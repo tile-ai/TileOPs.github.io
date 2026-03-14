@@ -7,7 +7,6 @@ Different GPU architectures offer distinct instruction sets and performance char
 
 | Architecture | SM Version | Key Features |
 |:-------------|:-----------|:-------------|
-| Ampere | SM 80/86 | Tensor Cores (FP16/BF16/TF32/INT8), async copy |
 | Hopper | SM 90 | WGMMA, TMA, warp specialization, FP8 |
 
 A single kernel implementation cannot optimally serve all architectures.
@@ -21,7 +20,6 @@ class MultiHeadAttentionFwdOp(Op):
     @property
     def default_kernel_map(self):
         return {
-            "ampere": FlashAttnV2FwdKernel,
             "hopper": FlashAttnV3FwdKernel,
         }
 ```
