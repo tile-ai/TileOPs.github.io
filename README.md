@@ -11,8 +11,6 @@ pip install mkdocs-material
 mkdocs serve
 ```
 
-Open http://localhost:8000
-
 ## Structure
 
 ```
