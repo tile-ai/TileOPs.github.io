@@ -2,13 +2,13 @@
 
 ## Project Overview
 
-TileOPs.github.io is the official documentation site for [TileOPs](https://github.com/tile-ai/TileOPs) — a high-performance LLM operator library built on TileLang. This repo is deployed via GitHub Pages.
+TileOPs.github.io is the official documentation site for [TileOPs](https://github.com/tile-ai/TileOPs) — a high-performance LLM operator library built on TileLang. Deployed via GitHub Pages with GitHub Actions (`gh-pages` branch).
 
 ## Tech Stack
 
 - **Static site generator**: [MkDocs](https://www.mkdocs.org/) with [Material for MkDocs](https://squidfundamentals.github.io/mkdocs-material/)
-- **Theme**: Material — slate (dark) scheme, deep orange accent
-- **Markup**: Markdown
+- **Theme**: Material — slate (dark) scheme, teal/cyan accent, Nunito + Source Code Pro fonts
+- **Deployment**: GitHub Actions → `gh-pages` branch (`.github/workflows/deploy.yml`)
 - **License**: MIT (tile-ai)
 
 ## Related Repositories
@@ -21,27 +21,31 @@ TileOPs.github.io is the official documentation site for [TileOPs](https://githu
 ## Site Structure
 
 ```
-mkdocs.yml              # MkDocs configuration
+mkdocs.yml                    # MkDocs configuration (nav, theme, extensions)
+.github/workflows/deploy.yml  # Auto-deploy on push to main
 docs/
-  index.md              # Home page
-  api/                  # API Reference
-    index.md
-    attention.md
-    linear-algebra.md
-    normalization.md
-    reduction.md
-    elementwise.md
-    other.md
-  design/               # Design documents
+  index.md                    # Home (Installation, Quick Start, Links)
+  design/
     index.md
     two-layer-architecture.md
     hardware-dispatch.md
-  benchmarks/           # Performance results
+  api/
     index.md
-    attention.md
-    gemm.md
-    normalization.md
     elementwise.md
+    reduction.md
+    normalization.md
+    linear-algebra.md          # GEMM
+    quantization.md
+    attention.md
+    fft.md
+    mhc.md
+    topk.md
+  benchmarks/
+    index.md                   # Overall
+    elementwise.md
+    normalization.md
+    gemm.md
+    attention.md
   blog/
     index.md
 ```
@@ -51,7 +55,6 @@ docs/
 ```bash
 pip install mkdocs-material
 mkdocs serve
-# Site available at http://localhost:8000
 ```
 
 ## Build Artifacts (gitignored)
