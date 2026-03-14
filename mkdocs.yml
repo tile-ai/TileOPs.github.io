@@ -1,0 +1,76 @@
+site_name: TileOPs
+site_url: https://tileops.github.io
+site_description: High-performance LLM operator library built on TileLang
+repo_url: https://github.com/tile-ai/TileOPs
+repo_name: tile-ai/TileOPs
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: teal
+    accent: cyan
+  logo: assets/logo.png
+  favicon: assets/logo.png
+  font:
+    text: Nunito
+    code: Source Code Pro
+  features:
+    - navigation.expand
+    - navigation.top
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+nav:
+  - Home: index.md
+  - Design:
+    - Two-Layer Architecture: design/two-layer-architecture.md
+    - Hardware-Aware Dispatch: design/hardware-dispatch.md
+  - API Reference:
+    - Elementwise: api/elementwise.md
+    - Reduction: api/reduction.md
+    - Normalization: api/normalization.md
+    - GEMM: api/linear-algebra.md
+    - Quantization: api/quantization.md
+    - Attention: api/attention.md
+    - FFT: api/fft.md
+    - MHC: api/mhc.md
+    - Top-k: api/topk.md
+  - Benchmarks:
+    - Overall: benchmarks/index.md
+    - Elementwise: benchmarks/elementwise.md
+    - Normalization: benchmarks/normalization.md
+    - GEMM: benchmarks/gemm.md
+    - Attention: benchmarks/attention.md
+  - Blog:
+    - blog/index.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/tile-ai/TileOPs
+
+copyright: Copyright &copy; 2026 tile-ai
