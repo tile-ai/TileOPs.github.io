@@ -29,6 +29,7 @@ nav:
   - Design:
     - Two-Layer Architecture: design/two-layer-architecture.md
     - Hardware-Aware Dispatch: design/hardware-dispatch.md
+    - Elementwise Operators: design/elementwise-ops.md
   - API Reference:
     - Elementwise: api/elementwise.md
     - Reduction: api/reduction.md
