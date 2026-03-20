@@ -27,9 +27,7 @@ theme:
 nav:
   - Home: index.md
   - Design:
-    - Two-Layer Architecture: design/two-layer-architecture.md
-    - Hardware-Aware Dispatch: design/hardware-dispatch.md
-    - Elementwise Operators: design/elementwise-ops.md
+    - design/index.md
   - API Reference:
     - Elementwise: api/elementwise.md
     - Reduction: api/reduction.md
@@ -41,13 +39,9 @@ nav:
     - MHC: api/mhc.md
     - Top-k: api/topk.md
   - Benchmarks:
-    - Overall: benchmarks/index.md
-    - Elementwise: benchmarks/elementwise.md
-    - Normalization: benchmarks/normalization.md
-    - GEMM: benchmarks/gemm.md
-    - Attention: benchmarks/attention.md
-  - Blog:
-    - blog/index.md
+    - benchmarks/index.md
+  - Performance Guides:
+    - performance-guides/index.md
 
 markdown_extensions:
   - pymdownx.highlight:

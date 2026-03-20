@@ -16,7 +16,6 @@ TileOPs.github.io is the official documentation site for [TileOPs](https://githu
 | Repo | Purpose |
 |------|---------|
 | `TileOPs` | Main operator library (source code) |
-| `TileOPs.wiki` | Internal wiki — meeting notes, dashboards, TileLang knowledge base |
 
 ## Site Structure
 
@@ -24,30 +23,11 @@ TileOPs.github.io is the official documentation site for [TileOPs](https://githu
 mkdocs.yml                    # MkDocs configuration (nav, theme, extensions)
 .github/workflows/deploy.yml  # Auto-deploy on push to main
 docs/
-  index.md                    # Home (Installation, Quick Start, Links)
-  design/
-    index.md
-    two-layer-architecture.md
-    hardware-dispatch.md
-  api/
-    index.md
-    elementwise.md
-    reduction.md
-    normalization.md
-    linear-algebra.md          # GEMM
-    quantization.md
-    attention.md
-    fft.md
-    mhc.md
-    topk.md
-  benchmarks/
-    index.md                   # Overall
-    elementwise.md
-    normalization.md
-    gemm.md
-    attention.md
-  blog/
-    index.md
+  index.md                    # Home
+  design/                     # Architecture & design docs
+  api/                        # Operator API reference
+  benchmarks/                 # Performance benchmarks
+  performance-guides/          # Performance optimization guides
 ```
 
 ## Development
