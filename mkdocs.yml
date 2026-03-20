@@ -64,6 +64,7 @@ markdown_extensions:
 plugins:
   - search
   - mkdocstrings:
+      on_error: warn
       handlers:
         python:
           paths: [TileOPs]
