@@ -28,6 +28,7 @@ nav:
   - Home: index.md
   - Design:
     - design/index.md
+    - Elementwise: design/elementwise.md
   - API Reference:
     - Elementwise: api/elementwise.md
     - Reduction: api/reduction.md
@@ -62,6 +63,13 @@ markdown_extensions:
 
 plugins:
   - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [TileOPs]
+          options:
+            docstring_style: google
+            show_source: false
 
 extra:
   social:

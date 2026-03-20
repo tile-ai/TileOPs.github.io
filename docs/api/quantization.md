@@ -1,9 +1,6 @@
 # Quantization
 
-### `Fp8QuantOp`
-
-FP8 quantization for inference optimization.
-
-### `Fp8LightingIndexerOp`
-
-FP8 indexing for Lightning-style quantization workflows.
+::: tileops.ops.quantization
+    options:
+      show_root_heading: false
+      members_order: source

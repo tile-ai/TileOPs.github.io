@@ -1,5 +1,6 @@
 # Top-k
 
-### `TopkSelectorOp`
-
-Top-k selection operator, commonly used in MoE routing.
+::: tileops.ops.topk
+    options:
+      show_root_heading: false
+      members_order: source
