@@ -16,8 +16,14 @@ jobs:
         with:
           repository: tile-ai/TileOPs
           path: TileOPs
+          fetch-depth: 1
+          sparse-checkout: |
+            docs/design
+            .claude/skills
+            tileops
+          sparse-checkout-cone-mode: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install mkdocs-material "mkdocstrings[python]"
+      - run: pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugin
       - run: mkdocs gh-deploy --force
