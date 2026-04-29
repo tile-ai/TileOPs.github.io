@@ -19,6 +19,7 @@ jobs:
           fetch-depth: 1
           sparse-checkout: |
             docs/design
+            docs/tileops-skills.md
             .claude/skills
             tileops
           sparse-checkout-cone-mode: false

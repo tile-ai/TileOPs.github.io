@@ -23,5 +23,21 @@ Skills live in `tile-ai/TileOPs` under `.claude/skills/`. Claude Code picks
 them up automatically when run inside a clone of that repository — no
 separate install.
 
-- [Catalog](catalog.md) — the flat index used by agents, mirrored from the upstream repo.
-- Per-skill guides — added to the navigation as each skill stabilizes.
+## At a glance
+
+{%
+   include-markdown "../../TileOPs/docs/tileops-skills.md"
+   start="## At a glance"
+   end="## Skills in detail"
+%}
+
+## Trust model  ·  who may write what
+
+{%
+   include-markdown "../../TileOPs/docs/tileops-skills.md"
+   start="## Trust model"
+   end="## Maintenance"
+%}
+
+For per-skill detail and the embedded agent contracts, see the
+[Catalog](catalog.md) and individual skill pages in the navigation.
