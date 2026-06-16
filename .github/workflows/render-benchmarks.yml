@@ -1,0 +1,50 @@
+name: Render benchmarks
+
+# Daily refresh of the docs Benchmarks page. Regenerates it from the nightly
+# snapshot on tile-ai/TileOPs' `nightly-bench` orphan branch and redeploys the
+# site. The generated page is a build artifact — it is not committed; the
+# rendered HTML lives on gh-pages. Runs after the TileOPs nightly so the
+# snapshot is ready; also runnable on demand.
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: render-benchmarks
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: tile-ai/TileOPs
+          path: TileOPs
+          fetch-depth: 1
+          sparse-checkout: |
+            docs/design
+            docs/tileops-skills.md
+            .claude/skills
+            scripts/nightly_report.py
+            tileops
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugin
+
+      - name: Render benchmark page from nightly-bench
+        run: bash scripts/render_bench.sh
+
+      - name: Deploy site
+        run: mkdocs gh-deploy --force
