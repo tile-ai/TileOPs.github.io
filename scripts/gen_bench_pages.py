@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
-"""Generate the Benchmarks page from a nightly bench XML — honest edition.
+"""Generate the Benchmarks page (tables only) from a nightly bench XML.
 
 Design contract (no cheating):
-  * Per family: a roofline scatter (log-log) with TileOPs AND baseline points.
-    Log axes absorb the huge cross-op scale variance; "good" reads as distance
-    to the ceiling and to the nearest competitor, not as absolute bar height.
-  * Arithmetic intensity AI = achieved_tflops / achieved_bandwidth_tbs (FLOP and
-    bytes cancel latency), available from existing artifacts.
-  * "% of roofline" = achieved / min(compute_peak[dtype], AI * HBM_peak). Honest
-    for GEMM/elementwise (ceiling is reachable); for attention/fused ops the
-    ceiling is intrinsically far above SOTA, so good/bad there is judged vs the
-    strongest competitive baseline, never vs the unreachable roof.
-  * torch / torch-ref are reference only — never a headline speedup.
-  * Every benchmarked op is shown, underperformers included; ops with neither a
-    competitive baseline nor a reachable roofline are marked "undetermined".
+  * One visible summary table per op family (one row per op): config count,
+    median TFLOPS, median % of roofline, median speedup vs the strongest
+    competitive baseline, and an honest good/bad status.
+  * Arithmetic intensity AI = achieved_tflops / achieved_bandwidth_tbs.
+  * "% of roofline" = achieved / min(compute_peak[dtype], AI * HBM_peak).
+  * Status: judged vs the strongest competitive baseline where one exists
+    (torch/torch-ref are reference only, never a headline); else vs the
+    roofline only where it is reachable (memory-bound ops); else undetermined.
+  * Every benchmarked op is shown, underperformers included.
 
 Usage:
     python scripts/gen_bench_pages.py --bench-xml <xml> [--test-xml <xml>] \
@@ -24,13 +21,8 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import os
-from collections import defaultdict
-
-import numpy as np
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
+import statistics
+from collections import Counter, defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
@@ -40,18 +32,10 @@ PEAK_BW = 4.8  # TB/s HBM3e
 PEAK_TF = {"fp8": 1978.9, "float16": 989.5, "bfloat16": 989.5, "float32": 494.7}
 PEAK_TF_DEFAULT = 989.5
 
-# Baselines that count as real competitors (torch/torch-ref are reference only).
 COMPETITIVE = {"fa3", "flashinfer", "triton", "triton-tma", "deepgemm",
                "torch-cublas", "vllm", "vllm-triton", "fla", "mamba"}
 
-TILEOPS_COLOR = "#00897b"
-BL_STYLE = {
-    "fa3": "#ff7043", "flashinfer": "#5c6bc0", "triton": "#ab47bc",
-    "triton-tma": "#8e24aa", "deepgemm": "#ec407a", "torch-cublas": "#26a69a",
-    "vllm": "#42a5f5", "vllm-triton": "#29b6f6", "fla": "#66bb6a",
-    "mamba": "#9ccc65", "torch": "#cfd8dc", "torch-ref": "#cfd8dc",
-}
-GREEN, YELLOW, RED = "🟢", "🟡", "🔴"
+GREEN, YELLOW, RED, NA = "🟢", "🟡", "🔴", "—"
 
 FAMILY_ORDER = [
     "attention", "linear_attention", "scan", "normalization", "moe",
@@ -107,31 +91,26 @@ def dtype_of(name: str) -> str:
     return "default"
 
 
-def peak_tf(name: str) -> float:
-    return PEAK_TF.get(dtype_of(name), PEAK_TF_DEFAULT)
-
-
 def cfg_ai(c: dict) -> float | None:
     tf, bw = c.get("tileops_tflops"), c.get("tileops_bandwidth_tbs")
-    if tf and bw:
-        return tf / bw
-    return None
+    return tf / bw if (tf and bw) else None
 
 
 def cfg_roofline_pct(c: dict) -> float | None:
-    ai = cfg_ai(c)
-    tf = c.get("tileops_tflops")
+    ai, tf = cfg_ai(c), c.get("tileops_tflops")
     if ai is None or not tf:
         return None
-    attain = min(peak_tf(c["name"]), ai * PEAK_BW)
+    attain = min(PEAK_TF.get(dtype_of(c["name"]), PEAK_TF_DEFAULT), ai * PEAK_BW)
     return tf / attain * 100 if attain else None
 
 
-def best_competitor(c: dict):
-    """Return (tag, ratio) vs the FASTEST competitive baseline, else (None, None).
+def cfg_memory_bound(c: dict) -> bool:
+    ai = cfg_ai(c)
+    return ai is not None and ai * PEAK_BW < PEAK_TF.get(dtype_of(c["name"]), PEAK_TF_DEFAULT)
 
-    ratio = competitor_latency / tileops_latency  (>1 => TileOPs faster).
-    """
+
+def cfg_competitor(c: dict):
+    """(tag, ratio) vs the FASTEST competitive baseline; ratio>1 => TileOPs faster."""
     tl = c.get("tileops_latency_ms")
     comp = {t: b for t, b in (c.get("baselines") or {}).items()
             if t in COMPETITIVE and b.get("latency_ms")}
@@ -141,92 +120,49 @@ def best_competitor(c: dict):
     return tag, comp[tag]["latency_ms"] / tl
 
 
-def verdict(c: dict) -> str:
-    """At-a-glance good/bad, honest about what is measurable."""
-    tag, ratio = best_competitor(c)
-    if ratio is not None:
-        mark = GREEN if ratio >= 0.95 else YELLOW if ratio >= 0.8 else RED
-        return f"{mark} {ratio:.2f}× {tag}"
-    pct = cfg_roofline_pct(c)
-    if pct is not None:
-        return f"({pct:.0f}% of roof)"
-    return "—"
+_GH = "https://github.com/tile-ai/TileOPs"
 
 
-# --- roofline scatter -------------------------------------------------------
-def render_roofline(fam: str, ops: dict[str, dict], out_svg: str) -> int:
-    pts: dict[str, list] = defaultdict(list)
-    dtypes = set()
-    for d in ops.values():
-        for c in d["configs"]:
-            ai = cfg_ai(c)
-            tf = c.get("tileops_tflops")
-            if ai is None or not tf:
-                continue
-            dtypes.add(dtype_of(c["name"]))
-            pts["TileOPs"].append((ai, tf))
-            for tag, bl in (c.get("baselines") or {}).items():
-                if bl.get("tflops"):  # same op => same AI
-                    pts[tag].append((ai, bl["tflops"]))
-    n = len(pts.get("TileOPs", []))
-    if not n:
-        return 0
+def op_link(op: str, module: str | None) -> str:
+    """Link an op to its source: the module's .py file if it exists, else search."""
+    if module and module.startswith("tileops."):
+        rel = module.replace(".", "/") + ".py"
+        if os.path.exists(os.path.join(REPO, "TileOPs", rel)):
+            return f"{_GH}/blob/main/{rel}"
+    return f"{_GH}/search?q=repo%3Atile-ai%2FTileOPs+{op}&type=code"
 
-    # Zoom each family to its own data window so memory-bound families (all
-    # low-AI) fill the chart instead of collapsing into a corner.
-    all_x = [x for ps in pts.values() for x, _ in ps]
-    all_y = [y for ps in pts.values() for y in (v for _, v in ps)]
-    xlo, xhi = min(all_x) * 0.4, max(all_x) * 2.5
-    ylo, yhi = max(0.3, min(all_y) * 0.55), max(all_y) * 2.2
 
-    fig, ax = plt.subplots(figsize=(9, 5.8), dpi=140)
-    ai_grid = np.logspace(np.log10(xlo), np.log10(xhi), 500)
-    compute_roofs = sorted({PEAK_TF.get(dt, PEAK_TF_DEFAULT) for dt in dtypes})
-    for pk in compute_roofs:
-        roof = np.minimum(pk, ai_grid * PEAK_BW)
-        ax.plot(ai_grid, roof, color="#37474f", lw=1.4, zorder=5)
-        if pk <= yhi:  # flat part is in view → label it
-            ax.text(xhi, pk, f" {pk:.0f} TF", fontsize=7, color="#37474f",
-                    va="bottom", ha="right")
-    top = max(compute_roofs) if compute_roofs else PEAK_TF_DEFAULT
-    ax.fill_between(ai_grid, np.minimum(top, ai_grid * PEAK_BW), 1e4,
-                    color="#eceff1", alpha=0.45, zorder=0)
-    # Annotate the bandwidth diagonal (the reachable ceiling for memory-bound).
-    if (xlo * PEAK_BW) < yhi:
-        ax.text(xlo * 1.3, xlo * 1.3 * PEAK_BW, "HBM 4.8 TB/s roof", fontsize=7,
-                color="#546e7a", rotation=33, va="bottom")
+def _med(xs):
+    xs = [x for x in xs if x is not None]
+    return statistics.median(xs) if xs else None
 
-    # TileOPs last so it sits on top.
-    order = [t for t in pts if t != "TileOPs"] + ["TileOPs"]
-    for tag in order:
-        ps = pts[tag]
-        if not ps:
-            continue
-        xs, ys = zip(*ps)
-        if tag == "TileOPs":
-            ax.scatter(xs, ys, marker="^", s=66, color=TILEOPS_COLOR,
-                       edgecolor="white", lw=0.6, zorder=6, label="TileOPs")
-        else:
-            ref = tag in ("torch", "torch-ref")
-            ax.scatter(xs, ys, marker="o", s=34, color=BL_STYLE.get(tag, "#90a4ae"),
-                       alpha=0.55 if ref else 0.85, edgecolor="white", lw=0.4,
-                       zorder=3 if ref else 4,
-                       label=f"{tag} (ref)" if ref else tag)
 
-    ax.set_xscale("log")
-    ax.set_yscale("log")
-    ax.set_xlim(xlo, xhi)
-    ax.set_ylim(ylo, yhi)
-    ax.set_xlabel("Arithmetic intensity  (FLOP / byte)", fontsize=9)
-    ax.set_ylabel("Achieved TFLOPS", fontsize=9)
-    ax.set_title(f"{FAMILY_TITLE.get(fam, fam)} — roofline (H200)", fontsize=12,
-                 fontweight="bold", loc="left")
-    ax.grid(True, which="both", color="#f4f4f4", zorder=0)
-    ax.legend(loc="lower right", fontsize=7.5, frameon=True, framealpha=0.9, ncol=2)
-    fig.tight_layout()
-    fig.savefig(out_svg, facecolor="white", bbox_inches="tight")
-    plt.close(fig)
-    return n
+def op_summary(configs: list[dict]) -> dict:
+    """Aggregate an op's configs into one honest summary row."""
+    tflops = _med([c.get("tileops_tflops") for c in configs])
+    roof = _med([cfg_roofline_pct(c) for c in configs])
+    ratios, tags = [], []
+    for c in configs:
+        tag, r = cfg_competitor(c)
+        if r is not None:
+            ratios.append(r)
+            tags.append(tag)
+    has_comp = bool(ratios)
+    med_ratio = _med(ratios) if ratios else None
+    sota_tag = Counter(tags).most_common(1)[0][0] if tags else None
+    mem_bound = sum(cfg_memory_bound(c) for c in configs) > len(configs) / 2
+
+    if has_comp and med_ratio is not None:
+        status = GREEN if med_ratio >= 0.95 else YELLOW if med_ratio >= 0.8 else RED
+        sota = f"{status} {med_ratio:.2f}× {sota_tag}"
+    elif mem_bound and roof is not None:
+        status = GREEN if roof >= 70 else YELLOW if roof >= 40 else RED
+        sota = f"{status} {roof:.0f}% roof"
+    else:
+        status = NA
+        sota = NA
+    return {"configs": len(configs), "tflops": tflops, "roof": roof,
+            "status": status, "sota": sota}
 
 
 def _load_nightly_report():
@@ -261,9 +197,6 @@ def main():
     for op, data in agg.items():
         fams[family_of(op, module_of.get(op))][op] = data
 
-    assets = os.path.join(REPO, "docs", "benchmarks", "assets")
-    os.makedirs(assets, exist_ok=True)
-
     n_ops = sum(len(v) for v in fams.values())
     n_cfg = sum(len(d["configs"]) for v in fams.values() for d in v.values())
     ordered = [f for f in FAMILY_ORDER if f in fams] + [f for f in fams if f not in FAMILY_ORDER]
@@ -273,48 +206,60 @@ def main():
         '!!! info "Nightly performance snapshot"',
         f"    **GPU:** {args.gpu} · **Commit:** "
         f"[`{args.commit}`](https://github.com/tile-ai/TileOPs/commit/{args.commit}) · "
-        f"**Date:** {args.date}", "",
-        f"    **{n_ops} ops** across **{len(ordered)} families** ({n_cfg} configs). "
-        "Each family is shown on its own **roofline** (log–log): the solid line is "
-        "the H200 theoretical ceiling; points are achieved throughput. A point "
-        "near the ceiling uses the hardware well; a point near a baseline matches "
-        "that kernel.", "",
-        "!!! warning \"How to read good vs. underperforming\"",
-        "    Distance below the ceiling is *not* by itself a verdict — flash-style "
-        "attention is intrinsically far below the GEMM ceiling, and SOTA kernels "
-        "(FA3, FlashInfer) sit there too. Good/bad is judged **against the "
-        "strongest competitive baseline** where one exists "
-        f"({GREEN} ≥0.95× · {YELLOW} 0.80–0.95× · {RED} <0.80×); against the "
-        "**roofline** only where the ceiling is reachable (GEMM, memory-bound "
-        "ops); and left **undetermined** otherwise. `torch` is reference only.", "",
+        f"**Date:** {args.date} · **{n_ops} ops** / {len(ordered)} families / "
+        f"{n_cfg} configs", "",
+        "**Status**", "",
+        f"- Against the strongest competitive baseline where one exists: "
+        f"{GREEN} ≥0.95× · {YELLOW} 0.80–0.95× · {RED} <0.80×",
+        f"- Against the roofline only where it is reachable (memory-bound ops): "
+        f"{GREEN} ≥70% · {YELLOW} 40–70% · {RED} <40%",
+        f"- `{NA}` when neither applies",
+        "- `torch` is reference only",
+        "- **Tests**: ✅ correctness test passed · ❌ failed · `–` no test matched",
+        "- **% roof** = achieved ÷ H200 theoretical ceiling at the op's "
+        "arithmetic intensity",
+        "",
     ]
 
     for fam in ordered:
         ops = fams[fam]
-        svg = os.path.join(assets, f"family_{fam}.svg")
-        plotted = render_roofline(fam, ops, svg)
-        title = FAMILY_TITLE.get(fam, fam)
-        lines += [f"## {title}  <small>({len(ops)} ops)</small>", ""]
-        if plotted:
-            lines += [f"![{title} roofline](assets/family_{fam}.svg)", ""]
-        lines += ['??? note "Per-config detail"', "",
-                  "    | Op | Config | Latency (ms) | TFLOPS | AI | % roof | Status |",
-                  "    | --- | --- | ---: | ---: | ---: | ---: | --- |"]
-        for op in sorted(ops):
+        lines += [f"## {FAMILY_TITLE.get(fam, fam)}  <small>({len(ops)} ops)</small>", "",
+                  "| Op | Tests | Configs | TFLOPS | % roof | vs baseline | Status |",
+                  "| --- | :---: | ---: | ---: | ---: | --- | :---: |"]
+        rows = []
+        for op in ops:
+            s = op_summary(ops[op]["configs"])
             tstat = test_agg.get(op, {})
-            badge = (" ✅" if not tstat.get("failed") else " ❌") if tstat else ""
+            correct = ("✅" if not tstat.get("failed") else "❌") if tstat else "–"
+            rows.append((s["status"], op, correct, s))
+        # Sort: failing/underperforming first is misleading; sort by name, but
+        # keep it scannable — group by status (good → bad → undetermined).
+        rank = {GREEN: 0, YELLOW: 1, RED: 2, NA: 3}
+        rows.sort(key=lambda r: (rank.get(r[0], 9), r[1]))
+        for status, op, correct, s in rows:
+            name = f"[{op.replace('Op', '')}]({op_link(op, module_of.get(op))})"
+            lines.append(
+                f"| {name} | {correct} | {s['configs']} | "
+                f"{f'{s['tflops']:.1f}' if s['tflops'] else '–'} | "
+                f"{f'{s['roof']:.0f}%' if s['roof'] is not None else '–'} | "
+                f"{s['sota']} | {status} |")
+        lines.append("")
+
+        # Collapsible per-config detail.
+        lines += ['??? note "Per-config detail"', "",
+                  "    | Op | Config | Latency (ms) | TFLOPS | AI | % roof |",
+                  "    | --- | --- | ---: | ---: | ---: | ---: |"]
+        for op in sorted(ops):
             for c in ops[op]["configs"]:
                 cfg = c["name"].split("[")[-1].rstrip("]") if "[" in c["name"] else c["name"]
-                lat = c.get("tileops_latency_ms")
-                tf = c.get("tileops_tflops")
-                ai = cfg_ai(c)
-                pct = cfg_roofline_pct(c)
+                lat, tf = c.get("tileops_latency_ms"), c.get("tileops_tflops")
+                ai, pct = cfg_ai(c), cfg_roofline_pct(c)
                 lines.append(
-                    f"    | {op.replace('Op', '')}{badge} | `{cfg}` | "
+                    f"    | {op.replace('Op', '')} | `{cfg}` | "
                     f"{lat if lat is not None else '–'} | "
                     f"{f'{tf:.1f}' if tf else '–'} | "
                     f"{f'{ai:.0f}' if ai else '–'} | "
-                    f"{f'{pct:.0f}%' if pct else '–'} | {verdict(c)} |")
+                    f"{f'{pct:.0f}%' if pct is not None else '–'} |")
         lines.append("")
 
     out_md = os.path.join(REPO, "docs", "benchmarks", "index.md")
