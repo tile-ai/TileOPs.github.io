@@ -92,13 +92,17 @@ def dtype_of(name: str) -> str:
 
 
 def cfg_ai(c: dict) -> float | None:
+    # tf == 0.0 is a valid measurement (AI == 0); guard only against missing tf
+    # and missing/zero bw (the divisor).
     tf, bw = c.get("tileops_tflops"), c.get("tileops_bandwidth_tbs")
-    return tf / bw if (tf and bw) else None
+    if tf is None or not bw:
+        return None
+    return tf / bw
 
 
 def cfg_roofline_pct(c: dict) -> float | None:
     ai, tf = cfg_ai(c), c.get("tileops_tflops")
-    if ai is None or not tf:
+    if ai is None or tf is None:
         return None
     attain = min(PEAK_TF.get(dtype_of(c["name"]), PEAK_TF_DEFAULT), ai * PEAK_BW)
     return tf / attain * 100 if attain else None
@@ -137,6 +141,23 @@ def _med(xs):
     return statistics.median(xs) if xs else None
 
 
+def _fmt(x, spec="", suffix=""):
+    """Render a number cell, keeping legitimate 0.0; '–' only when missing."""
+    return f"{format(x, spec)}{suffix}" if x is not None else "–"
+
+
+def _test_mark(tstat: dict) -> str:
+    """Correctness marker. ✅ requires at least one executed pass; an op whose
+    cases all skipped (or none ran) is not a pass."""
+    if not tstat:
+        return "–"        # no test matched this op
+    if tstat.get("failed"):
+        return "❌"
+    if tstat.get("passed"):
+        return "✅"
+    return "⏭️"           # tests matched but all skipped / none executed
+
+
 def op_summary(configs: list[dict]) -> dict:
     """Aggregate an op's configs into one honest summary row."""
     tflops = _med([c.get("tileops_tflops") for c in configs])
@@ -171,8 +192,12 @@ def _load_nightly_report():
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
     import sys as _sys
+    saved_argv = _sys.argv
     _sys.argv = ["x"]
-    spec.loader.exec_module(mod)
+    try:
+        spec.loader.exec_module(mod)
+    finally:
+        _sys.argv = saved_argv
     return mod
 
 
@@ -225,7 +250,7 @@ def main():
         f"{GREEN} ≥70% · {YELLOW} 40–70% · {RED} <40%",
         f"- `{NA}` when neither applies",
         "- `torch` is reference only",
-        "- **Tests**: ✅ correctness test passed · ❌ failed · `–` no test matched",
+        "- **Tests**: ✅ passed · ❌ failed · ⏭️ all skipped · `–` no test matched",
         "- **% roof** = achieved ÷ H200 theoretical ceiling at the op's "
         "arithmetic intensity",
         "",
@@ -239,8 +264,7 @@ def main():
         rows = []
         for op in ops:
             s = op_summary(ops[op]["configs"])
-            tstat = test_agg.get(op, {})
-            correct = ("✅" if not tstat.get("failed") else "❌") if tstat else "–"
+            correct = _test_mark(test_agg.get(op, {}))
             rows.append((s["status"], op, correct, s))
         # Sort: failing/underperforming first is misleading; sort by name, but
         # keep it scannable — group by status (good → bad → undetermined).
@@ -248,11 +272,11 @@ def main():
         rows.sort(key=lambda r: (rank.get(r[0], 9), r[1]))
         for status, op, correct, s in rows:
             name = f"[{op.replace('Op', '')}]({op_link(op, module_of.get(op))})"
+            tflops = _fmt(s["tflops"], ".1f")
+            roof = _fmt(s["roof"], ".0f", suffix="%")
             lines.append(
                 f"| {name} | {correct} | {s['configs']} | "
-                f"{f'{s['tflops']:.1f}' if s['tflops'] else '–'} | "
-                f"{f'{s['roof']:.0f}%' if s['roof'] is not None else '–'} | "
-                f"{s['sota']} | {status} |")
+                f"{tflops} | {roof} | {s['sota']} | {status} |")
         lines.append("")
 
         # Collapsible per-config detail.
@@ -266,10 +290,8 @@ def main():
                 ai, pct = cfg_ai(c), cfg_roofline_pct(c)
                 lines.append(
                     f"    | {op.replace('Op', '')} | `{cfg}` | "
-                    f"{lat if lat is not None else '–'} | "
-                    f"{f'{tf:.1f}' if tf else '–'} | "
-                    f"{f'{ai:.0f}' if ai else '–'} | "
-                    f"{f'{pct:.0f}%' if pct is not None else '–'} |")
+                    f"{_fmt(lat)} | {_fmt(tf, '.1f')} | "
+                    f"{_fmt(ai, '.0f')} | {_fmt(pct, '.0f', suffix='%')} |")
         lines.append("")
 
     out_md = os.path.join(REPO, "docs", "benchmarks", "index.md")
