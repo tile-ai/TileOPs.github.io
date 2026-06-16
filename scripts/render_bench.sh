@@ -22,9 +22,20 @@ base="https://raw.githubusercontent.com/tile-ai/TileOPs/nightly-bench"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
-if ! git ls-remote --exit-code --heads "$repo" nightly-bench >/dev/null 2>&1; then
+# `git ls-remote --exit-code` returns 0 when the ref is found, 2 when there is
+# no matching ref, and other codes (e.g. 128) for transport/repository errors.
+# Only the explicit no-matching-ref case may bootstrap with the placeholder;
+# treat transport errors as transient and abort so the live page is preserved.
+set +e
+git ls-remote --exit-code --heads "$repo" nightly-bench >/dev/null 2>&1
+ls_status=$?
+set -e
+if [ "$ls_status" -eq 2 ]; then
   echo "::warning::nightly-bench branch does not exist yet; keeping placeholder benchmark page"
   exit 0
+elif [ "$ls_status" -ne 0 ]; then
+  echo "::error::could not query nightly-bench (git ls-remote exit ${ls_status}); aborting so the live benchmark page is not overwritten"
+  exit 1
 fi
 
 fetch() {  # fetch <remote-name> <dest>; retries to ride out transient errors
