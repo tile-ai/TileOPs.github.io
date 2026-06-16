@@ -127,12 +127,13 @@ def cfg_competitor(c: dict):
 _GH = "https://github.com/tile-ai/TileOPs"
 
 
-def op_link(op: str, module: str | None) -> str:
-    """Link an op to its source: the module's .py file if it exists, else search."""
+def op_link(op: str, module: str | None, ref: str = "main") -> str:
+    """Link an op to its source at `ref` (the benchmarked commit) if the
+    module file exists, else fall back to repo code search."""
     if module and module.startswith("tileops."):
         rel = module.replace(".", "/") + ".py"
         if os.path.exists(os.path.join(REPO, "TileOPs", rel)):
-            return f"{_GH}/blob/main/{rel}"
+            return f"{_GH}/blob/{ref}/{rel}"
     return f"{_GH}/search?q=repo%3Atile-ai%2FTileOPs+{op}&type=code"
 
 
@@ -144,6 +145,22 @@ def _med(xs):
 def _fmt(x, spec="", suffix=""):
     """Render a number cell, keeping legitimate 0.0; '–' only when missing."""
     return f"{format(x, spec)}{suffix}" if x is not None else "–"
+
+
+def _md(s) -> str:
+    """Escape an XML-sourced string for a Markdown table cell: neutralize the
+    cell separator, code-span/link delimiters, and newlines so a stray value
+    cannot break the table or inject markup."""
+    out = str(s).replace("\\", "\\\\")
+    for ch in ("|", "`", "[", "]", "<", ">"):
+        out = out.replace(ch, "\\" + ch)
+    return " ".join(out.split())
+
+
+def _md_code(s) -> str:
+    """Escape a value rendered inside a Markdown table code span: a backtick
+    would end the span and a bare `|` would split the row."""
+    return " ".join(str(s).replace("`", "'").replace("|", "\\|").split())
 
 
 def _test_mark(tstat: dict) -> str:
@@ -212,6 +229,9 @@ def main():
     ap.add_argument("--rendered", default=None,
                     help="Page render timestamp, e.g. '2026-06-16 02:00 UTC'")
     args = ap.parse_args()
+    # Pin source links to the benchmarked commit; fall back to main only when
+    # the SHA is unknown (so we never emit blob/unknown).
+    ref = args.commit if args.commit and args.commit != "unknown" else "main"
 
     nr = _load_nightly_report()
     bench_rows = nr.parse_bench_xml(args.bench_xml)
@@ -271,7 +291,7 @@ def main():
         rank = {GREEN: 0, YELLOW: 1, RED: 2, NA: 3}
         rows.sort(key=lambda r: (rank.get(r[0], 9), r[1]))
         for status, op, correct, s in rows:
-            name = f"[{op.replace('Op', '')}]({op_link(op, module_of.get(op))})"
+            name = f"[{_md(op.replace('Op', ''))}]({op_link(op, module_of.get(op), ref)})"
             tflops = _fmt(s["tflops"], ".1f")
             roof = _fmt(s["roof"], ".0f", suffix="%")
             lines.append(
@@ -289,13 +309,13 @@ def main():
                 lat, tf = c.get("tileops_latency_ms"), c.get("tileops_tflops")
                 ai, pct = cfg_ai(c), cfg_roofline_pct(c)
                 lines.append(
-                    f"    | {op.replace('Op', '')} | `{cfg}` | "
+                    f"    | {_md(op.replace('Op', ''))} | `{_md_code(cfg)}` | "
                     f"{_fmt(lat)} | {_fmt(tf, '.1f')} | "
                     f"{_fmt(ai, '.0f')} | {_fmt(pct, '.0f', suffix='%')} |")
         lines.append("")
 
     out_md = os.path.join(REPO, "docs", "benchmarks", "index.md")
-    with open(out_md, "w") as f:
+    with open(out_md, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     print(f"wrote {out_md}: {n_ops} ops, {len(ordered)} families, {n_cfg} configs")
 
