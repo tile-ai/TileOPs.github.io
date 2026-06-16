@@ -1,0 +1,84 @@
+name: Render benchmarks
+
+# Pulls the nightly benchmark snapshot that tile-ai/TileOPs publishes to its
+# `nightly-bench` orphan branch, regenerates docs/benchmarks/index.md, and
+# deploys the site. Scheduled a few hours after the TileOPs nightly so the
+# snapshot is ready; also runnable on demand.
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: render-benchmarks
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch nightly benchmark snapshot
+        run: |
+          set -euo pipefail
+          base="https://raw.githubusercontent.com/tile-ai/TileOPs/nightly-bench"
+          curl -fsSL "$base/bench_results.xml" -o bench_results.xml
+          curl -fsSL "$base/meta.json" -o meta.json
+          # test_results.xml is optional — the page renders without it.
+          curl -fsSL "$base/test_results.xml" -o test_results.xml || \
+            echo "::warning::test_results.xml not found on nightly-bench"
+
+      - uses: actions/checkout@v4
+        with:
+          repository: tile-ai/TileOPs
+          path: TileOPs
+          fetch-depth: 1
+          sparse-checkout: |
+            docs/design
+            docs/tileops-skills.md
+            .claude/skills
+            scripts/nightly_report.py
+            tileops
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugin
+
+      - name: Render benchmark page
+        run: |
+          set -euo pipefail
+          commit=$(python -c "import json;print(json.load(open('meta.json'))['commit'])")
+          date=$(python -c "import json;print(json.load(open('meta.json'))['date'])")
+          gpu=$(python -c "import json;print(json.load(open('meta.json'))['gpu'])")
+          test_arg=()
+          if [ -f test_results.xml ]; then
+            test_arg=(--test-xml test_results.xml)
+          fi
+          python scripts/gen_bench_pages.py \
+            --bench-xml bench_results.xml \
+            "${test_arg[@]}" \
+            --commit "$commit" --date "$date" --gpu "$gpu"
+
+      - name: Commit refreshed page
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- docs/benchmarks/index.md; then
+            echo "Benchmark page unchanged."
+          else
+            git add docs/benchmarks/index.md
+            git commit -m "chore(bench): refresh nightly benchmark page"
+            git push
+          fi
+
+      - name: Deploy site
+        run: mkdocs gh-deploy --force
