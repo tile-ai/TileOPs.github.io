@@ -21,10 +21,15 @@ jobs:
             docs/design
             docs/tileops-skills.md
             .claude/skills
+            scripts/nightly_report.py
             tileops
           sparse-checkout-cone-mode: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugin
+      # Regenerate the Benchmarks page from the latest nightly snapshot so a
+      # push deploy never serves a stale page. Falls back to the placeholder if
+      # the snapshot is unavailable.
+      - run: bash scripts/render_bench.sh
       - run: mkdocs gh-deploy --force

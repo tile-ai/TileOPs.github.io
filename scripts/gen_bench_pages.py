@@ -181,8 +181,11 @@ def main():
     ap.add_argument("--bench-xml", required=True)
     ap.add_argument("--test-xml")
     ap.add_argument("--commit", default="unknown")
-    ap.add_argument("--date", default="unknown")
+    ap.add_argument("--date", default="unknown",
+                    help="Benchmark run date (when the data was produced)")
     ap.add_argument("--gpu", default="unknown")
+    ap.add_argument("--rendered", default=None,
+                    help="Page render timestamp, e.g. '2026-06-16 02:00 UTC'")
     args = ap.parse_args()
 
     nr = _load_nightly_report()
@@ -201,13 +204,20 @@ def main():
     n_cfg = sum(len(d["configs"]) for v in fams.values() for d in v.values())
     ordered = [f for f in FAMILY_ORDER if f in fams] + [f for f in fams if f not in FAMILY_ORDER]
 
+    _nb = "https://github.com/tile-ai/TileOPs/tree/nightly-bench"
     lines = [
         "# Benchmarks", "",
         '!!! info "Nightly performance snapshot"',
         f"    **GPU:** {args.gpu} · **Commit:** "
         f"[`{args.commit}`](https://github.com/tile-ai/TileOPs/commit/{args.commit}) · "
-        f"**Date:** {args.date} · **{n_ops} ops** / {len(ordered)} families / "
-        f"{n_cfg} configs", "",
+        f"**Benchmark run:** {args.date} · **{n_ops} ops** / {len(ordered)} families / "
+        f"{n_cfg} configs",
+    ]
+    if args.rendered:
+        lines += ["", f"    *Page updated {args.rendered} from the "
+                  f"[`nightly-bench`]({_nb}) data snapshot.*"]
+    lines += [
+        "",
         "**Status**", "",
         f"- Against the strongest competitive baseline where one exists: "
         f"{GREEN} ≥0.95× · {YELLOW} 0.80–0.95× · {RED} <0.80×",
