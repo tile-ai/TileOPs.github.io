@@ -19,6 +19,7 @@ jobs:
           fetch-depth: 1
           sparse-checkout: |
             docs/design
+            docs/perf
             docs/tileops-skills.md
             .claude/skills
             scripts/nightly_report.py
