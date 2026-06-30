@@ -67,10 +67,12 @@ nav:
     - FFT: api/fft.md
     - MHC: api/mhc.md
     - Top-k: api/topk.md
+    - Trace: api/trace.md
   - Benchmarks:
     - benchmarks/index.md
   - Performance Guides:
     - performance-guides/index.md
+    - In-Kernel Timeline Trace: performance-guides/trace-timeline.md
 
 markdown_extensions:
   - pymdownx.highlight:
