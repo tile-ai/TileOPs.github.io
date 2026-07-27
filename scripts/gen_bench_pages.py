@@ -24,6 +24,8 @@ import os
 import statistics
 from collections import Counter, defaultdict
 
+from benchmark_families import OP_FAMILY
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 
@@ -38,13 +40,17 @@ COMPETITIVE = {"fa3", "flashinfer", "triton", "triton-tma", "deepgemm",
 GREEN, YELLOW, RED, NA = "🟢", "🟡", "🔴", "—"
 
 FAMILY_ORDER = [
-    "attention", "linear_attention", "scan", "normalization", "moe",
-    "linear_algebra", "reduction", "elementwise", "convolution", "pool",
-    "quantization", "positional", "fft", "mhc", "topk", "other",
+    "attention", "attention_indexing", "linear_attention", "sequence_modeling",
+    "scan", "normalization", "regularization", "moe", "linear_algebra",
+    "reduction", "elementwise", "convolution", "pool", "quantization",
+    "positional", "fft", "mhc", "topk", "other",
 ]
 FAMILY_TITLE = {
     "attention": "Attention", "linear_attention": "Linear Attention / SSM",
-    "scan": "Scan", "normalization": "Normalization", "moe": "Mixture of Experts",
+    "attention_indexing": "Attention Indexing",
+    "sequence_modeling": "Sequence Modeling",
+    "scan": "Scan", "normalization": "Normalization",
+    "regularization": "Regularization", "moe": "Mixture of Experts",
     "linear_algebra": "Linear Algebra (GEMM)", "reduction": "Reduction",
     "elementwise": "Elementwise", "convolution": "Convolution", "pool": "Pooling",
     "quantization": "Quantization", "positional": "Positional Encoding",
@@ -70,7 +76,8 @@ _MODULE_FAMILY = {"attention": "attention", "elementwise": "elementwise",
                   "reduction": "reduction", "norm": "normalization", "moe": "moe"}
 
 
-def family_of(op: str, op_module: str | None) -> str:
+def infer_family(op: str, op_module: str | None) -> str:
+    """Infer a provisional family for an operator absent from the review table."""
     mod = (op_module or "").lower()
     parts = mod.split(".")
     if len(parts) >= 4 and parts[0] == "tileops" and parts[1] == "ops":
@@ -81,6 +88,12 @@ def family_of(op: str, op_module: str | None) -> str:
         if any(k in hay for k in keys):
             return fam
     return "elementwise" if not mod or len(parts) <= 3 else "other"
+
+
+def family_of(op: str, op_module: str | None) -> str:
+    """Return the reviewed family, falling back to inference for new ops."""
+    inferred = infer_family(op, op_module)
+    return OP_FAMILY.get(op, inferred)
 
 
 def dtype_of(name: str) -> str:
@@ -242,8 +255,17 @@ def main():
         test_agg = nr.aggregate_test_results(nr.parse_test_xml(args.test_xml))
 
     fams: dict[str, dict] = defaultdict(dict)
+    corrections = []
+    unmapped = []
     for op, data in agg.items():
-        fams[family_of(op, module_of.get(op))][op] = data
+        module = module_of.get(op)
+        inferred = infer_family(op, module)
+        family = family_of(op, module)
+        if op in OP_FAMILY and family != inferred:
+            corrections.append((op, inferred, family))
+        elif op not in OP_FAMILY:
+            unmapped.append((op, inferred))
+        fams[family][op] = data
 
     n_ops = sum(len(v) for v in fams.values())
     n_cfg = sum(len(d["configs"]) for v in fams.values() for d in v.values())
@@ -318,6 +340,14 @@ def main():
     with open(out_md, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     print(f"wrote {out_md}: {n_ops} ops, {len(ordered)} families, {n_cfg} configs")
+    if corrections:
+        print("reviewed family corrections:")
+        for op, inferred, family in sorted(corrections):
+            print(f"  {op}: {inferred} -> {family}")
+    if unmapped:
+        print("unmapped operators using inferred families:")
+        for op, inferred in sorted(unmapped):
+            print(f"  {op}: {inferred}")
 
 
 if __name__ == "__main__":
