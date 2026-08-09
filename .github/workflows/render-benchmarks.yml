@@ -35,7 +35,7 @@ jobs:
             docs/tileops-skills.md
             .claude/skills
             scripts/nightly_report.py
-            tileops
+            src/tileops
           sparse-checkout-cone-mode: false
 
       - uses: actions/setup-python@v5
