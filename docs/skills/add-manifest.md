@@ -1,6 +1,6 @@
 # `add-manifest`
 
-> Generate or re-align one `tileops/manifest/` entry from a reference-API
+> Generate or re-align one `src/tileops/manifest/` entry from a reference-API
 > docs URL. Caller provides the manifest key (`op_name`); the skill writes
 > that one entry. Idempotent.
 
@@ -24,7 +24,7 @@
 
 ## Outputs
 
-- *(TODO)* One `tileops/manifest/<op_name>.json` (or equivalent) entry,
+- *(TODO)* One `src/tileops/manifest/<op_name>.json` (or equivalent) entry,
   written or updated in place.
 
 ## Example

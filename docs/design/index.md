@@ -5,7 +5,7 @@ below mirror `docs/design/` in the [`tile-ai/TileOPs`](https://github.com/tile-a
 repository — the source of truth — pulled in at site build time.
 
 - [Architecture](architecture.md) — top-level module layout and the spec-driven pipeline.
-- [Op Manifest](manifest.md) — the `tileops/manifest/` package as the source of truth for op interfaces.
+- [Op Manifest](manifest.md) — the `src/tileops/manifest/` package as the source of truth for op interfaces.
 - [Op Interface Design](ops-design.md) — playbook for scaffolding a new op from a manifest entry.
 - [Op Interface Reference](ops-design-reference.md) — slot-keyed authoritative rules.
 - [Roofline](roofline.md) — performance model and the `roofline` manifest field.

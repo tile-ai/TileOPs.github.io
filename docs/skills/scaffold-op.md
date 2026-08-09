@@ -1,7 +1,7 @@
 # `scaffold-op`
 
 > Scaffold a new T2 (L1-direct) Op file from a single
-> `tileops/manifest/` entry by following the 7-step playbook in
+> `src/tileops/manifest/` entry by following the 7-step playbook in
 > [`docs/design/ops-design.md`](../design/ops-design.md). Emits the 17
 > scaffold slots (S1–S7, S12–S21); leaves family-specific protocol
 > variables, optional hooks, and kernel implementations to downstream

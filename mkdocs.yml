@@ -107,7 +107,7 @@ plugins:
       on_error: warn
       handlers:
         python:
-          paths: [TileOPs]
+          paths: [TileOPs/src]
           options:
             docstring_style: google
             show_source: false

@@ -1,7 +1,7 @@
 # `fix-manifest`
 
 > Patch one missing structural field (`kernel_map`, `static_dims`) on an
-> existing `tileops/manifest/` entry. Auto-detects the field via the
+> existing `src/tileops/manifest/` entry. Auto-detects the field via the
 > validator or takes `--field=<name>`. Reference-derivable fields
 > (`signature.*`, `shape_rules`, `dtype_combos`, `roofline`) belong to
 > [`add-manifest`](add-manifest.md), not here.

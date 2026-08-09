@@ -13,7 +13,7 @@ TileOPs skills are organized along **two axes**:
 
 - **op** — a single operator.
 - **family** — a group of related ops (reductions, norms, …).
-- **manifest** — entries in `tileops/manifest/`.
+- **manifest** — entries in `src/tileops/manifest/`.
 
 **Role** — how the skill relates to others:
 
