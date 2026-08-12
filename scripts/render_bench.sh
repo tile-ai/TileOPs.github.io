@@ -13,8 +13,8 @@
 #   * branch present but fetch fails -> transient 404/network error; exit
 #     non-zero so the deploy aborts and the live page is left intact.
 #
-# Requires TileOPs checked out at ./TileOPs (for scripts/nightly_report.py,
-# loaded by gen_bench_pages.py) and python on PATH.
+# Requires TileOPs checked out at ./TileOPs (gen_bench_pages.py reads the GPU
+# profiles under src/tileops/perf/profiles/ from there) and python on PATH.
 set -euo pipefail
 
 repo="https://github.com/tile-ai/TileOPs"

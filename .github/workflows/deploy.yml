@@ -22,13 +22,12 @@ jobs:
             docs/perf
             docs/tileops-skills.md
             .claude/skills
-            scripts/nightly_report.py
             src/tileops
           sparse-checkout-cone-mode: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugin
+      - run: pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugin pyyaml
       # Regenerate the Benchmarks page from the latest nightly snapshot so a
       # push deploy never serves a stale page. Falls back to the placeholder if
       # the snapshot is unavailable.
