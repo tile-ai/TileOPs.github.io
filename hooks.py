@@ -49,7 +49,7 @@ def on_page_markdown(markdown, page, config, files):
 # page reaches the nav without editing this list.
 _BENCH_ORDER = [
     "index.md", "reading.md", "attention.md", "linear-attention.md",
-    "gemm-moe.md", "elementwise-reduction.md", "norm-conv-pool.md", "gaps.md",
+    "gemm-moe.md", "elementwise-reduction.md", "norm-conv-pool.md",
 ]
 
 
