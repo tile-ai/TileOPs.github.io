@@ -1,0 +1,234 @@
+/* Palette and typography shared with tile-ai/TileFoundry.github.io, plus the
+ * rules the benchmark data tables need.
+ *
+ * Single light scheme, as on TileFoundry: warm paper ground with a dot texture,
+ * one red accent for structure, blue reserved for asides.
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap");
+
+:root {
+  --tf-paper: #f3ede1;
+  --tf-paper-2: #e8e1d1;
+  --tf-ink: #191a16;
+  --tf-muted: #7c7565;
+  --tf-red: #c43c19;
+  --tf-red-dark: #9f2d12;
+  --tf-teal: #1a6e63;
+  --tf-blue: #2f5d8c;
+  --tf-line: rgba(25, 26, 22, 0.16);
+  --tf-line-soft: rgba(25, 26, 22, 0.07);
+  --tf-display: "Bricolage Grotesque", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --tf-body: "Hanken Grotesk", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --tf-mono: "Space Mono", ui-monospace, monospace;
+}
+
+[data-md-color-scheme="default"] {
+  --md-default-bg-color: var(--tf-paper);
+  --md-default-fg-color: var(--tf-ink);
+  --md-default-fg-color--light: var(--tf-muted);
+  --md-default-fg-color--lighter: var(--tf-line);
+  --md-default-fg-color--lightest: var(--tf-line-soft);
+  --md-primary-fg-color: var(--tf-red);
+  --md-primary-fg-color--light: #db6c4e;
+  --md-primary-fg-color--dark: var(--tf-red-dark);
+  --md-accent-fg-color: var(--tf-red);
+  --md-typeset-a-color: var(--tf-red);
+  --md-code-bg-color: var(--tf-paper-2);
+  --md-code-fg-color: var(--tf-ink);
+}
+
+html,
+body,
+.md-container,
+.md-main {
+  background-color: var(--md-default-bg-color);
+  background-image: radial-gradient(var(--tf-line-soft) 1px, transparent 1.5px);
+  background-size: 26px 26px;
+}
+
+body,
+.md-typeset,
+.md-nav,
+.md-search__input {
+  font-family: var(--tf-body);
+}
+
+/* Header sits on the paper rather than in the accent colour. */
+.md-header,
+.md-tabs {
+  color: var(--tf-ink);
+  background: var(--tf-paper);
+  box-shadow: none;
+}
+
+.md-header {
+  border-bottom: 1px solid var(--tf-line-soft);
+}
+
+.md-header__topic,
+.md-header__button,
+.md-header__button:hover,
+.md-source,
+.md-source:hover {
+  color: var(--tf-ink);
+}
+
+.md-header__title,
+.md-header__topic {
+  font-family: var(--tf-display);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.md-source__repository {
+  font-family: var(--tf-mono);
+  font-size: 0.68rem;
+}
+
+.md-nav__title {
+  color: var(--tf-ink);
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--tf-display);
+  font-weight: 800;
+}
+
+.md-nav__item .md-nav__link--active,
+.md-nav__item .md-nav__link--active code,
+.md-nav__link:focus,
+.md-nav__link:hover {
+  color: var(--tf-red);
+}
+
+.md-typeset {
+  color: var(--md-default-fg-color);
+  font-size: 0.91rem;
+  line-height: 1.6;
+}
+
+/* Headings carry a red rule whose weight tracks the level. */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4 {
+  color: var(--md-default-fg-color);
+  font-family: var(--tf-display);
+  letter-spacing: 0;
+}
+
+.md-typeset h1 {
+  margin: 0 0 1.25rem;
+  padding-left: 0.3em;
+  border-left: 11px solid var(--tf-red);
+  font-size: 2.1rem;
+  font-weight: 800;
+  line-height: 1.06;
+}
+
+.md-typeset h2 {
+  margin: 2em 0 0.7em;
+  padding-left: 0.46em;
+  border-left: 8px solid var(--tf-red);
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.13;
+}
+
+.md-typeset h3 {
+  margin: 1.6em 0 0.5em;
+  padding-left: 0.5em;
+  border-left: 5px solid var(--tf-red);
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.md-typeset h4 {
+  margin: 1.45em 0 0.4em;
+  padding-left: 0.55em;
+  border-left: 3px solid var(--tf-red);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.md-typeset code {
+  padding: 0.05em 0.28em;
+  border-radius: 4px;
+  background: var(--md-code-bg-color);
+  color: var(--md-code-fg-color);
+  font-family: var(--tf-mono);
+  font-size: 0.82em;
+}
+
+.md-typeset blockquote {
+  margin: 1.3em 0;
+  padding: 0.08em 0 0.08em 1.05em;
+  border-left: 3px solid var(--tf-blue);
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  border: 0;
+  border-left: 3px solid var(--tf-blue);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.md-typeset .admonition.warning,
+.md-typeset details.warning {
+  border-left-color: var(--tf-red);
+}
+
+.md-typeset .admonition-title,
+.md-typeset summary {
+  background: transparent;
+  font-family: var(--tf-mono);
+  font-size: 0.8rem;
+}
+
+.md-typeset table:not([class]) {
+  margin: 1em 0;
+  border: 0;
+  font-size: 0.75rem;
+}
+
+.md-typeset table:not([class]) th {
+  border: 0;
+  border-bottom: 2px solid var(--md-default-fg-color);
+  font-family: var(--tf-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.md-typeset table:not([class]) td {
+  border: 0;
+  border-bottom: 1px solid var(--tf-line-soft);
+}
+
+.md-typeset table:not([class]) tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--md-default-fg-color), transparent 97%);
+}
+
+/* Benchmark data tables: many short numeric cells. Keeping each cell on one
+ * line and letting the table scroll beats wrapping every column to fit, which
+ * turns one row into four. The wrapper comes from
+ * scripts/gen_bench_pages.py.
+ */
+.md-typeset .datatable table:not([class]) {
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.md-typeset .datatable table:not([class]) td,
+.md-typeset .datatable table:not([class]) th {
+  white-space: nowrap;
+}
+
+.md-typeset .datatable table:not([class]) code {
+  background: transparent;
+  padding: 0;
+  color: var(--md-default-fg-color--light);
+}

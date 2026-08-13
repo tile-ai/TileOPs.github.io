@@ -7,23 +7,14 @@ repo_name: tile-ai/TileOPs
 theme:
   name: material
   palette:
-    - scheme: default
-      primary: teal
-      accent: cyan
-      toggle:
-        icon: material/weather-night
-        name: Switch to dark mode
-    - scheme: slate
-      primary: teal
-      accent: cyan
-      toggle:
-        icon: material/weather-sunny
-        name: Switch to light mode
+    scheme: default
+    primary: red
+    accent: deep orange
   logo: assets/logo.png
   favicon: assets/logo.png
   font:
-    text: Nunito
-    code: Source Code Pro
+    text: Hanken Grotesk
+    code: Space Mono
   features:
     - navigation.expand
     - navigation.top
@@ -95,6 +86,9 @@ markdown_extensions:
   - toc:
       permalink: true
       toc_depth: 2
+
+extra_css:
+  - assets/extra.css
 
 hooks:
   - hooks.py
