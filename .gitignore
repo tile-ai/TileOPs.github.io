@@ -2,3 +2,5 @@ site/
 __pycache__/
 .cache/
 TileOPs
+docs/benchmarks/*.md
+!docs/benchmarks/index.md

@@ -63,4 +63,5 @@ test_arg=()
 python scripts/gen_bench_pages.py \
   --bench-xml "$work/bench_results.xml" \
   ${test_arg[@]+"${test_arg[@]}"} \
+  --meta "$work/meta.json" \
   --commit "$bench_commit" --date "$bench_date" --gpu "$bench_gpu" --rendered "$rendered"

@@ -1,37 +1,48 @@
 #!/usr/bin/env python3
-"""Render the Benchmarks page from a nightly benchmark XML snapshot.
+"""Render the Benchmarks section from a nightly benchmark XML snapshot.
 
-What the page must answer, per op:
+Output is one overview page, one page explaining the numbers, five data pages
+grouped by op domain, and one page listing what the run could not measure.
+`hooks.py` puts them into the site nav in that order.
 
-  * How fast is it in absolute terms — FLOP/s and HBM GB/s.
-  * How much of the machine that is — compute utilisation and bandwidth
-    utilisation against the GPU profile, and which of the two is the limit.
-  * How that compares to the best other implementation available, reported
-    with the *same* metrics, never as a bare ratio.
+What a data row must answer, per op:
+
+  * How fast it is in absolute terms — FLOP/s and HBM bandwidth.
+  * How much of the machine that is, against the GPU profile, and which of the
+    two resources bounds the workload.
+  * How that compares to the best other implementation measured on the same
+    workload, reported with the *same* metrics rather than as a bare ratio.
   * Whether the numbers can be trusted — correctness status, sample spread,
-    and an explicit marker whenever an input to a metric was not recorded.
+    kernel count, and an explicit marker wherever an input was not recorded.
 
 Rules this renderer follows:
 
+  * The compared quantity is ``device_busy_ms``: the time the device spent
+    executing the call's kernels. A single-kernel call has no gap between
+    kernels by construction, so comparing spans would charge a multi-kernel
+    implementation for the host's launch latency and credit a fused one for
+    nothing it did. Gap and kernel count are reported separately, never folded
+    into the comparison.
   * Every baseline present in the data is shown. Baselines are tiered
     (library kernel / PyTorch native op / eager reference), never discarded:
-    a tag the tier table does not know is reported as unclassified, not
-    dropped.
+    a tag the tier table does not know is reported as unclassified.
   * Hardware ceilings come from ``src/tileops/perf/profiles/*.yaml``. With no
     profile for the benchmarked GPU, utilisation columns render blank rather
     than against guessed peaks.
-  * A metric whose input is missing renders as the empty marker, and the op
-    is listed under Data gaps. No metric is silently substituted.
+  * A metric whose input is missing renders as the empty marker and the op is
+    listed under Data gaps. No metric is silently substituted.
 
 Usage:
     python scripts/gen_bench_pages.py --bench-xml <xml> [--test-xml <xml>] \
-        --commit <sha> --date <YYYY-MM-DD> --gpu "NVIDIA H200"
+        [--meta <meta.json>] --commit <sha> --date <YYYY-MM-DD> --gpu "NVIDIA H200"
 """
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import statistics
+import sys
 import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
 
@@ -43,6 +54,7 @@ _NB = f"{_GH}/tree/nightly-bench"
 
 GREEN, YELLOW, RED, NA = "🟢", "🟡", "🔴", "—"
 EMPTY = "·"  # a metric whose input was not recorded
+NOISY_SPREAD = 25.0  # above this the median stops summarising the samples
 
 # --- Baseline tiers ---------------------------------------------------------
 # A baseline's tier decides how a comparison against it reads, not whether it
@@ -50,12 +62,6 @@ EMPTY = "·"  # a metric whose input was not recorded
 # newly added baseline gets classified deliberately.
 TIER_LIB, TIER_TORCH, TIER_REF = "lib", "torch", "ref"
 _TORCH_NATIVE = {"torch", "torch-autograd", "torch-dequantized-matmul"}
-TIER_LABEL = {
-    TIER_LIB: "tuned library kernel",
-    TIER_TORCH: "PyTorch native op",
-    TIER_REF: "eager reference composition",
-}
-# Tags whose tier is settled; anything else is reported as unclassified.
 _KNOWN_TAGS = _TORCH_NATIVE | {
     "fa3", "flashinfer", "flashinfer-bmm-fp8", "flashinfer-fp8-blockscale-sm90",
     "fla", "mamba", "vllm", "vllm-triton", "triton", "triton-tma", "deepgemm",
@@ -73,12 +79,7 @@ def tier_of(tag: str) -> str:
     return TIER_LIB
 
 
-# --- Op families -----------------------------------------------------------
-FAMILY_ORDER = [
-    "attention", "linear_attention", "scan", "normalization", "moe",
-    "linear_algebra", "reduction", "elementwise", "convolution", "pool",
-    "quantization", "positional", "fft", "mhc", "topk", "other",
-]
+# --- Op families and the pages they group into -----------------------------
 FAMILY_TITLE = {
     "attention": "Attention", "linear_attention": "Linear Attention / SSM",
     "scan": "Scan", "normalization": "Normalization", "moe": "Mixture of Experts",
@@ -87,6 +88,18 @@ FAMILY_TITLE = {
     "quantization": "Quantization", "positional": "Positional Encoding",
     "fft": "FFT", "mhc": "MHC", "topk": "Top-k", "other": "Other",
 }
+# (slug, page title, families in display order)
+DATA_PAGES = [
+    ("attention", "Attention", ["attention"]),
+    ("linear-attention", "Linear Attention & SSM", ["linear_attention", "scan"]),
+    ("gemm-moe", "GEMM, MoE & Quantization",
+     ["linear_algebra", "moe", "quantization"]),
+    ("elementwise-reduction", "Elementwise & Reduction",
+     ["elementwise", "reduction"]),
+    ("norm-conv-pool", "Norm, Conv, Pool & Other",
+     ["normalization", "convolution", "pool", "positional", "fft", "mhc",
+      "topk", "other"]),
+]
 _KEYWORD_FAMILY = [
     (("mamba", "deltanet", "gla", "linear_attn", "recurrence", "ssd", "ssm",
       "engram"), "linear_attention"),
@@ -120,12 +133,18 @@ def family_of(op: str, op_module: str | None) -> str:
     return "elementwise" if not mod or len(parts) <= 3 else "other"
 
 
+def page_of_family(fam: str) -> str:
+    for slug, _, fams in DATA_PAGES:
+        if fam in fams:
+            return slug
+    return DATA_PAGES[-1][0]
+
+
 # --- GPU profile -----------------------------------------------------------
 # Utilisation is reported against the *attainable* ceiling (theoretical peak x
 # measured calibration) because that is the number a kernel can actually reach;
-# both figures are printed in the page header.
+# both figures are printed on the overview page.
 _PROFILE_FILE = {"h200": ("nvidia h200",), "h20_3e": ("nvidia h20-3e", "h20")}
-# dtype token in a config name -> tensor_core section in the profile
 _DTYPE_PEAK_KEY = {"fp8": "fp8", "bfloat16": "bf16", "bf16": "bf16",
                    "float16": "fp16", "fp16": "fp16", "float32": "tf32"}
 _DTYPE_TOKENS = ("fp8", "bfloat16", "bf16", "float16", "fp16", "float32")
@@ -136,6 +155,8 @@ def load_gpu_profile(gpu: str) -> dict | None:
     try:
         import yaml
     except ImportError:
+        print("warning: pyyaml missing; utilisation columns will be blank",
+              file=sys.stderr)
         return None
     prof_dir = os.path.join(TILEOPS, "src", "tileops", "perf", "profiles")
     if not os.path.isdir(prof_dir):
@@ -148,8 +169,8 @@ def load_gpu_profile(gpu: str) -> dict | None:
         if not os.path.exists(path):
             continue
         with open(path, encoding="utf-8") as f:
-            raw = yaml.safe_load(f)
-        return _resolve_profile(raw)
+            return _resolve_profile(yaml.safe_load(f))
+    print(f"warning: no GPU profile matches {gpu!r}", file=sys.stderr)
     return None
 
 
@@ -167,14 +188,13 @@ def _resolve_profile(raw: dict) -> dict:
         cal = _num(section.get("calibration")) or 1.0
         return (theo, theo * cal if theo else None)
 
-    hbm = raw.get("hbm") or {}
     tf = {k: pair(v) for k, v in (raw.get("tensor_core") or {}).items()
           if isinstance(v, dict)}
-    return {"gpu": raw.get("gpu"), "bw": pair(hbm), "tf": tf}
+    return {"gpu": raw.get("gpu"), "bw": pair(raw.get("hbm") or {}), "tf": tf}
 
 
 def dtype_of(config_name: str) -> str | None:
-    """The dtype token a config name carries, if any."""
+    """The dtype token a workload name carries, if any."""
     n = config_name.lower()
     for tok in _DTYPE_TOKENS:
         if tok in n:
@@ -182,24 +202,52 @@ def dtype_of(config_name: str) -> str | None:
     return None
 
 
+class Machine:
+    """The ceilings a workload's utilisation is measured against."""
+
+    def __init__(self, profile: dict | None):
+        self.profile = profile
+
+    @property
+    def known(self) -> bool:
+        return bool(self.profile and self.profile["bw"][1])
+
+    def bw_peak(self) -> tuple[float | None, float | None]:
+        """Theoretical and attainable HBM bytes/s."""
+        return self.profile["bw"] if self.profile else (None, None)
+
+    def tf_peak(self, dtype: str | None) -> tuple[float | None, float | None]:
+        return self.tf_peak_by_key(_DTYPE_PEAK_KEY.get(dtype or ""))
+
+    def tf_peak_by_key(self, key: str | None) -> tuple[float | None, float | None]:
+        if not self.profile or not key:
+            return (None, None)
+        return self.profile["tf"].get(key) or (None, None)
+
+
 # --- XML parsing -----------------------------------------------------------
 # Property names are <tag>_<metric>. Parsing is generic over the metric suffix
 # so a metric added on the TileOPs side appears here without a code change.
+# Longer suffixes come first: device_busy_p10_ms must not match as latency_ms.
 _METRIC_SUFFIXES = (
-    "latency_p10_ms", "latency_p90_ms", "latency_ms", "bandwidth_tbs",
-    "tflops", "ratio", "n_samples", "flops", "bytes", "dtype", "timing",
-    "variant",
+    "device_busy_p10_ms", "device_busy_p90_ms", "device_busy_ms",
+    "latency_p10_ms", "latency_p90_ms", "latency_ms", "gap_ms",
+    "bandwidth_tbs", "tflops", "ratio", "n_kernels", "n_samples",
+    "flops", "bytes", "dtype", "timing", "variant",
 )
-_NUMERIC_METRICS = {"latency_ms", "latency_p10_ms", "latency_p90_ms", "tflops",
-                    "bandwidth_tbs", "ratio", "flops", "bytes", "n_samples"}
+_NUMERIC_METRICS = {
+    "device_busy_ms", "device_busy_p10_ms", "device_busy_p90_ms",
+    "latency_ms", "latency_p10_ms", "latency_p90_ms", "gap_ms", "tflops",
+    "bandwidth_tbs", "ratio", "flops", "bytes", "n_kernels", "n_samples",
+}
 # Legacy duplicates of the first baseline's tag-prefixed keys.
-_LEGACY = {"baseline_tag", "baseline_latency_ms", "baseline_tflops",
-           "baseline_ratio", "baseline_bandwidth_tbs"}
+_LEGACY = {"baseline_tag", "baseline_device_busy_ms", "baseline_latency_ms",
+           "baseline_tflops", "baseline_ratio", "baseline_bandwidth_tbs"}
 
 
 def parse_bench_xml(path: str) -> tuple[list[dict], list[dict], list[dict]]:
-    """Return (configs, failures, skips) from a benchmark JUnit XML."""
-    configs, failures, skips = [], [], []
+    """Return (workloads, failures, skips) from a benchmark JUnit XML."""
+    workloads, failures, skips = [], [], []
     for tc in ET.parse(path).iter("testcase"):
         props = {p.attrib["name"]: p.attrib.get("value", "")
                  for p in tc.iter("property")}
@@ -226,14 +274,14 @@ def parse_bench_xml(path: str) -> tuple[list[dict], list[dict], list[dict]]:
                     tag = key[: -len(suf) - 1]
                     impls[tag][suf] = _num(val) if suf in _NUMERIC_METRICS else val
                     break
-        configs.append({
+        workloads.append({
             "name": name,
             "config": name.split("[")[-1].rstrip("]") if "[" in name else name,
             "op": props["op"],
             "op_module": props.get("op_module"),
             "impls": dict(impls),
         })
-    return configs, failures, skips
+    return workloads, failures, skips
 
 
 def parse_test_xml(path: str) -> dict[str, dict]:
@@ -255,11 +303,12 @@ def parse_test_xml(path: str) -> dict[str, dict]:
             d["passed"] += 1
         err = _num(props.get("max_abs_err"))
         if err is not None:
-            d["max_abs_err"] = err if d["max_abs_err"] is None else max(d["max_abs_err"], err)
+            d["max_abs_err"] = err if d["max_abs_err"] is None else max(
+                d["max_abs_err"], err)
     return dict(ops)
 
 
-# --- Per-config metrics ----------------------------------------------------
+# --- Per-workload metrics --------------------------------------------------
 # A recorded 0.0 for tflops/bandwidth means the op reported no FLOPs or no
 # bytes for the workload; the derived metric is unavailable, not zero.
 
@@ -268,57 +317,46 @@ def _pos(x) -> float | None:
     return x if isinstance(x, (int, float)) and x > 0 else None
 
 
-class Machine:
-    """The ceilings a config's utilisation is measured against."""
+def _busy_of(impl: dict) -> float | None:
+    """The device-execution time of one implementation on one workload.
 
-    def __init__(self, profile: dict | None):
-        self.profile = profile
-
-    @property
-    def known(self) -> bool:
-        return bool(self.profile and self.profile["bw"][1])
-
-    def bw_peak(self) -> tuple[float | None, float | None]:
-        """Theoretical and attainable HBM bytes/s."""
-        return self.profile["bw"] if self.profile else (None, None)
-
-    def tf_peak(self, dtype: str | None) -> tuple[float | None, float | None]:
-        """Theoretical and attainable FLOP/s for a dtype token."""
-        return self.tf_peak_by_key(_DTYPE_PEAK_KEY.get(dtype or ""))
-
-    def tf_peak_by_key(self, key: str | None) -> tuple[float | None, float | None]:
-        """Theoretical and attainable FLOP/s for a profile tensor_core key."""
-        if not self.profile or not key:
-            return (None, None)
-        return self.profile["tf"].get(key) or (None, None)
+    Falls back to the span for a snapshot taken before the two were recorded
+    separately, where the only recorded quantity was the span.
+    """
+    return _pos(impl.get("device_busy_ms")) or _pos(impl.get("latency_ms"))
 
 
-def config_metrics(cfg: dict, mach: Machine) -> dict:
-    """Derive every displayed metric for one benchmarked config."""
-    tl = cfg["impls"].get("tileops", {})
-    lat = _pos(tl.get("latency_ms"))
+def workload_metrics(w: dict, mach: Machine) -> dict:
+    """Derive every displayed metric for one benchmarked workload."""
+    tl = w["impls"].get("tileops", {})
+    busy = _busy_of(tl)
+    span = _pos(tl.get("latency_ms"))
     tflops = _pos(tl.get("tflops"))
     bw = _pos(tl.get("bandwidth_tbs"))
-    dtype = tl.get("dtype") or dtype_of(cfg["config"])
+    dtype = tl.get("dtype") or dtype_of(w["config"])
 
-    # Prefer the recorded roofline inputs for arithmetic intensity; fall back to
-    # the ratio of the derived rates, which is algebraically the same quantity,
-    # for snapshots taken before the inputs were recorded.
+    # Prefer the recorded roofline inputs for arithmetic intensity; the ratio of
+    # the derived rates is algebraically the same quantity and covers snapshots
+    # taken before the inputs were recorded.
     flops, nbytes = _pos(tl.get("flops")), _pos(tl.get("bytes"))
     ai = (flops / nbytes) if (flops and nbytes) else (
         (tflops / bw) if (tflops and bw) else None)
 
     m = {
-        "latency_ms": lat, "tflops": tflops, "bw_tbs": bw, "dtype": dtype,
-        "flops": flops, "bytes": nbytes, "ai": ai,
-        "spread_pct": None, "n_samples": tl.get("n_samples"),
+        "busy_ms": busy, "span_ms": span, "tflops": tflops, "bw_tbs": bw,
+        "dtype": dtype, "flops": flops, "bytes": nbytes, "ai": ai,
+        "n_kernels": tl.get("n_kernels"), "n_samples": tl.get("n_samples"),
         "variant": tl.get("variant"),
+        "gap_pct": (100 * (span - busy) / span) if (span and busy and span >= busy)
+                   else None,
+        "spread_pct": None,
         "compute_util": None, "bw_util": None, "sol": None, "bound": None,
         "resident": False,
     }
-    p10, p90 = _pos(tl.get("latency_p10_ms")), _pos(tl.get("latency_p90_ms"))
-    if lat and p10 and p90:
-        m["spread_pct"] = (p90 - p10) / lat * 100
+    p10 = _pos(tl.get("device_busy_p10_ms")) or _pos(tl.get("latency_p10_ms"))
+    p90 = _pos(tl.get("device_busy_p90_ms")) or _pos(tl.get("latency_p90_ms"))
+    if busy and p10 and p90:
+        m["spread_pct"] = (p90 - p10) / busy * 100
 
     bw_theo, bw_att = mach.bw_peak()
     _, tf_att = mach.tf_peak(dtype)
@@ -331,51 +369,57 @@ def config_metrics(cfg: dict, mach: Machine) -> dict:
                                  (m["bw_util"], "memory")) if u is not None]
     if utils:
         m["sol"], m["bound"] = max(utils)
-    # Bound type is only meaningful when both ceilings were resolvable.
     if m["compute_util"] is None or m["bw_util"] is None:
-        m["bound"] = None
+        m["bound"] = None  # naming a bound needs both ceilings resolved
 
-    # Baselines: same workload, so bytes and FLOPs match TileOPs and the
-    # baseline's bandwidth follows from its latency.
+    # Baselines run the same workload, so its FLOP and byte counts apply to them
+    # too; their rates follow from their own device-execution time.
     rivals = {}
-    for tag, d in cfg["impls"].items():
+    for tag, d in w["impls"].items():
         if tag.startswith("tileops"):
             continue
-        b_lat = _pos(d.get("latency_ms"))
-        if not b_lat:
+        b_busy = _busy_of(d)
+        if not b_busy:
             continue
+        b_span = _pos(d.get("latency_ms"))
         b_bw = _pos(d.get("bandwidth_tbs"))
-        if b_bw is None and bw and lat:
-            b_bw = bw * lat / b_lat
+        if b_bw is None and bw and busy:
+            b_bw = bw * busy / b_busy
         b_tf = _pos(d.get("tflops"))
-        if b_tf is None and tflops and lat:
-            b_tf = tflops * lat / b_lat
+        if b_tf is None and tflops and busy:
+            b_tf = tflops * busy / b_busy
+        # The benchmark computes the ratio before rounding its times for the
+        # XML, so prefer it: a sub-microsecond kernel loses several percent to
+        # the write precision of the times alone.
+        computed = (b_busy / busy) if busy else None
+        recorded = _pos(d.get("ratio"))
         rivals[tag] = {
-            "tier": tier_of(tag), "latency_ms": b_lat, "tflops": b_tf,
-            "bw_tbs": b_bw,
-            "speedup": (b_lat / lat) if lat else None,
-            "bw_util": (b_bw * 1e12 / bw_att * 100) if (b_bw and bw_att) else None,
+            "tier": tier_of(tag), "busy_ms": b_busy, "span_ms": b_span,
+            "tflops": b_tf, "bw_tbs": b_bw,
+            "speedup": recorded or computed,
+            "computed_ratio": computed, "recorded_ratio": recorded,
+            "gap_pct": (100 * (b_span - b_busy) / b_span)
+                       if (b_span and b_span >= b_busy) else None,
         }
     m["rivals"] = rivals
     return m
 
 
-def best_rival(metrics: list[dict], tiers: tuple[str, ...]) -> tuple[str | None, float | None]:
-    """Fastest rival within `tiers` across an op's configs, and the median
-    speedup against it over the configs where it ran."""
-    per_cfg = []
+def best_rival(metrics: list[dict], tiers: tuple[str, ...]):
+    """Fastest rival within `tiers` across an op's workloads, and the median
+    speedup against that one rival."""
+    per_workload = []
     for m in metrics:
         cands = {t: r for t, r in m["rivals"].items()
                  if r["tier"] in tiers and r["speedup"]}
         if cands:
-            tag = min(cands, key=lambda t: cands[t]["latency_ms"])
-            per_cfg.append((tag, cands[tag]["speedup"]))
-    if not per_cfg:
+            tag = min(cands, key=lambda t: cands[t]["busy_ms"])
+            per_workload.append((tag, cands[tag]["speedup"]))
+    if not per_workload:
         return None, None
-    tag = Counter(t for t, _ in per_cfg).most_common(1)[0][0]
-    # Report the speedup against the named rival only, never a mixed median.
-    ratios = [s for t, s in per_cfg if t == tag]
-    return tag, statistics.median(ratios)
+    tag = Counter(t for t, _ in per_workload).most_common(1)[0][0]
+    # The speedup belongs to the named rival only, never a mixed median.
+    return tag, statistics.median([s for t, s in per_workload if t == tag])
 
 
 def _med(xs):
@@ -384,16 +428,18 @@ def _med(xs):
 
 
 def op_summary(metrics: list[dict]) -> dict:
-    """Aggregate an op's configs into one row. Medians across configs; the
-    worst case is reported next to the speedup so a uniform win is
-    distinguishable from an average of a win and a loss."""
+    """Aggregate an op's workloads into one row. Medians across workloads; the
+    worst case sits next to the speedup so a uniform win is distinguishable
+    from an average of a win and a loss."""
     s = {
-        "configs": len(metrics),
+        "workloads": len(metrics),
         "tflops": _med([m["tflops"] for m in metrics]),
         "bw_tbs": _med([m["bw_tbs"] for m in metrics]),
         "compute_util": _med([m["compute_util"] for m in metrics]),
         "bw_util": _med([m["bw_util"] for m in metrics]),
         "sol": _med([m["sol"] for m in metrics]),
+        "n_kernels": _med([m["n_kernels"] for m in metrics]),
+        "gap_pct": _med([m["gap_pct"] for m in metrics]),
         "resident": any(m["resident"] for m in metrics),
     }
     bounds = Counter(m["bound"] for m in metrics if m["bound"])
@@ -409,16 +455,16 @@ def op_summary(metrics: list[dict]) -> dict:
         rs = [m["rivals"][tag] for m in metrics if tag in m["rivals"]]
         s["rival_tflops"] = _med([r["tflops"] for r in rs])
         s["rival_bw_tbs"] = _med([r["bw_tbs"] for r in rs])
+        s["rival_gap_pct"] = _med([r["gap_pct"] for r in rs])
         s["worst_speedup"] = min([r["speedup"] for r in rs if r["speedup"]],
                                  default=None)
         s["rival_tier"] = tier_of(tag)
     else:
-        s.update(rival_tflops=None, rival_bw_tbs=None, worst_speedup=None,
-                 rival_tier=None)
+        s.update(rival_tflops=None, rival_bw_tbs=None, rival_gap_pct=None,
+                 worst_speedup=None, rival_tier=None)
 
-    # Status: judged against a real alternative where one was measured;
-    # against the attainable ceiling otherwise; undetermined when neither
-    # input exists.
+    # Status: judged against a real alternative where one was measured; against
+    # the attainable ceiling otherwise; undetermined when neither input exists.
     if ratio is not None and not ref_only:
         s["status"] = GREEN if ratio >= 0.95 else YELLOW if ratio >= 0.80 else RED
         s["basis"] = "baseline"
@@ -451,7 +497,7 @@ def _f(x, spec=".1f", suffix="") -> str:
 
 
 def _sig(x) -> str:
-    """Three significant digits. Throughputs on this page span six orders of
+    """Three significant digits. Throughputs on these pages span six orders of
     magnitude, so a fixed number of decimals would print small ones as zero."""
     if x is None:
         return EMPTY
@@ -494,15 +540,6 @@ def _op_cell(op: str, module: str | None, ref: str) -> str:
     return f"[{_md(op.removesuffix('Op'))}]({op_link(op, module, ref)})"
 
 
-# --- Page sections ---------------------------------------------------------
-
-SUMMARY_HEADER = (
-    "| Op | Test | Workloads | Bound | TFLOP/s | of peak | HBM TB/s | of peak "
-    "| SOL | Best alternative | Speedup | worst | its TFLOP/s | its TB/s |",
-    "| --- | :-: | -: | :-: | -: | -: | -: | -: | -: | --- | -: | -: | -: | -: |",
-)
-
-
 def _bound_cell(bound: str | None, resident: bool) -> str:
     cell = bound or EMPTY
     return cell + " ᶜ" if resident else cell
@@ -515,9 +552,21 @@ def _rival_cell(tag: str | None, tier: str | None) -> str:
     return f"`{_md_code(tag)}`{badge}"
 
 
+# --- Data tables -----------------------------------------------------------
+
+SUMMARY_HEADER = (
+    "| Op | Test | Workloads | Kernels | Bound | TFLOP/s | of peak "
+    "| HBM TB/s | of peak | SOL | Best alternative | Speedup | worst "
+    "| its TFLOP/s | its TB/s |",
+    "| --- | :-: | -: | -: | :-: | -: | -: | -: | -: | -: | --- | -: | -: "
+    "| -: | -: |",
+)
+
+
 def summary_row(op: str, module: str | None, s: dict, tmark: str, ref: str) -> str:
     return (
-        f"| {s['status']} {_op_cell(op, module, ref)} | {tmark} | {s['configs']} "
+        f"| {s['status']} {_op_cell(op, module, ref)} | {tmark} "
+        f"| {s['workloads']} | {_f(s['n_kernels'], '.0f')} "
         f"| {_bound_cell(s['bound'], s['resident'])} "
         f"| {_sig(s['tflops'])} | {_pct(s['compute_util'])} "
         f"| {_sig(s['bw_tbs'])} | {_pct(s['bw_util'])} | {_pct(s['sol'])} "
@@ -528,279 +577,408 @@ def summary_row(op: str, module: str | None, s: dict, tmark: str, ref: str) -> s
 
 
 DETAIL_HEADER = (
-    "    | Op | Config | dtype | Latency ms | spread | TFLOP/s | HBM TB/s "
-    "| AI | SOL | Bound | Alternatives (latency ms · speedup) |",
-    "    | --- | --- | :-: | -: | -: | -: | -: | -: | -: | :-: | --- |",
+    "| Op | Workload | dtype | Busy ms | spread | Kernels | gap | TFLOP/s "
+    "| HBM TB/s | AI | SOL | Bound | Alternatives (busy ms · speedup · gap) |",
+    "| --- | --- | :-: | -: | -: | -: | -: | -: | -: | -: | -: | :-: | --- |",
 )
-NOISY_SPREAD = 25.0  # above this the median is worth distrusting
 
 
-def detail_row(op: str, cfg: dict, m: dict) -> str:
+def detail_row(op: str, w: dict, m: dict) -> str:
     rivals = " · ".join(
-        f"`{_md_code(t)}` {r['latency_ms']:.4f} ({_speed(r['speedup'])})"
-        for t, r in sorted(m["rivals"].items(), key=lambda kv: kv[1]["latency_ms"])
+        f"`{_md_code(t)}` {r['busy_ms']:.4f} ({_speed(r['speedup'])}"
+        + (f", gap {_pct(r['gap_pct'])}" if r["gap_pct"] else "") + ")"
+        for t, r in sorted(m["rivals"].items(), key=lambda kv: kv[1]["busy_ms"])
     ) or EMPTY
     spread = _pct(m["spread_pct"])
     if m["spread_pct"] is not None and m["spread_pct"] > NOISY_SPREAD:
         spread += " ⚠"
     return (
-        f"    | {_md(op.removesuffix('Op'))} | `{_md_code(cfg['config'])}` "
-        f"| {m['dtype'] or EMPTY} | {_f(m['latency_ms'], '.4f')} "
-        f"| {spread} | {_sig(m['tflops'])} | {_sig(m['bw_tbs'])} "
+        f"| {_md(op.removesuffix('Op'))} | `{_md_code(w['config'])}` "
+        f"| {m['dtype'] or EMPTY} | {_f(m['busy_ms'], '.4f')} | {spread} "
+        f"| {_f(m['n_kernels'], '.0f')} | {_pct(m['gap_pct'])} "
+        f"| {_sig(m['tflops'])} | {_sig(m['bw_tbs'])} "
         f"| {_f(m['ai'], '.0f')} | {_pct(m['sol'])} "
         f"| {_bound_cell(m['bound'], m['resident'])} | {rivals} |"
     )
 
 
-def header_block(args, mach: Machine, n_ops: int, n_fam: int, n_cfg: int,
-                 timing: str | None) -> list[str]:
+# --- Pages -----------------------------------------------------------------
+
+# Environment keys in the order the overview table shows them; anything else
+# recorded in meta.json is appended so a newly published fact is never dropped.
+ENV_ORDER = ["image", "digest", "gpu", "driver", "cuda", "torch", "tilelang",
+             "flashinfer", "flash-attn", "fa3", "vllm", "triton", "mamba-ssm",
+             "deep_gemm", "fla", "timer", "warmup_ms", "repeat_ms"]
+
+
+def env_block(meta: dict, timing: str | None) -> list[str]:
+    """The stack the numbers were produced on, from the published meta.json."""
+    env = dict(meta.get("environment") or {})
+    if timing and "timer" not in env:
+        env["timer"] = timing
+    lines = ["## Environment", ""]
+    if not env:
+        return lines + [
+            '!!! warning "The run did not publish its environment"', "",
+            "    The snapshot carries no image, driver, CUDA, torch or library "
+            "versions, so a number on these pages cannot be tied to the stack "
+            "that produced it. The nightly's publish step fills this in "
+            f"through [`meta.json`]({_NB}).", "",
+        ]
+    keys = [k for k in ENV_ORDER if k in env] + [k for k in env if k not in ENV_ORDER]
+    lines += ["| | |", "| --- | --- |"]
+    for k in keys:
+        lines.append(f"| {_md(k)} | `{_md_code(env[k])}` |")
+    missing = [k for k in ("image", "digest", "driver", "cuda", "torch",
+                           "tilelang") if k not in env]
+    if missing:
+        lines += ["", "Not published by this run: "
+                  + ", ".join(f"`{k}`" for k in missing) + "."]
+    return lines + [""]
+
+
+def method_block(meta: dict) -> list[str]:
+    """How the numbers were taken. Fixed policy of the benchmark layer."""
+    env = meta.get("environment") or {}
+    warm = env.get("warmup_ms")
+    rep = env.get("repeat_ms")
+    budget = (f"{warm} ms of warmup and {rep} ms of measurement per implementation"
+              if warm and rep else
+              "a fixed warmup and measurement time budget per implementation")
+    return [
+        "## Method", "",
+        "Every implementation of an op runs in one process on the same inputs, "
+        f"with {budget}, and is timed forward then reversed so drift across the "
+        "case does not land on whichever ran last. L2 is cleared between "
+        "iterations. Compilation and workspace setup are excluded. Timing is "
+        "CUPTI, fail-closed: a run that cannot collect device activity fails "
+        "rather than falling back to a different clock.",
+        "",
+        "The compared quantity is **device-busy time** — the union of the "
+        "intervals the device spent executing that call's kernels. It excludes "
+        "the gaps between kernels within one call, which the records cannot "
+        "separate into the implementation's own dependencies and the host being "
+        "late with the next launch. A single-kernel call has no such gap by "
+        "construction, so comparing wall-clock spans instead would charge a "
+        "multi-kernel implementation for launch latency it does not own. Gap "
+        "and kernel count are reported per workload as their own columns.",
+        "",
+    ]
+
+
+def ceilings_block(mach: Machine, gpu: str) -> list[str]:
     bw_theo, bw_att = mach.bw_peak()
+    if not mach.known:
+        return [
+            "## Hardware ceilings", "",
+            f'!!! warning "No GPU profile for {gpu}"', "",
+            "    Utilisation, SOL and bound columns are blank: this renderer "
+            "does not guess peaks. Add a profile under "
+            f"[`src/tileops/perf/profiles/`]({_GH}/tree/main/src/tileops/perf/profiles) "
+            "to fill them.", "",
+        ]
     lines = [
+        "## Hardware ceilings", "",
+        "Utilisation is reported against the **attainable** ceiling — the "
+        "spec-sheet peak scaled by what "
+        f"[`benchmarks/hardware/`]({_GH}/tree/main/benchmarks/hardware) measures "
+        "on this GPU. 100% means saturating the machine as microbenchmarks find "
+        "it, not as the datasheet advertises it.", "",
+        "| Resource | Spec-sheet peak | Attainable | Ratio |",
+        "| --- | -: | -: | -: |",
+        f"| HBM bandwidth | {bw_theo / 1e12:.2f} TB/s | {bw_att / 1e12:.2f} TB/s "
+        f"| {bw_att / bw_theo:.0%} |",
+    ]
+    for key in ("fp8", "fp16", "bf16", "tf32"):
+        theo, att = mach.tf_peak_by_key(key)
+        if theo:
+            lines.append(f"| Tensor core {key} | {theo / 1e12:.0f} TFLOP/s "
+                         f"| {att / 1e12:.0f} TFLOP/s | {att / theo:.0%} |")
+    lines += ["", "Source: [`src/tileops/perf/profiles/`]"
+              f"({_GH}/tree/main/src/tileops/perf/profiles)", ""]
+    return lines
+
+
+def index_page(args, meta: dict, mach: Machine, rows: list[tuple],
+               by_page: dict, spreads: list[float], timing: str | None,
+               n_workloads: int) -> str:
+    run_id = meta.get("run_id")
+    head = [
         "# Benchmarks", "",
         '!!! info "Nightly snapshot"', "",
         f"    **GPU** {args.gpu} · **commit** "
         f"[`{args.commit[:12]}`]({_GH}/commit/{args.commit}) · "
-        f"**run date** {args.date} · **{n_ops} ops** across {n_fam} families, "
-        f"{n_cfg} workloads",
+        f"**run date** {args.date} · **{len(rows)} ops**, {n_workloads} workloads",
     ]
-    if timing:
-        lines.append(f"    · timing: {timing}")
+    if run_id:
+        head.append(f"    · [nightly run]({_GH}/actions/runs/{run_id})")
     if args.rendered:
-        lines += ["", f"    Page rendered {args.rendered} from the "
-                  f"[`nightly-bench`]({_NB}) snapshot."]
-    lines += ["", "## Hardware ceilings", ""]
-    if mach.known:
-        lines += [
-            "Utilisation is reported against the **attainable** ceiling — the "
-            "spec-sheet peak scaled by what "
-            f"[`benchmarks/hardware/`]({_GH}/tree/main/benchmarks/hardware) "
-            "measures on this GPU. Reaching 100% means saturating the machine "
-            "as microbenchmarks find it, not as the datasheet advertises it.",
-            "",
-            "| Resource | Spec-sheet peak | Attainable | Ratio |",
-            "| --- | -: | -: | -: |",
-            f"| HBM bandwidth | {bw_theo / 1e12:.2f} TB/s "
-            f"| {bw_att / 1e12:.2f} TB/s | {bw_att / bw_theo:.0%} |",
-        ]
-        for key in ("fp8", "fp16", "bf16", "tf32"):
-            theo, att = mach.tf_peak_by_key(key)
-            if theo:
-                lines.append(f"| Tensor core {key} | {theo / 1e12:.0f} TFLOP/s "
-                             f"| {att / 1e12:.0f} TFLOP/s | {att / theo:.0%} |")
-        lines += ["", "Source: "
-                  f"[`src/tileops/perf/profiles/`]({_GH}/tree/main/src/tileops/perf/profiles)"]
-    else:
-        lines += [
-            f"!!! warning \"No GPU profile for {args.gpu}\"", "",
-            "    Utilisation, SOL and limit columns are blank: this renderer "
-            "does not guess peaks. Add a profile under "
-            f"[`src/tileops/perf/profiles/`]({_GH}/tree/main/src/tileops/perf/profiles) "
-            "to fill them.",
-        ]
-    return lines
+        head += ["", f"    Page rendered {args.rendered} from the "
+                 f"[`nightly-bench`]({_NB}) snapshot."]
+    head.append("")
 
+    lines = head + env_block(meta, timing) + method_block(meta) \
+        + ceilings_block(mach, args.gpu)
 
-def legend_block() -> list[str]:
-    return [
-        "", "## How to read a row", "",
-        "| Column | Meaning |",
-        "| --- | --- |",
-        "| **TFLOP/s** | FLOPs the workload requires ÷ measured latency. "
-        "The FLOP count is the manifest `roofline` formula, not a "
-        "hardware counter. |",
-        "| **HBM TB/s** | Bytes the workload must move ÷ measured latency, "
-        "from the same formula. |",
-        "| **of peak** | The two utilisations: achieved ÷ attainable ceiling "
-        "for that dtype / for HBM. |",
-        "| **SOL** | Speed of light: the larger of the two utilisations — how "
-        "close the kernel is to the resource that limits it. This is the one "
-        "number to read if you read one. |",
-        "| **Bound** | Which resource that is, at this workload's arithmetic "
-        "intensity. `ᶜ` marks a workload whose "
-        "achieved bandwidth exceeds the HBM peak, i.e. it ran out of cache, "
-        "so the HBM ceiling understates its headroom. |",
-        "| **Best alternative** | The fastest other implementation measured on "
-        "the same workload. Reported with its own TFLOP/s and TB/s so it is "
-        "comparable line by line, never as a bare ratio. Tier: unlabelled = "
-        f"tuned library kernel, _{TIER_TORCH}_ = PyTorch native op, "
-        f"_{TIER_REF}_ = eager reference composition (a weak bar — beating it "
-        "by 10× is expected, not news). |",
-        "| **Speedup / worst** | Median and worst-case alternative latency ÷ "
-        "TileOPs latency, across the op's workloads. >1 means TileOPs is "
-        "faster. A high median with a low worst means one shape regressed. |",
-        "| **Test** | Correctness: ✅ passed · ❌ failed · ⏭️ all skipped · "
-        f"`{EMPTY}` no test matched this op. |",
-        "| **spread** | (p90 − p10) ÷ median latency over the timed samples — "
-        f"noise around that measurement. `⚠` above {NOISY_SPREAD:.0f}%, where "
-        "the median stops being a reliable summary. |",
-        "| **AI** | Arithmetic intensity, FLOPs ÷ bytes. |",
-        "",
-        "**Status dot** on the op name is judged against the best "
-        f"non-reference alternative where one was measured ({GREEN} ≥0.95× · "
-        f"{YELLOW} 0.80–0.95× · {RED} <0.80×), otherwise against SOL "
-        f"({GREEN} ≥70% · {YELLOW} 40–70% · {RED} <40%), otherwise "
-        f"`{NA}`.",
-        "",
-        f"A `{EMPTY}` cell means an input to that metric was not recorded — "
-        "see [Data gaps](#data-gaps). Aggregate rows are medians over the "
-        "op's workloads; per-workload numbers are in each family's detail "
-        "table.",
-        "",
-    ]
-
-
-def rollup_block(rows: list[tuple], spreads: list[float]) -> list[str]:
-    """How the 196 ops distribute over status and over judging basis."""
+    # Status roll-up.
     by = Counter((s["status"], s["basis"]) for _, _, s, _, _ in rows)
-    lines = ["", "## Where the library stands", "",
-             "| | Judged against an alternative | Judged against the ceiling "
-             "| Total |", "| --- | -: | -: | -: |"]
-    labels = [(GREEN, f"{GREEN} at or ahead / ≥70% of SOL"),
-              (YELLOW, f"{YELLOW} 0.80–0.95× / 40–70% of SOL"),
-              (RED, f"{RED} below 0.80× / <40% of SOL"),
-              (NA, f"{NA} no alternative and no ceiling resolved")]
-    for status, label in labels:
+    lines += ["## Where the library stands", "",
+              "| | Judged against an alternative | Judged against the ceiling "
+              "| Total |", "| --- | -: | -: | -: |"]
+    for status, label in ((GREEN, f"{GREEN} at or ahead / ≥70% of SOL"),
+                          (YELLOW, f"{YELLOW} 0.80–0.95× / 40–70% of SOL"),
+                          (RED, f"{RED} below 0.80× / <40% of SOL"),
+                          (NA, f"{NA} no alternative and no ceiling resolved")):
         b, c = by[(status, "baseline")], by[(status, "sol")]
         n = b + c + by[(status, "none")]
         if n:
             lines.append(f"| {label} | {b or EMPTY} | {c or EMPTY} | {n} |")
     n_base = sum(v for (_, basis), v in by.items() if basis == "baseline")
-    lines += ["", f"{n_base} of {len(rows)} ops have a non-reference "
-              "alternative measured on the identical workload; the rest are "
-              "judged against the hardware ceiling only, which is a weaker "
-              "claim.", ""]
+    lines += ["", f"{n_base} of {len(rows)} ops have a non-reference alternative "
+              "measured on the identical workload; the rest are judged against "
+              "the hardware ceiling only, which is a weaker claim. "
+              "[How to read a row](reading.md)", ""]
     if spreads:
         noisy = sum(1 for x in spreads if x > NOISY_SPREAD)
         lines += [f"Measurement noise: median p10→p90 spread "
-                  f"{statistics.median(spreads):.1f}% of latency; "
+                  f"{statistics.median(spreads):.1f}% of device-busy time; "
                   f"{noisy} of {len(spreads)} workloads exceed "
                   f"{NOISY_SPREAD:.0f}% and carry `⚠`.", ""]
-    return lines
+
+    # Entry table into the data pages.
+    lines += ["## Data", "",
+              "| Page | Ops | Workloads | median SOL | " + GREEN + " | "
+              + YELLOW + " | " + RED + " | " + NA + " |",
+              "| --- | -: | -: | -: | -: | -: | -: | -: |"]
+    for slug, title, _ in DATA_PAGES:
+        page_rows = by_page.get(slug, [])
+        if not page_rows:
+            continue
+        st = Counter(s["status"] for _, _, s, _, _ in page_rows)
+        sols = [s["sol"] for _, _, s, _, _ in page_rows if s["sol"] is not None]
+        n_w = sum(s["workloads"] for _, _, s, _, _ in page_rows)
+        lines.append(
+            f"| [{title}]({slug}.md) | {len(page_rows)} | {n_w} "
+            f"| {_pct(statistics.median(sols)) if sols else EMPTY} "
+            f"| {st[GREEN] or EMPTY} | {st[YELLOW] or EMPTY} "
+            f"| {st[RED] or EMPTY} | {st[NA] or EMPTY} |")
+    lines += ["", "[What this run could not measure](gaps.md)", ""]
+    return "\n".join(lines) + "\n"
 
 
-def _rank_table(title: str, subset: list[tuple], note: str) -> list[str]:
-    out = [f"### {title}", "", note, "",
-           "| Op | Alternative | Speedup | worst | TileOPs TFLOP/s "
-           "| its TFLOP/s | TileOPs TB/s | its TB/s | SOL |",
-           "| --- | --- | -: | -: | -: | -: | -: | -: | -: |"]
-    for op, module, s, _, ref in subset:
-        out.append(
-            f"| {s['status']} {_op_cell(op, module, ref)} "
-            f"| {_rival_cell(s['rival'], s['rival_tier'])} "
-            f"| {_speed(s['speedup'])} | {_speed(s['worst_speedup'])} "
-            f"| {_sig(s['tflops'])} | {_sig(s['rival_tflops'])} "
-            f"| {_sig(s['bw_tbs'])} | {_sig(s['rival_bw_tbs'])} "
-            f"| {_pct(s['sol'])} |")
-    out.append("")
-    return out
+def reading_page() -> str:
+    lines = [
+        "# How to read these numbers", "",
+        "Every data page carries two tables per op family: one row per op, then "
+        "one row per workload. Aggregate rows are medians over the op's "
+        "workloads.", "",
+        "## Columns", "",
+        "| Column | Meaning |",
+        "| --- | --- |",
+        "| **Busy ms** | Device-busy time: the union of the intervals the "
+        "device spent executing that call's kernels. This is the quantity every "
+        "comparison on these pages uses. |",
+        "| **gap** | Share of the call's wall-clock span in which none of its "
+        "kernels was executing. Only a multi-kernel call can have one; it mixes "
+        "the implementation's own dependencies with the host being late, so it "
+        "is reported, not compared. |",
+        "| **Kernels** | Kernels the call launched. One fused kernel has no gap "
+        "by construction; more kernels means more exposure to launch latency "
+        "when the host cannot run ahead. |",
+        "| **TFLOP/s** | FLOPs the workload requires ÷ device-busy time. The "
+        "FLOP count is the manifest `roofline` formula, not a hardware "
+        "counter. |",
+        "| **HBM TB/s** | Bytes the workload must move ÷ device-busy time, from "
+        "the same formula. |",
+        "| **of peak** | The two utilisations: achieved ÷ attainable ceiling for "
+        "that dtype, and ÷ attainable HBM bandwidth. |",
+        "| **SOL** | Speed of light: the larger of the two utilisations — how "
+        "close the kernel is to the resource that bounds it. One number to read "
+        "if you read one. |",
+        "| **Bound** | Which resource that is, at this workload's arithmetic "
+        "intensity. `ᶜ` marks a workload whose achieved bandwidth exceeds the "
+        "HBM peak, i.e. it ran out of cache, so the HBM ceiling understates its "
+        "headroom. |",
+        "| **Best alternative** | The fastest other implementation measured on "
+        "the same workload, with its own TFLOP/s and bandwidth beside it. Tier: "
+        f"unlabelled = tuned library kernel, _{TIER_TORCH}_ = PyTorch native op, "
+        f"_{TIER_REF}_ = eager reference composition (a weak bar — beating it by "
+        "10× is expected, not news). |",
+        "| **Speedup / worst** | Median and worst-case alternative device-busy "
+        "time ÷ TileOPs device-busy time, across the op's workloads. >1 means "
+        "TileOPs is faster. A high median with a low worst means one shape "
+        "regressed. |",
+        "| **Test** | Correctness in the same nightly: ✅ passed · ❌ failed · "
+        f"⏭️ all skipped · `{EMPTY}` no test matched this op. |",
+        "| **spread** | (p90 − p10) ÷ median device-busy time over the timed "
+        f"samples. `⚠` above {NOISY_SPREAD:.0f}%, where the median stops being a "
+        "reliable summary. |",
+        "| **AI** | Arithmetic intensity, FLOPs ÷ bytes. |",
+        "",
+        "## Status", "",
+        "The dot on an op name is judged against the best non-reference "
+        f"alternative where one was measured ({GREEN} ≥0.95× · {YELLOW} "
+        f"0.80–0.95× · {RED} <0.80×), otherwise against SOL ({GREEN} ≥70% · "
+        f"{YELLOW} 40–70% · {RED} <40%), otherwise `{NA}`.",
+        "",
+        "A comparison against an alternative is the stronger claim: the ceiling "
+        "says how much of the machine a kernel uses, not whether someone else's "
+        "kernel does the same work faster.",
+        "",
+        "## Empty cells", "",
+        f"`{EMPTY}` means an input to that metric was not recorded, never that "
+        "the value is zero. Every case is counted on the "
+        "[Data gaps](gaps.md) page.",
+        "",
+        "## Why device-busy time", "",
+        "The wall-clock span of a call includes the gaps between its kernels. "
+        "Those gaps are dominated by how fast the host issues the next launch, "
+        "which is a property of the benchmark loop rather than of the kernel: "
+        "measured on this suite they are a roughly constant per-call cost, so "
+        "the same implementation appears to gain or lose against a rival purely "
+        "with problem size. A call that launches one fused kernel has no gap at "
+        "all. Comparing spans therefore rewards fusion twice and penalises "
+        "multi-kernel implementations for the host. Device-busy time excludes "
+        "the gaps on both sides; the gap and kernel-count columns keep the "
+        "launch structure visible on its own.",
+        "",
+    ]
+    return "\n".join(lines) + "\n"
 
 
-def leaderboard_block(rows: list[tuple], k: int = 15) -> list[str]:
-    """The two lists worth acting on: where an alternative is faster, and
-    where TileOPs beats a tuned library kernel."""
-    judged = [r for r in rows if r[2]["basis"] == "baseline"]
-    if not judged:
-        return []
-    behind = sorted((r for r in judged if r[2]["speedup"] < 0.95),
-                    key=lambda r: r[2]["speedup"])
-    ahead_lib = sorted((r for r in judged if r[2]["rival_tier"] == TIER_LIB
-                        and r[2]["speedup"] >= 1.0),
-                       key=lambda r: -r[2]["speedup"])
-    lines = ["", "## Two lists worth reading", ""]
-    if behind:
-        lines += _rank_table(
-            f"Behind an alternative ({len(behind)} ops, worst {min(k, len(behind))})",
-            behind[:k],
-            "Sorted by median speedup. A `worst` far below the median means "
-            "one shape carries the loss.")
-    if ahead_lib:
-        lines += _rank_table(
-            f"Ahead of a tuned library kernel ({len(ahead_lib)} ops, "
-            f"top {min(k, len(ahead_lib))})",
-            ahead_lib[:k],
-            "Restricted to library-kernel alternatives; a win over eager "
-            "PyTorch is not listed here.")
-    return lines
+def data_page(title: str, fams: list[str], rows_by_fam: dict,
+              metrics_by_op: dict, workloads_of: dict, ref: str) -> str:
+    rank = {GREEN: 0, YELLOW: 1, RED: 2, NA: 3}
+    lines = [f"# {title}", "",
+             "One row per op, then every workload behind it. Column meanings "
+             "are on [How to read these numbers](reading.md).", ""]
+    for fam in fams:
+        rows = rows_by_fam.get(fam)
+        if not rows:
+            continue
+        rows = sorted(rows, key=lambda r: (rank.get(r[2]["status"], 9), r[0]))
+        n_w = sum(s["workloads"] for _, _, s, _, _ in rows)
+        lines += [f"## {FAMILY_TITLE.get(fam, fam)} "
+                  f"<small>({len(rows)} ops, {n_w} workloads)</small>", "",
+                  *SUMMARY_HEADER]
+        for op, module, s, tmark, _ in rows:
+            lines.append(summary_row(op, module, s, tmark, ref))
+        lines += ["", f"### {FAMILY_TITLE.get(fam, fam)} — per workload", "",
+                  *DETAIL_HEADER]
+        for op, *_ in rows:
+            for w, m in sorted(zip(workloads_of[op], metrics_by_op[op]),
+                               key=lambda z: z[0]["config"]):
+                lines.append(detail_row(op, w, m))
+        lines.append("")
+    return "\n".join(lines) + "\n"
 
 
-def gaps_block(rows: list[tuple], metrics_by_op: dict[str, list[dict]],
-               unclassified: list[str], failures: list[dict],
-               skips: list[dict]) -> list[str]:
-    """Every reason a cell on this page is empty."""
-    # An op counts as missing a quantity when any of its workloads lacks it:
-    # the median hides a gap that the per-workload table shows.
-    no_flops = sorted(op for op, ms in metrics_by_op.items()
-                      if any(m["tflops"] is None for m in ms))
-    no_bytes = sorted(op for op, ms in metrics_by_op.items()
-                      if any(m["bw_tbs"] is None for m in ms))
+ROADMAP = [
+    ("Baseline kernel count", "kernels each alternative launched",
+     "would put the fused-vs-multi-kernel difference next to the speedup "
+     "instead of only on the TileOPs side",
+     "the benchmark records `n_kernels` for its own entry only"),
+    ("Achieved DRAM traffic", "measured bytes moved, vs the formula's",
+     "would separate a kernel that moves more bytes than it must from one that "
+     "is genuinely bandwidth-bound", "CUPTI metric collection in the run"),
+    ("L2 hit rate", "share of traffic served by cache",
+     "would replace the `ᶜ` marker with a number and give cache-resident "
+     "workloads a real ceiling", "CUPTI metric collection"),
+    ("Achieved occupancy", "resident warps ÷ maximum",
+     "would explain a low SOL that neither utilisation accounts for",
+     "CUPTI metric collection"),
+    ("Tensor core utilisation", "pipe-active cycles ÷ elapsed",
+     "would show whether a compute-bound kernel is limited by the MMA pipe or "
+     "by everything around it", "CUPTI metric collection"),
+    ("Energy per workload", "joules per call",
+     "would rank ops by efficiency rather than time alone",
+     "NVML power sampling around the timed region"),
+    ("Numerical error per workload", "worst error against a high-precision "
+     "reference", "would put accuracy next to speed, so a fast kernel that lost "
+     "precision is visible here",
+     "error recorded in the benchmark, not only in tests"),
+]
+
+
+def gaps_page(rows: list[tuple], metrics_by_op: dict, unclassified: list[str],
+              failures: list[dict], skips: list[dict],
+              ratio_drift: list[tuple]) -> str:
+    def ops_where(pred):
+        return sorted(op for op, ms in metrics_by_op.items() if any(pred(m) for m in ms))
+
+    def n_workloads(pred):
+        return sum(1 for ms in metrics_by_op.values() for m in ms if pred(m))
+
+    no_flops = ops_where(lambda m: m["tflops"] is None)
+    no_bytes = ops_where(lambda m: m["bw_tbs"] is None)
+    no_ceiling = ops_where(lambda m: m["compute_util"] is None
+                           and m["tflops"] is not None)
     no_rival = sorted(op for op, _, s, _, _ in rows if s["rival"] is None)
     ref_only = sorted(op for op, _, s, _, _ in rows if s["rival_ref_only"])
-    no_dtype = sorted(op for op, ms in metrics_by_op.items()
-                      if any(m["compute_util"] is None and m["tflops"] is not None
-                             for m in ms))
     no_test = sorted(op for op, _, _, tmark, _ in rows if tmark == EMPTY)
-    n_wl = {"flops": sum(1 for ms in metrics_by_op.values() for m in ms
-                         if m["tflops"] is None),
-            "bytes": sum(1 for ms in metrics_by_op.values() for m in ms
-                         if m["bw_tbs"] is None),
-            "dtype": sum(1 for ms in metrics_by_op.values() for m in ms
-                         if m["compute_util"] is None and m["tflops"] is not None)}
 
-    lines = ["", "## Data gaps", "",
-             "What is missing from this run, and what fills it.", "",
-             "| Gap | Ops | Workloads | Effect on this page | Fix |",
+    lines = ["# Data gaps", "",
+             "Every reason a cell on the data pages is empty, and what fills "
+             "it.", "",
+             "| Gap | Ops | Workloads | Effect | Fix |",
              "| --- | -: | -: | --- | --- |"]
 
-    def row(gap, ops, effect, fix, workloads=None):
-        if not ops:
-            return
-        lines.append(f"| {gap} | {len(ops)} | {workloads if workloads else EMPTY} "
-                     f"| {effect} | {fix} |")
+    def row(gap, ops, workloads, effect, fix):
+        if ops:
+            lines.append(f"| {gap} | {len(ops)} | {workloads or EMPTY} "
+                         f"| {effect} | {fix} |")
 
     row("No FLOP count reported", no_flops,
+        n_workloads(lambda m: m["tflops"] is None),
         "TFLOP/s, AI and compute utilisation blank",
-        "op `eval_roofline()` returns 0 FLOPs for the workload", n_wl["flops"])
+        "op `eval_roofline()` returns 0 FLOPs for the workload")
     row("No byte count reported", no_bytes,
-        "HBM TB/s, AI and bandwidth utilisation blank",
-        "op `eval_roofline()` returns 0 bytes for the workload", n_wl["bytes"])
-    row("Compute ceiling unresolved", no_dtype,
+        n_workloads(lambda m: m["bw_tbs"] is None),
+        "bandwidth, AI and bandwidth utilisation blank",
+        "op `eval_roofline()` returns 0 bytes for the workload")
+    row("Compute ceiling unresolved", no_ceiling,
+        n_workloads(lambda m: m["compute_util"] is None and m["tflops"] is not None),
         "of-peak and SOL blank on the compute side",
-        "record the executed dtype per workload instead of parsing it out of "
-        "the workload name", n_wl["dtype"])
-    row("No alternative measured", no_rival,
+        "record the executed dtype for the workload instead of leaving it to be "
+        "parsed out of the workload name")
+    row("No alternative measured", no_rival, None,
         "alternative columns blank; status falls back to SOL",
         "add a baseline to the op's benchmark")
-    row("Only an eager reference measured", ref_only,
+    row("Only an eager reference measured", ref_only, None,
         "speedup shown but not used for status",
         "add a library or native-op baseline")
-    row("No correctness test matched", no_test,
+    row("No correctness test matched", no_test, None,
         "Test column blank — the numbers are unverified",
         "record the same `op` name in the op's test as in its benchmark")
-    row("Unclassified baseline tag", unclassified,
+    row("Unclassified baseline tag", unclassified, None,
         "counted as a tuned library kernel, which may overstate the bar",
         "add the tag to the tier table in `scripts/gen_bench_pages.py`")
+    if ratio_drift:
+        lines.append(f"| Recorded ratio disagrees | {len(ratio_drift)} | "
+                     f"{len(ratio_drift)} | this renderer and the benchmark "
+                     "layer compare different quantities | reconcile the "
+                     "renderer with the field the benchmark records |")
     if failures:
-        lines.append(f"| Benchmark errored | {EMPTY} | {len(failures)} | workload "
-                     "absent from every table | fix the benchmark |")
+        lines.append(f"| Benchmark errored | {EMPTY} | {len(failures)} "
+                     "| workload absent from every table | fix the benchmark |")
     if skips:
         lines.append(f"| Benchmark skipped | {EMPTY} | {len(skips)} | workload "
                      "absent from every table | supply the missing dependency "
                      "or kernel |")
     lines.append("")
 
-    def detail(title, ops):
-        if not ops:
-            return
-        lines.extend([f'??? note "{title} ({len(ops)})"', "",
-                      "    " + ", ".join(f"`{_md_code(o)}`" for o in ops), ""])
+    def fold(title, ops):
+        if ops:
+            lines.extend([f'??? note "{title} ({len(ops)})"', "",
+                          "    " + ", ".join(f"`{_md_code(o)}`" for o in ops), ""])
 
-    detail("Ops reporting no FLOP count", no_flops)
-    detail("Ops reporting no byte count", no_bytes)
-    detail("Ops with no alternative implementation measured", no_rival)
-    detail("Ops compared only against an eager reference", ref_only)
-    detail("Ops with no correctness test in this run", no_test)
-    if unclassified:
-        detail("Unclassified baseline tags", unclassified)
+    fold("Ops reporting no FLOP count", no_flops)
+    fold("Ops reporting no byte count", no_bytes)
+    fold("Ops whose compute ceiling could not be resolved", no_ceiling)
+    fold("Ops with no alternative implementation measured", no_rival)
+    fold("Ops compared only against an eager reference", ref_only)
+    fold("Ops with no correctness test in this run", no_test)
+    fold("Unclassified baseline tags", unclassified)
 
     for title, items in (("Benchmarks that errored", failures),
                          ("Benchmarks skipped", skips)):
@@ -813,123 +991,129 @@ def gaps_block(rows: list[tuple], metrics_by_op: dict[str, list[dict]],
             lines.append(f"    | `{_md_code(it['name'])}` | "
                          f"{_md(msg[:160]) or EMPTY} |")
         lines.append("")
-    return lines
 
+    if ratio_drift:
+        lines.extend(['??? warning "Workloads where the recorded ratio '
+                      f'disagrees with the computed one ({len(ratio_drift)})"', "",
+                      "    | Workload | Alternative | recorded | computed |",
+                      "    | --- | --- | -: | -: |"])
+        for name, tag, rec, comp in ratio_drift[:40]:
+            lines.append(f"    | `{_md_code(name)}` | `{_md_code(tag)}` "
+                         f"| {rec:.3f} | {comp:.3f} |")
+        lines.append("")
 
-ROADMAP = [
-    ("Achieved DRAM traffic", "measured bytes moved, vs the formula's",
-     "would separate a kernel that moves more bytes than it must from one "
-     "that is genuinely bandwidth-bound",
-     "CUPTI metric collection in the benchmark run"),
-    ("L2 hit rate", "share of traffic served by cache",
-     "would replace the `ᶜ` marker with a number and give cache-resident "
-     "workloads a real ceiling",
-     "CUPTI metric collection"),
-    ("Achieved occupancy", "resident warps ÷ maximum",
-     "would explain a low SOL that neither utilisation accounts for",
-     "CUPTI metric collection"),
-    ("Tensor core utilisation", "pipe-active cycles ÷ elapsed",
-     "would show whether a compute-bound kernel is limited by the MMA pipe "
-     "or by everything around it",
-     "CUPTI metric collection"),
-    ("Energy per workload", "joules per call",
-     "would rank ops by efficiency rather than latency alone",
-     "NVML power sampling around the timed region"),
-    ("Numerical error against fp64", "worst relative error per workload",
-     "would put accuracy next to speed, so a fast kernel that lost precision "
-     "is visible here",
-     "per-workload error recorded in the benchmark, not only in tests"),
-]
-
-
-def roadmap_block() -> list[str]:
-    lines = ["", "## Metrics this page does not have yet", "",
-             "Designed columns whose inputs no part of the pipeline records. "
-             "They are named here rather than shown as empty columns on every "
-             "row.", "",
-             "| Metric | Definition | What it would answer | Blocked on |",
-             "| --- | --- | --- | --- |"]
-    for name, defn, answers, blocker in ROADMAP:
-        lines.append(f"| {name} | {defn} | {answers} | {blocker} |")
+    lines += ["## Metrics these pages do not have yet", "",
+              "Designed columns whose inputs no part of the pipeline records. "
+              "They are named here rather than shown as empty columns on every "
+              "row.", "",
+              "| Metric | Definition | What it would answer | Blocked on |",
+              "| --- | --- | --- | --- |"]
+    lines += [f"| {n} | {d} | {a} | {b} |" for n, d, a, b in ROADMAP]
     lines.append("")
-    return lines
+    return "\n".join(lines) + "\n"
 
 
 # --- Main ------------------------------------------------------------------
+
+
+RATIO_DRIFT = 0.10
+
+
+def collect_ratio_drift(workloads: list[dict], metrics: list[dict]) -> list[tuple]:
+    """Workloads where the ratio the benchmark recorded and the one recomputed
+    from the times it published disagree by more than `RATIO_DRIFT`.
+
+    Small disagreements are the write precision of the times; a large one means
+    the two layers are no longer comparing the same quantity, which is how this
+    page last went wrong.
+    """
+    drift = []
+    for w, m in zip(workloads, metrics):
+        for tag, r in m["rivals"].items():
+            rec, comp = r["recorded_ratio"], r["computed_ratio"]
+            if rec and comp and abs(rec - comp) / rec > RATIO_DRIFT:
+                drift.append((w["name"], tag, rec, comp))
+    return drift
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--bench-xml", required=True)
     ap.add_argument("--test-xml")
+    ap.add_argument("--meta", help="published meta.json (environment, run id)")
     ap.add_argument("--commit", default="unknown")
     ap.add_argument("--date", default="unknown")
     ap.add_argument("--gpu", default="unknown")
     ap.add_argument("--rendered", default=None)
-    ap.add_argument("--out", default=None)
+    ap.add_argument("--out-dir", default=None)
     args = ap.parse_args()
     ref = args.commit if args.commit and args.commit != "unknown" else "main"
 
-    configs, failures, skips = parse_bench_xml(args.bench_xml)
+    meta = {}
+    if args.meta and os.path.exists(args.meta):
+        with open(args.meta, encoding="utf-8") as f:
+            meta = json.load(f)
+
+    workloads, failures, skips = parse_bench_xml(args.bench_xml)
     tests = (parse_test_xml(args.test_xml)
              if args.test_xml and os.path.exists(args.test_xml) else {})
     mach = Machine(load_gpu_profile(args.gpu))
 
     unclassified = sorted({
-        t for c in configs for t in c["impls"]
+        t for w in workloads for t in w["impls"]
         if not t.startswith("tileops") and t not in _KNOWN_TAGS})
-    timing = Counter(
-        c["impls"].get("tileops", {}).get("timing") for c in configs).most_common(1)
-    timing = timing[0][0] if timing else None
+    timings = Counter(w["impls"].get("tileops", {}).get("timing")
+                      for w in workloads).most_common(1)
+    timing = timings[0][0] if timings else None
 
-    by_op: dict[str, list[dict]] = defaultdict(list)
-    module_of, cfgs_of = {}, defaultdict(list)
-    for c in configs:
-        by_op[c["op"]].append(config_metrics(c, mach))
-        cfgs_of[c["op"]].append(c)
-        module_of.setdefault(c["op"], c["op_module"])
+    metrics_by_op: dict[str, list[dict]] = defaultdict(list)
+    workloads_of: dict[str, list[dict]] = defaultdict(list)
+    module_of: dict[str, str | None] = {}
+    for w in workloads:
+        metrics_by_op[w["op"]].append(workload_metrics(w, mach))
+        workloads_of[w["op"]].append(w)
+        module_of.setdefault(w["op"], w["op_module"])
 
     rows_by_fam: dict[str, list[tuple]] = defaultdict(list)
+    by_page: dict[str, list[tuple]] = defaultdict(list)
     all_rows = []
-    for op, ms in by_op.items():
+    for op, ms in metrics_by_op.items():
         s = op_summary(ms)
         row = (op, module_of.get(op), s, _test_mark(tests.get(op)), ref)
-        rows_by_fam[family_of(op, module_of.get(op))].append(row)
+        fam = family_of(op, module_of.get(op))
+        rows_by_fam[fam].append(row)
+        by_page[page_of_family(fam)].append(row)
         all_rows.append(row)
 
-    ordered = ([f for f in FAMILY_ORDER if f in rows_by_fam]
-               + sorted(f for f in rows_by_fam if f not in FAMILY_ORDER))
-    spreads = [m["spread_pct"] for ms in by_op.values() for m in ms
+    ratio_drift = []
+    for op in metrics_by_op:
+        ratio_drift += collect_ratio_drift(workloads_of[op], metrics_by_op[op])
+    spreads = [m["spread_pct"] for ms in metrics_by_op.values() for m in ms
                if m["spread_pct"] is not None]
-    lines = header_block(args, mach, len(by_op), len(ordered), len(configs), timing)
-    lines += legend_block()
-    lines += rollup_block(all_rows, spreads)
-    lines += leaderboard_block(all_rows)
 
-    rank = {GREEN: 0, YELLOW: 1, RED: 2, NA: 3}
-    for fam in ordered:
-        rows = sorted(rows_by_fam[fam],
-                      key=lambda r: (rank.get(r[2]["status"], 9), r[0]))
-        lines += [f"## {FAMILY_TITLE.get(fam, fam)} "
-                  f"<small>({len(rows)} ops)</small>", "", *SUMMARY_HEADER]
-        for op, module, s, tmark, _ in rows:
-            lines.append(summary_row(op, module, s, tmark, ref))
-        lines += ["", '??? note "Per-workload detail"', "", *DETAIL_HEADER]
-        for op, *_ in rows:
-            for cfg, m in sorted(zip(cfgs_of[op], by_op[op]),
-                                 key=lambda z: z[0]["config"]):
-                lines.append(detail_row(op, cfg, m))
-        lines.append("")
+    out_dir = args.out_dir or os.path.join(REPO, "docs", "benchmarks")
+    os.makedirs(out_dir, exist_ok=True)
+    pages = {
+        "index.md": index_page(args, meta, mach, all_rows, by_page, spreads,
+                               timing, len(workloads)),
+        "reading.md": reading_page(),
+        "gaps.md": gaps_page(all_rows, metrics_by_op, unclassified, failures,
+                             skips, ratio_drift),
+    }
+    for slug, title, fams in DATA_PAGES:
+        if any(rows_by_fam.get(f) for f in fams):
+            pages[f"{slug}.md"] = data_page(title, fams, rows_by_fam,
+                                            metrics_by_op, workloads_of, ref)
+    for name, text in pages.items():
+        with open(os.path.join(out_dir, name), "w", encoding="utf-8") as f:
+            f.write(text)
 
-    lines += gaps_block(all_rows, by_op, unclassified, failures, skips)
-    lines += roadmap_block()
-
-    out = args.out or os.path.join(REPO, "docs", "benchmarks", "index.md")
-    os.makedirs(os.path.dirname(out), exist_ok=True)
-    with open(out, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
-    print(f"wrote {out}: {len(by_op)} ops, {len(ordered)} families, "
-          f"{len(configs)} workloads, {len(failures)} failed, {len(skips)} skipped")
+    print(f"wrote {len(pages)} pages to {out_dir}: {len(all_rows)} ops, "
+          f"{len(workloads)} workloads, {len(failures)} failed, "
+          f"{len(skips)} skipped")
+    if ratio_drift:
+        print(f"warning: {len(ratio_drift)} workloads where the recorded ratio "
+              "disagrees with the computed one", file=sys.stderr)
 
 
 if __name__ == "__main__":
