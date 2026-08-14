@@ -1,40 +1,23 @@
 # CLAUDE.md
 
-## Project Overview
+Documentation site for [TileOPs](https://github.com/tile-ai/TileOPs) — spec-driven
+LLM operators across backends, built on TileLang. MkDocs + Material, deployed to
+`gh-pages` by GitHub Actions. Palette and type are shared with
+[TileFoundry](https://github.com/tile-ai/TileFoundry.github.io); see
+`docs/assets/extra.css`.
 
-TileOPs.github.io is the official documentation site for [TileOPs](https://github.com/tile-ai/TileOPs) — spec-driven LLM operators across backends, built on TileLang. Deployed via GitHub Pages with GitHub Actions (`gh-pages` branch).
-
-## Tech Stack
-
-- **Static site generator**: [MkDocs](https://www.mkdocs.org/) with [Material for MkDocs](https://squidfundamentals.github.io/mkdocs-material/)
-- **Theme**: Material, one light scheme. Palette and type are shared with [TileFoundry](https://github.com/tile-ai/TileFoundry.github.io): warm paper ground, one red accent, Bricolage Grotesque / Hanken Grotesk / Space Mono, in `docs/assets/extra.css`
-- **Deployment**: GitHub Actions → `gh-pages` branch (`.github/workflows/deploy.yml`)
-- **License**: MIT (tile-ai)
-
-## Related Repositories
-
-| Repo | Purpose |
-|------|---------|
-| `TileOPs` | Main operator library (source code) |
-
-## Site Structure
+## Layout
 
 ```
-mkdocs.yml                    # MkDocs configuration (nav, theme, extensions)
-hooks.py                      # Path rewrites for mirrored content; Benchmarks nav
-scripts/
-  render_bench.sh             # Fetches the nightly-bench snapshot, calls the renderer
-  gen_bench_pages.py          # Writes the Benchmarks pages from that snapshot
-.github/workflows/
-  deploy.yml                  # Auto-deploy on push to main
-  render-benchmarks.yml       # Daily re-render from the latest snapshot
-docs/
-  index.md                    # Home
-  assets/extra.css            # Palette and data-table styling
-  design/                     # Architecture & design docs
-  api/                        # Operator API reference
-  benchmarks/                 # Generated at deploy time; only index.md is tracked
-  performance-guides/         # Performance optimization guides
+mkdocs.yml                    # nav, theme, plugins
+hooks.py                      # path rewrites for mirrored content; Benchmarks nav
+scripts/render_bench.sh       # fetches the nightly-bench snapshot, calls the renderer
+scripts/gen_bench_pages.py    # writes the Benchmarks pages from that snapshot
+.github/workflows/            # deploy.yml (push to main), render-benchmarks.yml (daily)
+docs/design/                  # mirrored from TileOPs via include-markdown
+docs/api/                     # generated from Python docstrings by mkdocstrings
+docs/benchmarks/              # generated at deploy time; only index.md is tracked
+docs/skills/, performance-guides/
 ```
 
 ## Development
@@ -45,60 +28,63 @@ pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugi
 mkdocs serve
 ```
 
-The API reference and the mirrored design/skills pages read from a TileOPs
-checkout at `./TileOPs` (the deploy workflow clones it there). To render the
-Benchmarks pages locally, run `bash scripts/render_bench.sh` first; it
-overwrites `docs/benchmarks/`, which is a build artifact.
+Python 3.12+ is required — `gen_bench_pages.py` uses multi-line f-string
+expressions. `api/` and the mirrored `design/` pages read from a TileOPs checkout
+at `./TileOPs` (the workflows clone it there); without it mkdocstrings warns, and
+`--strict` fails. `bash scripts/render_bench.sh` renders `docs/benchmarks/`.
 
-The Benchmarks pages answer one question per op: how TileOPs compares to the
-fastest other implementation of the same op on the same workload. The gap is the
-column right after the op name and its colour is the verdict — red behind, plain
-ink level, green ahead, grey where the only rival is an eager reference.
-Utilisation against a hardware ceiling (SOL, bound, arithmetic intensity) is a
-different question and is deliberately not reported.
+## Benchmarks pages
 
-## Bilingual Pages (en / zh)
-
-English is the default language and lives at the site root; Chinese is served
-under `/zh/`. A Chinese page is a `<name>.zh.md` file beside the English
-`<name>.md` — full prose, not an `include-markdown` shell, because this repo
-holds the Chinese source of truth while the English design docs are mirrored
-from TileOPs.
+Generated from the nightly snapshot, never edited by hand — change the renderer
+instead. They answer one question per workload: how TileOPs compares to the
+fastest other implementation of the same op on that workload.
 
 | Rule | Detail |
 |------|--------|
-| Coverage | Translate `index.md` and `design/`. Leave `skills/` in English — those pages are agent-facing instructions. |
-| Never translate | `api/` (generated from Python docstrings) and `benchmarks/` (generated data tables). |
-| Missing translation | Falls back to the English page at the same URL, so the zh nav is never sparse. `hooks.py` prepends a "本页暂无中文版" notice there. |
-| Nav labels | `nav_translations` in the `i18n` plugin block. Keep an entry for every new `nav` title; an untranslated title renders in English. |
-| Chinese search | Requires `jieba`. Without it, Chinese search returns nothing useful. |
+| No aggregates | One table per op, one row per workload. An op's workloads span shapes orders of magnitude apart, so a median matches no reproducible run and a mean ratio hides which shape is behind. |
+| The colour is the verdict | `Ratio` sits right after the workload name: red behind, plain ink level, green ahead, grey where the only rival is an eager `-ref`. |
+| Device time | The compared quantity is `device_busy_ms`, never wall-clock span. |
+| Not reported | Utilisation against a hardware ceiling (SOL, bound, arithmetic intensity) — a different question. |
+| Nav | `hooks.py` expands the single `Benchmarks` nav entry to whichever pages the renderer produced. |
+
+## Bilingual pages (en / zh)
+
+English lives at the site root, Chinese under `/zh/`. A Chinese page is a
+`<name>.zh.md` beside the English `<name>.md` — full prose, not an
+`include-markdown` shell, because this repo holds the Chinese source of truth
+while the English design docs are mirrored from TileOPs.
+
+| Rule | Detail |
+|------|--------|
+| Coverage | Translate `index.md` and `design/`. `skills/` stays English — those pages are agent-facing instructions. |
+| Never translate | `api/` and `benchmarks/` — both generated. |
+| Missing translation | Falls back to English at the same URL, so the zh nav is never sparse. `hooks.py` prepends a "本页暂无中文版" notice. |
+| Nav labels | `nav_translations` in the `i18n` plugin block; keep an entry for every `nav` title. |
+| Chinese search | Requires `jieba`. |
 
 Translated prose should read as Chinese written from scratch, not as a
 word-for-word rendering of the English.
 
-### Chinese Typography
+### Chinese typography
 
 | Rule | Detail |
 |------|--------|
-| Punctuation | Full-width in Chinese prose: `，。：；（）` — never `,.:;()`. Latin quotes and brackets stay half-width inside code spans. |
-| Latin in Chinese | Keep a space either side of a Latin token: `由 spec 驱动`, `形状和 dtype`. Do not add the space inside code spans. |
-| Terms to keep English | kernel, spec, agent, dtype, roofline, GEMM, and every op name. Translating them loses the link to the API. |
-| Inline code | For real identifiers only (`GemmOp`, `eval_roofline`, paths, flags). A concept mentioned in prose is not code. |
-| Type metrics | `extra.css` sets a larger size and looser leading under `html[lang="zh"]`, and drops headings from 800 to 700 — a Latin display face at 800 falls through to a CJK face where that weight closes up the strokes. Scoped away from fallback pages, whose body text is English. |
-| No CJK webfont | Han glyphs come from the platform UI face (`--tf-cjk`). A Simplified Chinese subset costs megabytes per page load. |
+| Punctuation | Full-width in Chinese prose: `，。：；（）`. Latin quotes and brackets stay half-width inside code spans. |
+| Latin in Chinese | A space either side of a Latin token: `由 spec 驱动`, `形状和 dtype`. Not inside code spans. |
+| Keep in English | kernel, spec, agent, dtype, roofline, GEMM, and every op name — translating them loses the link to the API. |
+| Inline code | Real identifiers only (`GemmOp`, `eval_roofline`, paths, flags). A concept mentioned in prose is not code. |
+| Type metrics | `extra.css` sets larger type and looser leading under `html[lang="zh"]`, and drops headings from 800 to 700 — a Latin display face at 800 falls through to a CJK face where that weight closes up the strokes. Scoped away from fallback pages, whose body text is English. |
+| No CJK webfont | Han glyphs come from the platform UI face (`--tf-cjk`); a Simplified Chinese subset costs megabytes per page load. |
 
-## Build Artifacts (gitignored)
+## Conventions
 
-`site/`, `__pycache__/`, `.cache/`
-
-## Collaboration Rules for Claude
-
-- This is a documentation repo — clarity and accuracy are top priorities.
-- Keep page structure consistent across the site.
-- When adding new pages, update `nav` in `mkdocs.yml` accordingly. The Benchmarks section is the exception: `hooks.py` expands that one entry to whichever pages the renderer produced.
-- Use MkDocs admonitions (`!!! note`, `!!! warning`, etc.) for callouts.
-- Prefer minimal, targeted changes; avoid unrelated reformatting.
-- Use relative Markdown links for internal cross-references.
-- Do not duplicate content that belongs in the main TileOPs repo docs; link to it instead.
-- Benchmark pages are generated from the nightly snapshot at deploy time, never edited by hand. `docs/benchmarks/index.md` is a committed placeholder for the case where no snapshot exists; the rest are gitignored.
-- Response should include: change summary, affected paths, and next suggestions.
+- Clarity and accuracy come first — this is documentation.
+- Add new pages to `nav` in `mkdocs.yml` (Benchmarks excepted, see above).
+- Admonitions (`!!! note`, `!!! warning`) for callouts; relative Markdown links
+  for internal cross-references.
+- Minimal, targeted changes; no unrelated reformatting.
+- Don't duplicate what belongs in the TileOPs repo — link to it. `design/` pages
+  are mirrors; a page authored here instead will drift.
+- Gitignored: `site/`, `__pycache__/`, `.cache/`, `TileOPs/`, and
+  `docs/benchmarks/` except `index.md`.
+- Responses: change summary, affected paths, next suggestions.

@@ -35,7 +35,6 @@ nav:
     - Roofline: design/roofline.md
     - Testing & Benchmarking: design/testing.md
     - Trust Model: design/trust-model.md
-    - Elementwise: design/elementwise.md
   - Skills:
     - Overview: skills/index.md
     - Catalog: skills/catalog.md

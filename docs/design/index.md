@@ -11,4 +11,3 @@ repository — the source of truth — pulled in at site build time.
 - [Roofline](roofline.md) — performance model and the `roofline` manifest field.
 - [Testing & Benchmarking](testing.md) — separation of correctness tests and profiling benchmarks.
 - [Trust Model](trust-model.md) — stage boundaries and the guarantees each stage owns.
-- [Elementwise Operators](elementwise.md) — kernel strategies, broadcast coalescing, fp8 support.

@@ -234,6 +234,13 @@ body,
   white-space: nowrap;
 }
 
+/* The Alternatives sub-columns stack one line per alternative. Top alignment is
+ * what makes them read across, and keeps Ratio level with the fastest one.
+ */
+.md-typeset .datatable table:not([class]) td {
+  vertical-align: top;
+}
+
 .md-typeset .datatable table:not([class]) code {
   background: transparent;
   padding: 0;
@@ -263,16 +270,6 @@ body,
 
 .md-typeset .perf-behind {
   color: var(--tf-red);
-}
-
-/* The worst workload, named only when the aggregate hides it. Subordinate to
- * the number it qualifies.
- */
-.md-typeset .perf-worst {
-  color: var(--tf-muted);
-  font-family: var(--tf-mono);
-  font-size: 0.86em;
-  white-space: nowrap;
 }
 
 /* A ratio against an eager reference only. Shown, but never as a win: the bar
