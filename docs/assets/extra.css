@@ -69,13 +69,37 @@
   --md-code-hl-name-color: var(--md-code-fg-color);
 }
 
-html,
+/* The ground: paper, a dot texture, and a wash of each accent thrown in from
+ * opposite corners. The wash is what puts the two hues on a page that is
+ * otherwise a wall of tables — but it stays under 10% and is pushed to the
+ * edges, so the column of text and numbers still sits on clean paper. Fixed
+ * attachment keeps it reading as light on the sheet rather than as a graphic
+ * scrolling past.
+ *
+ * Applied to html alone and propagated to the canvas: the containers used to
+ * repeat it, which multiplied the dot alpha four times over.
+ */
+html {
+  background-color: var(--md-default-bg-color);
+  background-image: radial-gradient(var(--tf-line-soft) 1px, transparent 1.5px),
+    radial-gradient(
+      130% 95% at 4% -8%,
+      color-mix(in srgb, var(--tf-violet), transparent 89%),
+      transparent 62%
+    ),
+    radial-gradient(
+      110% 85% at 100% 104%,
+      color-mix(in srgb, var(--tf-teal), transparent 90%),
+      transparent 60%
+    );
+  background-size: 26px 26px, auto, auto;
+  background-attachment: scroll, fixed, fixed;
+}
+
 body,
 .md-container,
 .md-main {
-  background-color: var(--md-default-bg-color);
-  background-image: radial-gradient(var(--tf-line-soft) 1px, transparent 1.5px);
-  background-size: 26px 26px;
+  background: transparent;
 }
 
 body,
@@ -85,11 +109,15 @@ body,
   font-family: var(--tf-body);
 }
 
-/* Header sits on the paper rather than in the accent colour. */
+/* Header sits on the paper rather than in the accent colour, and lets the wash
+ * behind it through: an opaque band across the top would cut the ground in two
+ * at exactly the place the violet is strongest.
+ */
 .md-header,
 .md-tabs {
   color: var(--tf-ink);
-  background: var(--tf-paper);
+  background: color-mix(in srgb, var(--tf-paper), transparent 22%);
+  backdrop-filter: blur(10px);
   box-shadow: none;
 }
 
@@ -134,6 +162,21 @@ body,
   box-shadow: none;
   font-family: var(--tf-display);
   font-weight: 800;
+}
+
+/* On wide screens the sidebar is part of the sheet, so nothing in it may paint
+ * its own paper — an opaque panel over the wash reads as a patch of a slightly
+ * different white. The drawer at narrow widths keeps its background, which it
+ * needs to sit over the content.
+ */
+@media screen and (min-width: 76.25em) {
+  .md-sidebar,
+  .md-sidebar__scrollwrap,
+  .md-nav,
+  .md-nav__title {
+    background: transparent;
+    box-shadow: none;
+  }
 }
 
 .md-nav__item .md-nav__link--active,
@@ -256,9 +299,15 @@ body,
   font-size: 0.75rem;
 }
 
+/* The rule under the header row is a table's heaviest mark and the one the eye
+ * lands on first. In the accent rather than in ink, it is what carries the
+ * palette onto a Benchmarks page, which is otherwise columns of figures with
+ * nowhere for a heading rule to sit.
+ */
 .md-typeset table:not([class]) th {
   border: 0;
-  border-bottom: 2px solid var(--md-default-fg-color);
+  border-bottom: 2px solid var(--tf-violet);
+  color: var(--tf-violet-dark);
   font-family: var(--tf-display);
   font-size: 0.8rem;
   font-weight: 700;
@@ -269,8 +318,11 @@ body,
   border-bottom: 1px solid var(--tf-line-soft);
 }
 
+/* Striped in the accent, not in ink: at 4% it is barely a colour, but it is
+ * what makes the body of a long table belong to the page around it.
+ */
 .md-typeset table:not([class]) tbody tr:nth-child(even) {
-  background: color-mix(in srgb, var(--md-default-fg-color), transparent 97%);
+  background: color-mix(in srgb, var(--tf-violet), transparent 96%);
 }
 
 /* Benchmark data tables: many short numeric cells. Keeping each cell on one
