@@ -655,10 +655,9 @@ def env_block(meta: dict, timing: str | None) -> list[str]:
     if not env:
         lines += [
             '!!! warning "The run did not publish its environment"', "",
-            "    The snapshot carries no image, driver, CUDA or torch version, "
-            "so a number on these pages cannot be tied to the stack that "
-            f"produced it. The nightly's publish step fills this in through "
-            f"[`meta.json`]({_NB}).", "",
+            "    Without it a number on these pages cannot be tied to the "
+            "machine and the stack that produced it. The nightly's publish "
+            f"step fills this in through [`meta.json`]({_NB}).", "",
         ]
     else:
         keys = ([k for k in ENV_ORDER if k in env]
@@ -912,7 +911,16 @@ def reading_page() -> str:
 def data_page(title: str, fams: list[str], rows_by_fam: dict,
               metrics_by_op: dict, workloads_of: dict, ref: str) -> str:
     rank = {GREEN: 0, YELLOW: 1, RED: 2, NA: 3}
+    present = [f for f in fams if rows_by_fam.get(f)]
+    n_ops = sum(len(rows_by_fam[f]) for f in present)
+    n_workloads = sum(s["workloads"] for f in present
+                      for _, _, s, _, _ in rows_by_fam[f])
+    tally = " · ".join(
+        f"{FAMILY_TITLE.get(f, f)} {len(rows_by_fam[f])}" for f in present)
     lines = [f"# {title}", "",
+             f"**{n_ops} ops, {n_workloads} workloads** — {tally}."
+             if len(present) > 1 else
+             f"**{n_ops} ops, {n_workloads} workloads.**", "",
              "One row per op, then every workload behind it. Column meanings "
              "are on [How to read these numbers](reading.md).", ""]
     for fam in fams:
@@ -920,11 +928,9 @@ def data_page(title: str, fams: list[str], rows_by_fam: dict,
         if not rows:
             continue
         rows = sorted(rows, key=lambda r: (rank.get(r[2]["status"], 9), r[0]))
-        n_w = sum(s["workloads"] for _, _, s, _, _ in rows)
         # The wrapper is a styling hook: extra.css keeps these dense numeric
         # cells on one line and lets the table scroll instead of wrapping.
-        lines += [f"## {FAMILY_TITLE.get(fam, fam)} "
-                  f"<small>({len(rows)} ops, {n_w} workloads)</small>", "",
+        lines += [f"## {FAMILY_TITLE.get(fam, fam)}", "",
                   '<div class="datatable" markdown="1">', "", *SUMMARY_HEADER]
         for op, module, s, tmark, _ in rows:
             lines.append(summary_row(op, module, s, tmark, ref))
