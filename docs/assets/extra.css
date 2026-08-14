@@ -447,10 +447,12 @@ body,
 }
 
 /* A hairline between that label and the numbers it belongs to — the only
- * vertical rule in the table. At 16% it stays legible across the striped rows.
+ * vertical rule in the table, and in teal the longest mark the second accent
+ * makes on a Benchmarks page. It divides what a row *is* from what it
+ * measured, which is the same distinction the asides use teal for.
  */
 .md-typeset .datatable table:not([class]) .colsep {
-  border-right: 1px solid var(--tf-line);
+  border-right: 1px solid color-mix(in srgb, var(--tf-teal), transparent 58%);
   padding-right: 0.8em;
 }
 
@@ -479,17 +481,31 @@ body,
 }
 
 /* Second header row: units and the ratio's direction. Subordinate to the header
- * word above it, so it reads as a qualifier rather than a column of its own.
+ * word above it, so it reads as a qualifier rather than a column of its own —
+ * which is exactly what teal marks everywhere else on the site. It closes the
+ * header block with its own hairline under the violet one.
  */
 .md-typeset .datatable table:not([class]) th.subhead {
+  border-bottom: 1px solid color-mix(in srgb, var(--tf-teal), transparent 62%);
+  color: color-mix(in srgb, var(--tf-teal), var(--tf-muted) 25%);
+  font-family: var(--tf-mono);
+  font-size: 0.66rem;
   font-weight: 400;
-  color: var(--md-default-fg-color--light);
 }
 
 .md-typeset .datatable table:not([class]) code {
   background: transparent;
   padding: 0;
   color: var(--md-default-fg-color--light);
+}
+
+/* The workload names take a cool cast, so the teal rule reads as dividing a
+ * teal label column from ink measurements rather than as a line dropped
+ * between them. It is the same in every row, which is what keeps it clear of
+ * the verdict: a colour that never varies cannot be reporting a result.
+ */
+.md-typeset .datatable table:not([class]) td.colsep code {
+  color: color-mix(in srgb, var(--tf-teal), var(--tf-muted) 32%);
 }
 
 /* Benchmark verdicts. The ratio's colour *is* the result, so these carry the
@@ -534,6 +550,17 @@ body,
 
 .md-typeset .perf-none {
   color: var(--md-default-fg-color--light);
+}
+
+/* The count beside an op name is what the heading is *about*, not part of it:
+ * teal, in the body face, at the weight of running text. In the display face
+ * at 800 it was reading as a second half of the op's name.
+ */
+.md-typeset h3 > small {
+  color: var(--tf-teal);
+  font-family: var(--tf-body);
+  font-size: 0.72em;
+  font-weight: 500;
 }
 
 /* A verdict repeated in an op heading sits in the display face around it. */
