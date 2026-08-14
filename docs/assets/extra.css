@@ -90,13 +90,13 @@ html {
   background-image: radial-gradient(var(--tf-line-soft) 1px, transparent 1.5px),
     radial-gradient(
       130% 95% at 4% -8%,
-      color-mix(in srgb, var(--tf-violet), transparent 89%),
-      transparent 62%
+      color-mix(in srgb, var(--tf-violet), transparent 94%),
+      transparent 58%
     ),
     radial-gradient(
       110% 85% at 100% 104%,
-      color-mix(in srgb, var(--tf-teal), transparent 90%),
-      transparent 60%
+      color-mix(in srgb, var(--tf-teal), transparent 95%),
+      transparent 55%
     );
   background-size: 26px 26px, auto, auto;
   background-attachment: scroll, fixed, fixed;
@@ -375,48 +375,40 @@ body,
   font-size: 0.8rem;
 }
 
+/* Three rules and nothing else: above the head, under it, under the last row.
+ * No verticals, no zebra, no fill — the columns are held apart by their own
+ * alignment, and every mark added beyond these three is one the reader has to
+ * look past to get at the numbers.
+ */
 .md-typeset table:not([class]) {
   margin: 1em 0;
+  /* Material fills a table with the page colour, which over the wash reads as
+   * a lighter panel laid on the sheet.
+   */
+  background: none;
   border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--tf-ink), transparent 72%);
+  border-bottom: 1px solid color-mix(in srgb, var(--tf-ink), transparent 72%);
   font-size: 0.75rem;
 }
 
-/* The rule under the header row is a table's heaviest mark and the one the eye
- * lands on first. In the accent rather than in ink, it is what carries the
- * palette onto a Benchmarks page, which is otherwise columns of figures with
- * nowhere for a heading rule to sit.
+/* The middle rule is the table's one accented mark, and on a Benchmarks page
+ * the only place the palette can sit at all — those pages are columns of
+ * figures with nowhere for a heading rule to go.
  */
 .md-typeset table:not([class]) th {
   border: 0;
-  border-bottom: 2px solid var(--tf-violet);
+  border-bottom: 1px solid var(--tf-violet);
   color: var(--tf-violet-dark);
   font-family: var(--tf-display);
   font-size: 0.8rem;
   font-weight: 700;
+  background: none;
 }
 
 .md-typeset table:not([class]) td {
   border: 0;
-  border-bottom: 1px solid var(--tf-line-soft);
-}
-
-/* Striped in the accent, not in ink: at 4% it is barely a colour, but it is
- * what makes the body of a long table belong to the page around it.
- */
-.md-typeset table:not([class]) tbody tr:nth-child(even) {
-  background: color-mix(in srgb, var(--tf-violet), transparent 96%);
-}
-
-.md-typeset > table:not([class]) tbody tr:hover {
-  background: color-mix(in srgb, var(--tf-teal), transparent 94%);
-}
-
-/* The row under the cursor, on a benchmark table wide enough that holding a
- * row across five columns takes effort. Hueless on purpose: those tables
- * already spend colour on the verdict, and a tinted row would read as one.
- */
-.md-typeset .datatable table:not([class]) tbody tr:hover {
-  background: color-mix(in srgb, var(--md-default-fg-color), transparent 94%);
+  background: none;
 }
 
 /* Benchmark data tables: many short numeric cells. Keeping each cell on one
@@ -446,23 +438,22 @@ body,
   text-align: left;
 }
 
-/* A hairline between that label and the numbers it belongs to — the only
- * vertical rule in the table, and in teal the longest mark the second accent
- * makes on a Benchmarks page. It divides what a row *is* from what it
- * measured, which is the same distinction the asides use teal for.
+/* Gap instead of a rule between the label and the numbers it belongs to. The
+ * columns are already held apart by their alignment, and a vertical line
+ * turns a three-rule table into a grid.
  */
 .md-typeset .datatable table:not([class]) .colsep {
-  border-right: 1px solid color-mix(in srgb, var(--tf-teal), transparent 58%);
-  padding-right: 0.8em;
+  padding-right: 1.4em;
 }
 
 /* A cell holding four stacked alternatives is four lines tall while its
- * neighbours are one. Tighter leading gives back most of a line.
- *
- * No rule under each row either: the striped rows already separate them, and
- * doing both reads as a grid drawn over a table that did not need one.
+ * neighbours are one. Tighter leading gives back most of a line; the row
+ * padding is what separates one workload from the next, since nothing is
+ * drawn between them.
  */
 .md-typeset .datatable table:not([class]) td {
+  padding-top: 0.55em;
+  padding-bottom: 0.55em;
   line-height: 1.35;
   border-bottom: 0;
 }
@@ -480,13 +471,26 @@ body,
   vertical-align: top;
 }
 
-/* Second header row: units and the ratio's direction. Subordinate to the header
- * word above it, so it reads as a qualifier rather than a column of its own —
- * which is exactly what teal marks everywhere else on the site. It closes the
- * header block with its own hairline under the violet one.
+/* Two header rows, still one middle rule: it belongs under the whole header
+ * block, not between its halves. The `Workload` cell spans both rows, so its
+ * own bottom edge already sits on that line.
+ */
+.md-typeset .datatable table:not([class]) thead tr:first-child th:not([rowspan]) {
+  border-bottom: 0;
+}
+
+/* Except under a header spanning two columns, which takes a short rule of its
+ * own — the one mark that says how far `Alternatives` reaches.
+ */
+.md-typeset .datatable table:not([class]) thead th[colspan] {
+  border-bottom: 1px solid color-mix(in srgb, var(--tf-teal), transparent 50%);
+}
+
+/* Second header row: units and the ratio's direction. Subordinate to the
+ * header word above it, so it reads as a qualifier rather than a column of its
+ * own — which is exactly what teal marks everywhere else on the site.
  */
 .md-typeset .datatable table:not([class]) th.subhead {
-  border-bottom: 1px solid color-mix(in srgb, var(--tf-teal), transparent 62%);
   color: color-mix(in srgb, var(--tf-teal), var(--tf-muted) 25%);
   font-family: var(--tf-mono);
   font-size: 0.66rem;

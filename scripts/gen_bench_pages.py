@@ -465,7 +465,7 @@ DETAIL_HEADER = (
     # The second row carries what a header word cannot: the unit, and which way
     # the ratio divides. Every numeric column states its own on the same line.
     "<tr>",
-    '<th class="subhead">alt ÷ ours</th>',
+    '<th class="subhead">alt / ours</th>',
     '<th class="subhead">ms</th>',
     '<th class="subhead">name</th>',
     '<th class="subhead">ms</th>',
@@ -663,7 +663,7 @@ def reading_page() -> str:
         "| --- | --- |",
         "| **Workload** | The shape and dtype the row was measured on, as the "
         "benchmark names it. |",
-        "| **Ratio** | `alt ÷ ours` — the fastest alternative's device time "
+        "| **Ratio** | `alt / ours` — the fastest alternative's device time "
         "divided by ours, the one number the colour grades. |",
         "| **Device time** | Milliseconds the device spent executing the call's "
         "kernels — the union of their intervals. Every comparison on these "
@@ -675,7 +675,7 @@ def reading_page() -> str:
         "composition of PyTorch ops, which is not a bar worth reporting a win "
         "against. Divide any of them by our device time to get the ratio "
         "against that one. |",
-        "| **Throughput** | TFLOP/s: required FLOPs ÷ device time. The count is "
+        "| **Throughput** | TFLOP/s: required FLOPs / device time. The count is "
         "analytic — the op's `eval_roofline` formula evaluated on the workload's "
         "own shapes, not a hardware counter — so it counts the work the problem "
         "demands, not the instructions the kernel issued. Padding, recompute or "
