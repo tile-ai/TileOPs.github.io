@@ -40,14 +40,52 @@ docs/
 ## Development
 
 ```bash
-pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugin pyyaml
+pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugin \
+  mkdocs-static-i18n jieba pyyaml
 mkdocs serve
 ```
 
-The API reference and the hardware ceilings on the Benchmarks page read from a
-TileOPs checkout at `./TileOPs` (the deploy workflow clones it there). To render
-the Benchmarks pages locally, run `bash scripts/render_bench.sh` first; it
+The API reference and the mirrored design/skills pages read from a TileOPs
+checkout at `./TileOPs` (the deploy workflow clones it there). To render the
+Benchmarks pages locally, run `bash scripts/render_bench.sh` first; it
 overwrites `docs/benchmarks/`, which is a build artifact.
+
+The Benchmarks pages answer one question per op: how TileOPs compares to the
+fastest other implementation of the same op on the same workload. The gap is the
+column right after the op name and its colour is the verdict — red behind, plain
+ink level, green ahead, grey where the only rival is an eager reference.
+Utilisation against a hardware ceiling (SOL, bound, arithmetic intensity) is a
+different question and is deliberately not reported.
+
+## Bilingual Pages (en / zh)
+
+English is the default language and lives at the site root; Chinese is served
+under `/zh/`. A Chinese page is a `<name>.zh.md` file beside the English
+`<name>.md` — full prose, not an `include-markdown` shell, because this repo
+holds the Chinese source of truth while the English design docs are mirrored
+from TileOPs.
+
+| Rule | Detail |
+|------|--------|
+| Coverage | Translate `index.md` and `design/`. Leave `skills/` in English — those pages are agent-facing instructions. |
+| Never translate | `api/` (generated from Python docstrings) and `benchmarks/` (generated data tables). |
+| Missing translation | Falls back to the English page at the same URL, so the zh nav is never sparse. `hooks.py` prepends a "本页暂无中文版" notice there. |
+| Nav labels | `nav_translations` in the `i18n` plugin block. Keep an entry for every new `nav` title; an untranslated title renders in English. |
+| Chinese search | Requires `jieba`. Without it, Chinese search returns nothing useful. |
+
+Translated prose should read as Chinese written from scratch, not as a
+word-for-word rendering of the English.
+
+### Chinese Typography
+
+| Rule | Detail |
+|------|--------|
+| Punctuation | Full-width in Chinese prose: `，。：；（）` — never `,.:;()`. Latin quotes and brackets stay half-width inside code spans. |
+| Latin in Chinese | Keep a space either side of a Latin token: `由 spec 驱动`, `形状和 dtype`. Do not add the space inside code spans. |
+| Terms to keep English | kernel, spec, agent, dtype, roofline, GEMM, and every op name. Translating them loses the link to the API. |
+| Inline code | For real identifiers only (`GemmOp`, `eval_roofline`, paths, flags). A concept mentioned in prose is not code. |
+| Type metrics | `extra.css` sets a larger size and looser leading under `html[lang="zh"]`, and drops headings from 800 to 700 — a Latin display face at 800 falls through to a CJK face where that weight closes up the strokes. Scoped away from fallback pages, whose body text is English. |
+| No CJK webfont | Han glyphs come from the platform UI face (`--tf-cjk`). A Simplified Chinese subset costs megabytes per page load. |
 
 ## Build Artifacts (gitignored)
 

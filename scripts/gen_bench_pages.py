@@ -5,32 +5,30 @@ Output is one overview page, one page explaining the numbers, and five data
 pages grouped by op domain. `hooks.py` puts them into the site nav in that
 order.
 
-What a data row must answer, per op:
-
-  * How fast it is in absolute terms — FLOP/s and HBM bandwidth.
-  * How much of the machine that is, against the GPU profile, and which of the
-    two resources bounds the workload.
-  * How that compares to the best other implementation measured on the same
-    workload, reported with the *same* metrics rather than as a bare ratio.
-  * Whether the numbers can be trusted — correctness status, sample spread,
-    kernel count, and an explicit marker wherever an input was not recorded.
+These pages answer one question per op: **how does TileOPs compare to the
+fastest other implementation of the same op on the same workload?** Everything
+a row carries either states that gap or qualifies how much to trust it.
 
 Rules this renderer follows:
 
+  * The gap is the first column after the op name, and its colour is the
+    verdict — red behind, plain ink level, green ahead. A reader gets the answer
+    without scrolling a wide table to its right edge, and without a legend.
   * The compared quantity is ``device_busy_ms``: the time the device spent
     executing the call's kernels. A single-kernel call has no gap between
     kernels by construction, so comparing spans would charge a multi-kernel
     implementation for the host's launch latency and credit a fused one for
-    nothing it did. Gap and kernel count are reported separately, never folded
-    into the comparison.
+    nothing it did.
+  * Utilisation against a hardware ceiling is a different question and is not
+    reported. How much of the machine a kernel uses says nothing about whether
+    someone else's kernel does the same work faster.
   * Every baseline present in the data is shown. Baselines are tiered
     (library kernel / PyTorch native op / eager reference), never discarded:
-    a tag the tier table does not know is reported as unclassified.
-  * Hardware ceilings come from ``src/tileops/perf/profiles/*.yaml``. With no
-    profile for the benchmarked GPU, utilisation columns render blank rather
-    than against guessed peaks.
-  * A metric whose input is missing renders as the empty marker and the op is
-    listed as such. No metric is silently substituted.
+    a tag the tier table does not know is reported as unclassified. Only the
+    first two tiers can rate an op — beating an eager composition of PyTorch
+    ops is not a result, so an op with no better rival stays unrated.
+  * A metric whose input is missing renders as the empty marker. No metric is
+    silently substituted.
 
 Usage:
     python scripts/gen_bench_pages.py --bench-xml <xml> [--test-xml <xml>] \
@@ -52,9 +50,18 @@ TILEOPS = os.path.join(REPO, "TileOPs")
 _GH = "https://github.com/tile-ai/TileOPs"
 _NB = f"{_GH}/tree/nightly-bench"
 
-GREEN, YELLOW, RED, NA = "🟢", "🟡", "🔴", "—"
+# How an op stands against the fastest real alternative measured on its
+# workloads. The verdict is carried by the colour of the ratio itself rather
+# than by a separate status glyph, so a reader gets it from the number they
+# were already reading.
+AHEAD, PAR, BEHIND, UNRATED = "ahead", "par", "behind", "unrated"
+PAR_BAND = (0.95, 1.05)  # inside this the two implementations are level
+NA = "—"
 EMPTY = "·"  # a metric whose input was not recorded
 NOISY_SPREAD = 25.0  # above this the median stops summarising the samples
+# A geometric mean can sit at parity while one workload is far behind. Below
+# this the worst workload is named next to the aggregate instead of hidden.
+WORST_ALERT = 0.95
 
 # --- Baseline tiers ---------------------------------------------------------
 # A baseline's tier decides how a comparison against it reads, not whether it
@@ -140,38 +147,8 @@ def page_of_family(fam: str) -> str:
     return DATA_PAGES[-1][0]
 
 
-# --- GPU profile -----------------------------------------------------------
-# Utilisation is reported against the *attainable* ceiling (theoretical peak x
-# measured calibration) because that is the number a kernel can actually reach;
-# both figures are printed on the overview page.
-_PROFILE_FILE = {"h200": ("nvidia h200",), "h20_3e": ("nvidia h20-3e", "h20")}
-_DTYPE_PEAK_KEY = {"fp8": "fp8", "bfloat16": "bf16", "bf16": "bf16",
-                   "float16": "fp16", "fp16": "fp16", "float32": "tf32"}
+# --- Workload dtype --------------------------------------------------------
 _DTYPE_TOKENS = ("fp8", "bfloat16", "bf16", "float16", "fp16", "float32")
-
-
-def load_gpu_profile(gpu: str) -> dict | None:
-    """Load the profile matching a GPU name, or None when none matches."""
-    try:
-        import yaml
-    except ImportError:
-        print("warning: pyyaml missing; utilisation columns will be blank",
-              file=sys.stderr)
-        return None
-    prof_dir = os.path.join(TILEOPS, "src", "tileops", "perf", "profiles")
-    if not os.path.isdir(prof_dir):
-        return None
-    want = (gpu or "").strip().lower()
-    for stem, aliases in _PROFILE_FILE.items():
-        if not any(a in want for a in aliases):
-            continue
-        path = os.path.join(prof_dir, f"{stem}.yaml")
-        if not os.path.exists(path):
-            continue
-        with open(path, encoding="utf-8") as f:
-            return _resolve_profile(yaml.safe_load(f))
-    print(f"warning: no GPU profile matches {gpu!r}", file=sys.stderr)
-    return None
 
 
 def _num(v) -> float | None:
@@ -181,18 +158,6 @@ def _num(v) -> float | None:
         return None
 
 
-def _resolve_profile(raw: dict) -> dict:
-    """Reduce a profile YAML to {'bw': (theo, attainable), 'tf': {key: (...)}}."""
-    def pair(section):
-        theo = _num(section.get("theoretical"))
-        cal = _num(section.get("calibration")) or 1.0
-        return (theo, theo * cal if theo else None)
-
-    tf = {k: pair(v) for k, v in (raw.get("tensor_core") or {}).items()
-          if isinstance(v, dict)}
-    return {"gpu": raw.get("gpu"), "bw": pair(raw.get("hbm") or {}), "tf": tf}
-
-
 def dtype_of(config_name: str) -> str | None:
     """The dtype token a workload name carries, if any."""
     n = config_name.lower()
@@ -200,29 +165,6 @@ def dtype_of(config_name: str) -> str | None:
         if tok in n:
             return tok
     return None
-
-
-class Machine:
-    """The ceilings a workload's utilisation is measured against."""
-
-    def __init__(self, profile: dict | None):
-        self.profile = profile
-
-    @property
-    def known(self) -> bool:
-        return bool(self.profile and self.profile["bw"][1])
-
-    def bw_peak(self) -> tuple[float | None, float | None]:
-        """Theoretical and attainable HBM bytes/s."""
-        return self.profile["bw"] if self.profile else (None, None)
-
-    def tf_peak(self, dtype: str | None) -> tuple[float | None, float | None]:
-        return self.tf_peak_by_key(_DTYPE_PEAK_KEY.get(dtype or ""))
-
-    def tf_peak_by_key(self, key: str | None) -> tuple[float | None, float | None]:
-        if not self.profile or not key:
-            return (None, None)
-        return self.profile["tf"].get(key) or (None, None)
 
 
 # --- XML parsing -----------------------------------------------------------
@@ -328,54 +270,25 @@ def _busy_of(impl: dict) -> float | None:
     return _pos(impl.get("device_busy_ms")) or _pos(impl.get("latency_ms"))
 
 
-def workload_metrics(w: dict, mach: Machine) -> dict:
+def workload_metrics(w: dict) -> dict:
     """Derive every displayed metric for one benchmarked workload."""
     tl = w["impls"].get("tileops", {})
     busy = _busy_of(tl)
-    span = _pos(tl.get("latency_ms"))
     tflops = _pos(tl.get("tflops"))
-    bw = _pos(tl.get("bandwidth_tbs"))
-    dtype = tl.get("dtype") or dtype_of(w["config"])
-
-    # Prefer the recorded roofline inputs for arithmetic intensity; the ratio of
-    # the derived rates is algebraically the same quantity and covers snapshots
-    # taken before the inputs were recorded.
-    flops, nbytes = _pos(tl.get("flops")), _pos(tl.get("bytes"))
-    ai = (flops / nbytes) if (flops and nbytes) else (
-        (tflops / bw) if (tflops and bw) else None)
 
     m = {
-        "busy_ms": busy, "span_ms": span, "tflops": tflops, "bw_tbs": bw,
-        "dtype": dtype, "flops": flops, "bytes": nbytes, "ai": ai,
-        "n_kernels": tl.get("n_kernels"), "n_samples": tl.get("n_samples"),
+        "busy_ms": busy,
+        "tflops": tflops,
+        "dtype": tl.get("dtype") or dtype_of(w["config"]),
+        "n_samples": tl.get("n_samples"),
         "variant": tl.get("variant"),
-        "gap_pct": (100 * (span - busy) / span) if (span and busy and span >= busy)
-                   else None,
         "spread_pct": None,
-        "compute_util": None, "bw_util": None, "sol": None, "bound": None,
-        "resident": False,
     }
     p10 = _pos(tl.get("device_busy_p10_ms")) or _pos(tl.get("latency_p10_ms"))
     p90 = _pos(tl.get("device_busy_p90_ms")) or _pos(tl.get("latency_p90_ms"))
     if busy and p10 and p90:
         m["spread_pct"] = (p90 - p10) / busy * 100
 
-    bw_theo, bw_att = mach.bw_peak()
-    _, tf_att = mach.tf_peak(dtype)
-    if bw and bw_att:
-        m["bw_util"] = bw * 1e12 / bw_att * 100
-        m["resident"] = bw_theo is not None and bw * 1e12 > bw_theo
-    if tflops and tf_att:
-        m["compute_util"] = tflops * 1e12 / tf_att * 100
-    utils = [(u, b) for u, b in ((m["compute_util"], "compute"),
-                                 (m["bw_util"], "memory")) if u is not None]
-    if utils:
-        m["sol"], m["bound"] = max(utils)
-    if m["compute_util"] is None or m["bw_util"] is None:
-        m["bound"] = None  # naming a bound needs both ceilings resolved
-
-    # Baselines run the same workload, so its FLOP and byte counts apply to them
-    # too; their rates follow from their own device-execution time.
     rivals = {}
     for tag, d in w["impls"].items():
         if tag.startswith("tileops"):
@@ -383,25 +296,15 @@ def workload_metrics(w: dict, mach: Machine) -> dict:
         b_busy = _busy_of(d)
         if not b_busy:
             continue
-        b_span = _pos(d.get("latency_ms"))
-        b_bw = _pos(d.get("bandwidth_tbs"))
-        if b_bw is None and bw and busy:
-            b_bw = bw * busy / b_busy
-        b_tf = _pos(d.get("tflops"))
-        if b_tf is None and tflops and busy:
-            b_tf = tflops * busy / b_busy
         # The benchmark computes the ratio before rounding its times for the
         # XML, so prefer it: a sub-microsecond kernel loses several percent to
         # the write precision of the times alone.
         computed = (b_busy / busy) if busy else None
         recorded = _pos(d.get("ratio"))
         rivals[tag] = {
-            "tier": tier_of(tag), "busy_ms": b_busy, "span_ms": b_span,
-            "tflops": b_tf, "bw_tbs": b_bw,
+            "tier": tier_of(tag), "busy_ms": b_busy,
             "speedup": recorded or computed,
             "computed_ratio": computed, "recorded_ratio": recorded,
-            "gap_pct": (100 * (b_span - b_busy) / b_span)
-                       if (b_span and b_span >= b_busy) else None,
         }
     m["rivals"] = rivals
     return m
@@ -447,16 +350,7 @@ def op_summary(metrics: list[dict]) -> dict:
         "workloads": len(metrics),
         "busy_ms": _med([m["busy_ms"] for m in metrics]),
         "tflops": _med([m["tflops"] for m in metrics]),
-        "bw_tbs": _med([m["bw_tbs"] for m in metrics]),
-        "compute_util": _med([m["compute_util"] for m in metrics]),
-        "bw_util": _med([m["bw_util"] for m in metrics]),
-        "sol": _med([m["sol"] for m in metrics]),
-        "n_kernels": _med([m["n_kernels"] for m in metrics]),
-        "gap_pct": _med([m["gap_pct"] for m in metrics]),
-        "resident": any(m["resident"] for m in metrics),
     }
-    bounds = Counter(m["bound"] for m in metrics if m["bound"])
-    s["bound"] = bounds.most_common(1)[0][0] if bounds else None
 
     tag, ratio = best_rival(metrics, (TIER_LIB, TIER_TORCH))
     ref_only = False
@@ -466,28 +360,26 @@ def op_summary(metrics: list[dict]) -> dict:
     s.update(rival=tag, speedup=ratio, rival_ref_only=ref_only)
     if tag:
         rs = [m["rivals"][tag] for m in metrics if tag in m["rivals"]]
-        s["rival_tflops"] = _med([r["tflops"] for r in rs])
-        s["rival_bw_tbs"] = _med([r["bw_tbs"] for r in rs])
-        s["rival_gap_pct"] = _med([r["gap_pct"] for r in rs])
+        # Median over the same workloads as our own median, so the two device
+        # times in a row are directly comparable.
+        s["rival_busy_ms"] = _med([r["busy_ms"] for r in rs])
         s["worst_speedup"] = min([r["speedup"] for r in rs if r["speedup"]],
                                  default=None)
         s["rival_workloads"] = len(rs)
         s["rival_tier"] = tier_of(tag)
     else:
-        s.update(rival_tflops=None, rival_bw_tbs=None, rival_gap_pct=None,
-                 worst_speedup=None, rival_tier=None, rival_workloads=None)
+        s.update(rival_busy_ms=None, worst_speedup=None, rival_tier=None,
+                 rival_workloads=None)
 
-    # Status: judged against a real alternative where one was measured; against
-    # the attainable ceiling otherwise; undetermined when neither input exists.
+    # Only a real alternative measured on the identical workload says anything
+    # about the gap to the state of the art. An eager reference does not: beating
+    # a naive composition of PyTorch ops is not a result, so those ops stay
+    # unrated rather than being scored against a bar nobody competes at.
     if ratio is not None and not ref_only:
-        s["status"] = GREEN if ratio >= 0.95 else YELLOW if ratio >= 0.80 else RED
-        s["basis"] = "baseline"
-    elif s["sol"] is not None:
-        s["status"] = GREEN if s["sol"] >= 70 else YELLOW if s["sol"] >= 40 else RED
-        s["basis"] = "sol"
+        lo, hi = PAR_BAND
+        s["status"] = AHEAD if ratio >= hi else PAR if ratio >= lo else BEHIND
     else:
-        s["status"] = NA
-        s["basis"] = "none"
+        s["status"] = UNRATED
     return s
 
 
@@ -570,43 +462,67 @@ def _op_cell(op: str, module: str | None, ref: str) -> str:
     return f"[{_md(op.removesuffix('Op'))}]({op_link(op, module, ref)})"
 
 
-def _bound_cell(bound: str | None, resident: bool) -> str:
-    cell = bound or EMPTY
-    return cell + " ᶜ" if resident else cell
-
-
 def _rival_cell(tag: str | None, tier: str | None) -> str:
-    if not tag:
-        return EMPTY
-    badge = "" if tier == TIER_LIB else f" _{tier}_"
-    return f"`{_md_code(tag)}`{badge}"
+    """The alternative's name. No tier badge: a tag carries its own tier, since
+    `tier_of` reads the tier off the name (`-ref` suffix, `torch` prefix). The
+    badge rendered `torch` as "torch torch" and `torch-ref` as "torch-ref ref".
+    """
+    return f"`{_md_code(tag)}`" if tag else EMPTY
+
+
+def _ratio_cell(ratio: float | None, worst: float | None = None,
+                rated: bool = True) -> str:
+    """The gap to the alternative, coloured by which side of parity it lands on.
+
+    Red for behind, plain ink for level, green for ahead — the reader gets the
+    verdict from the number itself instead of a legend. The worst workload is
+    appended only when the aggregate hides it, so the column stays one number
+    wide in the common case.
+
+    `rated=False` for a ratio against an eager reference only: the number is
+    still shown, because it says the kernel does something, but it stays grey.
+    Painting a 18x win over a naive composition of PyTorch ops the same green as
+    a win over a tuned library kernel would overstate it.
+    """
+    if ratio is None:
+        return f'<span class="perf-none">{NA}</span>'
+    if not rated:
+        return f'<span class="perf-unrated">{_speed(ratio)}</span>'
+    lo, hi = PAR_BAND
+    cls = "perf-ahead" if ratio >= hi else "perf-par" if ratio >= lo else "perf-behind"
+    cell = f'<span class="{cls}">{_speed(ratio)}</span>'
+    if worst is not None and worst < WORST_ALERT and worst < ratio * 0.95:
+        cell += f' <span class="perf-worst">worst {_speed(worst)}</span>'
+    return cell
 
 
 # --- Data tables -----------------------------------------------------------
 
-# The summary answers two questions only: how fast, and how it compares. The
-# per-workload table below it carries everything else.
+# The gap to the fastest alternative is the first thing after the op name, so
+# the answer is readable without scrolling a wide table to its right edge.
+# Utilisation against the hardware ceiling (SOL, bound, arithmetic intensity) is
+# a different question and is not asked here.
 SUMMARY_HEADER = (
-    "| Op | Test | Workloads | Busy ms | TFLOP/s | HBM TB/s | SOL "
-    "| Best alternative | its busy ÷ ours | worst | its TFLOP/s |",
-    "| --- | :-: | -: | -: | -: | -: | -: | --- | -: | -: | -: |",
+    "| Op | Speed vs alternative | Alternative | Device time | "
+    "Its device time | Workloads | Test |",
+    "| --- | -: | --- | -: | -: | -: | :-: |",
 )
 
 
 def summary_row(op: str, module: str | None, s: dict, tmark: str, ref: str) -> str:
     return (
-        f"| {s['status']} {_op_cell(op, module, ref)} | {tmark} "
-        f"| {s['workloads']}{_coverage(s)} | {_sig_ms(s['busy_ms'])} "
-        f"| {_sig(s['tflops'])} | {_sig(s['bw_tbs'])} | {_pct(s['sol'])} "
-        f"| {_rival_cell(s['rival'], s['rival_tier'])} | {_speed(s['speedup'])} "
-        f"| {_speed(s['worst_speedup'])} | {_sig(s['rival_tflops'])} |"
+        f"| {_op_cell(op, module, ref)} "
+        f"| {_ratio_cell(s['speedup'], s['worst_speedup'], not s['rival_ref_only'])} "
+        f"| {_rival_cell(s['rival'], s['rival_tier'])} "
+        f"| {_sig_ms(s['busy_ms'])} | {_sig_ms(s['rival_busy_ms'])} "
+        f"| {s['workloads']}{_coverage(s)} | {tmark} |"
     )
 
 
 DETAIL_HEADER = (
-    "| Workload | dtype | Busy ms | spread | Kernels | gap | TFLOP/s "
-    "| HBM TB/s | AI | SOL | Bound | Alternatives (busy ms · its busy ÷ ours) |",
-    "| --- | :-: | -: | -: | -: | -: | -: | -: | -: | -: | :-: | --- |",
+    "| Workload | Speed vs fastest | Device time | Alternatives "
+    "(device time · speed vs it) | dtype | TFLOP/s | spread |",
+    "| --- | -: | -: | --- | :-: | -: | -: |",
 )
 
 
@@ -618,20 +534,26 @@ def _workload_label(config: str, dtype: str | None) -> str:
 
 
 def detail_row(w: dict, m: dict) -> str:
+    ordered = sorted(m["rivals"].items(), key=lambda kv: kv[1]["busy_ms"])
     rivals = " · ".join(
         f"`{_md_code(t)}` {_sig_ms(r['busy_ms'])} ({_speed(r['speedup'])})"
-        for t, r in sorted(m["rivals"].items(), key=lambda kv: kv[1]["busy_ms"])
+        for t, r in ordered
     ) or EMPTY
+    # The headline ratio is against the fastest non-reference alternative, the
+    # same bar the op's row is judged on. With only a reference to compare
+    # against, the ratio is shown grey rather than green — see `_ratio_cell`.
+    real = [r for _, r in ordered if r["tier"] != TIER_REF and r["speedup"]]
+    weak = [r for _, r in ordered if r["tier"] == TIER_REF and r["speedup"]]
     spread = _pct(m["spread_pct"])
     if m["spread_pct"] is not None and m["spread_pct"] > NOISY_SPREAD:
         spread += " ⚠"
     return (
         f"| `{_md_code(_workload_label(w['config'], m['dtype']))}` "
-        f"| {m['dtype'] or EMPTY} | {_sig_ms(m['busy_ms'])} | {spread} "
-        f"| {_f(m['n_kernels'], '.0f')} | {_pct(m['gap_pct'])} "
-        f"| {_sig(m['tflops'])} | {_sig(m['bw_tbs'])} "
-        f"| {_f(m['ai'], '.0f')} | {_pct(m['sol'])} "
-        f"| {_bound_cell(m['bound'], m['resident'])} | {rivals} |"
+        f"| {_ratio_cell(real[0]['speedup'] if real else
+                         weak[0]['speedup'] if weak else None,
+                         rated=bool(real))} "
+        f"| {_sig_ms(m['busy_ms'])} | {rivals} "
+        f"| {m['dtype'] or EMPTY} | {_sig(m['tflops'])} | {spread} |"
     )
 
 
@@ -639,15 +561,18 @@ def detail_row(w: dict, m: dict) -> str:
 
 # Environment keys in the order the overview table shows them; anything else
 # recorded in meta.json is appended so a newly published fact is never dropped.
-ENV_ORDER = ["image", "gpu", "driver", "cuda", "torch", "tilelang", "timer",
-             "warmup_ms", "repeat_ms"]
+ENV_ORDER = ["image", "gpu", "driver", "cuda", "torch", "tilelang", "timer"]
+# The warmup and measurement budgets are deliberately not published as facts
+# about a number. They are a per-implementation time budget the harness fills
+# with as many samples as fit, so "25 ms" reads as if a call took 25 ms.
+_ENV_HIDE = {"warmup_ms", "repeat_ms"}
 
 
 def env_block(meta: dict, timing: str | None) -> list[str]:
     """The stack the numbers were produced on, from the published meta.json."""
     # A nested value is an inventory, not a fact for this table.
     env = {k: v for k, v in (meta.get("environment") or {}).items()
-           if not isinstance(v, (dict, list))}
+           if not isinstance(v, (dict, list)) and k not in _ENV_HIDE}
     packages = meta.get("packages") or (meta.get("environment") or {}).get("packages") or {}
     if timing and "timer" not in env:
         env["timer"] = timing
@@ -670,86 +595,37 @@ def env_block(meta: dict, timing: str | None) -> list[str]:
         if missing:
             lines += ["", "Not published by this run: "
                       + ", ".join(f"`{k}`" for k in missing) + "."]
-    if packages:
-        lines += ["", f'??? note "Every installed package ({len(packages)})"', "",
-                  "    | Package | Version |", "    | --- | --- |"]
-        lines += [f"    | `{_md_code(name)}` | `{_md_code(packages[name])}` |"
-                  for name in sorted(packages, key=str.lower)]
+    # The full installed-package inventory is not published here. It is a few
+    # hundred rows nobody reads to understand a benchmark number, and the
+    # versions that do matter are named in the table above. The snapshot itself
+    # carries the inventory for anyone reproducing a run.
     return lines + [""]
 
 
-def method_block(meta: dict) -> list[str]:
-    """How the numbers were taken. Fixed policy of the benchmark layer."""
-    env = meta.get("environment") or {}
-    warm = env.get("warmup_ms")
-    rep = env.get("repeat_ms")
-    budget = (f"**{warm} ms warmup, {rep} ms measurement** per implementation"
-              if warm and rep else
-              "**A fixed warmup and measurement budget** per implementation")
+def method_block() -> list[str]:
+    """How the numbers were taken. Fixed policy of the benchmark layer.
+
+    Kept to what changes how a number should be read. The reasoning behind the
+    compared quantity lives on the reading page, not here.
+    """
     return [
         "## Method", "",
-        "How a row was produced:", "",
         "- **One process, common inputs.** Every implementation of an op is "
-        "timed on the same tensors in the same process.",
-        f"- {budget}, reported as the median over the samples it fits in.",
-        "- **Forward then reversed order.** Timing each implementation twice in "
-        "opposite orders keeps drift across the case from landing on whichever "
-        "ran last.",
-        "- **L2 cleared between iterations.**",
+        "timed on the same tensors in the same process, in forward and then "
+        "reversed order so drift does not land on whichever ran last.",
+        "- **A fixed warmup and measurement budget** per implementation, "
+        "reported as the median over however many samples fit in it, with L2 "
+        "cleared between iterations.",
         "- **Compilation and workspace setup excluded.**",
-        "- **CUPTI, fail-closed.** A run that cannot collect device activity "
-        "fails rather than falling back to a different clock.",
-        "",
-        "What is compared:", "",
-        "- **Device-busy time** — the union of the intervals the device spent "
-        "executing that call's kernels.",
-        "- **It excludes the gaps between kernels within one call.** The "
-        "records cannot separate such a gap into the implementation's own "
-        "dependencies and the host being late with the next launch.",
-        "- **A single-kernel call has no gap at all**, by construction. "
-        "Comparing wall-clock spans would therefore charge a multi-kernel "
-        "implementation for launch latency it does not own, and credit a fused "
-        "one for nothing it did.",
-        "- **Launch structure is reported, not compared.** `gap` and `Kernels` "
-        "are their own columns on every data page.",
+        "- **Device time is what is compared** — the union of the intervals the "
+        "device spent executing the call's kernels, collected through CUPTI. A "
+        "run that cannot collect device activity fails rather than falling back "
+        "to a different clock. [Why this quantity](reading.md#why-device-time)",
         "",
     ]
 
 
-def ceilings_block(mach: Machine, gpu: str) -> list[str]:
-    bw_theo, bw_att = mach.bw_peak()
-    if not mach.known:
-        return [
-            "## Hardware ceilings", "",
-            f'!!! warning "No GPU profile for {gpu}"', "",
-            "    Utilisation, SOL and bound columns are blank: this renderer "
-            "does not guess peaks. Add a profile under "
-            f"[`src/tileops/perf/profiles/`]({_GH}/tree/main/src/tileops/perf/profiles) "
-            "to fill them.", "",
-        ]
-    lines = [
-        "## Hardware ceilings", "",
-        "Utilisation is reported against the **attainable** ceiling — the "
-        "spec-sheet peak scaled by what "
-        f"[`benchmarks/hardware/`]({_GH}/tree/main/benchmarks/hardware) measures "
-        "on this GPU. 100% means saturating the machine as microbenchmarks find "
-        "it, not as the datasheet advertises it.", "",
-        "| Resource | Spec-sheet peak | Attainable | Ratio |",
-        "| --- | -: | -: | -: |",
-        f"| HBM bandwidth | {bw_theo / 1e12:.2f} TB/s | {bw_att / 1e12:.2f} TB/s "
-        f"| {bw_att / bw_theo:.0%} |",
-    ]
-    for key in ("fp8", "fp16", "bf16", "tf32"):
-        theo, att = mach.tf_peak_by_key(key)
-        if theo:
-            lines.append(f"| Tensor core {key} | {theo / 1e12:.0f} TFLOP/s "
-                         f"| {att / 1e12:.0f} TFLOP/s | {att / theo:.0%} |")
-    lines += ["", "Source: [`src/tileops/perf/profiles/`]"
-              f"({_GH}/tree/main/src/tileops/perf/profiles)", ""]
-    return lines
-
-
-def index_page(args, meta: dict, mach: Machine, rows: list[tuple],
+def index_page(args, meta: dict, rows: list[tuple],
                by_page: dict, spreads: list[float], timing: str | None,
                n_workloads: int, n_failed: int, n_skipped: int) -> str:
     run_id = meta.get("run_id")
@@ -767,132 +643,115 @@ def index_page(args, meta: dict, mach: Machine, rows: list[tuple],
                  f"[`nightly-bench`]({_NB}) snapshot."]
     head.append("")
 
-    lines = head + env_block(meta, timing) + method_block(meta) \
-        + ceilings_block(mach, args.gpu)
+    lines = head + env_block(meta, timing) + method_block()
 
-    # Status roll-up.
-    by = Counter((s["status"], s["basis"]) for _, _, s, _, _ in rows)
-    lines += ["## Where the library stands", "",
-              "| | Judged against an alternative | Judged against the ceiling "
-              "| Total |", "| --- | -: | -: | -: |"]
-    for status, label in ((GREEN, f"{GREEN} at or ahead / ≥70% of SOL"),
-                          (YELLOW, f"{YELLOW} 0.80–0.95× / 40–70% of SOL"),
-                          (RED, f"{RED} below 0.80× / <40% of SOL"),
-                          (NA, f"{NA} no alternative and no ceiling resolved")):
-        b, c = by[(status, "baseline")], by[(status, "sol")]
-        n = b + c + by[(status, "none")]
-        if n:
-            lines.append(f"| {label} | {b or EMPTY} | {c or EMPTY} | {n} |")
-    n_base = sum(v for (_, basis), v in by.items() if basis == "baseline")
-    lines += ["", f"{n_base} of {len(rows)} ops have a non-reference alternative "
-              "measured on the identical workload; the rest are judged against "
-              "the hardware ceiling only, which is a weaker claim. "
-              "[How to read a row](reading.md)", ""]
+    # What the run covers and how far to trust it — the qualifications a reader
+    # needs before reading any single number off a data page.
+    by = Counter(s["status"] for _, _, s, _, _ in rows)
+    rated = len(rows) - by[UNRATED]
+    lines += ["## Coverage", "",
+              f"- **{rated} of {len(rows)} ops** are measured against a real "
+              "alternative — a tuned library kernel or a native PyTorch op — on "
+              "the identical workload. The rest run against an eager reference "
+              "only, which is not a bar worth reporting a win against."]
     if spreads:
         noisy = sum(1 for x in spreads if x > NOISY_SPREAD)
-        lines += [f"Measurement noise: median p10→p90 spread "
-                  f"{statistics.median(spreads):.1f}% of device-busy time; "
-                  f"{noisy} of {len(spreads)} workloads exceed "
-                  f"{NOISY_SPREAD:.0f}% and carry `⚠`.", ""]
+        lines.append(f"- **Repeatability**: the median workload's p10→p90 spread "
+                     f"is {statistics.median(spreads):.1f}% of its device time. "
+                     f"{noisy} of {len(spreads)} exceed {NOISY_SPREAD:.0f}% and "
+                     "carry `⚠` where they appear.")
     if n_failed or n_skipped:
-        lines += [f"Absent from every table: {n_failed} workloads errored and "
-                  f"{n_skipped} were skipped in this run.", ""]
+        lines.append(f"- **Absent from every table**: {n_failed} workloads "
+                     f"errored and {n_skipped} were skipped in this run.")
+    lines += ["", "[How these numbers are taken](reading.md)", ""]
 
-    # Entry table into the data pages.
+    # Entry table into the data pages. Coverage only: the per-page verdict
+    # tallies belong on the page that shows the rows behind them.
     lines += ["## Data", "",
-              "| Page | Ops | Workloads | median SOL | " + GREEN + " | "
-              + YELLOW + " | " + RED + " | " + NA + " |",
-              "| --- | -: | -: | -: | -: | -: | -: | -: |"]
+              "| Page | Ops | Workloads |", "| --- | -: | -: |"]
     for slug, title, _ in DATA_PAGES:
         page_rows = by_page.get(slug, [])
         if not page_rows:
             continue
-        st = Counter(s["status"] for _, _, s, _, _ in page_rows)
-        sols = [s["sol"] for _, _, s, _, _ in page_rows if s["sol"] is not None]
         n_w = sum(s["workloads"] for _, _, s, _, _ in page_rows)
-        lines.append(
-            f"| [{title}]({slug}.md) | {len(page_rows)} | {n_w} "
-            f"| {_pct(statistics.median(sols)) if sols else EMPTY} "
-            f"| {st[GREEN] or EMPTY} | {st[YELLOW] or EMPTY} "
-            f"| {st[RED] or EMPTY} | {st[NA] or EMPTY} |")
+        lines.append(f"| [{title}]({slug}.md) | {len(page_rows)} | {n_w} |")
     return "\n".join(lines) + "\n"
 
 
 def reading_page() -> str:
+    lo, hi = PAR_BAND
     lines = [
-        "# How to read these numbers", "",
-        "Each op family gets two tables. The first is one row per op — how fast "
-        "it is and how that compares — with the numbers as medians over the "
-        "op's workloads. The second lists every workload behind it, with the "
-        "per-workload numbers and every alternative measured on it.", "",
+        "# How these numbers are taken", "",
+        "Every data page answers one question: **how does TileOPs compare to the "
+        "fastest alternative implementation of the same op, on the same "
+        "workload?** Each op family gets one row per op, then every workload "
+        "behind it.", "",
+        "## The colour is the verdict", "",
+        "| | Meaning |",
+        "| --- | --- |",
+        f'| <span class="perf-behind">0.74×</span> | Slower than the '
+        f"alternative — below {lo:.2f}×. |",
+        f'| <span class="perf-par">1.02×</span> | Level with it — '
+        f"{lo:.2f}–{hi:.2f}×, inside measurement noise. |",
+        f'| <span class="perf-ahead">1.42×</span> | Faster than it — '
+        f"{hi:.2f}× and above. |",
+        f'| <span class="perf-unrated">18.06×</span> | Measured against an eager '
+        f"reference only (a name ending in `-{TIER_REF}`). Grey, not green: the "
+        "bar is a naive composition of PyTorch ops, so the number says the "
+        "kernel does something, not that it beats anyone. |",
+        f'| <span class="perf-none">{NA}</span> | No alternative at all ran on '
+        "this workload. |",
+        "",
+        "A ratio is the alternative's device time divided by ours, so **above 1 "
+        "means TileOPs is faster**. Where the aggregate hides a bad workload, "
+        f"the worst one is named beside it (below {WORST_ALERT:.2f}×).", "",
         "## Columns", "",
         "| Column | Meaning |",
         "| --- | --- |",
-        "| **Busy ms** | Device execution time: union of the call's kernel "
-        "intervals. Every comparison uses it. |",
-        "| **gap** | Share of the call's span with no kernel running. Reported, "
-        "never compared. |",
-        "| **Kernels** | Kernels the call launched. |",
-        "| **TFLOP/s** | Required FLOPs ÷ busy. Count from the manifest "
-        "`roofline` formula, not a hardware counter. |",
-        "| **HBM TB/s** | Required bytes ÷ busy, same source. |",
-        "| **SOL** | Achieved ÷ attainable ceiling, whichever of the two binds: "
-        "the dtype's FLOP/s or HBM bandwidth. |",
-        "| **Bound** | Which resource that is. `ᶜ` = bandwidth above the HBM "
-        "peak, i.e. cache-resident. |",
-        "| **Best alternative** | Fastest other implementation on the same "
-        f"workload. Unlabelled = tuned library kernel, _{TIER_TORCH}_ = PyTorch "
-        f"native op, _{TIER_REF}_ = eager composition (a weak bar). |",
-        "| **its busy ÷ ours** | The alternative's busy time divided by "
-        "ours, aggregated over the op's workloads. >1 = TileOPs faster. |",
-        "| **worst** | The same ratio on the op's worst workload. |",
-        "| **its TFLOP/s** | The alternative's own rate, same definition. |",
+        "| **Device time** | The time the device spent executing the call's "
+        "kernels — the union of their intervals. Every comparison on these "
+        "pages uses it. |",
+        "| **Alternative** | The fastest other implementation measured on the "
+        "same workload. A tuned library kernel (`fla`, `mamba`, `fa3`, "
+        f"`triton`, …) or a native PyTorch op (`{TIER_TORCH}`). A name ending "
+        f"in `-{TIER_REF}` is an eager composition of PyTorch ops, which is not "
+        "a bar worth reporting a win against. |",
+        "| **Its device time** | The alternative's own, same definition. |",
+        "| **TFLOP/s** | Required FLOPs ÷ device time. The count comes from the "
+        "op's manifest `roofline` formula, not from a hardware counter. |",
+        "| **spread** | (p90 − p10) ÷ median device time — how repeatable the "
+        f"measurement was. `⚠` above {NOISY_SPREAD:.0f}%. |",
+        "| **Workloads** | How many workloads the op's row aggregates. |",
         "| **Test** | ✅ passed · ❌ failed · ⏭️ all skipped · "
         f"`{EMPTY}` no test matched. |",
-        "| **spread** | (p90 − p10) ÷ median busy. "
-        f"`⚠` above {NOISY_SPREAD:.0f}%. |",
-        "| **AI** | Arithmetic intensity: FLOPs ÷ bytes. |",
+        "",
+        "Utilisation against the hardware ceiling — what share of peak FLOP/s or "
+        "HBM bandwidth a kernel reached, and which of the two bounds it — is a "
+        "different question and is not on these pages. It says how much of the "
+        "machine a kernel uses, not whether someone else's kernel does the same "
+        "work faster.",
         "",
         "## How a per-op row is aggregated", "",
         "An op is benchmarked on several shapes and dtypes, so every number in "
-        "the one-row-per-op table is an aggregate over its workloads:", "",
-        "- **Busy ms, TFLOP/s, HBM TB/s, SOL** — the median over the op's "
-        "workloads, each column taken independently. Shapes and dtypes are "
-        "mixed, so the row gives the op's scale, not a workload you can "
-        "reproduce. The per-workload table is where a single number lives.",
-        "- **Best alternative** — per workload, the fastest non-reference "
-        "alternative is picked; the op is then labelled with whichever "
-        "alternative won most often. Only that one alternative's ratios are "
-        "aggregated, so the name and the number always belong together.",
-        "- **its busy ÷ ours** — the geometric mean of those ratios, the same "
-        "statistic "
-        "TileOPs PR bodies use. An arithmetic mean would let one large win "
-        "outweigh several losses of equal size.",
-        "- **worst** — the smallest ratio among them, not an average.",
-        "- **its TFLOP/s** — the median of that alternative's rate over the "
-        "workloads where it ran, which need not be all of them.",
-        "- **Workloads** — how many workloads the aggregate covers.",
-        "",
-        "The overview page adds one more layer: its `median SOL` per page is a "
-        "median of those per-op medians.",
-        "",
-        "## Status", "",
-        "The dot on an op name is judged against the best non-reference "
-        f"alternative where one was measured ({GREEN} ≥0.95× · {YELLOW} "
-        f"0.80–0.95× · {RED} <0.80×), otherwise against SOL ({GREEN} ≥70% · "
-        f"{YELLOW} 40–70% · {RED} <40%), otherwise `{NA}`.",
-        "",
-        "A comparison against an alternative is the stronger claim: the ceiling "
-        "says how much of the machine a kernel uses, not whether someone else's "
-        "kernel does the same work faster.",
+        "its row is an aggregate over its workloads:", "",
+        "- **Device time** — the median over the op's workloads, and the "
+        "alternative's median over the same ones. Shapes and dtypes are mixed, "
+        "so the pair gives the op's scale, not a workload you can reproduce. "
+        "The per-workload table is where a single number lives.",
+        "- **Alternative** — per workload, the fastest non-reference "
+        "alternative is picked; the op is labelled with whichever won most "
+        "often. Only that one alternative's ratios are aggregated, so the name "
+        "and the number always belong together.",
+        "- **Speed vs alternative** — the geometric mean of those ratios, the "
+        "same statistic TileOPs PR bodies use. An arithmetic mean would let one "
+        "large win outweigh several losses of equal size.",
         "",
         "## Empty cells", "",
         f"`{EMPTY}` means an input to that metric was not recorded, never that "
-        "the value is zero: the op reported no FLOP or byte count for that "
-        "workload, no alternative ran on it, or its dtype ceiling could not be "
-        "resolved.",
+        "the value is zero: the op reported no FLOP count for that workload, or "
+        "no alternative ran on it.",
         "",
-        "## Why device-busy time", "",
+        "## Why device time", "",
         "The wall-clock span of a call includes the gaps between its kernels. "
         "Those gaps are dominated by how fast the host issues the next launch, "
         "which is a property of the benchmark loop rather than of the kernel: "
@@ -900,9 +759,9 @@ def reading_page() -> str:
         "the same implementation appears to gain or lose against a rival purely "
         "with problem size. A call that launches one fused kernel has no gap at "
         "all. Comparing spans therefore rewards fusion twice and penalises "
-        "multi-kernel implementations for the host. Device-busy time excludes "
-        "the gaps on both sides; the gap and kernel-count columns keep the "
-        "launch structure visible on its own.",
+        "multi-kernel implementations for the host. Device time excludes the "
+        "gaps on both sides, so the two implementations in a comparison are "
+        "charged for the same thing: their own kernels.",
         "",
     ]
     return "\n".join(lines) + "\n"
@@ -910,7 +769,9 @@ def reading_page() -> str:
 
 def data_page(title: str, fams: list[str], rows_by_fam: dict,
               metrics_by_op: dict, workloads_of: dict, ref: str) -> str:
-    rank = {GREEN: 0, YELLOW: 1, RED: 2, NA: 3}
+    # Widest lead first, then level, then behind, then the unrated. Every op is
+    # listed either way; this only decides what a reader meets first.
+    rank = {AHEAD: 0, PAR: 1, BEHIND: 2, UNRATED: 3}
     present = [f for f in fams if rows_by_fam.get(f)]
     n_ops = sum(len(rows_by_fam[f]) for f in present)
     n_workloads = sum(s["workloads"] for f in present
@@ -921,13 +782,19 @@ def data_page(title: str, fams: list[str], rows_by_fam: dict,
              f"**{n_ops} ops, {n_workloads} workloads** — {tally}."
              if len(present) > 1 else
              f"**{n_ops} ops, {n_workloads} workloads.**", "",
-             "One row per op, then every workload behind it. Column meanings "
-             "are on [How to read these numbers](reading.md).", ""]
+             "One row per op, then every workload behind it. The second column "
+             "is the gap to the fastest other implementation of the same op: "
+             '<span class="perf-ahead">green</span> is faster than it, '
+             '<span class="perf-par">plain</span> is level with it, '
+             '<span class="perf-behind">red</span> is slower. '
+             "[How these numbers are taken](reading.md).", ""]
     for fam in fams:
         rows = rows_by_fam.get(fam)
         if not rows:
             continue
-        rows = sorted(rows, key=lambda r: (rank.get(r[2]["status"], 9), r[0]))
+        # Within a band, the widest margin first.
+        rows = sorted(rows, key=lambda r: (rank.get(r[2]["status"], 9),
+                                           -(r[2]["speedup"] or 0), r[0]))
         # The wrapper is a styling hook: extra.css keeps these dense numeric
         # cells on one line and lets the table scroll instead of wrapping.
         lines += [f"## {FAMILY_TITLE.get(fam, fam)}", "",
@@ -938,7 +805,13 @@ def data_page(title: str, fams: list[str], rows_by_fam: dict,
         # otherwise repeat down the widest column of every row.
         lines += ["", "</div>", ""]
         for op, module, s, _, _ in rows:
-            lines += [f"### {s['status']} {_md(op.removesuffix('Op'))} "
+            # The verdict repeats in the heading so scrolling to an op answers
+            # the question before the table is read.
+            verdict = (
+                f" — {_ratio_cell(s['speedup'], rated=not s['rival_ref_only'])} "
+                f"vs `{_md_code(s['rival'])}`"
+                if s["rival"] and s["speedup"] else "")
+            lines += [f"### {_md(op.removesuffix('Op'))}{verdict} "
                       f"<small>({s['workloads']} workloads)</small>", "",
                       '<div class="datatable" markdown="1">', "", *DETAIL_HEADER]
             for w, m in sorted(zip(workloads_of[op], metrics_by_op[op]),
@@ -992,7 +865,6 @@ def main():
     workloads, failures, skips = parse_bench_xml(args.bench_xml)
     tests = (parse_test_xml(args.test_xml)
              if args.test_xml and os.path.exists(args.test_xml) else {})
-    mach = Machine(load_gpu_profile(args.gpu))
 
     unclassified = sorted({
         t for w in workloads for t in w["impls"]
@@ -1005,7 +877,7 @@ def main():
     workloads_of: dict[str, list[dict]] = defaultdict(list)
     module_of: dict[str, str | None] = {}
     for w in workloads:
-        metrics_by_op[w["op"]].append(workload_metrics(w, mach))
+        metrics_by_op[w["op"]].append(workload_metrics(w))
         workloads_of[w["op"]].append(w)
         module_of.setdefault(w["op"], w["op_module"])
 
@@ -1029,7 +901,7 @@ def main():
     out_dir = args.out_dir or os.path.join(REPO, "docs", "benchmarks")
     os.makedirs(out_dir, exist_ok=True)
     pages = {
-        "index.md": index_page(args, meta, mach, all_rows, by_page, spreads,
+        "index.md": index_page(args, meta, all_rows, by_page, spreads,
                                timing, len(workloads), len(failures),
                                len(skips)),
         "reading.md": reading_page(),

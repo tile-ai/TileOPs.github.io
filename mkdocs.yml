@@ -95,10 +95,56 @@ hooks:
 
 plugins:
   - search
+  # Chinese pages are `<name>.zh.md` next to the English `<name>.md`. A page with
+  # no Chinese version falls back to English, so the zh nav is never sparse;
+  # hooks.py marks those pages with a notice. i18n runs at event_priority(-100),
+  # after hooks.py has expanded the Benchmarks nav.
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: zh
+          name: 简体中文
+          build: true
+          nav_translations:
+            Home: 首页
+            Design: 设计
+            Overview: 概览
+            Architecture: 架构
+            Op Manifest: 算子清单
+            Op Interface Design: 算子接口设计
+            Op Interface Reference: 算子接口参考
+            Roofline: Roofline
+            Testing & Benchmarking: 测试与性能测量
+            Trust Model: 信任模型
+            Elementwise: Elementwise
+            # Skills stays English: those pages are agent-facing instructions.
+            API Reference: API 参考
+            Reduction: Reduction
+            Normalization: Normalization
+            GEMM: GEMM
+            Quantization: Quantization
+            Attention: Attention
+            FFT: FFT
+            MHC: MHC
+            Top-k: Top-k
+            Trace: Trace
+            Benchmarks: 性能数据
+            Performance Guides: 性能指南
+            In-Kernel Timeline Trace: 核内时间线追踪
   - include-markdown:
       rewrite_relative_urls: false
+  # A missing ./TileOPs checkout makes every mkdocstrings identifier
+  # unresolvable. That is a warning, not an error, so `mkdocs serve` still works
+  # on a bare clone; `--strict` turns it into a build failure, which is what CI
+  # wants.
   - mkdocstrings:
-      on_error: warn
       handlers:
         python:
           paths: [TileOPs/src]

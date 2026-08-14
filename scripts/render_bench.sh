@@ -13,8 +13,9 @@
 #   * branch present but fetch fails -> transient 404/network error; exit
 #     non-zero so the deploy aborts and the live page is left intact.
 #
-# Requires TileOPs checked out at ./TileOPs (gen_bench_pages.py reads the GPU
-# profiles under src/tileops/perf/profiles/ from there) and python on PATH.
+# Requires python on PATH. A ./TileOPs checkout is optional: it only makes
+# gen_bench_pages.py resolve an op's source link to its file instead of a code
+# search.
 set -euo pipefail
 
 repo="https://github.com/tile-ai/TileOPs"

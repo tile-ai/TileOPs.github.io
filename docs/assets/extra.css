@@ -18,8 +18,15 @@
   --tf-blue: #2f5d8c;
   --tf-line: rgba(25, 26, 22, 0.16);
   --tf-line-soft: rgba(25, 26, 22, 0.07);
-  --tf-display: "Bricolage Grotesque", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --tf-body: "Hanken Grotesk", "PingFang SC", "Microsoft YaHei", sans-serif;
+  /* Latin faces come first so technical terms inside Chinese prose keep the
+   * site's voice; Han glyphs fall through to the platform UI face. No CJK
+   * webfont: a Simplified Chinese subset costs megabytes, which is not worth
+   * paying on every page for a partly translated site.
+   */
+  --tf-cjk: "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei",
+    "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
+  --tf-display: "Bricolage Grotesque", var(--tf-cjk);
+  --tf-body: "Hanken Grotesk", var(--tf-cjk);
   --tf-mono: "Space Mono", ui-monospace, monospace;
 }
 
@@ -231,4 +238,129 @@ body,
   background: transparent;
   padding: 0;
   color: var(--md-default-fg-color--light);
+}
+
+/* Benchmark verdicts. The ratio's colour *is* the result, so these carry the
+ * weight no separate status glyph does: red behind the alternative, plain ink
+ * level with it, green ahead. Tabular figures keep a column of them aligned.
+ */
+.md-typeset .perf-ahead,
+.md-typeset .perf-par,
+.md-typeset .perf-behind {
+  font-family: var(--tf-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.md-typeset .perf-ahead {
+  color: var(--tf-teal);
+}
+
+.md-typeset .perf-par {
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset .perf-behind {
+  color: var(--tf-red);
+}
+
+/* The worst workload, named only when the aggregate hides it. Subordinate to
+ * the number it qualifies.
+ */
+.md-typeset .perf-worst {
+  color: var(--tf-muted);
+  font-family: var(--tf-mono);
+  font-size: 0.86em;
+  white-space: nowrap;
+}
+
+/* A ratio against an eager reference only. Shown, but never as a win: the bar
+ * is a naive composition of PyTorch ops that nobody competes at.
+ */
+.md-typeset .perf-unrated {
+  color: var(--tf-muted);
+  font-family: var(--tf-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.md-typeset .perf-none {
+  color: var(--md-default-fg-color--light);
+}
+
+/* A verdict repeated in an op heading sits in the display face around it. */
+.md-typeset h3 .perf-ahead,
+.md-typeset h3 .perf-par,
+.md-typeset h3 .perf-behind {
+  font-size: 0.82em;
+}
+
+/* Language switcher: a quiet pill on the paper header, matching the source
+ * link beside it rather than Material's default bare-icon dropdown.
+ */
+.md-header__option .md-select__inner {
+  border-radius: 999px;
+}
+
+.md-header__option .md-select__link {
+  font-family: var(--tf-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* A page served from the default language because this locale has no
+ * translation yet. Reads as a status line, not as a warning.
+ */
+.md-typeset .locale-notice {
+  margin: -0.4rem 0 1.4rem;
+  padding: 0.5rem 0.8rem;
+  border-left: 3px solid var(--tf-line);
+  background: var(--tf-line-soft);
+  color: var(--tf-muted);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.md-typeset .locale-notice strong {
+  margin-right: 0.35em;
+  color: var(--md-default-fg-color);
+  font-weight: 700;
+}
+
+/* Chinese type metrics. Han glyphs fill their em box, so the Latin line height
+ * and size read as cramped; headings set in a Latin display face at 800 fall
+ * through to a CJK face where that weight closes up the strokes.
+ *
+ * Scoped away from pages carrying .locale-notice: their body text is English,
+ * and Latin copy under Chinese metrics reads as loose.
+ */
+html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) {
+  font-size: 0.94rem;
+  line-height: 1.8;
+}
+
+html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) h1,
+html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) h2,
+html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) h3,
+html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) h4 {
+  font-weight: 700;
+}
+
+/* Inline code sits in the middle of Chinese sentences far more often than in
+ * English ones; at the larger Chinese body size it needs less box around it.
+ */
+html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) code {
+  font-size: 0.8em;
+  padding: 0.04em 0.24em;
+}
+
+/* Underlines otherwise cut into the descender-free baseline of Han glyphs. */
+html[lang="zh"] .md-typeset a {
+  text-underline-offset: 0.18em;
+}
+
+html[lang="zh"] .md-nav,
+html[lang="zh"] .md-nav__title {
+  line-height: 1.5;
 }
