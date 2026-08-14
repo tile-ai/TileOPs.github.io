@@ -240,9 +240,9 @@ _NUMERIC_METRICS = {
     "latency_ms", "latency_p10_ms", "latency_p90_ms", "gap_ms", "tflops",
     "bandwidth_tbs", "ratio", "flops", "bytes", "n_kernels", "n_samples",
 }
-# Legacy duplicates of the first baseline's tag-prefixed keys.
-_LEGACY = {"baseline_tag", "baseline_device_busy_ms", "baseline_latency_ms",
-           "baseline_tflops", "baseline_ratio", "baseline_bandwidth_tbs"}
+# The alias the benchmark writes for its first baseline. Dropped whole: it
+# duplicates an implementation under a name none has, and its key set grows.
+_LEGACY_TAG = "baseline"
 
 
 def parse_bench_xml(path: str) -> tuple[list[dict], list[dict], list[dict]]:
@@ -267,11 +267,13 @@ def parse_bench_xml(path: str) -> tuple[list[dict], list[dict], list[dict]]:
 
         impls: dict[str, dict] = defaultdict(dict)
         for key, val in props.items():
-            if key in ("op", "op_module") or key in _LEGACY:
+            if key in ("op", "op_module"):
                 continue
             for suf in _METRIC_SUFFIXES:
                 if key.endswith("_" + suf):
                     tag = key[: -len(suf) - 1]
+                    if tag == _LEGACY_TAG:
+                        break
                     impls[tag][suf] = _num(val) if suf in _NUMERIC_METRICS else val
                     break
         workloads.append({
@@ -469,10 +471,11 @@ def op_summary(metrics: list[dict]) -> dict:
         s["rival_gap_pct"] = _med([r["gap_pct"] for r in rs])
         s["worst_speedup"] = min([r["speedup"] for r in rs if r["speedup"]],
                                  default=None)
+        s["rival_workloads"] = len(rs)
         s["rival_tier"] = tier_of(tag)
     else:
         s.update(rival_tflops=None, rival_bw_tbs=None, rival_gap_pct=None,
-                 worst_speedup=None, rival_tier=None)
+                 worst_speedup=None, rival_tier=None, rival_workloads=None)
 
     # Status: judged against a real alternative where one was measured; against
     # the attainable ceiling otherwise; undetermined when neither input exists.
@@ -515,6 +518,22 @@ def _sig(x) -> str:
     if x == 0:
         return "0"
     return f"{x:.3g}" if abs(x) < 1000 else f"{x:,.0f}"
+
+
+def _sig_ms(x) -> str:
+    """A time in ms. Fixed decimals would round a small kernel away, so
+    anything under 10 us keeps significant digits instead."""
+    if x is None:
+        return EMPTY
+    return f"{x:.4f}" if x >= 0.01 else f"{x:.3g}"
+
+
+def _coverage(s: dict) -> str:
+    """How many workloads the named rival ran on, when not all of them."""
+    n = s.get("rival_workloads")
+    if n is None or n == s["workloads"]:
+        return ""
+    return f" ({n} vs `{_md_code(s['rival'])}`)"
 
 
 def _pct(x) -> str:
@@ -577,7 +596,7 @@ SUMMARY_HEADER = (
 def summary_row(op: str, module: str | None, s: dict, tmark: str, ref: str) -> str:
     return (
         f"| {s['status']} {_op_cell(op, module, ref)} | {tmark} "
-        f"| {s['workloads']} | {_f(s['busy_ms'], '.4f')} "
+        f"| {s['workloads']}{_coverage(s)} | {_sig_ms(s['busy_ms'])} "
         f"| {_sig(s['tflops'])} | {_sig(s['bw_tbs'])} | {_pct(s['sol'])} "
         f"| {_rival_cell(s['rival'], s['rival_tier'])} | {_speed(s['speedup'])} "
         f"| {_speed(s['worst_speedup'])} | {_sig(s['rival_tflops'])} |"
@@ -600,7 +619,7 @@ def _workload_label(config: str, dtype: str | None) -> str:
 
 def detail_row(w: dict, m: dict) -> str:
     rivals = " · ".join(
-        f"`{_md_code(t)}` {r['busy_ms']:.4f} ({_speed(r['speedup'])})"
+        f"`{_md_code(t)}` {_sig_ms(r['busy_ms'])} ({_speed(r['speedup'])})"
         for t, r in sorted(m["rivals"].items(), key=lambda kv: kv[1]["busy_ms"])
     ) or EMPTY
     spread = _pct(m["spread_pct"])
@@ -608,7 +627,7 @@ def detail_row(w: dict, m: dict) -> str:
         spread += " ⚠"
     return (
         f"| `{_md_code(_workload_label(w['config'], m['dtype']))}` "
-        f"| {m['dtype'] or EMPTY} | {_f(m['busy_ms'], '.4f')} | {spread} "
+        f"| {m['dtype'] or EMPTY} | {_sig_ms(m['busy_ms'])} | {spread} "
         f"| {_f(m['n_kernels'], '.0f')} | {_pct(m['gap_pct'])} "
         f"| {_sig(m['tflops'])} | {_sig(m['bw_tbs'])} "
         f"| {_f(m['ai'], '.0f')} | {_pct(m['sol'])} "
@@ -620,34 +639,43 @@ def detail_row(w: dict, m: dict) -> str:
 
 # Environment keys in the order the overview table shows them; anything else
 # recorded in meta.json is appended so a newly published fact is never dropped.
-ENV_ORDER = ["image", "digest", "gpu", "driver", "cuda", "torch", "tilelang",
-             "flashinfer", "flash-attn", "fa3", "vllm", "triton", "mamba-ssm",
-             "deep_gemm", "fla", "timer", "warmup_ms", "repeat_ms"]
+ENV_ORDER = ["image", "gpu", "driver", "cuda", "torch", "tilelang", "timer",
+             "warmup_ms", "repeat_ms"]
 
 
 def env_block(meta: dict, timing: str | None) -> list[str]:
     """The stack the numbers were produced on, from the published meta.json."""
-    env = dict(meta.get("environment") or {})
+    # A nested value is an inventory, not a fact for this table.
+    env = {k: v for k, v in (meta.get("environment") or {}).items()
+           if not isinstance(v, (dict, list))}
+    packages = meta.get("packages") or (meta.get("environment") or {}).get("packages") or {}
     if timing and "timer" not in env:
         env["timer"] = timing
     lines = ["## Environment", ""]
     if not env:
-        return lines + [
+        lines += [
             '!!! warning "The run did not publish its environment"', "",
-            "    The snapshot carries no image, driver, CUDA, torch or library "
-            "versions, so a number on these pages cannot be tied to the stack "
-            "that produced it. The nightly's publish step fills this in "
-            f"through [`meta.json`]({_NB}).", "",
+            "    The snapshot carries no image, driver, CUDA or torch version, "
+            "so a number on these pages cannot be tied to the stack that "
+            f"produced it. The nightly's publish step fills this in through "
+            f"[`meta.json`]({_NB}).", "",
         ]
-    keys = [k for k in ENV_ORDER if k in env] + [k for k in env if k not in ENV_ORDER]
-    lines += ["| | |", "| --- | --- |"]
-    for k in keys:
-        lines.append(f"| {_md(k)} | `{_md_code(env[k])}` |")
-    missing = [k for k in ("image", "digest", "driver", "cuda", "torch",
-                           "tilelang") if k not in env]
-    if missing:
-        lines += ["", "Not published by this run: "
-                  + ", ".join(f"`{k}`" for k in missing) + "."]
+    else:
+        keys = ([k for k in ENV_ORDER if k in env]
+                + [k for k in env if k not in ENV_ORDER])
+        lines += ["| | |", "| --- | --- |"]
+        lines += [f"| {_md(k)} | `{_md_code(env[k])}` |" for k in keys]
+        # A version the inventory carries is published, wherever it sits.
+        missing = [k for k in ("image", "driver", "cuda", "torch", "tilelang")
+                   if k not in env and k not in packages]
+        if missing:
+            lines += ["", "Not published by this run: "
+                      + ", ".join(f"`{k}`" for k in missing) + "."]
+    if packages:
+        lines += ["", f'??? note "Every installed package ({len(packages)})"', "",
+                  "    | Package | Version |", "    | --- | --- |"]
+        lines += [f"    | `{_md_code(name)}` | `{_md_code(packages[name])}` |"
+                  for name in sorted(packages, key=str.lower)]
     return lines + [""]
 
 
@@ -797,7 +825,7 @@ def reading_page() -> str:
         "Each op family gets two tables. The first is one row per op — how fast "
         "it is and how that compares — with the numbers as medians over the "
         "op's workloads. The second lists every workload behind it, with the "
-        "full metric set and every alternative measured on it.", "",
+        "per-workload numbers and every alternative measured on it.", "",
         "## Columns", "",
         "| Column | Meaning |",
         "| --- | --- |",
