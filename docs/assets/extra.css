@@ -157,6 +157,16 @@ body,
   font-weight: 800;
 }
 
+/* The logo is a wordmark: it already reads TileOPs, so the site name beside it
+ * says the same thing twice. Hidden rather than removed, because the second
+ * topic in the same slot — the page's own title, which takes over once the h1
+ * has scrolled away — still needs the space. The logo link carries the site
+ * name as its label, so nothing is lost to a screen reader.
+ */
+.md-header__topic:first-child {
+  visibility: hidden;
+}
+
 .md-source__repository {
   font-family: var(--tf-mono);
   font-size: 0.68rem;
@@ -209,6 +219,15 @@ body,
   .md-nav__title {
     background: transparent;
     box-shadow: none;
+  }
+
+  /* Material pins that title to the top of the nav and hides what scrolls
+   * under it behind its own paper. With the paper gone the items ran straight
+   * through it, and it has nothing to stay for anyway: it repeats the site
+   * name already in the header. It scrolls with the list it heads.
+   */
+  .md-nav--primary .md-nav__title {
+    position: static;
   }
 }
 
