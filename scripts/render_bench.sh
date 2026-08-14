@@ -13,9 +13,9 @@
 #   * branch present but fetch fails -> transient 404/network error; exit
 #     non-zero so the deploy aborts and the live page is left intact.
 #
-# Requires python on PATH. A ./TileOPs checkout is optional: it only makes
-# gen_bench_pages.py resolve an op's source link to its file instead of a code
-# search.
+# Requires python3 on PATH (3.9 is enough; CI pins 3.12). A ./TileOPs checkout is
+# optional: it only makes gen_bench_pages.py resolve an op's source link to its
+# file instead of a code search.
 set -euo pipefail
 
 repo="https://github.com/tile-ai/TileOPs"
@@ -51,7 +51,7 @@ fetch test_results.xml "$work/test_results.xml" \
   || echo "::warning::test_results.xml not found on nightly-bench; rendering without test status"
 
 read_meta() {  # read_meta <key>; missing key -> "unknown"
-  python -c "import json;print(json.load(open('$work/meta.json')).get('$1','unknown'))"
+  python3 -c "import json;print(json.load(open('$work/meta.json')).get('$1','unknown'))"
 }
 bench_commit="$(read_meta commit)"
 bench_date="$(read_meta date)"
@@ -61,7 +61,7 @@ rendered="$(date -u +'%Y-%m-%d %H:%M UTC')"
 test_arg=()
 [ -f "$work/test_results.xml" ] && test_arg=(--test-xml "$work/test_results.xml")
 
-python scripts/gen_bench_pages.py \
+python3 scripts/gen_bench_pages.py \
   --bench-xml "$work/bench_results.xml" \
   ${test_arg[@]+"${test_arg[@]}"} \
   --meta "$work/meta.json" \

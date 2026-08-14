@@ -454,17 +454,22 @@ DETAIL_HEADER = (
     "<table>",
     "<thead>",
     "<tr>",
-    '<th rowspan="2">Workload</th>',
-    '<th rowspan="2">Ratio</th>',
-    '<th rowspan="2">Device time</th>',
-    # Centred over the three sub-columns it spans; every other cell is left.
-    '<th colspan="3" style="text-align:center">Alternatives</th>',
-    '<th rowspan="2">TFLOP/s</th>',
+    # `colsep` draws the hairline between the workload name and the numbers.
+    # Its own cell spans both header rows, so the rule has no gap.
+    '<th rowspan="2" class="colsep">Workload</th>',
+    "<th>Ratio</th>",
+    "<th>Device time</th>",
+    '<th colspan="2">Alternatives</th>',
+    "<th>Throughput</th>",
     "</tr>",
+    # The second row carries what a header word cannot: the unit, and which way
+    # the ratio divides. Every numeric column states its own on the same line.
     "<tr>",
-    "<th>name</th>",
-    "<th>device time</th>",
-    "<th>speed vs it</th>",
+    '<th class="subhead">alt ÷ ours</th>',
+    '<th class="subhead">ms</th>',
+    '<th class="subhead">name</th>',
+    '<th class="subhead">ms</th>',
+    '<th class="subhead">TFLOP/s</th>',
     "</tr>",
     "</thead>",
     "<tbody>",
@@ -473,16 +478,26 @@ DETAIL_FOOTER = ("</tbody>", "</table>")
 
 
 def _stack(cells: list[str]) -> str:
-    """One line per alternative. All three sub-columns stack in the same order,
-    so they read across without a nested table."""
-    return "<br>".join(cells) if cells else EMPTY
+    """One line per alternative, fastest first. Both sub-columns stack in the
+    same order, so they read across without a nested table.
+
+    Only the first line stays at full strength: it is the one `Ratio` divides
+    by. The slower alternatives are context, and reading them as equals costs a
+    reader the moment of finding which bar was actually cleared.
+    """
+    if not cells:
+        return EMPTY
+    head, *rest = cells
+    if not rest:
+        return head
+    tail = "<br>".join(f'<span class="alt-slow">{c}</span>' for c in rest)
+    return f"{head}<br>{tail}"
 
 
 def detail_row(w: dict, m: dict) -> str:
     ordered = sorted(m["rivals"].items(), key=lambda kv: kv[1]["busy_ms"])
     names = _stack([f"<code>{html.escape(t)}</code>" for t, _ in ordered])
     times = _stack([_sig_ms(r["busy_ms"]) for _, r in ordered])
-    ratios = _stack([_speed(r["speedup"]) for _, r in ordered])
     # Against the fastest non-reference alternative, so a win over an eager
     # reference is not painted as a win over a real one — see `_ratio_cell`.
     real = [r for _, r in ordered if r["tier"] != TIER_REF and r["speedup"]]
@@ -492,12 +507,11 @@ def detail_row(w: dict, m: dict) -> str:
                       rated=bool(real))
     return (
         "<tr>"
-        f"<td><code>{html.escape(w['config'])}</code></td>"
+        f'<td class="colsep"><code>{html.escape(w["config"])}</code></td>'
         f"<td>{gap}</td>"
         f"<td>{_sig_ms(m['busy_ms'])}</td>"
         f"<td>{names}</td>"
         f"<td>{times}</td>"
-        f"<td>{ratios}</td>"
         f"<td>{_sig(m['tflops'])}</td>"
         "</tr>"
     )
@@ -649,21 +663,19 @@ def reading_page() -> str:
         "| --- | --- |",
         "| **Workload** | The shape and dtype the row was measured on, as the "
         "benchmark names it. |",
-        "| **Ratio** | The fastest alternative's device time on this workload "
-        "divided by ours — the one number the colour grades. It repeats the top "
-        "line of **speed vs it**, and has a column of its own so a page can be "
-        "scanned down. |",
-        "| **Device time** | The time the device spent executing the call's "
+        "| **Ratio** | `alt ÷ ours` — the fastest alternative's device time "
+        "divided by ours, the one number the colour grades. |",
+        "| **Device time** | Milliseconds the device spent executing the call's "
         "kernels — the union of their intervals. Every comparison on these "
         "pages uses it. |",
         "| **Alternatives** | One line per other implementation measured on this "
-        "workload, fastest first: its **name**, its own **device time**, and "
-        "**speed vs it** — its time divided by ours. A tuned library kernel "
-        f"(`fla`, `mamba`, `fa3`, `triton`, …), a native PyTorch op "
-        f"(`{TIER_TORCH}`), or a name ending in `-{TIER_REF}` — an eager "
+        "workload, fastest first, with its own device time in ms. A tuned "
+        f"library kernel (`fla`, `mamba`, `fa3`, `triton`, …), a native PyTorch "
+        f"op (`{TIER_TORCH}`), or a name ending in `-{TIER_REF}` — an eager "
         "composition of PyTorch ops, which is not a bar worth reporting a win "
-        "against. |",
-        "| **TFLOP/s** | Required FLOPs ÷ device time. The FLOP count is "
+        "against. Divide any of them by our device time to get the ratio "
+        "against that one. |",
+        "| **Throughput** | TFLOP/s: required FLOPs ÷ device time. The count is "
         "analytic — the op's `eval_roofline` formula evaluated on the workload's "
         "own shapes, not a hardware counter — so it counts the work the problem "
         "demands, not the instructions the kernel issued. Padding, recompute or "
@@ -705,11 +717,11 @@ def data_page(title: str, fams: list[str], rows_by_fam: dict,
              f"**{n_ops} ops, {n_workloads} workloads** — {tally}."
              if len(present) > 1 else
              f"**{n_ops} ops, {n_workloads} workloads.**", "",
-             "One table per op, one row per workload. The second column is the "
-             "gap to the fastest other implementation of the same op on that "
-             "workload: <span class=\"perf-ahead\">green</span> is faster than "
-             'it, <span class="perf-par">plain</span> is level with it, '
-             '<span class="perf-behind">red</span> is slower. '
+             "One table per op, one row per workload. `Ratio` is the fastest "
+             "other implementation's device time divided by ours, so "
+             '<span class="perf-ahead">green</span> is faster than it, '
+             '<span class="perf-par">plain</span> is level with it, '
+             '<span class="perf-behind">red</span> is slower. Times are in ms. '
              "[How these numbers are taken](reading.md).", ""]
     for fam in fams:
         rows = rows_by_fam.get(fam)

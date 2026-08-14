@@ -28,8 +28,7 @@ pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugi
 mkdocs serve
 ```
 
-Python 3.12+ is required — `gen_bench_pages.py` uses multi-line f-string
-expressions. `api/` and the mirrored `design/` pages read from a TileOPs checkout
+`api/` and the mirrored `design/` pages read from a TileOPs checkout
 at `./TileOPs` (the workflows clone it there); without it mkdocstrings warns, and
 `--strict` fails. `bash scripts/render_bench.sh` renders `docs/benchmarks/`.
 

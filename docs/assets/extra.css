@@ -234,11 +234,56 @@ body,
   white-space: nowrap;
 }
 
+/* Everything centred in its column, except the workload name: it is the row's
+ * label, of varying length, and reads as a list only when flush left.
+ */
+.md-typeset .datatable table:not([class]) th,
+.md-typeset .datatable table:not([class]) td {
+  text-align: center;
+}
+
+.md-typeset .datatable table:not([class]) td.colsep {
+  text-align: left;
+}
+
+/* A hairline between that label and the numbers it belongs to — the only
+ * vertical rule in the table. At 16% it stays legible across the striped rows.
+ */
+.md-typeset .datatable table:not([class]) .colsep {
+  border-right: 1px solid var(--tf-line);
+  padding-right: 0.8em;
+}
+
+/* A cell holding four stacked alternatives is four lines tall while its
+ * neighbours are one. Tighter leading gives back most of a line.
+ *
+ * No rule under each row either: the striped rows already separate them, and
+ * doing both reads as a grid drawn over a table that did not need one.
+ */
+.md-typeset .datatable table:not([class]) td {
+  line-height: 1.35;
+  border-bottom: 0;
+}
+
+/* Everything but the fastest alternative is context. */
+.md-typeset .datatable table:not([class]) .alt-slow,
+.md-typeset .datatable table:not([class]) .alt-slow code {
+  color: var(--tf-muted);
+}
+
 /* The Alternatives sub-columns stack one line per alternative. Top alignment is
  * what makes them read across, and keeps Ratio level with the fastest one.
  */
 .md-typeset .datatable table:not([class]) td {
   vertical-align: top;
+}
+
+/* Second header row: units and the ratio's direction. Subordinate to the header
+ * word above it, so it reads as a qualifier rather than a column of its own.
+ */
+.md-typeset .datatable table:not([class]) th.subhead {
+  font-weight: 400;
+  color: var(--md-default-fg-color--light);
 }
 
 .md-typeset .datatable table:not([class]) code {
