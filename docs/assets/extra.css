@@ -1,20 +1,24 @@
 /* Palette and typography shared with tile-ai/TileFoundry.github.io, plus the
  * rules the benchmark data tables need.
  *
- * Single light scheme: warm paper ground with a dot texture, one iris-violet
- * accent for structure, teal reserved for asides. Violet and teal are both dark
- * and low-chroma — a saturated pair at this size reads as candy rather than as
- * an editorial page, and the warm ground keeps the two cool hues from turning
- * the site clinical.
+ * Single light scheme: a paper carrying the faintest violet, a dot texture,
+ * one iris-violet accent for structure, teal reserved for asides. Violet and
+ * teal are both dark and low-chroma — a saturated pair at this size reads as
+ * candy rather than as an editorial page.
+ *
+ * The ground takes its cast from the accent rather than from cream: a warm
+ * yellow paper under two cool hues leaves the page arguing with itself, and
+ * the yellow is what the eye reads first on a wall of white space. Ink and the
+ * muted grey follow it, so nothing on the sheet is warm.
  */
 
 @import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap");
 
 :root {
-  --tf-paper: #f6f2ea;
-  --tf-paper-2: #ebe4dd;
-  --tf-ink: #181b19;
-  --tf-muted: #6c6659;
+  --tf-paper: #f5f3f8;
+  --tf-paper-2: #e9e5f1;
+  --tf-ink: #1a1720;
+  --tf-muted: #6a6478;
   --tf-violet: #5a3e85;
   --tf-violet-dark: #432c66;
   --tf-violet-light: #7c5cae;
@@ -95,7 +99,7 @@ html {
     ),
     radial-gradient(
       110% 85% at 100% 104%,
-      color-mix(in srgb, var(--tf-teal), transparent 95%),
+      color-mix(in srgb, var(--tf-teal), transparent 93%),
       transparent 55%
     );
   background-size: 26px 26px, auto, auto;
