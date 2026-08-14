@@ -49,8 +49,14 @@
   --md-primary-fg-color--dark: var(--tf-violet-dark);
   --md-accent-fg-color: var(--tf-teal);
   --md-typeset-a-color: var(--tf-violet);
-  --md-code-bg-color: var(--tf-paper-2);
+  /* Translucent, so a code block is an inset in the sheet the wash carries on
+   * through rather than a slab dropped on top of it. The old flat fill was the
+   * one opaque mass on the page and read as dead weight.
+   */
+  --md-code-bg-color: color-mix(in srgb, var(--tf-paper-2), transparent 45%);
   --md-code-fg-color: var(--tf-ink);
+  --md-footer-bg-color: #241a33;
+  --md-footer-bg-color--dark: #1b1327;
   /* Syntax highlighting drawn from the same two hues rather than Material's
    * default blue and red, which are the only warm-cool pair left on the page
    * once the accent is violet. Identifiers stay plain ink: in these snippets
@@ -156,6 +162,32 @@ body,
   font-size: 0.68rem;
 }
 
+/* Search: a pill drawn on the header's own paper. Material's default is a
+ * filled grey field, which is the darkest thing in the header and pulls the
+ * eye there before the page title.
+ */
+.md-search__form {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tf-paper-2), transparent 35%);
+  box-shadow: inset 0 0 0 1px var(--tf-line-soft);
+}
+
+.md-search__form:hover,
+[data-md-toggle="search"]:checked ~ .md-header .md-search__form {
+  background: color-mix(in srgb, var(--tf-paper-2), transparent 15%);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--tf-violet), transparent 70%);
+}
+
+.md-search__input,
+.md-search__icon {
+  color: var(--tf-ink);
+}
+
+.md-search__input::placeholder {
+  color: var(--tf-muted);
+}
+
 .md-nav__title {
   color: var(--tf-ink);
   background: transparent;
@@ -173,6 +205,7 @@ body,
   .md-sidebar,
   .md-sidebar__scrollwrap,
   .md-nav,
+  .md-nav--primary .md-nav__title,
   .md-nav__title {
     background: transparent;
     box-shadow: none;
@@ -256,13 +289,62 @@ body,
   font-weight: 700;
 }
 
+/* An inline identifier is a chip in the accent rather than a grey box: at this
+ * size a neutral fill just looks like a smudge in the line.
+ */
 .md-typeset code {
   padding: 0.05em 0.28em;
   border-radius: 4px;
-  background: var(--md-code-bg-color);
+  background: color-mix(in srgb, var(--tf-violet), transparent 93%);
   color: var(--md-code-fg-color);
   font-family: var(--tf-mono);
   font-size: 0.82em;
+}
+
+/* A block keeps the paler ground and is drawn instead — a hairline and a
+ * radius contain it, which is what the heavy fill was doing by brute force.
+ */
+.md-typeset pre > code {
+  border: 1px solid color-mix(in srgb, var(--tf-violet), transparent 88%);
+  border-radius: 8px;
+  background: var(--md-code-bg-color);
+}
+
+.md-typeset .md-clipboard {
+  color: var(--tf-muted);
+}
+
+.md-typeset .md-clipboard:hover {
+  color: var(--tf-violet);
+}
+
+/* Links: violet, but underlined at less than full strength so a paragraph with
+ * several of them does not turn into a ladder. Hover moves the underline to
+ * teal, which is the one place the second accent answers the first.
+ */
+.md-typeset a {
+  text-decoration: underline;
+  text-decoration-thickness: 0.07em;
+  text-underline-offset: 0.16em;
+  text-decoration-color: color-mix(in srgb, var(--tf-violet), transparent 58%);
+}
+
+.md-typeset a:hover {
+  text-decoration-color: var(--tf-teal);
+}
+
+/* A rule between sections, drawn as light rather than as a line. */
+.md-typeset hr {
+  height: 1px;
+  margin: 2rem 0;
+  border: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--tf-violet), transparent 70%) 18%,
+    color-mix(in srgb, var(--tf-teal), transparent 76%) 82%,
+    transparent
+  );
 }
 
 .md-typeset blockquote {
@@ -323,6 +405,18 @@ body,
  */
 .md-typeset table:not([class]) tbody tr:nth-child(even) {
   background: color-mix(in srgb, var(--tf-violet), transparent 96%);
+}
+
+.md-typeset > table:not([class]) tbody tr:hover {
+  background: color-mix(in srgb, var(--tf-teal), transparent 94%);
+}
+
+/* The row under the cursor, on a benchmark table wide enough that holding a
+ * row across five columns takes effort. Hueless on purpose: those tables
+ * already spend colour on the verdict, and a tinted row would read as one.
+ */
+.md-typeset .datatable table:not([class]) tbody tr:hover {
+  background: color-mix(in srgb, var(--md-default-fg-color), transparent 94%);
 }
 
 /* Benchmark data tables: many short numeric cells. Keeping each cell on one
@@ -502,8 +596,9 @@ html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) h4 {
 
 /* Inline code sits in the middle of Chinese sentences far more often than in
  * English ones; at the larger Chinese body size it needs less box around it.
+ * Inline only — unscoped, this took the padding off code blocks too.
  */
-html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) code {
+html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) code:not(pre > code) {
   font-size: 0.8em;
   padding: 0.04em 0.24em;
 }
