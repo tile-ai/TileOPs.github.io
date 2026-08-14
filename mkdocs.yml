@@ -8,8 +8,8 @@ theme:
   name: material
   palette:
     scheme: default
-    primary: red
-    accent: deep orange
+    primary: deep purple
+    accent: teal
   logo: assets/logo.png
   favicon: assets/logo.png
   font:

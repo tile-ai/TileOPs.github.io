@@ -1,23 +1,31 @@
 /* Palette and typography shared with tile-ai/TileFoundry.github.io, plus the
  * rules the benchmark data tables need.
  *
- * Single light scheme, as on TileFoundry: warm paper ground with a dot texture,
- * one red accent for structure, blue reserved for asides.
+ * Single light scheme: warm paper ground with a dot texture, one iris-violet
+ * accent for structure, teal reserved for asides. Violet and teal are both dark
+ * and low-chroma — a saturated pair at this size reads as candy rather than as
+ * an editorial page, and the warm ground keeps the two cool hues from turning
+ * the site clinical.
  */
 
 @import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap");
 
 :root {
-  --tf-paper: #f3ede1;
-  --tf-paper-2: #e8e1d1;
-  --tf-ink: #191a16;
-  --tf-muted: #7c7565;
-  --tf-red: #c43c19;
-  --tf-red-dark: #9f2d12;
-  --tf-teal: #1a6e63;
-  --tf-blue: #2f5d8c;
-  --tf-line: rgba(25, 26, 22, 0.16);
-  --tf-line-soft: rgba(25, 26, 22, 0.07);
+  --tf-paper: #f6f2ea;
+  --tf-paper-2: #ebe4dd;
+  --tf-ink: #181b19;
+  --tf-muted: #6c6659;
+  --tf-violet: #5a3e85;
+  --tf-violet-dark: #432c66;
+  --tf-violet-light: #7c5cae;
+  --tf-teal: #16706b;
+  --tf-green: #23724a;
+  --tf-rose: #a43f46;
+  /* Rules and the dot texture carry a trace of the accent rather than plain
+   * ink, so the paper reads as one ground with the headings instead of two.
+   */
+  --tf-line: rgba(51, 35, 79, 0.18);
+  --tf-line-soft: rgba(51, 35, 79, 0.08);
   /* Latin faces come first so technical terms inside Chinese prose keep the
    * site's voice; Han glyphs fall through to the platform UI face. No CJK
    * webfont: a Simplified Chinese subset costs megabytes, which is not worth
@@ -36,13 +44,29 @@
   --md-default-fg-color--light: var(--tf-muted);
   --md-default-fg-color--lighter: var(--tf-line);
   --md-default-fg-color--lightest: var(--tf-line-soft);
-  --md-primary-fg-color: var(--tf-red);
-  --md-primary-fg-color--light: #db6c4e;
-  --md-primary-fg-color--dark: var(--tf-red-dark);
-  --md-accent-fg-color: var(--tf-red);
-  --md-typeset-a-color: var(--tf-red);
+  --md-primary-fg-color: var(--tf-violet);
+  --md-primary-fg-color--light: var(--tf-violet-light);
+  --md-primary-fg-color--dark: var(--tf-violet-dark);
+  --md-accent-fg-color: var(--tf-teal);
+  --md-typeset-a-color: var(--tf-violet);
   --md-code-bg-color: var(--tf-paper-2);
   --md-code-fg-color: var(--tf-ink);
+  /* Syntax highlighting drawn from the same two hues rather than Material's
+   * default blue and red, which are the only warm-cool pair left on the page
+   * once the accent is violet. Identifiers stay plain ink: in these snippets
+   * they are the content, and colouring them too leaves nothing standing out.
+   */
+  --md-code-hl-keyword-color: var(--tf-violet);
+  --md-code-hl-function-color: var(--tf-violet-light);
+  --md-code-hl-constant-color: var(--tf-violet-light);
+  --md-code-hl-string-color: var(--tf-teal);
+  --md-code-hl-special-color: var(--tf-teal);
+  --md-code-hl-variable-color: var(--tf-teal);
+  --md-code-hl-number-color: var(--tf-rose);
+  --md-code-hl-comment-color: var(--tf-muted);
+  --md-code-hl-operator-color: var(--tf-muted);
+  --md-code-hl-punctuation-color: var(--tf-muted);
+  --md-code-hl-name-color: var(--md-code-fg-color);
 }
 
 html,
@@ -69,8 +93,19 @@ body,
   box-shadow: none;
 }
 
+/* The rule under the header is the one place the two accents meet across the
+ * full width — a hairline, so it registers as a tint rather than a stripe.
+ */
 .md-header {
-  border-bottom: 1px solid var(--tf-line-soft);
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(
+      90deg,
+      var(--tf-violet) 0%,
+      var(--tf-violet-light) 32%,
+      var(--tf-teal) 72%,
+      var(--tf-line-soft) 100%
+    )
+    1;
 }
 
 .md-header__topic,
@@ -105,7 +140,7 @@ body,
 .md-nav__item .md-nav__link--active code,
 .md-nav__link:focus,
 .md-nav__link:hover {
-  color: var(--tf-red);
+  color: var(--tf-violet);
 }
 
 .md-typeset {
@@ -114,7 +149,17 @@ body,
   line-height: 1.6;
 }
 
-/* Headings carry a red rule whose weight tracks the level. */
+/* Selection in the accent, weak enough that the ink stays the darkest thing on
+ * the page.
+ */
+::selection {
+  background: color-mix(in srgb, var(--tf-violet-light), transparent 78%);
+}
+
+/* Headings carry a violet rule whose weight tracks the level. Only h1 takes the
+ * violet-to-teal gradient: it is the page's one title, so the flourish stays
+ * singular instead of repeating down the page as decoration.
+ */
 .md-typeset h1,
 .md-typeset h2,
 .md-typeset h3,
@@ -126,8 +171,17 @@ body,
 
 .md-typeset h1 {
   margin: 0 0 1.25rem;
-  padding-left: 0.3em;
-  border-left: 11px solid var(--tf-red);
+  /* Drawn as a background bar, not a border: a single-side border-image would
+   * sample one sliver of the gradient and lose the run from violet to teal.
+   */
+  padding-left: calc(0.3em + 11px);
+  background: linear-gradient(
+      180deg,
+      var(--tf-violet-light) 0%,
+      var(--tf-violet) 45%,
+      var(--tf-teal) 100%
+    )
+    left top / 11px 100% no-repeat;
   font-size: 2.1rem;
   font-weight: 800;
   line-height: 1.06;
@@ -136,7 +190,7 @@ body,
 .md-typeset h2 {
   margin: 2em 0 0.7em;
   padding-left: 0.46em;
-  border-left: 8px solid var(--tf-red);
+  border-left: 8px solid var(--tf-violet);
   font-size: 1.4rem;
   font-weight: 800;
   line-height: 1.13;
@@ -145,7 +199,7 @@ body,
 .md-typeset h3 {
   margin: 1.6em 0 0.5em;
   padding-left: 0.5em;
-  border-left: 5px solid var(--tf-red);
+  border-left: 5px solid var(--tf-violet);
   font-size: 1.1rem;
   font-weight: 800;
   line-height: 1.2;
@@ -154,7 +208,7 @@ body,
 .md-typeset h4 {
   margin: 1.45em 0 0.4em;
   padding-left: 0.55em;
-  border-left: 3px solid var(--tf-red);
+  border-left: 3px solid var(--tf-violet-light);
   font-size: 0.9rem;
   font-weight: 700;
 }
@@ -171,14 +225,14 @@ body,
 .md-typeset blockquote {
   margin: 1.3em 0;
   padding: 0.08em 0 0.08em 1.05em;
-  border-left: 3px solid var(--tf-blue);
+  border-left: 3px solid var(--tf-teal);
   color: var(--md-default-fg-color);
 }
 
 .md-typeset .admonition,
 .md-typeset details {
   border: 0;
-  border-left: 3px solid var(--tf-blue);
+  border-left: 3px solid var(--tf-teal);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -186,7 +240,7 @@ body,
 
 .md-typeset .admonition.warning,
 .md-typeset details.warning {
-  border-left-color: var(--tf-red);
+  border-left-color: var(--tf-rose);
 }
 
 .md-typeset .admonition-title,
@@ -293,8 +347,13 @@ body,
 }
 
 /* Benchmark verdicts. The ratio's colour *is* the result, so these carry the
- * weight no separate status glyph does: red behind the alternative, plain ink
+ * weight no separate status glyph does: rose behind the alternative, plain ink
  * level with it, green ahead. Tabular figures keep a column of them aligned.
+ *
+ * Neither verdict colour is the link violet or the aside teal: a reader
+ * scanning a Ratio column must not have to decide whether a coloured figure is
+ * a verdict or a link. The green sits well away from the teal in both hue and
+ * lightness for the same reason.
  */
 .md-typeset .perf-ahead,
 .md-typeset .perf-par,
@@ -306,7 +365,7 @@ body,
 }
 
 .md-typeset .perf-ahead {
-  color: var(--tf-teal);
+  color: var(--tf-green);
 }
 
 .md-typeset .perf-par {
@@ -314,7 +373,7 @@ body,
 }
 
 .md-typeset .perf-behind {
-  color: var(--tf-red);
+  color: var(--tf-rose);
 }
 
 /* A ratio against an eager reference only. Shown, but never as a win: the bar
