@@ -410,8 +410,8 @@ body,
    */
   background: none;
   border: 0;
-  border-top: 1px solid color-mix(in srgb, var(--tf-ink), transparent 72%);
-  border-bottom: 1px solid color-mix(in srgb, var(--tf-ink), transparent 72%);
+  border-top: 2px solid color-mix(in srgb, var(--tf-ink), transparent 55%);
+  border-bottom: 2px solid color-mix(in srgb, var(--tf-ink), transparent 55%);
   font-size: 0.75rem;
 }
 
@@ -421,7 +421,7 @@ body,
  */
 .md-typeset table:not([class]) th {
   border: 0;
-  border-bottom: 1px solid var(--tf-violet);
+  border-bottom: 2px solid var(--tf-violet);
   color: var(--tf-violet-dark);
   font-family: var(--tf-display);
   font-size: 0.8rem;
@@ -461,12 +461,13 @@ body,
   text-align: left;
 }
 
-/* Gap instead of a rule between the label and the numbers it belongs to. The
- * columns are already held apart by their alignment, and a vertical line
- * turns a three-rule table into a grid.
+/* A hairline between the label and the numbers it belongs to — the table's one
+ * vertical, thin and grey so it divides without ruling: what a row *is* on the
+ * left, what it measured on the right.
  */
 .md-typeset .datatable table:not([class]) .colsep {
-  padding-right: 1.4em;
+  border-right: 1px solid color-mix(in srgb, var(--tf-ink), transparent 78%);
+  padding-right: 1em;
 }
 
 /* A cell holding four stacked alternatives is four lines tall while its
@@ -498,15 +499,13 @@ body,
  * block, not between its halves. The `Workload` cell spans both rows, so its
  * own bottom edge already sits on that line.
  */
-.md-typeset .datatable table:not([class]) thead tr:first-child th:not([rowspan]) {
-  border-bottom: 0;
-}
-
-/* Except under a header spanning two columns, which takes a short rule of its
- * own — the one mark that says how far `Alternatives` reaches.
+/* Each header word is underlined thin and grey — under `Alternatives` that is
+ * also what says how far a header spanning two columns reaches. The block's
+ * own heavy rule stays below the units, so these read as brackets over their
+ * columns rather than as further divisions of the table.
  */
-.md-typeset .datatable table:not([class]) thead th[colspan] {
-  border-bottom: 1px solid color-mix(in srgb, var(--tf-teal), transparent 50%);
+.md-typeset .datatable table:not([class]) thead tr:first-child th:not([rowspan]) {
+  border-bottom: 1px solid color-mix(in srgb, var(--tf-ink), transparent 74%);
 }
 
 /* Second header row: units and the ratio's direction. Subordinate to the
