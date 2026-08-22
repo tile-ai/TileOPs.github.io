@@ -1,0 +1,2990 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="High-performance LLM operator library built on TileLang">
+      
+      
+      
+        <link rel="canonical" href="https://tile-ai.github.io/TileOPs.github.io/benchmarks/norm-conv-pool/">
+      
+      
+        <link rel="prev" href="../elementwise-reduction/">
+      
+      
+        <link rel="next" href="../../performance-guides/">
+      
+      
+        
+          <link rel="alternate" href="./" hreflang="en">
+        
+          <link rel="alternate" href="../../zh/benchmarks/norm-conv-pool/" hreflang="zh">
+        
+      
+      
+      <link rel="icon" href="../../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Norm, Conv, Pool & Other - TileOPs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Hanken+Grotesk:300,300i,400,400i,700,700i%7CSpace+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Hanken Grotesk";--md-code-font:"Space Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../assets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#norm-conv-pool-other" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="TileOPs" class="md-header__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            TileOPs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Norm, Conv, Pool &amp; Other
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Select language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="../../zh/benchmarks/norm-conv-pool/" hreflang="zh" class="md-select__link">
+              简体中文
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="TileOPs" class="md-nav__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    TileOPs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Op Manifest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/ops-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Op Interface Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/ops-design-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Op Interface Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/roofline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roofline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing & Benchmarking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/trust-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trust Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skills
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Skills
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../skills/catalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../skills/align-op/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    align-op
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../skills/align-family/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    align-family
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../skills/audit-family/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    audit-family
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../skills/scaffold-op/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    scaffold-op
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../skills/implement-op/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    implement-op
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../skills/test-op/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    test-op
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../skills/bench-op/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    bench-op
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../skills/add-manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    add-manifest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../skills/fix-manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    fix-manifest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/linear-algebra/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/mamba/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mamba
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/fft/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/mhc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MHC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/topk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Top-k
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Benchmarks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How these numbers are taken
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention &amp; SSM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gemm-moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM, MoE &amp; Quantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../elementwise-reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise &amp; Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Norm, Conv, Pool &amp; Other
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Norm, Conv, Pool &amp; Other
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#normalization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Normalization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#convolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Convolution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pooling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pooling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#positional-encoding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Positional Encoding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fft" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FFT
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mhc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MHC
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#top-k" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-k
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Performance Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Guides
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/trace-timeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    In-Kernel Timeline Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="norm-conv-pool-other">Norm, Conv, Pool &amp; Other<a class="headerlink" href="#norm-conv-pool-other" title="Permanent link">&para;</a></h1>
+<p><strong>36 ops, 200 workloads</strong> — Normalization 10 · Convolution 3 · Pooling 13 · Positional Encoding 6 · FFT 1 · MHC 2 · Top-k 1.</p>
+<p>One table per op, one row per workload. <code>Ratio</code> is the fastest other implementation's device time divided by ours, so <span class="perf-ahead">green</span> is faster than it, <span class="perf-par">plain</span> is level with it, <span class="perf-behind">red</span> is slower. Times are in ms. <a href="../reading/">How these numbers are taken</a>.</p>
+<h2 id="normalization">Normalization<a class="headerlink" href="#normalization" title="Permanent link">&para;</a></h2>
+<h3 id="batchnormbwd-5-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/norm/batch_norm.py">BatchNormBwd</a> <small>(5 workloads)</small><a class="headerlink" href="#batchnormbwd-5-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>large-spatial-float16</code></td><td><span class="perf-ahead">1.89×</span></td><td>6.8740</td><td><code>torch-autograd</code></td><td>12.9725</td><td>0.625</td></tr>
+<tr><td class="colsep"><code>resnet50-fc-float16</code></td><td><span class="perf-ahead">3.30×</span></td><td>0.00707</td><td><code>torch-autograd</code></td><td>0.0234</td><td>0.00232</td></tr>
+<tr><td class="colsep"><code>resnet50-stage1-float16</code></td><td><span class="perf-ahead">1.86×</span></td><td>0.0148</td><td><code>torch-autograd</code></td><td>0.0275</td><td>0.284</td></tr>
+<tr><td class="colsep"><code>resnet50-stage2-float16</code></td><td><span class="perf-ahead">1.70×</span></td><td>0.0141</td><td><code>torch-autograd</code></td><td>0.0240</td><td>0.297</td></tr>
+<tr><td class="colsep"><code>resnet50-stage3-float16</code></td><td><span class="perf-ahead">1.50×</span></td><td>0.0171</td><td><code>torch-autograd</code></td><td>0.0256</td><td>0.376</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="adalayernormfwd-5-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/norm/ada_layer_norm.py">AdaLayerNormFwd</a> <small>(5 workloads · ✅)</small><a class="headerlink" href="#adalayernormfwd-5-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>dit-xl-2-bfloat16</code></td><td><span class="perf-ahead">1.47×</span></td><td>0.00533</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00781<br><span class="alt-slow">0.0121</span></td><td>1.11</td></tr>
+<tr><td class="colsep"><code>dit-xl-2-float16</code></td><td><span class="perf-ahead">1.46×</span></td><td>0.00522</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00762<br><span class="alt-slow">0.0121</span></td><td>1.13</td></tr>
+<tr><td class="colsep"><code>llama-8b-decode-bfloat16</code></td><td><span class="perf-ahead">1.16×</span></td><td>0.00266</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00307<br><span class="alt-slow">0.0103</span></td><td>0.00771</td></tr>
+<tr><td class="colsep"><code>llama-8b-prefill-bfloat16</code></td><td><span class="perf-ahead">1.36×</span></td><td>0.0199</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0271<br><span class="alt-slow">0.0418</span></td><td>2.11</td></tr>
+<tr><td class="colsep"><code>llama-8b-prefill-float16</code></td><td><span class="perf-ahead">1.29×</span></td><td>0.0198</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0255<br><span class="alt-slow">0.0416</span></td><td>2.12</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="adalayernormzerofwd-5-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/norm/ada_layer_norm_zero.py">AdaLayerNormZeroFwd</a> <small>(5 workloads · ✅)</small><a class="headerlink" href="#adalayernormzerofwd-5-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>dit-xl-2-bfloat16</code></td><td><span class="perf-ahead">1.30×</span></td><td>0.00624</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00813<br><span class="alt-slow">0.0148</span></td><td>1.13</td></tr>
+<tr><td class="colsep"><code>dit-xl-2-float16</code></td><td><span class="perf-ahead">1.25×</span></td><td>0.00621</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00778<br><span class="alt-slow">0.0148</span></td><td>1.14</td></tr>
+<tr><td class="colsep"><code>llama-8b-decode-bfloat16</code></td><td><span class="perf-ahead">1.12×</span></td><td>0.00285</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0032<br><span class="alt-slow">0.0116</span></td><td>0.00863</td></tr>
+<tr><td class="colsep"><code>llama-8b-prefill-bfloat16</code></td><td><span class="perf-ahead">1.14×</span></td><td>0.0247</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0281<br><span class="alt-slow">0.0536</span></td><td>2.04</td></tr>
+<tr><td class="colsep"><code>llama-8b-prefill-float16</code></td><td><span class="perf-ahead">1.10×</span></td><td>0.0248</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0274<br><span class="alt-slow">0.0533</span></td><td>2.03</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="fusedaddlayernormfwd-6-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/norm/fused_add_layer_norm.py">FusedAddLayerNormFwd</a> <small>(6 workloads · ✅)</small><a class="headerlink" href="#fusedaddlayernormfwd-6-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>llama-70b-decode-bfloat16</code></td><td><span class="perf-ahead">1.36×</span></td><td>0.00413</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0056<br><span class="alt-slow">0.0259</span></td><td>0.0119</td></tr>
+<tr><td class="colsep"><code>llama-70b-prefill-bfloat16</code></td><td><span class="perf-par">0.97×</span></td><td>0.0475</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0462<br><span class="alt-slow">0.2294</span></td><td>2.12</td></tr>
+<tr><td class="colsep"><code>llama-70b-prefill-float16</code></td><td><span class="perf-par">1.01×</span></td><td>0.0442</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0448<br><span class="alt-slow">0.2273</span></td><td>2.28</td></tr>
+<tr><td class="colsep"><code>llama-8b-decode-bfloat16</code></td><td><span class="perf-ahead">1.17×</span></td><td>0.00314</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00368<br><span class="alt-slow">0.0189</span></td><td>0.00784</td></tr>
+<tr><td class="colsep"><code>llama-8b-prefill-bfloat16</code></td><td><span class="perf-ahead">1.31×</span></td><td>0.0220</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0288<br><span class="alt-slow">0.1170</span></td><td>2.29</td></tr>
+<tr><td class="colsep"><code>llama-8b-prefill-float16</code></td><td><span class="perf-ahead">1.31×</span></td><td>0.0211</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0275<br><span class="alt-slow">0.1158</span></td><td>2.39</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="layernormfwd-9-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/norm/layer_norm.py">LayerNormFwd</a> <small>(9 workloads · ✅)</small><a class="headerlink" href="#layernormfwd-9-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>llama-405b-decode-bfloat16</code></td><td><span class="perf-ahead">1.28×</span></td><td>0.00429</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0055<br><span class="alt-slow">0.00605</span><br><span class="alt-slow">0.00611</span><br><span class="alt-slow">0.0379</span></td><td>0.0191</td></tr>
+<tr><td class="colsep"><code>llama-405b-prefill-bfloat16</code></td><td><span class="perf-par">0.99×</span></td><td>0.0508</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flashinfer</code></span></td><td>0.0504<br><span class="alt-slow">0.0506</span><br><span class="alt-slow">0.0743</span><br><span class="alt-slow">0.0785</span></td><td>3.3</td></tr>
+<tr><td class="colsep"><code>llama-405b-prefill-float16</code></td><td><span class="perf-behind">0.93×</span></td><td>0.0502</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flashinfer</code></span></td><td>0.0468<br><span class="alt-slow">0.0482</span><br><span class="alt-slow">0.0736</span><br><span class="alt-slow">0.0783</span></td><td>3.34</td></tr>
+<tr><td class="colsep"><code>llama-70b-decode-bfloat16</code></td><td><span class="perf-ahead">1.08×</span></td><td>0.00342</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00371<br><span class="alt-slow">0.0041</span><br><span class="alt-slow">0.00422</span><br><span class="alt-slow">0.0200</span></td><td>0.012</td></tr>
+<tr><td class="colsep"><code>llama-70b-prefill-bfloat16</code></td><td><span class="perf-par">1.04×</span></td><td>0.0265</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flashinfer</code></span></td><td>0.0276<br><span class="alt-slow">0.0333</span><br><span class="alt-slow">0.0404</span><br><span class="alt-slow">0.0466</span></td><td>3.17</td></tr>
+<tr><td class="colsep"><code>llama-70b-prefill-float16</code></td><td><span class="perf-par">0.99×</span></td><td>0.0260</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flashinfer</code></span></td><td>0.0257<br><span class="alt-slow">0.0306</span><br><span class="alt-slow">0.0402</span><br><span class="alt-slow">0.0465</span></td><td>3.23</td></tr>
+<tr><td class="colsep"><code>llama-8b-decode-bfloat16</code></td><td><span class="perf-par">0.99×</span></td><td>0.00275</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00272<br><span class="alt-slow">0.00282</span><br><span class="alt-slow">0.00304</span><br><span class="alt-slow">0.0112</span></td><td>0.00744</td></tr>
+<tr><td class="colsep"><code>llama-8b-prefill-bfloat16</code></td><td><span class="perf-behind">0.92×</span></td><td>0.0149</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.0138<br><span class="alt-slow">0.0213</span><br><span class="alt-slow">0.0213</span><br><span class="alt-slow">0.0245</span></td><td>2.81</td></tr>
+<tr><td class="colsep"><code>llama-8b-prefill-float16</code></td><td><span class="perf-par">0.96×</span></td><td>0.0137</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.0131<br><span class="alt-slow">0.0212</span><br><span class="alt-slow">0.0213</span><br><span class="alt-slow">0.0244</span></td><td>3.07</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="rmsnormfwd-9-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/norm/rms_norm.py">RMSNormFwd</a> <small>(9 workloads · ✅)</small><a class="headerlink" href="#rmsnormfwd-9-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>llama-405b-decode-bfloat16</code></td><td><span class="perf-par">0.98×</span></td><td>0.00359</td><td><code>flashinfer</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00352<br><span class="alt-slow">0.00426</span><br><span class="alt-slow">0.00435</span><br><span class="alt-slow">0.00461</span><br><span class="alt-slow">0.0201</span></td><td>0.0183</td></tr>
+<tr><td class="colsep"><code>llama-405b-prefill-bfloat16</code></td><td><span class="perf-behind">0.88×</span></td><td>0.0430</td><td><code>flashinfer</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0380<br><span class="alt-slow">0.0411</span><br><span class="alt-slow">0.0411</span><br><span class="alt-slow">0.0489</span><br><span class="alt-slow">0.5119</span></td><td>3.12</td></tr>
+<tr><td class="colsep"><code>llama-405b-prefill-float16</code></td><td><span class="perf-behind">0.88×</span></td><td>0.0420</td><td><code>flashinfer</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0372<br><span class="alt-slow">0.0397</span><br><span class="alt-slow">0.0400</span><br><span class="alt-slow">0.0487</span><br><span class="alt-slow">0.5100</span></td><td>3.2</td></tr>
+<tr><td class="colsep"><code>llama-70b-decode-bfloat16</code></td><td><span class="perf-par">0.99×</span></td><td>0.00262</td><td><code>flashinfer</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00259<br><span class="alt-slow">0.00269</span><br><span class="alt-slow">0.0031</span><br><span class="alt-slow">0.00413</span><br><span class="alt-slow">0.0187</span></td><td>0.0125</td></tr>
+<tr><td class="colsep"><code>llama-70b-prefill-bfloat16</code></td><td><span class="perf-behind">0.92×</span></td><td>0.0219</td><td><code>flashinfer</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0200<br><span class="alt-slow">0.0206</span><br><span class="alt-slow">0.0213</span><br><span class="alt-slow">0.0221</span><br><span class="alt-slow">0.2710</span></td><td>3.07</td></tr>
+<tr><td class="colsep"><code>llama-70b-prefill-float16</code></td><td><span class="perf-par">0.96×</span></td><td>0.0210</td><td><code>flashinfer</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0201<br><span class="alt-slow">0.0204</span><br><span class="alt-slow">0.0208</span><br><span class="alt-slow">0.0217</span><br><span class="alt-slow">0.2703</span></td><td>3.2</td></tr>
+<tr><td class="colsep"><code>llama-8b-decode-bfloat16</code></td><td><span class="perf-ahead">1.06×</span></td><td>0.00205</td><td><code>flashinfer</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00218<br><span class="alt-slow">0.00221</span><br><span class="alt-slow">0.00266</span><br><span class="alt-slow">0.0033</span><br><span class="alt-slow">0.0180</span></td><td>0.008</td></tr>
+<tr><td class="colsep"><code>llama-8b-prefill-bfloat16</code></td><td><span class="perf-behind">0.86×</span></td><td>0.0126</td><td><code>flashinfer</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0109<br><span class="alt-slow">0.0125</span><br><span class="alt-slow">0.0127</span><br><span class="alt-slow">0.0144</span><br><span class="alt-slow">0.1460</span></td><td>2.66</td></tr>
+<tr><td class="colsep"><code>llama-8b-prefill-float16</code></td><td><span class="perf-behind">0.92×</span></td><td>0.0119</td><td><code>flashinfer</code><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0110<br><span class="alt-slow">0.0124</span><br><span class="alt-slow">0.0127</span><br><span class="alt-slow">0.0136</span><br><span class="alt-slow">0.1453</span></td><td>2.82</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="groupnormfwd-8-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/norm/group_norm.py">GroupNormFwd</a> <small>(8 workloads · ✅)</small><a class="headerlink" href="#groupnormfwd-8-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>image-g32-affine-bfloat16</code></td><td><span class="perf-ahead">1.09×</span></td><td>0.00371</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00403<br><span class="alt-slow">0.00525</span><br><span class="alt-slow">0.0153</span></td><td>1.41</td></tr>
+<tr><td class="colsep"><code>image-g32-affine-float16</code></td><td><span class="perf-ahead">1.08×</span></td><td>0.00374</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00403<br><span class="alt-slow">0.00494</span><br><span class="alt-slow">0.0153</span></td><td>1.4</td></tr>
+<tr><td class="colsep"><code>image-g32-bfloat16</code></td><td><span class="perf-par">1.01×</span></td><td>0.00355</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00358<br><span class="alt-slow">0.00426</span><br><span class="alt-slow">0.0132</span></td><td>0.886</td></tr>
+<tr><td class="colsep"><code>image-g32-float16</code></td><td><span class="perf-par">1.01×</span></td><td>0.00355</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00358<br><span class="alt-slow">0.00438</span><br><span class="alt-slow">0.0132</span></td><td>0.886</td></tr>
+<tr><td class="colsep"><code>tail-spatial-g16-affine-float16</code></td><td><span class="perf-behind">0.67×</span></td><td>0.00608</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00406<br><span class="alt-slow">0.00445</span><br><span class="alt-slow">0.0154</span></td><td>0.379</td></tr>
+<tr><td class="colsep"><code>tail-spatial-g16-float16</code></td><td><span class="perf-behind">0.67×</span></td><td>0.00522</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00352<br><span class="alt-slow">0.00362</span><br><span class="alt-slow">0.0134</span></td><td>0.265</td></tr>
+<tr><td class="colsep"><code>wider-channel-g32-affine-float16</code></td><td><span class="perf-behind">0.67×</span></td><td>0.00592</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00397<br><span class="alt-slow">0.00435</span><br><span class="alt-slow">0.0163</span></td><td>0.678</td></tr>
+<tr><td class="colsep"><code>wider-channel-g32-float16</code></td><td><span class="perf-behind">0.72×</span></td><td>0.00483</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00349<br><span class="alt-slow">0.00387</span><br><span class="alt-slow">0.0142</span></td><td>0.498</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="instancenormfwd-8-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/norm/instance_norm.py">InstanceNormFwd</a> <small>(8 workloads · ✅)</small><a class="headerlink" href="#instancenormfwd-8-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>image-affine-bfloat16</code></td><td><span class="perf-behind">0.88×</span></td><td>0.00342</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00301<br><span class="alt-slow">0.00371</span><br><span class="alt-slow">0.0207</span></td><td>1.53</td></tr>
+<tr><td class="colsep"><code>image-affine-float16</code></td><td><span class="perf-behind">0.89×</span></td><td>0.00346</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00307<br><span class="alt-slow">0.00371</span><br><span class="alt-slow">0.0207</span></td><td>1.52</td></tr>
+<tr><td class="colsep"><code>image-bfloat16</code></td><td><span class="perf-behind">0.86×</span></td><td>0.00339</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00291<br><span class="alt-slow">0.00346</span><br><span class="alt-slow">0.0171</span></td><td>0.927</td></tr>
+<tr><td class="colsep"><code>image-float16</code></td><td><span class="perf-behind">0.87×</span></td><td>0.00339</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00294<br><span class="alt-slow">0.00349</span><br><span class="alt-slow">0.0170</span></td><td>0.927</td></tr>
+<tr><td class="colsep"><code>tail-spatial-affine-float16</code></td><td><span class="perf-behind">0.90×</span></td><td>0.00266</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0024<br><span class="alt-slow">0.00282</span><br><span class="alt-slow">0.0111</span></td><td>0.434</td></tr>
+<tr><td class="colsep"><code>tail-spatial-float16</code></td><td><span class="perf-behind">0.91×</span></td><td>0.00253</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0023<br><span class="alt-slow">0.00262</span><br><span class="alt-slow">0.00826</span></td><td>0.273</td></tr>
+<tr><td class="colsep"><code>wider-channel-affine-float16</code></td><td><span class="perf-behind">0.83×</span></td><td>0.00346</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00288<br><span class="alt-slow">0.00355</span><br><span class="alt-slow">0.0206</span></td><td>1.16</td></tr>
+<tr><td class="colsep"><code>wider-channel-float16</code></td><td><span class="perf-behind">0.83×</span></td><td>0.00333</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00277<br><span class="alt-slow">0.0033</span><br><span class="alt-slow">0.0162</span></td><td>0.724</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="fusedaddrmsnormfwd-9-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/norm/fused_add_rms_norm.py">FusedAddRMSNormFwd</a> <small>(9 workloads · ✅)</small><a class="headerlink" href="#fusedaddrmsnormfwd-9-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>llama-405b-decode-bfloat16</code></td><td><span class="perf-behind">0.70×</span></td><td>0.00621</td><td><code>flashinfer</code><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00435<br><span class="alt-slow">0.00499</span><br><span class="alt-slow">0.00584</span><br><span class="alt-slow">0.0316</span></td><td>0.0132</td></tr>
+<tr><td class="colsep"><code>llama-405b-prefill-bfloat16</code></td><td><span class="perf-behind">0.84×</span></td><td>0.0852</td><td><code>flashinfer</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0716<br><span class="alt-slow">0.0722</span><br><span class="alt-slow">0.0782</span><br><span class="alt-slow">0.9911</span></td><td>1.97</td></tr>
+<tr><td class="colsep"><code>llama-405b-prefill-float16</code></td><td><span class="perf-behind">0.93×</span></td><td>0.0768</td><td><code>flashinfer</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0713<br><span class="alt-slow">0.0714</span><br><span class="alt-slow">0.0778</span><br><span class="alt-slow">0.9835</span></td><td>2.18</td></tr>
+<tr><td class="colsep"><code>llama-70b-decode-bfloat16</code></td><td><span class="perf-behind">0.83×</span></td><td>0.00346</td><td><code>flashinfer</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00288<br><span class="alt-slow">0.00298</span><br><span class="alt-slow">0.00352</span><br><span class="alt-slow">0.0299</span></td><td>0.0119</td></tr>
+<tr><td class="colsep"><code>llama-70b-prefill-bfloat16</code></td><td><span class="perf-par">0.95×</span></td><td>0.0380</td><td><code>flashinfer</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0361<br><span class="alt-slow">0.0365</span><br><span class="alt-slow">0.0365</span><br><span class="alt-slow">0.5176</span></td><td>2.21</td></tr>
+<tr><td class="colsep"><code>llama-70b-prefill-float16</code></td><td><span class="perf-par">0.95×</span></td><td>0.0378</td><td><code>vllm</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0359<br><span class="alt-slow">0.0361</span><br><span class="alt-slow">0.0364</span><br><span class="alt-slow">0.5139</span></td><td>2.22</td></tr>
+<tr><td class="colsep"><code>llama-8b-decode-bfloat16</code></td><td><span class="perf-behind">0.85×</span></td><td>0.00272</td><td><code>flashinfer</code><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00231<br><span class="alt-slow">0.00298</span><br><span class="alt-slow">0.00323</span><br><span class="alt-slow">0.0287</span></td><td>0.00753</td></tr>
+<tr><td class="colsep"><code>llama-8b-prefill-bfloat16</code></td><td><span class="perf-behind">0.90×</span></td><td>0.0212</td><td><code>vllm</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0191<br><span class="alt-slow">0.0193</span><br><span class="alt-slow">0.0197</span><br><span class="alt-slow">0.2686</span></td><td>1.97</td></tr>
+<tr><td class="colsep"><code>llama-8b-prefill-float16</code></td><td><span class="perf-behind">0.90×</span></td><td>0.0208</td><td><code>vllm</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0187<br><span class="alt-slow">0.0193</span><br><span class="alt-slow">0.0196</span><br><span class="alt-slow">0.2669</span></td><td>2.01</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="batchnormfwd-5-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/norm/batch_norm.py">BatchNormFwd</a> <small>(5 workloads)</small><a class="headerlink" href="#batchnormfwd-5-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>large-spatial-float16</code></td><td><span class="perf-behind">0.23×</span></td><td>4.3436</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-cudnn</code></span></td><td>1.0180<br><span class="alt-slow">3.8982</span><br><span class="alt-slow">4.5349</span></td><td>1.24</td></tr>
+<tr><td class="colsep"><code>resnet50-fc-float16</code></td><td><span class="perf-behind">0.29×</span></td><td>0.00611</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-cudnn</code></span></td><td>0.00179<br><span class="alt-slow">0.00554</span><br><span class="alt-slow">0.0113</span></td><td>0.00335</td></tr>
+<tr><td class="colsep"><code>resnet50-stage1-float16</code></td><td><span class="perf-behind">0.38×</span></td><td>0.0109</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-cudnn</code></span></td><td>0.00413<br><span class="alt-slow">0.0103</span><br><span class="alt-slow">0.0114</span></td><td>0.479</td></tr>
+<tr><td class="colsep"><code>resnet50-stage2-float16</code></td><td><span class="perf-behind">0.33×</span></td><td>0.0107</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-cudnn</code></span></td><td>0.00349<br><span class="alt-slow">0.00896</span><br><span class="alt-slow">0.0104</span></td><td>0.491</td></tr>
+<tr><td class="colsep"><code>resnet50-stage3-float16</code></td><td><span class="perf-behind">0.35×</span></td><td>0.0129</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-cudnn</code></span></td><td>0.00458<br><span class="alt-slow">0.0110</span><br><span class="alt-slow">0.0111</span></td><td>0.623</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="convolution">Convolution<a class="headerlink" href="#convolution" title="Permanent link">&para;</a></h2>
+<h3 id="conv1dfwd-16-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/convolution.py">Conv1dFwd</a> <small>(16 workloads · ✅)</small><a class="headerlink" href="#conv1dfwd-16-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>encodec-deep-bfloat16</code></td><td><span class="perf-ahead">1.41×</span></td><td>0.0120</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0169<br><span class="alt-slow">0.0169</span><br><span class="alt-slow">0.0714</span></td><td>32.4</td></tr>
+<tr><td class="colsep"><code>encodec-deep-bias-bfloat16</code></td><td><span class="perf-ahead">1.50×</span></td><td>0.0124</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0186<br><span class="alt-slow">0.0203</span><br><span class="alt-slow">0.0706</span></td><td>31.2</td></tr>
+<tr><td class="colsep"><code>encodec-deep-bias-float16</code></td><td><span class="perf-ahead">1.50×</span></td><td>0.0124</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0186<br><span class="alt-slow">0.0204</span><br><span class="alt-slow">0.0705</span></td><td>31.2</td></tr>
+<tr><td class="colsep"><code>encodec-deep-float16</code></td><td><span class="perf-ahead">1.41×</span></td><td>0.0120</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0170<br><span class="alt-slow">0.0170</span><br><span class="alt-slow">0.0714</span></td><td>32.3</td></tr>
+<tr><td class="colsep"><code>encodec-init-bfloat16</code></td><td><span class="perf-ahead">1.89×</span></td><td>0.00352</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00666<br><span class="alt-slow">0.00667</span><br><span class="alt-slow">0.0244</span></td><td>3.05</td></tr>
+<tr><td class="colsep"><code>encodec-init-bias-bfloat16</code></td><td><span class="perf-ahead">2.37×</span></td><td>0.00362</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00858<br><span class="alt-slow">0.0107</span><br><span class="alt-slow">0.0236</span></td><td>3.19</td></tr>
+<tr><td class="colsep"><code>encodec-init-bias-float16</code></td><td><span class="perf-ahead">2.52×</span></td><td>0.00358</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00902<br><span class="alt-slow">0.0106</span><br><span class="alt-slow">0.0236</span></td><td>3.21</td></tr>
+<tr><td class="colsep"><code>encodec-init-float16</code></td><td><span class="perf-ahead">1.87×</span></td><td>0.00355</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00666<br><span class="alt-slow">0.00666</span><br><span class="alt-slow">0.0245</span></td><td>3.03</td></tr>
+<tr><td class="colsep"><code>wav2vec2-layer1-bfloat16</code></td><td><span class="perf-ahead">2.82×</span></td><td>0.00669</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0188<br><span class="alt-slow">0.0188</span><br><span class="alt-slow">0.0402</span></td><td>4.9</td></tr>
+<tr><td class="colsep"><code>wav2vec2-layer1-bias-bfloat16</code></td><td><span class="perf-ahead">3.12×</span></td><td>0.00694</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0217<br><span class="alt-slow">0.0255</span><br><span class="alt-slow">0.0392</span></td><td>4.95</td></tr>
+<tr><td class="colsep"><code>wav2vec2-layer1-bias-float16</code></td><td><span class="perf-ahead">3.25×</span></td><td>0.00691</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0225<br><span class="alt-slow">0.0252</span><br><span class="alt-slow">0.0391</span></td><td>4.98</td></tr>
+<tr><td class="colsep"><code>wav2vec2-layer1-float16</code></td><td><span class="perf-ahead">2.78×</span></td><td>0.00669</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0186<br><span class="alt-slow">0.0187</span><br><span class="alt-slow">0.0401</span></td><td>4.9</td></tr>
+<tr><td class="colsep"><code>whisper-large-conv1-bfloat16</code></td><td><span class="perf-ahead">1.16×</span></td><td>0.0485</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0564<br><span class="alt-slow">0.0565</span><br><span class="alt-slow">0.1118</span></td><td>38</td></tr>
+<tr><td class="colsep"><code>whisper-large-conv1-bias-bfloat16</code></td><td><span class="perf-ahead">1.33×</span></td><td>0.0477</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0634<br><span class="alt-slow">0.0693</span><br><span class="alt-slow">0.1117</span></td><td>38.7</td></tr>
+<tr><td class="colsep"><code>whisper-large-conv1-bias-float16</code></td><td><span class="perf-ahead">1.34×</span></td><td>0.0478</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0638<br><span class="alt-slow">0.0693</span><br><span class="alt-slow">0.1116</span></td><td>38.6</td></tr>
+<tr><td class="colsep"><code>whisper-large-conv1-float16</code></td><td><span class="perf-ahead">1.18×</span></td><td>0.0482</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0568<br><span class="alt-slow">0.0569</span><br><span class="alt-slow">0.1121</span></td><td>38.2</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="conv2dfwd-31-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/convolution.py">Conv2dFwd</a> <small>(31 workloads · ✅)</small><a class="headerlink" href="#conv2dfwd-31-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>bottleneck-expand-1x1-bias-float16</code></td><td><span class="perf-ahead">1.85×</span></td><td>0.0041</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00758<br><span class="alt-slow">0.00883</span><br><span class="alt-slow">0.0276</span></td><td>50.4</td></tr>
+<tr><td class="colsep"><code>bottleneck-expand-1x1-float16</code></td><td><span class="perf-ahead">1.05×</span></td><td>0.00381</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.004<br><span class="alt-slow">0.00739</span><br><span class="alt-slow">0.0286</span></td><td>54</td></tr>
+<tr><td class="colsep"><code>bottleneck-reduce-1x1-bias-float16</code></td><td><span class="perf-ahead">1.47×</span></td><td>0.00493</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00726<br><span class="alt-slow">0.00846</span><br><span class="alt-slow">0.0256</span></td><td>41.7</td></tr>
+<tr><td class="colsep"><code>bottleneck-reduce-1x1-float16</code></td><td><span class="perf-behind">0.92×</span></td><td>0.00467</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00432<br><span class="alt-slow">0.00797</span><br><span class="alt-slow">0.0264</span></td><td>44</td></tr>
+<tr><td class="colsep"><code>classifier-1x1-bias-float16</code></td><td><span class="perf-behind">0.81×</span></td><td>0.00957</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00779<br><span class="alt-slow">0.0119</span><br><span class="alt-slow">0.0199</span></td><td>10.8</td></tr>
+<tr><td class="colsep"><code>classifier-1x1-float16</code></td><td><span class="perf-behind">0.79×</span></td><td>0.00915</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00726<br><span class="alt-slow">0.00906</span><br><span class="alt-slow">0.0206</span></td><td>11.2</td></tr>
+<tr><td class="colsep"><code>deeplabv3-aspp-3x3-rate12-float16</code></td><td><span class="perf-par">1.02×</span></td><td>0.0890</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0909<br><span class="alt-slow">0.1190</span><br><span class="alt-slow">0.7156</span></td><td>109</td></tr>
+<tr><td class="colsep"><code>highres-3x3-s1-bias-float16</code></td><td><span class="perf-behind">0.75×</span></td><td>0.1052</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0790<br><span class="alt-slow">0.1147</span><br><span class="alt-slow">0.7348</span></td><td>281</td></tr>
+<tr><td class="colsep"><code>highres-3x3-s1-float16</code></td><td><span class="perf-behind">0.75×</span></td><td>0.1052</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0789<br><span class="alt-slow">0.0945</span><br><span class="alt-slow">0.7350</span></td><td>281</td></tr>
+<tr><td class="colsep"><code>late-stage-1x1-bias-float16</code></td><td><span class="perf-ahead">1.32×</span></td><td>0.00528</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00698<br><span class="alt-slow">0.00931</span><br><span class="alt-slow">0.0148</span></td><td>19.5</td></tr>
+<tr><td class="colsep"><code>late-stage-1x1-float16</code></td><td><span class="perf-ahead">1.27×</span></td><td>0.00499</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00634<br><span class="alt-slow">0.00666</span><br><span class="alt-slow">0.0154</span></td><td>20.6</td></tr>
+<tr><td class="colsep"><code>midres-5x5-s1-bias-float16</code></td><td><span class="perf-par">1.02×</span></td><td>0.0164</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0167<br><span class="alt-slow">0.0230</span><br><span class="alt-slow">0.2013</span></td><td>78.1</td></tr>
+<tr><td class="colsep"><code>midres-5x5-s1-float16</code></td><td><span class="perf-par">1.00×</span></td><td>0.0161</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0161<br><span class="alt-slow">0.0195</span><br><span class="alt-slow">0.2021</span></td><td>79.6</td></tr>
+<tr><td class="colsep"><code>mobilenetv2-depthwise-float16</code></td><td><span class="perf-ahead">1.08×</span></td><td>0.00282</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00304<br><span class="alt-slow">0.00554</span><br><span class="alt-slow">0.0542</span></td><td>0.641</td></tr>
+<tr><td class="colsep"><code>resnet-1x1-bfloat16</code></td><td><span class="perf-behind">0.91×</span></td><td>0.00438</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.004<br><span class="alt-slow">0.00832</span><br><span class="alt-slow">0.0492</span></td><td>46.9</td></tr>
+<tr><td class="colsep"><code>resnet-1x1-bias-bfloat16</code></td><td><span class="perf-ahead">1.81×</span></td><td>0.00461</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00835<br><span class="alt-slow">0.0115</span><br><span class="alt-slow">0.0483</span></td><td>44.9</td></tr>
+<tr><td class="colsep"><code>resnet-1x1-bias-float16</code></td><td><span class="perf-ahead">1.92×</span></td><td>0.00458</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00877<br><span class="alt-slow">0.0116</span><br><span class="alt-slow">0.0482</span></td><td>45.3</td></tr>
+<tr><td class="colsep"><code>resnet-1x1-float16</code></td><td><span class="perf-par">0.97×</span></td><td>0.00435</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00422<br><span class="alt-slow">0.00838</span><br><span class="alt-slow">0.0491</span></td><td>47.2</td></tr>
+<tr><td class="colsep"><code>resnet-3x3-bfloat16</code></td><td><span class="perf-behind">0.91×</span></td><td>0.0130</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0118<br><span class="alt-slow">0.0149</span><br><span class="alt-slow">0.0831</span></td><td>35.6</td></tr>
+<tr><td class="colsep"><code>resnet-3x3-bias-bfloat16</code></td><td><span class="perf-behind">0.87×</span></td><td>0.0138</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0119<br><span class="alt-slow">0.0184</span><br><span class="alt-slow">0.0823</span></td><td>33.6</td></tr>
+<tr><td class="colsep"><code>resnet-3x3-bias-float16</code></td><td><span class="perf-behind">0.89×</span></td><td>0.0133</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0118<br><span class="alt-slow">0.0183</span><br><span class="alt-slow">0.0824</span></td><td>34.9</td></tr>
+<tr><td class="colsep"><code>resnet-3x3-float16</code></td><td><span class="perf-behind">0.89×</span></td><td>0.0130</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0116<br><span class="alt-slow">0.0147</span><br><span class="alt-slow">0.0833</span></td><td>35.5</td></tr>
+<tr><td class="colsep"><code>resnext-grouped-3x3-float16</code></td><td><span class="perf-ahead">4.61×</span></td><td>0.00413</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0190<br><span class="alt-slow">0.0190</span><br><span class="alt-slow">0.0193</span></td><td>3.5</td></tr>
+<tr><td class="colsep"><code>stage-transition-3x3-s2-bias-float16</code></td><td><span class="perf-par">0.97×</span></td><td>0.0141</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0137<br><span class="alt-slow">0.0202</span><br><span class="alt-slow">0.1177</span></td><td>32.7</td></tr>
+<tr><td class="colsep"><code>stage-transition-3x3-s2-float16</code></td><td><span class="perf-par">0.97×</span></td><td>0.0138</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0134<br><span class="alt-slow">0.0170</span><br><span class="alt-slow">0.1188</span></td><td>33.5</td></tr>
+<tr><td class="colsep"><code>stage-transition-5x5-s2-bias-float16</code></td><td><span class="perf-par">1.00×</span></td><td>0.0225</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0224<br><span class="alt-slow">0.0287</span><br><span class="alt-slow">0.3090</span></td><td>57.1</td></tr>
+<tr><td class="colsep"><code>stage-transition-5x5-s2-float16</code></td><td><span class="perf-par">0.99×</span></td><td>0.0225</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0222<br><span class="alt-slow">0.0254</span><br><span class="alt-slow">0.3105</span></td><td>57.2</td></tr>
+<tr><td class="colsep"><code>stem-3x3-s2-bias-float16</code></td><td><span class="perf-ahead">2.72×</span></td><td>0.00349</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0095<br><span class="alt-slow">0.0095</span><br><span class="alt-slow">0.0123</span></td><td>3.16</td></tr>
+<tr><td class="colsep"><code>stem-3x3-s2-float16</code></td><td><span class="perf-ahead">1.81×</span></td><td>0.00358</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0065<br><span class="alt-slow">0.00925</span><br><span class="alt-slow">0.0130</span></td><td>3.02</td></tr>
+<tr><td class="colsep"><code>stride2-bfloat16</code></td><td><span class="perf-ahead">1.09×</span></td><td>0.0111</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0121<br><span class="alt-slow">0.0148</span><br><span class="alt-slow">0.0648</span></td><td>5.19</td></tr>
+<tr><td class="colsep"><code>stride2-bias-bfloat16</code></td><td><span class="perf-ahead">1.08×</span></td><td>0.0116</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0125<br><span class="alt-slow">0.0177</span><br><span class="alt-slow">0.0640</span></td><td>5.01</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="conv3dfwd-8-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/convolution.py">Conv3dFwd</a> <small>(8 workloads · ✅)</small><a class="headerlink" href="#conv3dfwd-8-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>3d-resnext-grouped-k3-float16</code></td><td><span class="perf-ahead">16.18×</span></td><td>0.0157</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.2545<br><span class="alt-slow">0.2651</span><br><span class="alt-slow">0.2776</span></td><td>5.51</td></tr>
+<tr><td class="colsep"><code>3d-unet-aspp-3x3x3-rate6-float16</code></td><td><span class="perf-behind">0.30×</span></td><td>0.1270</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0376<br><span class="alt-slow">0.0376</span><br><span class="alt-slow">0.3003</span></td><td>57.1</td></tr>
+<tr><td class="colsep"><code>r3d-stem-k3-s1-bias-float16</code></td><td><span class="perf-ahead">3.70×</span></td><td>0.0229</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0849<br><span class="alt-slow">0.1263</span><br><span class="alt-slow">0.1548</span></td><td>91.3</td></tr>
+<tr><td class="colsep"><code>r3d-stem-k3-s1-float16</code></td><td><span class="perf-ahead">3.74×</span></td><td>0.0229</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.0858<br><span class="alt-slow">0.1148</span><br><span class="alt-slow">0.1148</span></td><td>90.7</td></tr>
+<tr><td class="colsep"><code>unet-encoder-k3-s1-bfloat16</code></td><td><span class="perf-behind">0.33×</span></td><td>0.3546</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.1154<br><span class="alt-slow">0.1155</span><br><span class="alt-slow">0.3168</span></td><td>40.9</td></tr>
+<tr><td class="colsep"><code>unet-encoder-k3-s1-bias-bfloat16</code></td><td><span class="perf-behind">0.35×</span></td><td>0.3539</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.1224<br><span class="alt-slow">0.1411</span><br><span class="alt-slow">0.3161</span></td><td>41</td></tr>
+<tr><td class="colsep"><code>video-stage-downsample-k3-s2-bias-float16</code></td><td><span class="perf-behind">0.80×</span></td><td>0.0353</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0281<br><span class="alt-slow">0.0299</span><br><span class="alt-slow">0.2161</span></td><td>39.3</td></tr>
+<tr><td class="colsep"><code>video-stage-downsample-k3-s2-float16</code></td><td><span class="perf-behind">0.76×</span></td><td>0.0349</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0264<br><span class="alt-slow">0.0264</span><br><span class="alt-slow">0.2177</span></td><td>39.7</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="pooling">Pooling<a class="headerlink" href="#pooling" title="Permanent link">&para;</a></h2>
+<h3 id="meanpoolingforward-4-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/pool.py">MeanPoolingForward</a> <small>(4 workloads · ✅)</small><a class="headerlink" href="#meanpoolingforward-4-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>dense-batched</code></td><td><span class="perf-ahead">2.07×</span></td><td>0.0704</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.1459<br><span class="alt-slow">0.2531</span></td><td>0.476</td></tr>
+<tr><td class="colsep"><code>dense-mainstream</code></td><td><span class="perf-ahead">3.15×</span></td><td>0.1350</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.4250<br><span class="alt-slow">0.6113</span></td><td>0.497</td></tr>
+<tr><td class="colsep"><code>varlen-long</code></td><td><span class="perf-ahead">4.41×</span></td><td>0.1385</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.6107<br><span class="alt-slow">0.6160</span></td><td>0.484</td></tr>
+<tr><td class="colsep"><code>varlen-tail</code></td><td><span class="perf-ahead">9.60×</span></td><td>0.0219</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.2097<br><span class="alt-slow">0.2141</span></td><td>0.408</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="adaptivemaxpool2dfwd-3-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/pool.py">AdaptiveMaxPool2dFwd</a> <small>(3 workloads)</small><a class="headerlink" href="#adaptivemaxpool2dfwd-3-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>global-1x1-float16</code></td><td><span class="perf-ahead">1.30×</span></td><td>0.00291</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00378<br><span class="alt-slow">0.0449</span></td><td>0.276</td></tr>
+<tr><td class="colsep"><code>nondiv-7x7-bfloat16</code></td><td><span class="perf-ahead">1.76×</span></td><td>0.0065</td><td><code>torch-ref</code><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.0115<br><span class="alt-slow">0.0115</span></td><td>0.0757</td></tr>
+<tr><td class="colsep"><code>spp-6x6-float16</code></td><td><span class="perf-ahead">2.38×</span></td><td>0.00602</td><td><code>torch-ref</code><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.0143<br><span class="alt-slow">0.0143</span></td><td>0.153</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="adaptiveavgpool2dfwd-3-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/pool.py">AdaptiveAvgPool2dFwd</a> <small>(3 workloads · ✅)</small><a class="headerlink" href="#adaptiveavgpool2dfwd-3-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>nondiv-7x7-bfloat16</code></td><td><span class="perf-ahead">1.39×</span></td><td>0.00659</td><td><code>torch-ref</code><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.00915<br><span class="alt-slow">0.00917</span></td><td>0.0746</td></tr>
+<tr><td class="colsep"><code>resnet-global-float16</code></td><td><span class="perf-ahead">1.89×</span></td><td>0.00298</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00563<br><span class="alt-slow">0.00736</span></td><td>0.27</td></tr>
+<tr><td class="colsep"><code>spp-6x6-float16</code></td><td><span class="perf-ahead">1.97×</span></td><td>0.00538</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0106<br><span class="alt-slow">0.0106</span></td><td>0.171</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="avgpool2dfwd-3-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/pool.py">AvgPool2dFwd</a> <small>(3 workloads · ✅)</small><a class="headerlink" href="#avgpool2dfwd-3-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>ceil-divisor-bfloat16</code></td><td><span class="perf-ahead">1.24×</span></td><td>0.00314</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0039<br><span class="alt-slow">0.00579</span><br><span class="alt-slow">0.00765</span></td><td>1.12</td></tr>
+<tr><td class="colsep"><code>vision-3x3-s2-float16</code></td><td><span class="perf-par">1.03×</span></td><td>0.00397</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0041<br><span class="alt-slow">0.00662</span><br><span class="alt-slow">0.00909</span></td><td>0.91</td></tr>
+<tr><td class="colsep"><code>vision-5x5-s2-float16</code></td><td><span class="perf-ahead">1.79×</span></td><td>0.00403</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-ref</code></span><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.00723<br><span class="alt-slow">0.00983</span><br><span class="alt-slow">0.0206</span></td><td>1.24</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="maxpool3dindicesfwd-3-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/pool.py">MaxPool3dIndicesFwd</a> <small>(3 workloads · ✅)</small><a class="headerlink" href="#maxpool3dindicesfwd-3-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>c3d-pool1-float16</code></td><td><span class="perf-behind">0.43×</span></td><td>0.3040</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.1294<br><span class="alt-slow">0.5176</span></td><td>0.338</td></tr>
+<tr><td class="colsep"><code>c3d-pool2-float16</code></td><td><span class="perf-behind">0.56×</span></td><td>0.0588</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0327<br><span class="alt-slow">0.0940</span></td><td>0.437</td></tr>
+<tr><td class="colsep"><code>medicalnet-stem-bfloat16</code></td><td><span class="perf-ahead">6.14×</span></td><td>0.3315</td><td><code>torch-ref</code><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.3348<br><span class="alt-slow">2.0361</span></td><td>0.576</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="maxpool3dfwd-3-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/pool.py">MaxPool3dFwd</a> <small>(3 workloads)</small><a class="headerlink" href="#maxpool3dfwd-3-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>c3d-pool1-float16</code></td><td><span class="perf-par">1.01×</span></td><td>0.0763</td><td><code>torch-compile</code><br><span class="alt-slow"><code>cudnn</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0772<br><span class="alt-slow">0.3009</span><br><span class="alt-slow">0.5176</span></td><td>1.35</td></tr>
+<tr><td class="colsep"><code>c3d-pool2-float16</code></td><td><span class="perf-par">1.05×</span></td><td>0.0236</td><td><code>torch-compile</code><br><span class="alt-slow"><code>cudnn</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0247<br><span class="alt-slow">0.0608</span><br><span class="alt-slow">0.0938</span></td><td>1.09</td></tr>
+<tr><td class="colsep"><code>medicalnet-stem-bfloat16</code></td><td><span class="perf-ahead">2.37×</span></td><td>0.1111</td><td><code>cudnn</code><br><span class="alt-slow"><code>torch-ref</code></span><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.2637<br><span class="alt-slow">0.3349</span><br><span class="alt-slow">0.9266</span></td><td>1.72</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="avgpool3dfwd-3-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/pool.py">AvgPool3dFwd</a> <small>(3 workloads · ✅)</small><a class="headerlink" href="#avgpool3dfwd-3-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>ceil-video-float16</code></td><td><span class="perf-behind">0.93×</span></td><td>0.00438</td><td><code>torch-compile</code><br><span class="alt-slow"><code>cudnn</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00406<br><span class="alt-slow">0.00563</span><br><span class="alt-slow">0.0114</span></td><td>0.591</td></tr>
+<tr><td class="colsep"><code>divisor-bfloat16</code></td><td><span class="perf-behind">0.83×</span></td><td>0.00227</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00189<br><span class="alt-slow">0.00506</span></td><td>0.153</td></tr>
+<tr><td class="colsep"><code>video-2x2x2-float16</code></td><td><span class="perf-ahead">1.31×</span></td><td>0.00368</td><td><code>torch-compile</code><br><span class="alt-slow"><code>cudnn</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00483<br><span class="alt-slow">0.00589</span><br><span class="alt-slow">0.00995</span></td><td>0.436</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="maxpool2dfwd-9-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/pool.py">MaxPool2dFwd</a> <small>(9 workloads)</small><a class="headerlink" href="#maxpool2dfwd-9-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>alexnet-ceil-bfloat16</code></td><td><span class="perf-ahead">1.26×</span></td><td>0.00874</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0110<br><span class="alt-slow">0.0227</span><br><span class="alt-slow">0.0348</span></td><td>1.54</td></tr>
+<tr><td class="colsep"><code>alexnet-ceil-float16</code></td><td><span class="perf-ahead">1.25×</span></td><td>0.00877</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0109<br><span class="alt-slow">0.0225</span><br><span class="alt-slow">0.0347</span></td><td>1.53</td></tr>
+<tr><td class="colsep"><code>alexnet-ceil-float32</code></td><td><span class="perf-ahead">1.22×</span></td><td>0.0126</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0154<br><span class="alt-slow">0.0228</span><br><span class="alt-slow">0.0341</span></td><td>1.06</td></tr>
+<tr><td class="colsep"><code>resnet-stem-bfloat16</code></td><td><span class="perf-behind">0.72×</span></td><td>0.0471</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0340<br><span class="alt-slow">0.0782</span><br><span class="alt-slow">0.1393</span></td><td>1.23</td></tr>
+<tr><td class="colsep"><code>resnet-stem-float16</code></td><td><span class="perf-behind">0.72×</span></td><td>0.0471</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0340<br><span class="alt-slow">0.0784</span><br><span class="alt-slow">0.1390</span></td><td>1.23</td></tr>
+<tr><td class="colsep"><code>resnet-stem-float32</code></td><td><span class="perf-behind">0.94×</span></td><td>0.0528</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0498<br><span class="alt-slow">0.0810</span><br><span class="alt-slow">0.1347</span></td><td>1.1</td></tr>
+<tr><td class="colsep"><code>vgg-block-bfloat16</code></td><td><span class="perf-par">1.01×</span></td><td>0.0072</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00726<br><span class="alt-slow">0.0148</span><br><span class="alt-slow">0.0279</span></td><td>0.892</td></tr>
+<tr><td class="colsep"><code>vgg-block-float16</code></td><td><span class="perf-par">1.01×</span></td><td>0.0072</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00726<br><span class="alt-slow">0.0148</span><br><span class="alt-slow">0.0277</span></td><td>0.892</td></tr>
+<tr><td class="colsep"><code>vgg-block-float32</code></td><td><span class="perf-behind">0.94×</span></td><td>0.0111</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0104<br><span class="alt-slow">0.0167</span><br><span class="alt-slow">0.0277</span></td><td>0.58</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="avgpool1dfwd-3-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/pool.py">AvgPool1dFwd</a> <small>(3 workloads · ✅)</small><a class="headerlink" href="#avgpool1dfwd-3-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>audio-downsample-float16</code></td><td><span class="perf-par">1.03×</span></td><td>0.00617</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00637<br><span class="alt-slow">0.0153</span></td><td>0.509</td></tr>
+<tr><td class="colsep"><code>ceil-bfloat16</code></td><td><span class="perf-behind">0.67×</span></td><td>0.00346</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0023<br><span class="alt-slow">0.00533</span></td><td>0.303</td></tr>
+<tr><td class="colsep"><code>long-temporal-float16</code></td><td><span class="perf-behind">0.80×</span></td><td>0.0213</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0171<br><span class="alt-slow">0.0594</span></td><td>0.962</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="adaptivemaxpool2dindicesfwd-3-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/pool.py">AdaptiveMaxPool2dIndicesFwd</a> <small>(3 workloads · ✅)</small><a class="headerlink" href="#adaptivemaxpool2dindicesfwd-3-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>global-1x1-float16</code></td><td><span class="perf-behind">0.62×</span></td><td>0.0133</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00819<br><span class="alt-slow">0.0450</span></td><td>0.0605</td></tr>
+<tr><td class="colsep"><code>nondiv-7x7-bfloat16</code></td><td><span class="perf-behind">0.72×</span></td><td>0.0158</td><td><code>torch-ref</code><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.0115<br><span class="alt-slow">0.0115</span></td><td>0.0311</td></tr>
+<tr><td class="colsep"><code>spp-6x6-float16</code></td><td><span class="perf-behind">0.93×</span></td><td>0.0154</td><td><code>torch-ref</code><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.0142<br><span class="alt-slow">0.0143</span></td><td>0.0599</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="maxpool2dindicesfwd-9-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/pool.py">MaxPool2dIndicesFwd</a> <small>(9 workloads · ✅)</small><a class="headerlink" href="#maxpool2dindicesfwd-9-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>alexnet-ceil-bfloat16</code></td><td><span class="perf-behind">0.74×</span></td><td>0.0237</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0174<br><span class="alt-slow">0.0228</span><br><span class="alt-slow">0.0348</span></td><td>0.567</td></tr>
+<tr><td class="colsep"><code>alexnet-ceil-float16</code></td><td><span class="perf-behind">0.74×</span></td><td>0.0237</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0177<br><span class="alt-slow">0.0225</span><br><span class="alt-slow">0.0348</span></td><td>0.567</td></tr>
+<tr><td class="colsep"><code>alexnet-ceil-float32</code></td><td><span class="perf-behind">0.82×</span></td><td>0.0236</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0194<br><span class="alt-slow">0.0228</span><br><span class="alt-slow">0.0342</span></td><td>0.569</td></tr>
+<tr><td class="colsep"><code>resnet-stem-bfloat16</code></td><td><span class="perf-behind">0.62×</span></td><td>0.1122</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0698<br><span class="alt-slow">0.0783</span><br><span class="alt-slow">0.1396</span></td><td>0.515</td></tr>
+<tr><td class="colsep"><code>resnet-stem-float16</code></td><td><span class="perf-behind">0.62×</span></td><td>0.1122</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0693<br><span class="alt-slow">0.0784</span><br><span class="alt-slow">0.1393</span></td><td>0.515</td></tr>
+<tr><td class="colsep"><code>resnet-stem-float32</code></td><td><span class="perf-behind">0.67×</span></td><td>0.1074</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0715<br><span class="alt-slow">0.0811</span><br><span class="alt-slow">0.1348</span></td><td>0.538</td></tr>
+<tr><td class="colsep"><code>vgg-block-bfloat16</code></td><td><span class="perf-behind">0.55×</span></td><td>0.0195</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0106<br><span class="alt-slow">0.0148</span><br><span class="alt-slow">0.0279</span></td><td>0.33</td></tr>
+<tr><td class="colsep"><code>vgg-block-float16</code></td><td><span class="perf-behind">0.54×</span></td><td>0.0196</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0107<br><span class="alt-slow">0.0148</span><br><span class="alt-slow">0.0277</span></td><td>0.327</td></tr>
+<tr><td class="colsep"><code>vgg-block-float32</code></td><td><span class="perf-behind">0.65×</span></td><td>0.0195</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0127<br><span class="alt-slow">0.0168</span><br><span class="alt-slow">0.0277</span></td><td>0.33</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="maxpool1dfwd-3-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/pool.py">MaxPool1dFwd</a> <small>(3 workloads)</small><a class="headerlink" href="#maxpool1dfwd-3-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>ecg-cnn-dilated-bfloat16</code></td><td><span class="perf-behind">0.82×</span></td><td>0.00954</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00784<br><span class="alt-slow">0.0354</span></td><td>1.1</td></tr>
+<tr><td class="colsep"><code>sincnet-speaker-local-float16</code></td><td><span class="perf-par">1.00×</span></td><td>0.0114</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0114<br><span class="alt-slow">0.0505</span></td><td>0.92</td></tr>
+<tr><td class="colsep"><code>textcnn-global-float16</code></td><td><span class="perf-behind">0.28×</span></td><td>0.0135</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00371<br><span class="alt-slow">0.0264</span></td><td>0.156</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="maxpool1dindicesfwd-3-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/pool.py">MaxPool1dIndicesFwd</a> <small>(3 workloads · ✅)</small><a class="headerlink" href="#maxpool1dindicesfwd-3-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>ecg-cnn-dilated-bfloat16</code></td><td><span class="perf-behind">0.60×</span></td><td>0.0223</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0134<br><span class="alt-slow">0.0354</span></td><td>0.469</td></tr>
+<tr><td class="colsep"><code>sincnet-speaker-local-float16</code></td><td><span class="perf-behind">0.74×</span></td><td>0.0218</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0160<br><span class="alt-slow">0.0505</span></td><td>0.482</td></tr>
+<tr><td class="colsep"><code>textcnn-global-float16</code></td><td><span class="perf-behind">0.39×</span></td><td>0.0193</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00755<br><span class="alt-slow">0.0264</span></td><td>0.109</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="positional-encoding">Positional Encoding<a class="headerlink" href="#positional-encoding" title="Permanent link">&para;</a></h2>
+<h3 id="ropeneoxfwd-3-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/rope.py">RopeNeoxFwd</a> <small>(3 workloads · ✅)</small><a class="headerlink" href="#ropeneoxfwd-3-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>neox-1d-2k-d64-float16</code></td><td><span class="perf-ahead">1.09×</span></td><td>0.00182</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00198<br><span class="alt-slow">0.00944</span></td><td>0.287</td></tr>
+<tr><td class="colsep"><code>neox-1d-4k-d128-bfloat16</code></td><td><span class="perf-ahead">1.16×</span></td><td>0.00259</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00301<br><span class="alt-slow">0.0123</span></td><td>0.809</td></tr>
+<tr><td class="colsep"><code>neox-2d-b2-s2k-h32-d128-float16</code></td><td><span class="perf-behind">0.59×</span></td><td>0.0310</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0184<br><span class="alt-slow">0.2719</span></td><td>2.17</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="ropenonneoxfwd-2-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/rope.py">RopeNonNeoxFwd</a> <small>(2 workloads · ✅)</small><a class="headerlink" href="#ropenonneoxfwd-2-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>non-neox-1d-2k-d64-float16</code></td><td><span class="perf-behind">0.90×</span></td><td>0.00221</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00198<br><span class="alt-slow">0.00944</span></td><td>0.237</td></tr>
+<tr><td class="colsep"><code>non-neox-2d-b2-s2k-h32-d128-bfloat16</code></td><td><span class="perf-behind">0.76×</span></td><td>0.0252</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0190<br><span class="alt-slow">0.2747</span></td><td>2.66</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="ropeyarnfwd-2-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/rope.py">RopeYarnFwd</a> <small>(2 workloads · ✅)</small><a class="headerlink" href="#ropeyarnfwd-2-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>yarn-1d-8k-d128-bfloat16</code></td><td><span class="perf-ahead">1.15×</span></td><td>0.00362</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00416<br><span class="alt-slow">0.0159</span></td><td>1.16</td></tr>
+<tr><td class="colsep"><code>yarn-2d-b1-s8k-h32-d128-float16</code></td><td><span class="perf-behind">0.59×</span></td><td>0.0594</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0349<br><span class="alt-slow">0.4927</span></td><td>2.26</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="ropelongropefwd-2-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/rope.py">RopeLongRopeFwd</a> <small>(2 workloads · ✅)</small><a class="headerlink" href="#ropelongropefwd-2-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>longrope-1d-8k-d128-bfloat16</code></td><td><span class="perf-ahead">1.15×</span></td><td>0.00362</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00416<br><span class="alt-slow">0.0159</span></td><td>1.16</td></tr>
+<tr><td class="colsep"><code>longrope-2d-b1-s8k-h32-d128-float16</code></td><td><span class="perf-behind">0.59×</span></td><td>0.0594</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0349<br><span class="alt-slow">0.4923</span></td><td>2.26</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="ropellama31fwd-2-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/rope.py">RopeLlama31Fwd</a> <small>(2 workloads · ✅)</small><a class="headerlink" href="#ropellama31fwd-2-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>llama31-1d-8k-d128-bfloat16</code></td><td><span class="perf-ahead">1.15×</span></td><td>0.00362</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00416<br><span class="alt-slow">0.0159</span></td><td>1.16</td></tr>
+<tr><td class="colsep"><code>llama31-2d-b1-s8k-h32-d128-float16</code></td><td><span class="perf-behind">0.59×</span></td><td>0.0594</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0348<br><span class="alt-slow">0.4924</span></td><td>2.26</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="ropeneoxpositionidsfwd-2-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/rope.py">RopeNeoxPositionIdsFwd</a> <small>(2 workloads)</small><a class="headerlink" href="#ropeneoxpositionidsfwd-2-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>position-ids-s2k-h32-d128-float16</code></td><td><span class="perf-behind">0.43×</span></td><td>0.0278</td><td><code>torch-compile</code><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0119<br><span class="alt-slow">0.0243</span><br><span class="alt-slow">0.1297</span></td><td>1.21</td></tr>
+<tr><td class="colsep"><code>position-ids-s4k-h32-d128-bfloat16</code></td><td><span class="perf-behind">0.49×</span></td><td>0.0456</td><td><code>torch-compile</code><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0223<br><span class="alt-slow">0.0446</span><br><span class="alt-slow">0.2490</span></td><td>1.47</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="fft">FFT<a class="headerlink" href="#fft" title="Permanent link">&para;</a></h2>
+<h3 id="fftc2cfwd-3-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/fft.py">FFTC2CFwd</a> <small>(3 workloads · ✅)</small><a class="headerlink" href="#fftc2cfwd-3-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>fft-4k-c128-b64-complex128</code></td><td><span class="perf-behind">0.28×</span></td><td>0.0305</td><td><code>torch-cufft</code><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.00848<br><span class="alt-slow">0.00848</span></td><td>0.516</td></tr>
+<tr><td class="colsep"><code>fft-4k-c64-b64-complex64</code></td><td><span class="perf-behind">0.37×</span></td><td>0.0152</td><td><code>torch-cufft</code><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.00563<br><span class="alt-slow">0.00563</span></td><td>1.03</td></tr>
+<tr><td class="colsep"><code>fft-4k-c64-unbatched-complex64</code></td><td><span class="perf-behind">0.67×</span></td><td>0.00813</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-cufft</code></span></td><td>0.00544<br><span class="alt-slow">0.00544</span></td><td>0.0302</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="mhc">MHC<a class="headerlink" href="#mhc" title="Permanent link">&para;</a></h2>
+<h3 id="mhcpostfwd-3-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/sequence_modeling/mhc.py">MHCPostFwd</a> <small>(3 workloads · ✅)</small><a class="headerlink" href="#mhcpostfwd-3-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>post-large-bfloat16</code></td><td><span class="perf-par">1.00×</span></td><td>0.0016</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0016<br><span class="alt-slow">0.0114</span></td><td>0.0512</td></tr>
+<tr><td class="colsep"><code>post-medium-bfloat16</code></td><td><span class="perf-par">1.00×</span></td><td>0.00141</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00141<br><span class="alt-slow">0.0109</span></td><td>0.0218</td></tr>
+<tr><td class="colsep"><code>post-small-bfloat16</code></td><td><span class="perf-par">1.00×</span></td><td>0.00131</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00131<br><span class="alt-slow">0.0105</span></td><td>0.0078</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="mhcprefwd-3-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/sequence_modeling/mhc.py">MHCPreFwd</a> <small>(3 workloads · ✅)</small><a class="headerlink" href="#mhcprefwd-3-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>pre-large-bfloat16</code></td><td><span class="perf-behind">0.80×</span></td><td>0.0715</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0569<br><span class="alt-slow">0.1171</span></td><td>0.0332</td></tr>
+<tr><td class="colsep"><code>pre-medium-bfloat16</code></td><td><span class="perf-behind">0.58×</span></td><td>0.0544</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0313<br><span class="alt-slow">0.0778</span></td><td>0.0164</td></tr>
+<tr><td class="colsep"><code>pre-small-bfloat16</code></td><td><span class="perf-behind">0.50×</span></td><td>0.0394</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0195<br><span class="alt-slow">0.0592</span></td><td>0.00753</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="top-k">Top-k<a class="headerlink" href="#top-k" title="Permanent link">&para;</a></h2>
+<h3 id="topkselectorfwd-2-workloads"><a href="https://github.com/tile-ai/TileOPs/blob/69039910ccd4b45c868c10c6e0470766eca8f3c6/src/tileops/ops/topk_selector.py">TopkSelectorFwd</a> <small>(2 workloads · ✅)</small><a class="headerlink" href="#topkselectorfwd-2-workloads" title="Permanent link">&para;</a></h3>
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><code>topk1024-s32k-kv64k-float32</code></td><td><span class="perf-ahead">2.04×</span></td><td>15.6269</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>31.8350<br><span class="alt-slow">31.8367</span></td><td>0.137</td></tr>
+<tr><td class="colsep"><code>topk2048-s32k-kv64k-float32</code></td><td><span class="perf-ahead">2.05×</span></td><td>16.2374</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>33.2901<br><span class="alt-slow">33.2989</span></td><td>0.132</td></tr>
+</tbody>
+</table>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 tile-ai
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/tile-ai/TileOPs" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.expand", "navigation.top", "toc.integrate", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
