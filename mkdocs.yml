@@ -54,6 +54,8 @@ nav:
     - GEMM: api/linear-algebra.md
     - Quantization: api/quantization.md
     - Attention: api/attention.md
+    - Linear Attention: api/linear-attention.md
+    - Mamba: api/mamba.md
     - FFT: api/fft.md
     - MHC: api/mhc.md
     - Top-k: api/topk.md
@@ -130,6 +132,8 @@ plugins:
             GEMM: GEMM
             Quantization: Quantization
             Attention: Attention
+            Linear Attention: Linear Attention
+            Mamba: Mamba
             FFT: FFT
             MHC: MHC
             Top-k: Top-k
