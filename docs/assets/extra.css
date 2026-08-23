@@ -1137,3 +1137,17 @@ html[lang="zh"] .md-nav,
 html[lang="zh"] .md-nav__title {
   line-height: 1.5;
 }
+
+/* Sequence diagrams. The fence sets the type a size up from mermaid's default, which the
+ * diagram can afford once it fits the column; a wider one scrolls rather than shrinking
+ * the page. The autonumber bubble defaults to near-black, which reads as a blob at this
+ * size, so it takes the structural violet. */
+.md-typeset .mermaid {
+  overflow-x: auto;
+  --md-mermaid-sequence-number-bg-color: var(--tf-violet);
+}
+
+.md-typeset .mermaid text.sequenceNumber {
+  font-size: 12px !important;
+  font-weight: 700;
+}
