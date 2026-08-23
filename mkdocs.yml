@@ -30,6 +30,7 @@ theme:
 nav:
   - Home: index.md
   - User Guide:
+    - user-guide/index.md
     - Writing a Spec: manifest.md
     - Timing Benchmarks: timing.md
     - Using torch.compile: torch-compile.md

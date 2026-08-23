@@ -30,10 +30,9 @@ flops, nbytes = op.eval_roofline()   # 本次调用所需的计算量与访存�
 
 ## 从这里继续
 
-- [接入 torch.compile](torch-compile.md) —— 算子在编译图中的形态，以及调用时需要遵守的约定
-- [接入新硬件后端](backends.md) —— 用自己的 kernel 接管某一类设备上的算子
+- [使用指南](user-guide/index.md) —— 读写 manifest、接入 `torch.compile`、benchmark 怎么计时、接入新硬件后端
 - [API 参考](api/index.md) —— 各算子族的构造参数与调用方式
-- [性能数据](benchmarks/index.md) —— 每晚在 H200 上与其他实现同台测量的结果
+- [性能数据](benchmarks/index.md) —— 每晚在 H200 上实测，逐个 workload 与其他实现对比
 
 ## 相关链接
 
