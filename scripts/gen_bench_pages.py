@@ -683,6 +683,10 @@ def reading_page() -> str:
         "comparable between implementations of the same op on the same "
         "workload. |",
         "",
+        "How that device time is measured — what it counts, what it leaves out, "
+        "and where it refuses to produce a number — is in "
+        "[Benchmark Timing](../timing.md).",
+        "",
         "Each op's heading carries its workload count and its test outcome "
         "(✅ passed · ❌ failed · ⏭️ all skipped · "
         f"`{EMPTY}` no test matched).",

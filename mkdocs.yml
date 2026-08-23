@@ -31,6 +31,7 @@ nav:
   - Home: index.md
   - User Guide:
     - Manifest Entries: manifest.md
+    - Benchmark Timing: timing.md
     - torch.compile: torch-compile.md
     - Hardware Backends: backends.md
   # Ordered along the stack a reader is working through: the dense matmul, then
@@ -134,6 +135,7 @@ plugins:
             Design: 设计文档
             User Guide: 使用指南
             Manifest Entries: 读写 manifest
+            Benchmark Timing: benchmark 怎么计时
             torch.compile: 接入 torch.compile
             Hardware Backends: 接入新硬件后端
             Architecture: 架构
