@@ -1,4 +1,4 @@
-# Benchmark timing
+# How a benchmark is timed
 
 The nightly benchmark measures one row per workload per op, reporting `device_busy_ms`:
 the union of the execution intervals of every kernel one call produces. CUPTI records

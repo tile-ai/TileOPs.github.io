@@ -1,4 +1,4 @@
-# Adding a Hardware Backend
+# Adding a hardware backend
 
 This page is about bringing a new class of hardware into TileOPs, so that the ops
 on those devices run your own kernels.
@@ -26,7 +26,7 @@ listed in the order a backend author meets them:
 | 3 | Parameter normalisation | Parameters arrive as definite values. Where the manifest says `eps: float \| None`, what arrives is the number the op layer computed, not `None` |
 | 4 | Input contiguity | A backend only ever receives contiguous tensors |
 | 5 | Memoisation and reuse of kernels | The builder is called once per specialization: a later call with the same device and input signature reuses the previous return value. A builder may therefore compile, and the op layer guarantees it is not called again |
-| 6 | The `torch.compile` and CUDA-graph boundary | The op layer wraps a call as an opaque operator and registers a fake alongside, so the compiler can infer the output's shape and dtype without executing. **A backend's kernels do nothing for compilation**; see [torch.compile integration](torch-compile.md) |
+| 6 | The `torch.compile` and CUDA-graph boundary | The op layer wraps a call as an opaque operator and registers a fake alongside, so the compiler can infer the output's shape and dtype without executing. **A backend's kernels do nothing for compilation**; see [Bringing an op into torch.compile](torch-compile.md) |
 | 7 | Roofline, profiling and numerical tests | The op layer's existing tests run once with the backend's kernel and compare against the manifest's `ref_api`; performance reports are produced as usual |
 
 None of the seven depends on hardware, every target gets them, and adding a

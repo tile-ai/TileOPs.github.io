@@ -42,12 +42,12 @@ flops, nbytes = op.eval_roofline()   # what the call had to do and move
 
 ## Where to go next
 
-- [torch.compile integration](torch-compile.md) — what an op looks like inside a
-  compiled graph, and the conventions a caller keeps to
-- [Adding a Hardware Backend](backends.md) — take over the ops on a class of devices with
-  your own kernels
-- [API Reference](api/linear-algebra.md) — constructor parameters and call
-  signatures per op family
+- [Bringing an op into torch.compile](torch-compile.md) — what an op looks like
+  inside a compiled graph, and the conventions a caller keeps to
+- [Adding a hardware backend](backends.md) — take over the ops on a class of
+  devices with your own kernels
+- [API Reference](api/index.md) — constructor parameters and call signatures, one
+  page per op family
 - [Benchmarks](benchmarks/index.md) — measured nightly on an H200 against the
   alternatives
 

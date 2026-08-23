@@ -30,15 +30,16 @@ theme:
 nav:
   - Home: index.md
   - User Guide:
-    - Manifest Entries: manifest.md
-    - Benchmark Timing: timing.md
-    - torch.compile: torch-compile.md
-    - Hardware Backends: backends.md
+    - Writing a Spec: manifest.md
+    - Timing Benchmarks: timing.md
+    - Using torch.compile: torch-compile.md
+    - Adding a Backend: backends.md
   # Ordered along the stack a reader is working through: the dense matmul, then
   # attention and its linear replacements, then the elementwise and reduction
   # primitives, then FFT. The two pages still awaiting a stable interface sit
   # after those, and Trace last — it is a tool, not an op family.
   - API Reference:
+    - api/index.md
     - GEMM: api/linear-algebra.md
     - Attention: api/attention.md
     - Linear Attention: api/linear-attention.md
@@ -134,10 +135,10 @@ plugins:
             Home: 首页
             Design: 设计文档
             User Guide: 使用指南
-            Manifest Entries: 读写 manifest
-            Benchmark Timing: benchmark 怎么计时
-            torch.compile: 接入 torch.compile
-            Hardware Backends: 接入新硬件后端
+            Writing a Spec: 读写 manifest
+            Timing Benchmarks: benchmark 怎么计时
+            Using torch.compile: 接入 torch.compile
+            Adding a Backend: 接入新硬件后端
             Architecture: 架构
             Manifest: 算子清单
             Op Interfaces: 算子接口

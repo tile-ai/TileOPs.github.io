@@ -1,4 +1,4 @@
-# torch.compile integration
+# Bringing an op into torch.compile
 
 This page is about bringing a TileOPs op into `torch.compile`: making it appear as
 one node in the compiled graph when a user compiles their own model, with the
@@ -273,7 +273,7 @@ makes the compiled path behave differently from the eager one.
 - **Warm up before a CUDA-graph capture.** Call once with real tensors at the same
   shape: building a kernel is allowed to compile, while capture allows only a memo
   hit followed by the call. What each phase may do is set out in
-  [Adding a Hardware Backend](backends.md#phase-limits).
+  [Adding a hardware backend](backends.md#phase-limits).
 - **Every device builds its own kernel.** The device is part of the kernel memo
   key, so the same op instance builds again on a second card. A `target=` named in
   the constructor is honoured on the first compiled call as well, and a build that
