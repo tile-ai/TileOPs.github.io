@@ -143,10 +143,10 @@ plugins:
             In-Kernel Timeline Trace: 核内时间线追踪
   - include-markdown:
       rewrite_relative_urls: false
-  # A missing ./TileOPs checkout makes every mkdocstrings identifier
-  # unresolvable. That is a warning, not an error, so `mkdocs serve` still works
-  # on a bare clone; `--strict` turns it into a build failure, which is what CI
-  # wants.
+  # `paths` needs a TileOPs checkout at ./TileOPs. Without one, mkdocstrings
+  # cannot import `tileops` and every identifier fails to collect, which aborts
+  # the build with or without `--strict`. The workflows clone it there; locally,
+  # point ./TileOPs at a checkout (a symlink works — it is gitignored).
   - mkdocstrings:
       handlers:
         python:
