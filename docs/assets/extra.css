@@ -119,6 +119,55 @@ body,
   font-family: var(--tf-body);
 }
 
+/* Material's sheet is 61rem wide, sized for a page with one nav column. This
+ * site has two — nav on the left, the page's own headings on the right — which
+ * leaves the prose about 34rem, where every table wraps. The sheet widens to
+ * hold a 46rem prose column; the reading measure is then set by the content
+ * column below, not by the window.
+ */
+.md-grid {
+  max-width: 76rem;
+}
+
+/* An op reference page has no left nav of its own to balance against, and its
+ * signatures are the widest lines on the site.
+ */
+@media screen and (min-width: 100em) {
+  .md-grid {
+    max-width: 82rem;
+  }
+}
+
+/* The wide sheet is for tables, code and signatures. Running prose keeps its
+ * own measure inside it — around 80 characters, past which the eye loses the
+ * line it came from on the way back. Only direct children are capped, so text
+ * inside an admonition or a list item follows the box it sits in.
+ */
+:root {
+  --tf-measure: 32rem;
+}
+
+.md-typeset > p,
+.md-typeset > ul,
+.md-typeset > ol,
+.md-typeset > dl,
+.md-typeset > blockquote,
+.md-typeset > .admonition,
+.md-typeset > details,
+.md-typeset > h1,
+.md-typeset > h2,
+.md-typeset > h3,
+.md-typeset > h4 {
+  max-width: var(--tf-measure);
+}
+
+/* Han glyphs are one em wide, so the same measure holds fewer characters per
+ * line than in Latin copy — and a Chinese line reads comfortably longer.
+ */
+html[lang="zh"] {
+  --tf-measure: 36rem;
+}
+
 /* Header sits on the paper rather than in the accent colour, and lets the wash
  * behind it through: an opaque band across the top would cut the ground in two
  * at exactly the place the violet is strongest.
@@ -244,8 +293,8 @@ body,
 
 .md-typeset {
   color: var(--md-default-fg-color);
-  font-size: 0.91rem;
-  line-height: 1.6;
+  font-size: 0.78rem;
+  line-height: 1.65;
 }
 
 /* Selection in the accent, weak enough that the ink stays the darkest thing on
@@ -281,16 +330,16 @@ body,
       var(--tf-teal) 100%
     )
     left top / 11px 100% no-repeat;
-  font-size: 2.1rem;
+  font-size: 1.7rem;
   font-weight: 800;
-  line-height: 1.06;
+  line-height: 1.1;
 }
 
 .md-typeset h2 {
   margin: 2em 0 0.7em;
   padding-left: 0.46em;
   border-left: 8px solid var(--tf-violet);
-  font-size: 1.4rem;
+  font-size: 1.1rem;
   font-weight: 800;
   line-height: 1.13;
 }
@@ -299,7 +348,7 @@ body,
   margin: 1.6em 0 0.5em;
   padding-left: 0.5em;
   border-left: 5px solid var(--tf-violet);
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -308,7 +357,7 @@ body,
   margin: 1.45em 0 0.4em;
   padding-left: 0.55em;
   border-left: 3px solid var(--tf-violet-light);
-  font-size: 0.9rem;
+  font-size: 0.79rem;
   font-weight: 700;
 }
 
@@ -596,6 +645,137 @@ body,
   font-size: 0.82em;
 }
 
+/* mkdocstrings: a symbol heading is a name, not prose. It carries the mono
+ * face at a size close to the body text — an op class set at the prose h2 size
+ * turns a reference page into forty display-weight banners, and the accent bar
+ * beside each one is what makes the column look striped.
+ */
+.md-typeset h2.doc-heading,
+.md-typeset h3.doc-heading,
+.md-typeset h4.doc-heading,
+.md-typeset h5.doc-heading {
+  font-family: var(--tf-mono);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+.md-typeset h2.doc-heading {
+  margin: 2.1em 0 0.5em;
+  border-left-width: 4px;
+  font-size: 0.88rem;
+}
+
+.md-typeset h3.doc-heading {
+  margin: 1.5em 0 0.4em;
+  border-left-width: 3px;
+  border-left-color: var(--tf-violet-light);
+  font-size: 0.78rem;
+}
+
+.md-typeset h4.doc-heading,
+.md-typeset h5.doc-heading {
+  border-left-color: var(--tf-line);
+  font-size: 0.76rem;
+}
+
+/* The name inside the heading is already in the mono face at heading size;
+ * the inline-identifier chip on top of that is a second treatment of the same
+ * thing.
+ */
+.md-typeset .doc-heading code {
+  padding: 0;
+  background: transparent;
+  font-size: 1em;
+}
+
+/* `property`, `classmethod`, `async` — a note about the symbol, not part of
+ * its name.
+ */
+.md-typeset .doc-labels .doc-label {
+  background: color-mix(in srgb, var(--tf-teal), transparent 90%);
+  color: var(--tf-teal);
+  font-family: var(--tf-body);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Parameters render as a definition list. The section label heads it in the
+ * display face, and each parameter name stays in mono so the list reads as a
+ * signature rather than a paragraph.
+ */
+.md-typeset .doc-section-title {
+  color: var(--tf-muted);
+  font-family: var(--tf-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.md-typeset .doc-section-item {
+  margin: 0.2em 0;
+}
+
+/* Right column: the page's own headings. It is a locator, so it is set quieter
+ * and tighter than the left nav — smaller type, muted ink, and a hairline that
+ * gives the column an edge instead of leaving it floating in the margin.
+ */
+.md-sidebar--secondary .md-nav__title {
+  color: var(--tf-muted);
+  font-family: var(--tf-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding-bottom: 0.5rem;
+  text-transform: uppercase;
+}
+
+.md-sidebar--secondary .md-nav__list {
+  border-left: 1px solid var(--tf-line-soft);
+}
+
+.md-sidebar--secondary .md-nav__link {
+  color: var(--tf-muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+  margin-top: 0.42rem;
+  padding-left: 0.7rem;
+}
+
+/* The section being read is marked on the rule the list hangs from, so the
+ * text itself does not have to change weight to say where you are.
+ */
+.md-sidebar--secondary .md-nav__link--active,
+.md-sidebar--secondary .md-nav__link--passed:hover,
+.md-sidebar--secondary .md-nav__link:hover {
+  color: var(--tf-violet);
+}
+
+.md-sidebar--secondary .md-nav__link--active {
+  box-shadow: inset 2px 0 var(--tf-violet);
+}
+
+/* A third-level entry is subordinate to the h2 above it: indented once, and a
+ * step down in size rather than a second bullet level.
+ */
+.md-sidebar--secondary .md-nav__list .md-nav__list .md-nav__link {
+  border-left: 0;
+  font-size: 0.65rem;
+  padding-left: 1.35rem;
+}
+
+.md-sidebar--secondary .md-nav__list .md-nav__list {
+  border-left: 0;
+}
+
+/* Han glyphs need the extra leading in a column this narrow. */
+html[lang="zh"] .md-sidebar--secondary .md-nav__link {
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
 /* Language switcher: a quiet pill on the paper header, matching the source
  * link beside it rather than Material's default bare-icon dropdown.
  */
@@ -629,15 +809,15 @@ body,
 }
 
 /* Chinese type metrics. Han glyphs fill their em box, so the Latin line height
- * and size read as cramped; headings set in a Latin display face at 800 fall
- * through to a CJK face where that weight closes up the strokes.
+ * reads as cramped; headings set in a Latin display face at 800 fall through to
+ * a CJK face where that weight closes up the strokes. The size stays at the
+ * Latin one — a step up on top of the fuller em box makes the column heavy.
  *
  * Scoped away from pages carrying .locale-notice: their body text is English,
  * and Latin copy under Chinese metrics reads as loose.
  */
 html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) {
-  font-size: 0.94rem;
-  line-height: 1.8;
+  line-height: 1.75;
 }
 
 html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) h1,

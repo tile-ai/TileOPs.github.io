@@ -151,6 +151,16 @@ plugins:
           options:
             docstring_style: google
             show_source: false
+            # Parameters and returns render as definition lists, not the
+            # four-column table mkdocstrings defaults to: a table gives the
+            # type and the default a column each, so an op with fourteen
+            # constructor parameters becomes a grid the size of the page.
+            docstring_section_style: list
+            # `Optional[float]` rather than `typing.Optional[float]`.
+            annotations_path: brief
+            # Every op class states `Bases: Op`, which distinguishes none of
+            # them from another.
+            show_bases: false
 
 extra:
   social:
