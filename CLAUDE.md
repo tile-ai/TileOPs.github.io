@@ -17,7 +17,8 @@ scripts/gen_bench_pages.py    # writes the Benchmarks pages from that snapshot
 docs/design/                  # mirrored from TileOPs via include-markdown
 docs/api/                     # generated from Python docstrings by mkdocstrings
 docs/benchmarks/              # generated at deploy time; only index.md is tracked
-docs/backends/                # backend-authoring guide; Chinese is the source
+docs/backends.md              # backend-authoring guide; Chinese is the source
+docs/torch-compile.md         # calling ops under torch.compile; Chinese is the source
 docs/performance-guides/
 ```
 

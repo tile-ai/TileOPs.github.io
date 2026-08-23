@@ -30,7 +30,8 @@ theme:
 nav:
   - Home: index.md
   - User Guide:
-    - Adding a Backend: backends/index.md
+    - torch.compile: torch-compile.md
+    - Hardware Backends: backends.md
   # Ordered along the stack a reader is working through: the dense matmul, then
   # attention and its linear replacements, then the elementwise and reduction
   # primitives, then FFT. The two pages still awaiting a stable interface sit
@@ -114,7 +115,8 @@ plugins:
             Home: 首页
             Design: 设计文档
             User Guide: 使用指南
-            Adding a Backend: 接入新后端
+            torch.compile: 接入 torch.compile
+            Hardware Backends: 接入新硬件后端
             Architecture: 架构
             Manifest: 算子清单
             Op Interfaces: 算子接口
