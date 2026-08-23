@@ -29,19 +29,12 @@ cannot import `tileops` and the build aborts.
 
 ## Layout
 
-```
-mkdocs.yml                 # nav, theme, plugins
-hooks.py                   # path rewrites for mirrored content; Benchmarks nav
-scripts/                   # the Benchmarks renderer and its fetch script
-docs/index.md              # Home
-docs/torch-compile.md      # bringing an op into torch.compile
-docs/backends.md           # adding a hardware backend
-docs/api/                  # generated from docstrings by mkdocstrings
-docs/benchmarks/           # generated at deploy time; only index.md is tracked
-docs/performance-guides/   # trace guide, and where to find which numbers
-docs/design/               # mirrored from TileOPs via include-markdown
-docs/assets/extra.css      # palette and type, shared with TileFoundry
-```
+Pages live under `docs/`, and `mkdocs.yml` holds the nav, theme and plugins — the
+nav is the current page list. Three groups of pages are not written by hand:
+`docs/api/` is generated from TileOPs docstrings by mkdocstrings, `docs/design/`
+mirrors that repo's `docs/design/` at build time, and `docs/benchmarks/` is
+rendered from the nightly snapshot at deploy time. `hooks.py` rewrites the paths
+mirrored content brings with it and expands the Benchmarks nav.
 
 ## Bilingual pages
 
