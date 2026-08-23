@@ -13,9 +13,10 @@ pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugi
   mkdocs-static-i18n jieba pyyaml
 
 # The API pages read docstrings from a TileOPs checkout at ./TileOPs, and the
-# design pages mirror its docs/design. A symlink to a local clone works —
-# ./TileOPs is gitignored.
-ln -s ../TileOPs TileOPs
+# design pages mirror its docs/design. The workflows clone it there; locally,
+# clone it too, or point a symlink at a clone you already have. Either way the
+# path is gitignored.
+git clone --depth 1 https://github.com/tile-ai/TileOPs.git TileOPs
 
 mkdocs serve
 ```
