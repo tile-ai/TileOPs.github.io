@@ -32,8 +32,6 @@ jobs:
           sparse-checkout: |
             docs/design
             docs/perf
-            docs/tileops-skills.md
-            .claude/skills
             src/tileops
           sparse-checkout-cone-mode: false
 

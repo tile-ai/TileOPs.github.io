@@ -17,7 +17,8 @@ scripts/gen_bench_pages.py    # writes the Benchmarks pages from that snapshot
 docs/design/                  # mirrored from TileOPs via include-markdown
 docs/api/                     # generated from Python docstrings by mkdocstrings
 docs/benchmarks/              # generated at deploy time; only index.md is tracked
-docs/skills/, performance-guides/
+docs/backends/                # backend-authoring guide; Chinese is the source
+docs/performance-guides/
 ```
 
 ## Development
@@ -53,9 +54,12 @@ English lives at the site root, Chinese under `/zh/`. A Chinese page is a
 `include-markdown` shell, because this repo holds the Chinese source of truth
 while the English design docs are mirrored from TileOPs.
 
+`backends/` runs the other way: it was authored in Chinese, and the English page
+is the translation. Edit the `.zh.md` first there, then bring `<name>.md` in line.
+
 | Rule | Detail |
 |------|--------|
-| Coverage | Translate `index.md` and `design/`. `skills/` stays English — those pages are agent-facing instructions. |
+| Coverage | Translate `index.md`, `design/`, and `backends/`. |
 | Never translate | `api/` and `benchmarks/` — both generated. |
 | Missing translation | Falls back to English at the same URL, so the zh nav is never sparse. `hooks.py` prepends a "本页暂无中文版" notice. |
 | Nav labels | `nav_translations` in the `i18n` plugin block; keep an entry for every `nav` title. |
@@ -72,13 +76,22 @@ word-for-word rendering of the English.
 | Latin in Chinese | A space either side of a Latin token: `由 spec 驱动`, `形状和 dtype`. Not inside code spans. |
 | Keep in English | kernel, spec, agent, dtype, roofline, GEMM, and every op name — translating them loses the link to the API. |
 | Inline code | Real identifiers only (`GemmOp`, `eval_roofline`, paths, flags). A concept mentioned in prose is not code. |
-| Type metrics | `extra.css` sets larger type and looser leading under `html[lang="zh"]`, and drops headings from 800 to 700 — a Latin display face at 800 falls through to a CJK face where that weight closes up the strokes. Scoped away from fallback pages, whose body text is English. |
+| Type metrics | `extra.css` sets looser leading under `html[lang="zh"]` and drops headings from 800 to 700 — a Latin display face at 800 falls through to a CJK face where that weight closes up the strokes. The body size is the Latin one. Scoped away from fallback pages, whose body text is English. |
 | No CJK webfont | Han glyphs come from the platform UI face (`--tf-cjk`); a Simplified Chinese subset costs megabytes per page load. |
 
 ## Conventions
 
 - Clarity and accuracy come first — this is documentation.
 - Add new pages to `nav` in `mkdocs.yml` (Benchmarks excepted, see above).
+- Six sections, ordered by the reader's questions — what it is, how to use it,
+  what to call, how fast it is, how to make it faster, how it works inside: Home,
+  User Guide, API Reference, Benchmarks, Performance Guides, Design. A user-facing
+  topic goes under User Guide as its own subsection. Design comes last: it is
+  contributor-facing and mirrored from TileOPs.
+- `navigation.indexes` makes a section's first nav entry — a bare `<dir>/index.md`
+  with no title — the section's own page. Its H1 has to read as the nav label, and
+  the label needs a `nav_translations` entry. The page TOC renders in the right
+  column, so `toc.integrate` must stay off: the two features are incompatible.
 - Admonitions (`!!! note`, `!!! warning`) for callouts; relative Markdown links
   for internal cross-references.
 - Minimal, targeted changes; no unrelated reformatting.
