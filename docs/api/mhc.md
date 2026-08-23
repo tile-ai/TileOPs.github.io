@@ -1,6 +1,20 @@
-# MHC
+# MHC Operators
 
-::: tileops.ops.sequence_modeling.mhc
+Every op on this page is used the same way: construct it once, then call it. The
+constructor takes what the kernel is compiled with; the call takes the tensors.
+Both are documented under each op — `__init__` and `forward`, where `forward` is
+what runs when you call `op(...)`.
+
+## Multi-head compression
+
+::: tileops.ops.sequence_modeling.mhc.MHCPreFwdOp
     options:
-      show_root_heading: false
-      members_order: source
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
+::: tileops.ops.sequence_modeling.mhc.MHCPostFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]

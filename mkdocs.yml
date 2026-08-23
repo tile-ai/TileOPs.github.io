@@ -191,6 +191,10 @@ plugins:
             # any width wide enough for two arguments packs the short ones.
             separate_signature: true
             line_length: 1
+            # Most elementwise and reduction ops carry no `__init__` or `forward`
+            # of their own — the family's base class does — so without this the
+            # page shows their name and nothing else.
+            inherited_members: true
 
 extra:
   social:
