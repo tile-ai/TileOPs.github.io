@@ -65,6 +65,10 @@ nav:
     - Trust Model: design/trust-model.md
 
 markdown_extensions:
+  # Docstrings and design docs carry formulas. `generic: true` emits the plain
+  # \(…\) / \[…\] MathJax reads, rather than markup tied to one renderer.
+  - pymdownx.arithmatex:
+      generic: true
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
@@ -88,6 +92,12 @@ markdown_extensions:
 
 extra_css:
   - assets/extra.css
+
+# MathJax itself is the only script the site pulls from a CDN; the config beside
+# it re-typesets on Material's instant-loading page swaps.
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 hooks:
   - hooks.py
