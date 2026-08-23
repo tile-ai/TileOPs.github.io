@@ -23,6 +23,12 @@ UPSTREAM_BLOB = "https://github.com/tile-ai/TileOPs/blob/main"
 
 _DESIGN_REPO_PATH = re.compile(r"\.\./\.\./([\w./-]+)")
 
+# A mirrored design doc names three slot rules as same-page anchors, but the ids
+# live in the skill file the rules ship with, which this site does not publish.
+# The sibling doc links the same slots by path, so send these there too.
+_SLOT_RULES = ".claude/skills/scaffold-op/slot-rules.md"
+_DESIGN_SLOT_ANCHOR = re.compile(r"\]\(#(slot-s\d+)\)")
+
 # Keyed by the locale being built, not by the locale of the content shown.
 # A plain block, not an admonition: admonitions are styled as technical asides
 # here, and a translation-status note should not compete with them. The class
@@ -55,6 +61,9 @@ def on_page_markdown(markdown, page, config, files):
         # Upstream design docs link to source files via ../../<repo path>.
         # Redirect those to GitHub so they resolve from the published site.
         markdown = _DESIGN_REPO_PATH.sub(rf"{UPSTREAM_BLOB}/\1", markdown)
+        markdown = _DESIGN_SLOT_ANCHOR.sub(
+            rf"]({UPSTREAM_BLOB}/{_SLOT_RULES}#\1)", markdown
+        )
 
     notice = _fallback_notice(page)
     if notice:
