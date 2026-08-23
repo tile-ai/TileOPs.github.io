@@ -1,14 +1,14 @@
 # 接入新硬件后端
 
-TileLang 是多后端 DSL，每种硬件各有一套独立的 kernel，由各自的 Python 包发行。TileOPs 因此规定了一套协议：一个仓外的 Python 包可以接管某个算子的 kernel，取代 TileOPs 自带的实现，而接入过程不需要修改 TileOPs 的任何代码。
+TileLang 是多后端 DSL，每种硬件各有一套独立的 kernel，由各自的 Python 包发行。TileOPs 因此定了一套协议：仓外的 Python 包可以接管某个算子的 kernel，取代自带的实现，且不必改 TileOPs 的任何代码。
 
-本页说明如何把一类新硬件接入 TileOPs，使这类设备上的算子由自己的 kernel 执行。
+本页讲怎么把一类新硬件接进来，让这类设备上的算子由自己的 kernel 执行。
 
 **后端只提供一件事：一个能算这次调用的可调用对象。** 其余都由算子层负责。
 
-本页分两部分。前半按动手的顺序列出后端作者的工作：要写的四样东西、协议中的四个函数、一个可直接安装运行的后端、编写 kernel 时的四条规则、各阶段允许做什么、从模板改造为面向真实硬件的后端，以及安装之后各条错误信息对应的原因。
+前半按动手顺序列出要做的事：要写的四样东西、协议中的四个函数、一次调用怎么走到它们、一个可直接安装运行的后端、怎么从模板改造为面向真实硬件的后端、编写 kernel 的四条规则、各阶段允许做什么，以及装好之后每个算子处于哪种状态、各条错误信息对应什么原因。
 
-后半说明协议何以如此设计：target 与 kernel 的两层选择、算子层的契约、kernel 的重建条件、算子迁移进度决定的三种状态、调用方可用的接口，以及协议刻意不支持的情形。
+后半说明协议何以如此设计：两层选择、算子层的契约、kernel 的重建条件、调用方可用的接口，以及刻意不支持的情形。
 
 ## 写一个后端要做的四件事
 
@@ -19,28 +19,28 @@ TileLang 是多后端 DSL，每种硬件各有一套独立的 kernel，由各自
 | 3 | 挑第一个要接管的算子，照它的 manifest 签名写 `build_kernel` |
 | 4 | 在模块顶层调用 `register_detector` 与 `register_kernel_builder` |
 
-四件事完成后 `pip install` 即生效。下一节是一个可直接安装运行的完整例子。
+四件事写完，`pip install` 即生效。下面几节依次是：这四个函数的签名、一次调用怎么走到它们，以及一个照这四步写成、可直接安装运行的[完整后端](#runnable)。
 
-之后逐个算子增加 `build_kernel`。**目标模型用到的算子必须全部覆盖** —— 缺少任何一个都会报错，不会改用 TileOPs 自带的实现，因为那些 kernel 在该 target 的设备上启动不了。
+之后逐个算子增加 `build_kernel`。**目标模型用到的算子必须全部覆盖** —— 缺一个就报错，不会改用自带实现，因为那些 kernel 在该 target 的设备上启动不了。
 
 ## 协议中的四个函数
 
-`tileops.backend` 定义对外接口，不含任何实现。接口用 Python 的结构化类型（`typing.Protocol`）表达：后端不继承基类，也不实现抽象方法，只要写出签名相符的普通函数并注册进来。算子层检查后端返回值时同样只看结构，即 `callable()`。
+`tileops.backend` 只定义对外接口，用 Python 的结构化类型（`typing.Protocol`）表达：后端不继承基类，不实现抽象方法，写出签名相符的普通函数再注册进来即可。算子层检查返回值时同样只看结构，即 `callable()`。
 
-后端实现两个函数（`detect`、`build_kernel`），调用两个注册函数把它们登记进来（`register_detector`、`register_kernel_builder`），再加上协议定义的 `TensorSpec` 与 `pyproject.toml` 里的一条 entry point：
+后端实现 `detect` 与 `build_kernel`，再调 `register_detector` 与 `register_kernel_builder` 把它们登记进来；另有协议定义的 `TensorSpec`，以及 `pyproject.toml` 里的一条 entry point：
 
-| 名字 | 谁写 | 谁调用，何时调用 |
-| --- | --- | --- |
-| `detect` | 后端实现 | 算子层为一次调用选定 target 时，逐个 target 调用 |
-| `register_detector` | 后端调用 | 后端模块被 import 时执行一次 |
-| `register_kernel_builder` | 后端调用 | 同上，每个要接管的算子调用一次 |
-| `TensorSpec` | 协议定义 | 算子层构造，作为 `build_kernel` 的实参传入 |
-| `build_kernel` | 后端实现 | 算子层在记忆表未命中时调用 |
-| entry point | 后端在 `pyproject.toml` 中声明 | TileOPs 在构造第一个算子时枚举 |
+| # | 名字 | 谁写 | 谁调用，何时调用 |
+| --- | --- | --- | --- |
+| 1 | `detect` | 后端实现 | 算子层为一次调用选定 target 时，逐个 target 调用 |
+| 2 | `build_kernel` | 后端实现 | 算子层在记忆表未命中时调用 |
+| 3 | `register_detector` | 后端调用 | 后端模块被 import 时执行一次 |
+| 4 | `register_kernel_builder` | 后端调用 | 同上，每个要接管的算子调用一次 |
+| —— | `TensorSpec` | 协议定义 | 算子层构造，作为 `build_kernel` 的实参传入 |
+| —— | entry point | 后端在 `pyproject.toml` 中声明 | TileOPs 在构造第一个算子时枚举 |
 
-五个名字的签名与含义如下。
+下面按这个顺序逐个给出签名与含义，最后是协议定义的 `TensorSpec`。
 
-### `detect`
+### 1. `detect`
 
 ```python
 def detect(device: torch.device) -> bool: ...
@@ -48,7 +48,19 @@ def detect(device: torch.device) -> bool: ...
 
 后端实现。回答这类设备是否由自己这套 kernel 服务：只看设备，不看 dtype 与形状；不是自己的设备返回 `False`，不要抛异常。
 
-### `build_kernel`
+```python
+# 认领一整类设备
+def detect(device: torch.device) -> bool:
+    return device.type == "acme"
+
+# 需要读环境变量或问厂商 runtime 时也在这里做
+def detect(device: torch.device) -> bool:
+    if device.type != "privateuseone":
+        return False
+    return acme_runtime.is_present(device.index)
+```
+
+### 2. `build_kernel`
 
 ```python
 def build_kernel(*inputs: "TensorSpec | None", **params) -> Callable[..., KernelResult]: ...
@@ -56,7 +68,15 @@ def build_kernel(*inputs: "TensorSpec | None", **params) -> Callable[..., Kernel
 
 后端实现，一组 `(算子, target)` 一个。签名即该算子的 manifest 签名：`inputs` 与 `signature.inputs` 的条目一一对应、按声明顺序，`params` 按 `signature.params` 命名。声明为 optional 的输入本次没有传入时，对应的实参是 `None`。
 
-### `register_detector`
+```python
+# GroupNormFwdOp 的 spec：weight、bias 是可选输入，没传时实参是 None
+def build_group_norm(x, weight, bias, *, num_groups, eps):
+    if weight is None:                                   # 从槽位上的值判断传没传
+        return AcmeGroupNorm(num_groups, eps, x.dtype)
+    return AcmeGroupNormAffine(num_groups, eps, x.dtype)
+```
+
+### 3. `register_detector`
 
 ```python
 def register_detector(target: str, detect: Callable[[torch.device], bool]) -> None: ...
@@ -64,7 +84,7 @@ def register_detector(target: str, detect: Callable[[torch.device], bool]) -> No
 
 后端调用，每个 target 一次，在后端模块被 import 时执行。登记该 target 的设备识别函数。
 
-### `register_kernel_builder`
+### 4. `register_kernel_builder`
 
 ```python
 def register_kernel_builder(op: str, target: str, build_kernel: BuildKernel) -> None: ...
@@ -83,6 +103,18 @@ class TensorSpec(NamedTuple):
 
 协议定义的类型，由算子层构造后传入 `build_kernel`。描述一个张量是什么，不含张量本身。
 
+```python
+# build_kernel 收到的实参长这样
+TensorSpec(device=torch.device("acme:0"), dtype=torch.float16, shape=(4096, 4096))
+
+# 能读的就这三项
+def build_gemm(a: TensorSpec, b: TensorSpec, *, trans_a, trans_b):
+    m, k = a.shape                    # 形状：编译期常量，用来选实现、定 tile
+    if a.dtype is not torch.float16:  # dtype：不支持就在这里报错
+        raise ValueError(f"acme gemm needs fp16, got {a.dtype}")
+    ...
+```
+
 返回值只需满足一条结构约定：**它必须可调用**，能以 `(*tensors)` 的形式调用，返回一个张量、一个张量元组，或纯原地写入时的 `None`。算子层对它的检查就是 `callable()`。
 
 **协议传的是描述，不是张量。** 这样就不必再写一条「构造时不得读张量内容、不得保存对张量的引用」的规则，那条规则算子层根本无法校验。它要防的是两件事：
@@ -92,46 +124,78 @@ class TensorSpec(NamedTuple):
 
 `TensorSpec` 上既没有数据也没有张量，这两件事于是无从写起。
 
-## 一次调用的时序
+这四个函数在一次真实调用里各自何时被调到，见下一节。
 
-下图是一次调用经过的路径。图中 `detect`、`build_kernel` 与 `kernel` 由后端提供，其余在算子层；`kernel` 即 `build_kernel` 返回的那个可调用对象：
+## 一次调用怎么走到 `build_kernel` {#from-op-layer}
 
-```mermaid
-%%{init: {'sequence': {'actorFontSize': 14, 'messageFontSize': 13, 'noteFontSize': 13, 'actorMargin': 42, 'width': 128, 'boxMargin': 8}}}%%
-sequenceDiagram
-    autonumber
-    actor Caller as 调用方
-    participant Op as 算子层
-    participant Reg as 注册表
-    participant Det as detect
-    participant Bld as build_kernel
-    participant K as kernel
+一次调用从用户代码走到后端的 `build_kernel`，中间经过的每一步：
 
-    Caller->>Op: op(x, weight)
-    Op->>Op: 校验 dtype 与形状，连续化
-    Op->>Reg: 这块 device 归哪个 target
-    loop 每个已注册的 target
-        Reg->>Det: detect(device)
-        Det-->>Reg: True / False
-    end
-    Reg-->>Op: target
-    alt 记忆表未命中
-        Op->>Bld: build_kernel(TensorSpec..., **params)
-        Bld-->>Op: 可调用对象
-        Op->>Op: 按 (device, 输入签名) 存入记忆表
-    else 记忆表命中
-        Op->>Op: 取出上次的可调用对象
-    end
-    Op->>K: kernel(*tensors)
-    K-->>Op: 输出张量
-    Op-->>Caller: 输出张量
+```python
+# ── 调用方 ───────────────────────────────────────────────────────────
+op = GemmFwdOp()                 # 构造时不写 target=，本次由输入张量的设备决定
+                                 #   写了 target="acme" 就跳过设备探测，直接用它；
+                                 #   写 target=BUILTIN 则强制走 TileOPs 自带的 kernel
+a = torch.randn(4096, 4096, dtype=torch.float16, device="acme:0")
+b = torch.randn(4096, 4096, dtype=torch.float16, device="acme:0")
+d = op(a, b)                     # 所有输入必须在同一设备上：a.device == b.device
+
+# ── 算子层：定 target ────────────────────────────────────────────────
+# 每个装好的后端在 import 时都往注册表里放了一个 detect。算子层把 a.device
+# 这一个对象原样交给每个 detect，问「这块设备是不是你这套 kernel 的」：
+#   acme 的 detect(device) → True      其他后端的 → False
+#   恰好一个返回 True    → target = "acme"，这个算子实例此后固定用它
+#   一个都没有返回 True  → 用 TileOPs 自带的 kernel
+#   两个以上返回 True    → 抛 AmbiguousTargetError，要求显式写 target=
+
+# ── 算子层：GemmFwdOp.forward 里唯一取 kernel 的那一处 ───────────────
+kernel = self.get_or_build_kernel(
+    "gemm_kernel",               # kernel_map 里的名字
+    (a, b),                      # 即将传给 kernel 的张量，顺序照 signature.inputs
+    key=(m, n, k, a.dtype),      # 自带实现用，这次不走
+    build=lambda: GemmKernel(m, n, k, a.dtype),   # 自带实现用，这次不走
+)
+
+# ── 算子层：按设备与输入签名查外部记忆表 ─────────────────────────────
+#   ("acme:0", (float16, (4096, 4096)), (float16, (4096, 4096)))
+#   第一项是设备，其余每项对应一个输入的 (dtype, shape)
+#   这是这个算子实例的第一次调用，表还是空的 → 未命中，往下走构造
+#   同样设备、同样 dtype 与形状的下一次调用就会命中，直接跳到最后一步
+
+# ── 后端：算子层调 build_gemm，张量已转成 TensorSpec ─────────────────
+#   build_gemm(TensorSpec("acme:0", float16, (4096, 4096)),
+#              TensorSpec("acme:0", float16, (4096, 4096)),
+#              trans_a=False, trans_b=True)      # params 按 manifest 的名字传
+#   → 返回一个可调用对象
+
+# ── 算子层：存进记忆表，然后 launch ─────────────────────────────────
+return kernel(a, b)              # d = a @ b.T，由 acme 的 kernel 算出
 ```
 
-第 7 步只在记忆表未命中时发生，所以 `build_kernel` 内部可以编译；第 12 步每次调用都发生，因此不允许编译或惰性初始化，详见[各阶段的限制](#phase-limits)。
+后端要写的只有其中一步 —— 那个 `build_gemm`，以及把它注册进来：
 
-## 实现一个可运行的后端
+```python
+def build_gemm(a: TensorSpec, b: TensorSpec, *, trans_a, trans_b):
+    m = a.shape[1] if trans_a else a.shape[0]
+    if m == 1:                                  # 名字不传进来，情形从 spec 自行判断
+        return AcmeGemv(a, b, trans_a, trans_b)
+    return AcmeGemm(a, b, trans_a, trans_b)
 
-[`tileops-backend-example`](https://github.com/lcy-seso/tileops-backend-example) 是按这四步写成的一个完整后端。它以纯 PyTorch 实现 kernel、认领 CPU，因此在任何机器上都能安装、运行和测试；除 kernel 本身不涉及专用硬件之外，其余各部分 —— entry point、注册方式、`build_kernel` 签名、记忆规则、错误信息 —— 与一个面向专用硬件的后端完全一致。
+
+register_kernel_builder(op="GemmFwdOp", target="acme", build_kernel=build_gemm)
+```
+
+`build_gemm` 由算子层调用，后端自己从不调它：import 后端模块时只是把它登记进注册表，真正被调是在一次调用走到 `get_or_build_kernel`、且外部记忆表未命中的时候，每个「设备 + 输入签名」一次。它返回的可调用对象随后由算子层 launch，也由算子层存进记忆表。
+
+四点对应关系值得记住：
+
+- **`key` 与 `build` 由算子作者写，与后端无关。** 它们只服务自带实现：`key` 决定自带 kernel 按什么查表，`build` 决定它怎么构造。target 选中后端时这两个参数整条不走。
+- **张量按位置传，参数按名字传。** `build_kernel(*inputs, **params)`：位置实参是 `TensorSpec`（没传的可选输入是 `None`），关键字实参是 manifest 里 `params` 的名字与本次调用的确定值。
+- **一个 `(算子, target)` 只注册一个 builder。** 算子内部分几种情形（GEMM 的 `gemm_kernel` 与 `gemv_kernel`）不会传进来，`build_kernel` 从 `TensorSpec` 自行判断该返回哪个 kernel。
+- **不必自己做记忆。** 同一个设备与输入签名，算子层不会再调第二次；要更细的区分或更少的重建，在 `build_kernel` 内部另加一层缓存。算子完全没有自带实现时 `build` 可以不传，那时没有 target 认领设备，调用直接抛 `OpNotAvailableError`。
+
+## 实现一个可运行的后端 {#runnable}
+
+读到这里，四个函数与一次调用的路径都齐了，可以直接照抄一个能跑的后端。[`tileops-backend-example`](https://github.com/lcy-seso/tileops-backend-example) 就是按这四步写成的完整后端。它以纯 PyTorch 实现 kernel、认领 CPU，因此在任何机器上都能安装、运行和测试；除 kernel 本身不涉及专用硬件之外，其余各部分 —— entry point、注册方式、`build_kernel` 签名、记忆规则、错误信息 —— 与一个面向专用硬件的后端完全一致。
 
 安装这个包前后的差别如下：
 
@@ -197,74 +261,6 @@ register_kernel_builder(
 )
 ```
 
-## 编写 kernel
-
-### 签名来自 manifest
-
-**编写 kernel 只需阅读 manifest，不需要阅读 TileOPs 的源码。** builder 的签名就是该算子的 manifest 签名。以 [`src/tileops/manifest/normalization.yaml`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/normalization.yaml) 中的 `RMSNormFwdOp` 为例：
-
-```yaml
-signature:
-  inputs:                       # 声明顺序即传入顺序
-    x: {dtype: "float16 | bfloat16"}
-    weight: {dtype: "same_as(x)"}
-  params:                       # 按这些名字作为关键字参数传入
-    normalized_shape: {type: "list[int] | tuple[int, ...]"}
-    eps: {type: "float | None", default: null}
-```
-
-与之对应的 builder 签名是：
-
-```python
-def build_rms_norm(x: TensorSpec, weight: TensorSpec, *, normalized_shape, eps):
-```
-
-这份签名有两点要注意。
-
-- **`eps` 收到的是 `1e-6`，而不是 `None`。** manifest 中的默认值写作 null，但算子层已经把它规范化为确定的数值。所有可选参数都是如此。
-- **返回值按 `signature.outputs` 的声明给出** —— 单输出返回张量，多输出按声明顺序返回 tuple，纯原地写入的算子返回 `None`。
-
-### 构造函数只接收编译期参数
-
-会被编译进生成代码的值 —— tile 尺寸、当作常量处理的维度、dtype —— 放进构造函数，其余参数留给 `__call__`。
-
-这一条对 decode 路径是硬性要求：`seq_len` 逐步递增，batch 随 running set 变化，把它们放进构造函数就意味着每一步都要重新编译。
-
-### 形状由 manifest 规定
-
-算子层在把张量传给 kernel 之前不改变形状：kernel 收到的就是 manifest 声明的形状，需要何种 layout 由它自己在调用包装里处理。
-
-代码与 manifest 对同一件事都有描述时，以 manifest 为准。输出 dtype、形状规则与参数类型都由 manifest 规定，kernel 不得改写。
-
-### kernel 服务不了这次调用时怎么报错
-
-kernel 服务不了这次调用时应当报错，而不是降级处理。报错须给出两项信息：
-
-- **未满足的是哪一项** —— dtype、形状、arch、无可用实现，还是编译失败。
-- **实际收到的值是什么。**
-
-只写「不支持」不构成有效的诊断信息。
-
-## 各阶段允许做什么 {#phase-limits}
-
-decode 路径会被 CUDA graph 捕获，因此各阶段允许执行的操作分别规定如下：
-
-| 阶段 | 允许 | 不允许 |
-| --- | --- | --- |
-| 查记忆表（键与重建条件见[后文](#memo)） | 一次字典查找 | 其他任何操作 |
-| `detect` | 一次谓词判断 | 任何 import，任何加锁 |
-| 构造 kernel | 选择实现、编译、分配显存、重新 import、建立 handle | 依赖真实张量的调优 |
-| 调用 kernel | 启动已编译的 kernel，经 torch allocator 分配输出 | 编译、惰性初始化、建立 handle、host 端同步 |
-
-**模块顶层的 import 不得触发编译。** TileOPs 在构造第一个算子时 import 后端模块，编译应当发生在 `build_kernel` 被调用的时候。
-
-调用 kernel 还须满足两条与流有关的规则：
-
-- **必须在当前流上启动**，在 CUDA 上即 `torch.cuda.current_stream(device)`，不得改用默认流。自带 launcher 的后端尤其容易违反这一条。
-- **内部分配的生命周期必须跨越异步执行。** 如果只把裸指针传给 launch，对象必须存活到该流执行完成为止。协议不提供 workspace，这一部分安全由后端自己保证。
-
-调用方需要在捕获之前完成预热，即至少执行一次同形状的非捕获调用，因为构造 kernel 允许编译。捕获期间只允许「查表命中后直接调用」这一条路径。
-
 ## 模板项目：结构、测试与改造
 
 ### 仓库结构
@@ -313,6 +309,116 @@ docker run --rm --gpus all -v "$PWD/..":/work -w /work \
 4. 选定第一个要接管的算子，照它的 manifest 签名编写 `build_kernel`。
 5. [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/main/tests) 中的四个文件大体可以直接沿用，替换其中的算子名与 target 名即可。
 6. 之后逐个算子增加 `build_kernel`，直到覆盖目标模型用到的全部算子。
+
+## 编写 kernel
+
+### 签名来自 manifest
+
+**编写 kernel 只需读 manifest，不必读 TileOPs 的源码。** builder 的签名就是该算子的 manifest 签名。以 [`src/tileops/manifest/normalization.yaml`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/normalization.yaml) 里的 `RMSNormFwdOp` 为例：
+
+```yaml
+signature:
+  inputs:                       # 声明顺序即传入顺序
+    x: {dtype: "float16 | bfloat16"}
+    weight: {dtype: "same_as(x)"}
+  params:                       # 按这些名字作为关键字参数传入
+    normalized_shape: {type: "list[int] | tuple[int, ...]"}
+    eps: {type: "float | None", default: null}
+```
+
+对应的 builder 签名：
+
+```python
+def build_rms_norm(x: TensorSpec, weight: TensorSpec, *, normalized_shape, eps):
+```
+
+两点要注意。
+
+- **`eps` 收到的是 `1e-6`，不是 `None`。** manifest 里默认值写作 null，算子层已经把它规范化成确定的数值。所有可选参数都是如此。
+- **返回值按 `signature.outputs` 的声明给出** —— 单输出返回张量，多输出按声明顺序返回 tuple，纯原地写入的算子返回 `None`。
+
+### 构造函数只接收编译期参数
+
+会被编译进生成代码的值 —— tile 尺寸、当作常量的维度、dtype —— 进构造函数，其余留给 `__call__`。
+
+对 decode 路径这是硬性要求：`seq_len` 逐步递增，batch 随 running set 变化，放进构造函数就是每一步重新编译。
+
+### 形状由 manifest 规定
+
+算子层不改形状：kernel 收到的就是 manifest 声明的形状，需要哪种 layout 由它在自己的调用包装里处理。
+
+代码与 manifest 说的不一致时以 manifest 为准：输出 dtype、形状规则与参数类型都由它规定，kernel 不得改写。
+
+### kernel 服务不了这次调用时怎么报错
+
+kernel 服务不了这次调用就报错，不要降级处理。报错须给出两项信息：
+
+- **未满足的是哪一项** —— dtype、形状、arch、无可用实现，还是编译失败。
+- **实际收到的值是什么。**
+
+只写「不支持」不构成有效的诊断信息。
+
+## 各阶段允许做什么 {#phase-limits}
+
+decode 路径会被 CUDA graph 捕获，因此各阶段允许执行的操作分别规定如下：
+
+| 阶段 | 允许 | 不允许 |
+| --- | --- | --- |
+| 查记忆表（键与重建条件见[后文](#memo)） | 一次字典查找 | 其他任何操作 |
+| `detect` | 一次谓词判断 | 任何 import，任何加锁 |
+| 构造 kernel | 选择实现、编译、分配显存、重新 import、建立 handle | 依赖真实张量的调优 |
+| 调用 kernel | 启动已编译的 kernel，经 torch allocator 分配输出 | 编译、惰性初始化、建立 handle、host 端同步 |
+
+**模块顶层的 import 不得触发编译。** TileOPs 在构造第一个算子时 import 后端模块，编译应当发生在 `build_kernel` 被调用的时候。
+
+调用 kernel 还须满足两条与流有关的规则：
+
+- **必须在当前流上启动**，在 CUDA 上即 `torch.cuda.current_stream(device)`，不得改用默认流。自带 launcher 的后端尤其容易违反这一条。
+- **内部分配的生命周期必须跨越异步执行。** 如果只把裸指针传给 launch，对象必须存活到该流执行完成为止。协议不提供 workspace，这一部分安全由后端自己保证。
+
+调用方需要在捕获之前完成预热，即至少执行一次同形状的非捕获调用，因为构造 kernel 允许编译。捕获期间只允许「查表命中后直接调用」这一条路径。
+
+## 安装后的三种状态 {#three-states}
+
+一旦 `detect` 认领了某一类设备，该设备上的**所有**算子都由这个 target 服务，其中任何一个缺失都会报错，不会改用 TileOPs 自带的实现。
+
+不回退的理由是：选中一个 target 就意味着这块设备属于另一套硬件，自带的 kernel 在它上面根本启动不了。真去回退，只会把一条清楚的「该 target 未实现此算子」换成一次难以理解的启动失败。
+
+因此安装之后，每个算子处于以下三种状态之一：
+
+| 状态 | 例子 | 结果 |
+| --- | --- | --- |
+| 已注册 builder，且该算子在取 kernel 处传入了张量 | `RMSNormFwdOp` | 正常执行 |
+| 已注册 builder，但该算子尚未在取 kernel 处传入张量 | `GemmOp` | 报错，**需要修改的是 TileOPs** |
+| 未注册 builder | 其余全部算子 | 报错 |
+
+第二种状态源于 TileOPs 当前的迁移进度：算子取 kernel 的位置必须把即将传给该 kernel 的张量一并传入，TileOPs 才能计算外部路径的记忆键。
+
+```python
+# TileOPs 内部，算子自身的 forward
+self.get_or_build_kernel("gemm_kernel", (a, b), key=..., build=...)
+#                                       ^^^^^^ 这一项
+```
+
+截至 2026 年 8 月，只有 `RMSNormFwdOp` 传入了这一项，其余 84 处取 kernel 的位置尚未传入。这是一项机械改动，会逐个算子补齐。
+
+示例仓库 `src/tileops_cpu/pending.py` 中的 `build_gemm` 正是这种情况：实现正确，注册成功，但目前调用不到。在 TileOPs 补上这一项之前先把 builder 写好是正常的工作顺序 —— `GemmOp` 可用的当天，这个后端无需任何改动即可服务它。
+
+### 平台判据
+
+即使一个算子已经能够走到外部路径，TileOPs 的 `forward` 中仍可能残留与特定硬件绑定的代码。`GemmOp` 就属于这种情况：
+
+```
+tileops/ops/gemm.py:102       _get_kernel
+tileops/kernels/call_spec.py  CallSpec.__post_init__
+tileops/utils/utils.py:39     get_sm_version  ->  torch.cuda.current_device()
+```
+
+选中的 target 面向 CPU，这段代码却仍然去查询 CUDA 的 SM 版本。在没有 CUDA 驱动的机器上，调用在到达 `build_kernel` 之前就已经失败。
+
+截至 2026 年 8 月，TileOPs 中约有 94 处这类判据。清除它们是接入第一个真实异构后端的前提，将按 family 分批进行。在此之前，后端作者会在自己的硬件上遇到它们；遇到时应向 TileOPs 提 issue 并附上调用栈，需要修改的是 TileOPs。
+
+示例仓库因此为两个测试加上了 `requires_cuda_runtime` 标记，在没有 GPU 的机器上自动跳过。这两个测试检验的是 TileOPs 的平台假设，而不是这个后端。
 
 ## 错误信息与处理
 
@@ -408,52 +514,12 @@ TileOPs 按**设备加输入签名**记住 `build_kernel` 的返回值。这个�
 
 也就是说，**设备与输入签名都相同的两次调用，TileOPs 会把同一个 kernel 交回给后端**，不再调用 `build_kernel`。同一个 target 的第二块卡会重新构造一次，因为为一块卡编译出的产物不一定能在另一块卡上启动。参数不进入这个键，它们对一个算子实例而言是固定的。
 
+算子层这一侧怎么查表、未命中时怎么调 `build_kernel`，见[一次调用怎么走到 `build_kernel`](#from-op-layer)。
+
 两点由此而来：
 
 - **记忆表有上限，条目可以在任何时候被淘汰。** 后端不得假设自己返回的可调用对象一直存活；它所依赖的资源应由它自己持有引用。
 - **需要更细或更粗的粒度，都在后端一侧解决。** 更细的区分在后端内部处理；希望减少重建次数，可以在 `build_kernel` 内部另加一层缓存。
-
-## 安装后的三种状态 {#three-states}
-
-一旦 `detect` 认领了某一类设备，该设备上的**所有**算子都由这个 target 服务，其中任何一个缺失都会报错，不会改用 TileOPs 自带的实现。
-
-不回退的理由是：选中一个 target 就意味着这块设备属于另一套硬件，自带的 kernel 在它上面根本启动不了。真去回退，只会把一条清楚的「该 target 未实现此算子」换成一次难以理解的启动失败。
-
-因此安装之后，每个算子处于以下三种状态之一：
-
-| 状态 | 例子 | 结果 |
-| --- | --- | --- |
-| 已注册 builder，且该算子在取 kernel 处传入了张量 | `RMSNormFwdOp` | 正常执行 |
-| 已注册 builder，但该算子尚未在取 kernel 处传入张量 | `GemmOp` | 报错，**需要修改的是 TileOPs** |
-| 未注册 builder | 其余全部算子 | 报错 |
-
-第二种状态源于 TileOPs 当前的迁移进度：算子取 kernel 的位置必须把即将传给该 kernel 的张量一并传入，TileOPs 才能计算外部路径的记忆键。
-
-```python
-# TileOPs 内部，算子自身的 forward
-self.get_or_build_kernel("gemm_kernel", (a, b), key=..., build=...)
-#                                       ^^^^^^ 这一项
-```
-
-截至 2026 年 8 月，只有 `RMSNormFwdOp` 传入了这一项，其余 84 处取 kernel 的位置尚未传入。这是一项机械改动，会逐个算子补齐。
-
-示例仓库 `src/tileops_cpu/pending.py` 中的 `build_gemm` 正是这种情况：实现正确，注册成功，但目前调用不到。在 TileOPs 补上这一项之前先把 builder 写好是正常的工作顺序 —— `GemmOp` 可用的当天，这个后端无需任何改动即可服务它。
-
-### 平台判据
-
-即使一个算子已经能够走到外部路径，TileOPs 的 `forward` 中仍可能残留与特定硬件绑定的代码。`GemmOp` 就属于这种情况：
-
-```
-tileops/ops/gemm.py:102       _get_kernel
-tileops/kernels/call_spec.py  CallSpec.__post_init__
-tileops/utils/utils.py:39     get_sm_version  ->  torch.cuda.current_device()
-```
-
-选中的 target 面向 CPU，这段代码却仍然去查询 CUDA 的 SM 版本。在没有 CUDA 驱动的机器上，调用在到达 `build_kernel` 之前就已经失败。
-
-截至 2026 年 8 月，TileOPs 中约有 94 处这类判据。清除它们是接入第一个真实异构后端的前提，将按 family 分批进行。在此之前，后端作者会在自己的硬件上遇到它们；遇到时应向 TileOPs 提 issue 并附上调用栈，需要修改的是 TileOPs。
-
-示例仓库因此为两个测试加上了 `requires_cuda_runtime` 标记，在没有 GPU 的机器上自动跳过。这两个测试检验的是 TileOPs 的平台假设，而不是这个后端。
 
 ## 调用方可用的接口
 

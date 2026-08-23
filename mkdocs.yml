@@ -32,6 +32,7 @@ nav:
   - User Guide:
     - user-guide/index.md
     - Writing a Spec: manifest.md
+    - Adding an Op: new-op.md
     - Timing Benchmarks: timing.md
     - Using torch.compile: torch-compile.md
     - Adding a Backend: backends.md
@@ -137,6 +138,7 @@ plugins:
             Design: 设计文档
             User Guide: 使用指南
             Writing a Spec: 读写 manifest
+            Adding an Op: 添加新算子
             Timing Benchmarks: benchmark 怎么计时
             Using torch.compile: 接入 torch.compile
             Adding a Backend: 接入新硬件后端

@@ -1,25 +1,29 @@
-name: Render benchmarks
+name: Daily refresh
 
-# Daily refresh of the docs Benchmarks page. Regenerates it from the nightly
-# snapshot on tile-ai/TileOPs' `nightly-bench` orphan branch and redeploys the
-# site. The generated page is a build artifact — it is not committed; the
-# rendered HTML lives on gh-pages. Runs after the TileOPs nightly so the
-# snapshot is ready; also runnable on demand.
+# Daily refresh of the whole site: the Benchmarks pages from the nightly snapshot on
+# tile-ai/TileOPs' `nightly-bench` orphan branch, and every page that reads the TileOPs
+# checkout — the API reference from its docstrings, the mirrored design docs — since this
+# job checks that repository out fresh each run. Nothing is committed; the rendered HTML
+# lives on gh-pages.
+#
+# 22:00 UTC is 06:00 Beijing, and the TileOPs nightly finishes before that, so the data is
+# waiting at the start of the working day. GitHub queues scheduled runs, so the deploy can
+# land a few minutes late; workflow_dispatch is there when it should not wait.
 
 on:
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 22 * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: render-benchmarks
+  group: daily-refresh
   cancel-in-progress: false
 
 jobs:
-  render:
+  refresh:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

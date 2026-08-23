@@ -58,7 +58,7 @@ first, then bring the English page in line. Everything else goes the other way.
 
 | Rule | Detail |
 |------|--------|
-| Coverage | `index.md`, `manifest.md`, `timing.md`, `backends.md`, `torch-compile.md`, `performance-guides/index.md`. |
+| Coverage | `index.md`, `manifest.md`, `new-op.md`, `timing.md`, `backends.md`, `torch-compile.md`, `user-guide/index.md`, `performance-guides/index.md`. |
 | Never translate | `api/` and `benchmarks/` — both generated. `design/` is mirrored English. |
 | Missing translation | Falls back to English at the same URL, so the zh nav is never sparse. `hooks.py` prepends a "本页暂无中文版" notice. |
 | Nav labels | `nav_translations` in the `i18n` plugin block; keep an entry for every `nav` title. |

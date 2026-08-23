@@ -1,10 +1,10 @@
 # 读写 manifest
 
-传统算子库以实现为中心：算子逐个写出来、逐个调优，至于它支持哪些形状、哪些 dtype、跑多快，都由实现事后说明，文档写的是追述。
+传统算子库以实现为中心：算子逐个写、逐个调优，支持哪些形状、哪些 dtype、跑多快，都由实现事后说明，文档写的是追述。
 
 TileOPs 的组织方式相反：算子的规格先声明，实现由规格推导。每个算子的规格称为它的 **spec**，写在 [`src/tileops/manifest/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest) 下的 YAML 文件里；这些文件合起来就是 manifest。
 
-**一个算子有了 spec，它就成为整个系统的数据输入。** 各个环节读的是同一份声明，而不是各自去读实现：
+**一个算子有了 spec，就成为整个系统的数据输入。** 各个环节读同一份声明，而不是各自去读实现：
 
 | 谁消费 | 读 spec 里的什么 | 产出 |
 | --- | --- | --- |
@@ -16,27 +16,27 @@ TileOPs 的组织方式相反：算子的规格先声明，实现由规格推导
 | 本文档站 | 全部字段 | 支持矩阵、算子清单、API 参考 |
 | CI 的 [spec 校验器](https://github.com/tile-ai/TileOPs/blob/main/scripts/validate_manifest.py) | 全部字段 | 分五级检查声明与实现是否一致，见[写一份新 spec](#writing-a-spec) |
 
-**上面每一行都以 spec 为前提**：没有 spec，就没有生成的校验、没有数值比对、没有性能数据，CI 也不会拦下任何回退。**为一个算子写 manifest 不是补文档，而是把它接进这条数据流。**{ .keystone }
+**每一行都以 spec 为前提**：没有 spec，就没有生成的校验、没有数值比对、没有性能数据，CI 也拦不下任何回退。**为一个算子写 manifest 不是补文档，而是把它接进这条数据流。**{ .keystone }
 
-本页分六部分：（1）一份 spec 的构成；（2）怎么读一份已有的 spec；（3）怎么写一份新的；（4）（5）`static_dims`，构造时承诺的维度；（6）可选输入，写 spec 时分歧最多的地方。之后是六个实例分析（每个走读一份真实 spec）、提交前对照用的规则速查，以及 spec 校验器查什么、不查什么。
+本页依次讲：一份 spec 的构成、怎么读一份已有的 spec、怎么写一份新的、`static_dims`（构造时承诺的维度）、可选输入（写 spec 时分歧最多的地方）。之后是六个实例分析、提交前对照用的规则速查，以及 spec 校验器查什么、不查什么。
 
 ## spec 驱动的生成与检查
 
-写了 spec，这个算子就进入 CI 的保护范围。TileOPs 现有的算子、测试与 benchmark 都由 spec 生成，三处各读 spec 的一部分：
+写了 spec，这个算子就进入 CI 的保护范围。现有的算子、测试与 benchmark 都由 spec 生成，三处各读其中一部分：
 
 - **算子层**的参数校验与形状推导照 `signature` 写。
 - **测试**的比对对象与 dtype 取自 `ref_api` 与 `workloads`。
 - **benchmark** 的形状由 `load_workloads` 读出来。
 
-生成之后，spec 校验器再逐级对照 spec 检查这些代码，声明与实现对不上就报错 —— 哪个字段对不上会以什么形式报出来，见[spec 校验器](#spec-validator)。
+生成之后，spec 校验器逐级对照 spec 检查这些代码，声明与实现对不上就报错；哪个字段以什么形式报出来，见[spec 校验器](#spec-validator)。
 
-**没有 spec 的算子不受这些检查约束。** 因此新增算子的推荐做法是先写 spec：spec 落地之后，后续每一次改动都由 CI 对照它检查。
+**没有 spec 的算子不受这些检查约束。** 所以新增算子先写 spec：spec 落地之后，后续每次改动都由 CI 对照它检查。
 
 ## 一份 spec 的构成
 
-一个 family 一个 YAML 文件（大的 family 可以分片），文件顶层是 `算子名 → spec` 的映射。加载时所有文件合并，同名算子重复即报错。
+一个 family 一个 YAML 文件（大的 family 可以分片），顶层是 `算子名 → spec` 的映射。加载时所有文件合并，同名算子重复即报错。
 
-spec 的键就是算子的 Python 类名：`{名字}{方向}Op`，方向取 `Fwd` 或 `Bwd`，同一个算子两个方向都在 manifest 里时方向必填。spec 校验器要求 `cls.__name__` 与键逐字符相同，不做任何大小写或缩写的推断。
+spec 的键就是算子的 Python 类名：`{名字}{方向}Op`，方向取 `Fwd` 或 `Bwd`；两个方向都在 manifest 里时方向必填。校验器要求 `cls.__name__` 与键逐字符相同，不做大小写或缩写的推断。
 
 | 字段 | 必填 | 内容 |
 | --- | --- | --- |
@@ -64,23 +64,23 @@ spec 的键就是算子的 Python 类名：`{名字}{方向}Op`，方向取 `Fwd
 
 ## 读一份 spec
 
-按四步读，每一步回答一个问题。
+四步，每步回答一个问题。
 
 1. **`inputs` 与 `outputs`** —— 调用要传哪些张量、各自的 dtype 取值域，返回什么。
-2. **`params`** —— 有哪些非张量参数。它们放在构造还是调用，由参考 API 决定，manifest 不编码这个区分；带 `default` 的参数在算子里也必须有同名默认值。
-3. **`shape_rules`** —— `shape` 表达不了的约束都在这里，包括维度整除、`dim` 的取值范围、输出形状的推导。
-4. **`workloads`** —— 这个算子被实测过哪些形状与 dtype。性能数据页上的每一行都出自这里。
+2. **`params`** —— 有哪些非张量参数。放在构造还是调用由参考 API 决定，manifest 不编码这个区分；带 `default` 的参数在算子里也必须有同名默认值。
+3. **`shape_rules`** —— `shape` 表达不了的约束都在这里：维度整除、`dim` 的取值范围、输出形状的推导。
+4. **`workloads`** —— 实测过哪些形状与 dtype。性能数据页上的每一行都出自这里。
 
 读 dtype 的四种写法：
 
 - `float16 | bfloat16` —— 取值域是这几种之一。
-- `same_as(x)` —— 运行时与 `x` 的 dtype 相同。它只说 dtype，不说形状，也不为组合数增加一个维度。
-- `promote_int_to_float(x)` —— `x` 是整数类型时结果为 `float32`，否则等同 `same_as(x)`。只允许出现在 `outputs`。
+- `same_as(x)` —— 运行时与 `x` 的 dtype 相同。只说 dtype，不说形状，也不为组合数增加一个维度。
+- `promote_int_to_float(x)` —— `x` 是整数类型时结果为 `float32`，否则同 `same_as(x)`。只允许出现在 `outputs`。
 - `dtype_combos` —— 逐条列出支持的跨张量组合。不写表示各自取值域的任意组合都支持。
 
 读形状先看有没有 `shape`：
 
-- **有 `shape`** —— rank 固定，维度名写出来，例如 `"[B, M, K]"`。**同名维度表示相等**：两个张量都写 `K`，它们那一维必须一样长。
+- **有 `shape`** —— rank 固定，维度名写出来，如 `"[B, M, K]"`。**同名维度表示相等**：两个张量都写 `K`，那一维就必须一样长。
 - **没有 `shape`** —— rank 任意，约束全在 `params` 与 `shape_rules` 里。
 
 程序化读取用 `tileops.manifest`：
@@ -97,19 +97,19 @@ load_workloads("RMSNormFwdOp")             # 该算子的 workload 列表
 
 ## 写一份新 spec {#writing-a-spec}
 
-按五步写，每一步都能立刻校验。
+五步，每步都能立刻校验。
 
 1. **起名，选 family。** 键是算子的类名，spec 写进 `family` 对应的那个文件。
-2. **写 `signature`。** 张量进 `inputs` / `outputs`，非张量进 `params`；顺序按调用顺序排，可选输入排在必填输入之后。dtype 要写全参考 API 支持的范围，而不是当前 kernel 支持的范围。
-3. **写 `shape_rules`。** 输出形状必须由 `shape` 与 `shape_rules` 完全确定。涉及 `dim` 的算子用 [`shape_rules.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/shape_rules.py) 里的 `dim_range_validity`、`reduced_shape` 等辅助函数 —— 算子层调用的是同一批函数，所以两边不会各说一套。
+2. **写 `signature`。** 张量进 `inputs` / `outputs`，非张量进 `params`；按调用顺序排，可选输入排在必填输入之后。dtype 写参考 API 支持的全部范围，不是当前 kernel 支持的范围。
+3. **写 `shape_rules`。** 输出形状必须由 `shape` 与 `shape_rules` 完全确定。涉及 `dim` 的算子用 [`shape_rules.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/shape_rules.py) 里的 `dim_range_validity`、`reduced_shape` 等辅助函数 —— 算子层调的是同一批函数，两边不会各说一套。
 4. **写 `workloads`。** 单张量输入的算子，形状键必须是 `{输入名}_shape`，其余键只能是 `params` 的名字或保留的 `dtypes` / `label`。
 5. **写 `roofline` 与 `source`。**
 
-接口先落地、实现在后时，spec 写 `status: spec-only`，此时只跑 L0；改成 `implemented` 之后五级全跑。每一级查什么、校验器管不到什么，都见本页最后一节 [spec 校验器](#spec-validator)。
+接口先落地、实现在后，spec 写 `status: spec-only`，只跑 L0；改成 `implemented` 之后五级全跑。每级查什么、校验器管不到什么，见最后一节 [spec 校验器](#spec-validator)。
 
 ## `static_dims`
 
-`static_dims` 声明用户在构造算子实例时就承诺下来的维度值。它只用于任意 rank 的算子 —— 固定 rank 的算子从 `shape` 就能拿到维度。
+`static_dims` 声明用户在构造算子实例时就承诺的维度值，只用于任意 rank 的算子 —— 固定 rank 的算子从 `shape` 就能拿到维度。
 
 ```yaml
 static_dims:
@@ -125,12 +125,12 @@ static_dims:
 
 四条规则：
 
-- 每个键都是 `__init__` 的**必填**关键字参数，不能有默认值。承诺的值必须由用户在构造时给出。
-- 表达式必须是**单轴引用**，形如 `<张量>.shape[<常量或参数名>]`。多轴形式一概禁止，包括 `product(...)`、推导式与形状上的算术。
+- 每个键都是 `__init__` 的**必填**关键字参数，不能有默认值 —— 承诺的值由用户在构造时给出。
+- 表达式必须是**单轴引用**，形如 `<张量>.shape[<常量或参数名>]`；多轴形式一概禁止，包括 `product(...)`、推导式与形状上的算术。
 - 引用的张量名必须出现在 `signature.inputs` 里；轴名不是整数字面量时，必须是 `signature.params` 的名字。
 - 键顺序决定这些关键字参数在生成的 `__init__` 中的顺序。
 
-单轴引用这一条最容易写错，两种被拒的写法都出自同一个原因 —— 它们在 `forward` 里没法逐个轴校验：
+单轴引用这一条最容易写错，两种被拒的写法都出自同一个原因：在 `forward` 里没法逐轴校验。
 
 ```yaml
 static_dims:
@@ -140,7 +140,7 @@ static_dims:
 # last: "x.shape[x.ndim - 1] * 2"       # 不接受：形状上的算术
 ```
 
-引用哪个张量不受限制，不必是第一个。`torch.nn.functional.linear` 的 `out_features` 就只能绑到 `weight` 上 —— 用 `input.shape` 写不出等价的表达式：
+引用哪个张量不受限制。`torch.nn.functional.linear` 的 `out_features` 只能绑到 `weight` 上，用 `input.shape` 写不出等价的表达式：
 
 ```yaml
 LinearFwdOp:
@@ -160,9 +160,9 @@ LinearFwdOp:
       - "output.shape == input.shape[:-1] + (out_features,)"
 ```
 
-**`static_dims` 为空是合法的。** 典型情形是接受 `dim=None` 的归约：归约的范围取决于整个输入形状，而不是用户给出的某个超参数，没有什么可以在构造时承诺。
+**`static_dims` 为空是合法的。** 典型情形是接受 `dim=None` 的归约：归约范围取决于整个输入形状，不是用户给出的超参数，没有什么可以在构造时承诺。
 
-为空的时候，算子作者**必须覆写 `_cache_key`**。默认实现按完整的输入形状做键，结果是正确的，但动态形状下每来一个新形状都要重新编译；基类遇到这种情形会发一次运行时警告。
+为空的时候，算子作者**必须覆写 `_cache_key`**。默认实现按完整输入形状做键，结果正确，但动态形状下每来一个新形状都要重新编译；基类遇到这种情形会发一次运行时警告。
 
 ```python
 class SumFwdOp(Op):
@@ -172,7 +172,7 @@ class SumFwdOp(Op):
 
 ## 可选输入 {#optional-inputs}
 
-一个输入可以不传，`shape_rules`、`workloads`、`roofline` 与 dtype 声明都要跟着改，因此这是写 spec 时分歧最多的地方。下面十条各回答一个具体的抉择，示例都取自仓里的真实 spec，顺序是：
+一个输入可以不传，`shape_rules`、`workloads`、`roofline` 与 dtype 声明都要跟着改，所以这里是写 spec 时分歧最多的地方。下面十条各回答一个抉择，示例都取自仓里的真实 spec：
 
 - **第 1、2 条**：可选输入是什么，调用时怎样算传了。
 - **第 3、4 条**：写 spec 时的两个抉择 —— 能不能按存在性派发，该不该另加一个 `bool`。
@@ -411,11 +411,11 @@ outputs:
 
 ## 实例分析
 
-以下六份都是仓里的真实 spec，各覆盖一种写法：（1）固定 rank；（2）任意 rank；（3）参数决定输出形状；（4）可选输入构成一个开关；（5）会被写入的输入；（6）输出 dtype 随输入提升。
+六份真实 spec，各覆盖一种写法：固定 rank、任意 rank、参数决定输出形状、可选输入作开关、会被写入的输入、输出 dtype 随输入提升。
 
 ### 1. 固定 rank 与同名维度
 
-`BmmFwdOp` 的三个张量都写出了 `shape`，`B` 与 `K` 在两个输入里同名，因此必须相等；`shape_rules` 再补一条 kernel 要求的整除条件。
+`BmmFwdOp` 的三个张量都写出 `shape`，`B` 与 `K` 在两个输入里同名，因此必须相等；`shape_rules` 再补一条 kernel 要求的整除条件。
 
 ```yaml
 BmmFwdOp:
@@ -554,7 +554,7 @@ ReciprocalFwdOp:
 
 ## 规则速查
 
-下面这十条前面都讲过，这里按它们各自约束什么分成四组，方便把写好的 spec 拿来逐条对一遍，然后再去跑下一节的校验器。
+这十条前面都讲过，这里按各自约束什么分成四组，方便把写好的 spec 拿来逐条对一遍，再去跑下一节的校验器。
 
 **签名**
 

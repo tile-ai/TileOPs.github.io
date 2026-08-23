@@ -1,8 +1,8 @@
 # Reading and writing an op's spec
 
 A conventional operator library is organised around its implementations: kernels are
-written and tuned one at a time, and what shapes and dtypes each supports, and how fast
-it runs, is described afterwards.
+written and tuned one at a time, and what shapes and dtypes each supports, and how fast it
+runs, gets described afterwards.
 
 TileOPs is organised the other way round: an op's specification is declared first, and
 the implementation is derived from it. That
@@ -22,37 +22,35 @@ declaration rather than reading the implementation:
 | This site | every field | the support matrix, the op list, the API reference |
 | CI's [spec validator](https://github.com/tile-ai/TileOPs/blob/main/scripts/validate_manifest.py) | every field | five levels of checking that declaration and implementation agree — see [Writing a spec](#writing-a-spec) |
 
-**Every row above presupposes a spec**: without one there is no generated
-validation, no numerical comparison, no performance data, and nothing in CI holding a
-regression back.
+**Every row presupposes a spec**: without one there is no generated validation, no
+numerical comparison, no performance data, and nothing in CI holding a regression back.
 **Writing a spec is not documenting the op; it is connecting the op to that flow.**{ .keystone }
 
-This page has six parts: (1) what a spec contains; (2) how to read one; (3) how to
-write one; (4) `static_dims`, the dimensions committed at construction; (5) optional
-inputs, where writing a spec goes wrong most often. After those come the rules at a
-six real specs read through as case studies, the rules at a glance to check a spec
-against before submitting it, and what the spec validator does and does not check.
+The page runs: what a spec contains, how to read one, how to write one, `static_dims`
+(the dimensions committed at construction), and optional inputs (where writing a spec goes
+wrong most often). Then six real specs as case studies, the rules at a glance to check a
+spec against before submitting it, and what the validator does and does not check.
 
 ## Codegen and CI
 
 A spec puts the op inside CI's reach. The ops, tests and benchmarks TileOPs ships are
-generated from their specs, each reading its own part:
+generated from their specs, three places each reading their own part:
 
 - **The op layer's** parameter validation and shape inference follow `signature`.
 - **A test** takes its comparison target and dtypes from `ref_api` and `workloads`.
 - **A benchmark** reads its shapes through `load_workloads`.
 
 The spec validator then checks that generated code against the spec, level by level, and
-a declaration the implementation does not match is an error — which field surfaces how is
-in [the spec validator](#spec-validator).
+a declaration the implementation does not match is an error; which field surfaces how is in
+[the spec validator](#spec-validator).
 
-**An op with no spec is bound by none of these checks.** So the way to add one is to
-write its spec first: once the spec lands, CI holds every later change against it.
+**An op with no spec is bound by none of these checks**, so a new op starts with its
+spec: once that lands, CI holds every later change against it.
 
 ## What a spec contains
 
-One YAML file per family — a large family may shard — with `op name → spec` at the
-top level. All files merge at load time, and a duplicate op name is an error.
+One YAML file per family — a large family may shard — with `op name → spec` at the top
+level. The files merge at load time, and a duplicate op name is an error.
 
 The key is the op's Python class name: `{Name}{Direction}Op`, where the direction
 is `Fwd` or `Bwd` and is required once both directions exist in the manifest. The
@@ -101,21 +99,21 @@ Four steps, each answering one question.
 Four ways a dtype is written:
 
 - `float16 | bfloat16` — one of these.
-- `same_as(x)` — the same dtype as `x` at runtime. It speaks only about dtype, never
-  shape, and adds no axis to the combination count.
+- `same_as(x)` — the same dtype as `x` at runtime. Dtype only, never shape, and it adds
+  no axis to the combination count.
 - `promote_int_to_float(x)` — `float32` when `x` is integral, otherwise `same_as(x)`.
   Allowed in `outputs` only.
-- `dtype_combos` — the supported cross-tensor combinations, listed. Absent means every
-  combination of the declared unions is supported.
+- `dtype_combos` — the supported cross-tensor combinations, listed one by one. Absent
+  means every combination of the declared unions works.
 
 For shapes, look first for `shape`:
 
-- **With `shape`** — fixed rank, dimensions named: `"[B, M, K]"`. **A shared name
-  means equality**: `K` in two tensors requires those axes to match.
+- **With `shape`** — fixed rank, dimensions named: `"[B, M, K]"`. **A shared name means
+  equality**: `K` in two tensors requires those axes to match.
 - **Without `shape`** — arbitrary rank, with every constraint in `params` and
   `shape_rules`.
 
-To read specs programmatically:
+Reading specs programmatically:
 
 ```python
 from tileops.manifest import load_manifest, load_workloads
@@ -131,30 +129,29 @@ load_workloads("RMSNormFwdOp")             # that op's workload rows
 
 Five steps, each one checkable immediately.
 
-1. **Name it and pick the family.** The key is the class name; the spec goes in the
+1. **Name it and pick the family.** The key is the class name, and the spec goes in the
    file its `family` names.
-2. **Write `signature`.** Tensors go in `inputs` / `outputs`, everything else in
-   `params`, in call order, with optional inputs after the required ones. Declare
-   the dtypes the reference API supports, not the ones the current kernel does.
-3. **Write `shape_rules`.** An output's shape has to be fully determined by `shape`
-   and `shape_rules` together. For ops with a `dim`, use the helpers in
-   [`shape_rules.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/shape_rules.py) — `dim_range_validity`, `reduced_shape` and the rest — which
-   the op layer calls too, so the two cannot disagree.
+2. **Write `signature`.** Tensors in `inputs` / `outputs`, everything else in `params`,
+   in call order, optional inputs after the required ones. Declare the dtypes the
+   reference API supports, not the ones the current kernel does.
+3. **Write `shape_rules`.** `shape` and `shape_rules` together have to determine an
+   output's shape completely. For ops with a `dim`, use the helpers in
+   [`shape_rules.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/shape_rules.py) — `dim_range_validity`, `reduced_shape` and the rest — which the
+   op layer calls too, so the two cannot disagree.
 4. **Write `workloads`.** For a single-tensor-input op the shape key must be
    `{input}_shape`, and every other key must be a `params` name or the reserved
    `dtypes` / `label`.
 5. **Write `roofline` and `source`.**
 
-To land an interface before its implementation, write `status: spec-only`: only L0
-runs. Switching to `implemented` turns on all five levels. What each level checks, and
-what the validator cannot see, are in the last section: [the spec
-validator](#spec-validator).
+To land an interface before its implementation, write `status: spec-only` and only L0
+runs; `implemented` turns on all five levels. What each level checks, and what the
+validator cannot see, are in the last section: [the spec validator](#spec-validator).
 
 ## `static_dims`
 
-`static_dims` declares the dimension values a user commits to when constructing the
-op instance. It is for arbitrary-rank ops only — a fixed-rank op takes its
-dimensions from `shape`.
+`static_dims` declares the dimension values a user commits to when constructing the op
+instance, and is for arbitrary-rank ops only — a fixed-rank op takes its dimensions from
+`shape`.
 
 ```yaml
 static_dims:
@@ -171,7 +168,7 @@ construction.** Two moments share one contract:
 
 Four rules:
 
-- Every key is a **required** `__init__` keyword parameter, with no default. The
+- Every key is a **required** `__init__` keyword parameter, with no default: the
   committed value comes from the user at construction.
 - The expression must be a **single-axis reference**, `<tensor>.shape[<const or
   param>]`. Multi-axis forms are forbidden: no `product(...)`, no comprehensions,
@@ -181,7 +178,7 @@ Four rules:
 - Key order is the order those keywords appear in the generated `__init__`.
 
 Single-axis is the rule most often broken, and both rejected forms fail for the same
-reason — neither can be checked one axis at a time in `forward`:
+reason: neither can be checked one axis at a time in `forward`.
 
 ```yaml
 static_dims:
@@ -191,9 +188,9 @@ static_dims:
 # last: "x.shape[x.ndim - 1] * 2"       # rejected: arithmetic over a shape
 ```
 
-Which tensor is referenced is unrestricted; it need not be the first. In
-`torch.nn.functional.linear`, `out_features` can only be bound to `weight` — no
-expression over `input.shape` is equivalent:
+Which tensor is referenced is unrestricted. In `torch.nn.functional.linear`,
+`out_features` can only be bound to `weight`; no expression over `input.shape` is
+equivalent:
 
 ```yaml
 LinearFwdOp:
@@ -214,12 +211,12 @@ LinearFwdOp:
 ```
 
 **An empty `static_dims` is legal.** The typical case is a reduction that accepts
-`dim=None`, where the extent depends on the whole input shape rather than on some
-hyperparameter the user gives, so there is nothing to commit at construction.
+`dim=None`: the extent depends on the whole input shape rather than on a hyperparameter
+the user gives, so there is nothing to commit at construction.
 
 When it is empty, the op author **must override `_cache_key`**. The default keys on the
-full input shape, which is correct, but under dynamic shapes every new shape recompiles;
-the base class warns once when it sees this.
+full input shape — correct, but under dynamic shapes every new shape recompiles; the base
+class warns once when it sees this.
 
 ```python
 class SumFwdOp(Op):
@@ -231,8 +228,8 @@ class SumFwdOp(Op):
 
 An input that may be absent pulls `shape_rules`, `workloads`, `roofline` and the dtype
 declarations along with it, which is why this is where writing a spec goes wrong most
-often. The ten questions below each answer one concrete decision, every snippet comes
-from a real spec in the repository, and they run in this order:
+often. Each of the ten questions below answers one decision, every snippet comes from a
+real spec in the repository, and they run in this order:
 
 - **1–2**: what an optional input is, and when a call counts as having passed one.
 - **3–4**: the two decisions when writing the spec — whether to dispatch on presence,
@@ -505,9 +502,9 @@ outputs:
 
 ## Case studies
 
-Six real specs, each covering one form: (1) fixed rank; (2) arbitrary
-rank; (3) a param deciding the output shape; (4) optional inputs forming one
-switch; (5) an input the op writes; (6) an output dtype promoted from the input.
+Six real specs, each covering one form: fixed rank, arbitrary rank, a param deciding the
+output shape, optional inputs forming one switch, an input the op writes, and an output
+dtype promoted from the input.
 
 ### 1. Fixed rank and shared names
 
@@ -669,9 +666,8 @@ ReciprocalFwdOp:
 
 ## Rules at a glance
 
-All ten of these appeared above. They are grouped here by what each one constrains, so a
-finished spec can be read against them one by one before the validator in the next
-section runs.
+All ten appeared above, grouped here by what each constrains, so a finished spec can be
+read against them one by one before the validator in the next section runs.
 
 **The signature**
 

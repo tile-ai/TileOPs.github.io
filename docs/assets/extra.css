@@ -1151,3 +1151,117 @@ html[lang="zh"] .md-nav__title {
   font-size: 12px !important;
   font-weight: 700;
 }
+
+/* Sequence diagrams. The fence sets the type a size up from mermaid's default, which the
+ * diagram can afford once it fits the column; a wider one scrolls rather than shrinking
+ * the page. The autonumber bubble defaults to near-black, which reads as a blob at this
+ * size, so it takes the structural violet. */
+.md-typeset .mermaid {
+  overflow-x: auto;
+  --md-mermaid-sequence-number-bg-color: var(--tf-violet);
+}
+
+.md-typeset .mermaid text.sequenceNumber {
+  font-size: 12px !important;
+  font-weight: 700;
+}
+
+/* Flowcharts. Two roles to tell apart at a glance: the layers dynamo traces, and the
+ * opaque node's interior. Colour comes from the palette rather than from the diagram
+ * source, so both schemes stay right and the .md stays readable. The boundary edge is the
+ * one thick link on the page. */
+.md-typeset .mermaid g.node.traced > rect {
+  fill: color-mix(in srgb, var(--tf-violet), transparent 88%);
+  stroke: var(--tf-violet);
+}
+
+.md-typeset .mermaid g.node.opaque > rect {
+  fill: color-mix(in srgb, var(--tf-teal), transparent 92%);
+  stroke: var(--tf-rule);
+  stroke-dasharray: 5 3;
+}
+
+.md-typeset .mermaid .edgeLabel {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.md-typeset .mermaid .edgeLabel .label foreignObject > div {
+  color: var(--tf-violet);
+}
+
+/* The call-path figure on the torch.compile page. Four layers of one call, every row the
+ * same width — a diagram engine sizes each box to its text, which reads as clutter when
+ * the rows are meant to be read as a stack. Colour separates the two roles: violet for
+ * what dynamo traces, a dashed teal for the opaque node's interior. */
+.md-typeset figure.callpath {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 1.2em 0;
+}
+
+.md-typeset figure.callpath .cp-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.5rem 0.8rem;
+  border-radius: 0.2rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.md-typeset figure.callpath .cp-step > code {
+  background: none;
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.md-typeset figure.callpath .cp-traced {
+  border: 1px solid var(--tf-violet);
+  background: color-mix(in srgb, var(--tf-violet), transparent 92%);
+}
+
+.md-typeset figure.callpath .cp-traced > code {
+  color: var(--tf-violet);
+}
+
+.md-typeset figure.callpath .cp-opaque {
+  border: 1px dashed var(--tf-rule);
+  background: color-mix(in srgb, var(--tf-teal), transparent 95%);
+}
+
+.md-typeset figure.callpath .cp-opaque > code {
+  color: var(--tf-teal);
+}
+
+/* The boundary itself: a rule across the stack with its name sitting on it. */
+.md-typeset figure.callpath .cp-boundary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.15rem 0;
+  color: var(--tf-violet);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.md-typeset figure.callpath .cp-boundary::before,
+.md-typeset figure.callpath .cp-boundary::after {
+  flex: 1;
+  height: 2px;
+  background: color-mix(in srgb, var(--tf-violet), transparent 55%);
+  content: "";
+}
+
+.md-typeset figure.callpath figcaption {
+  margin-top: 0.3rem;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.7rem;
+  line-height: 1.6;
+  text-align: left;
+}

@@ -1,25 +1,25 @@
 # Adding a hardware backend
 
 TileLang is a multi-backend DSL: each kind of hardware has its own set of kernels,
-shipped as its own Python package. TileOPs therefore defines a protocol under
-which a package outside the repository takes over an op's kernel, replacing the
-implementation TileOPs ships — and adding one requires no change to TileOPs itself.
+shipped as its own Python package. TileOPs therefore defines a protocol under which a
+package outside the repository takes over an op's kernel, replacing the implementation
+TileOPs ships — with no change to TileOPs itself.
 
-This page is about bringing a new class of hardware into TileOPs, so that the ops
-on those devices run your own kernels.
+This page is how a new class of hardware gets brought in, so that the ops on those
+devices run your kernels.
 
 **A backend supplies one thing: something callable that computes this call.**
 Everything else is the op layer's.
 
-This page has two halves. The first is what a backend author does, in the order they do
-it: the four things to write, the protocol's four functions, a backend that installs and
-runs as it stands, how a builder's signature is fixed, the phase limits a kernel has to
-respect, how to turn the template into a backend for real hardware, and what each error
-after install means.
+The first half is the work, in the order it is done: the four things to write, the
+protocol's four functions, how one call reaches them, a backend that installs and runs as
+it stands, how to turn the template into a backend for real hardware, the four rules for
+writing a kernel, what each phase may do, and — after install — which state each op is in
+and what each error means.
 
 The second half is why the protocol looks like this: the two layers of selection, the op
-layer's contract, when a kernel is rebuilt, the three states the migration leaves an op
-in, what a caller can reach for, and what the protocol deliberately leaves out.
+layer's contract, when a kernel is rebuilt, what a caller can reach for, and what the
+protocol deliberately leaves out.
 
 ## Four things to write
 
@@ -30,12 +30,13 @@ in, what a caller can reach for, and what the protocol deliberately leaves out.
 | 3 | A `build_kernel` for the first op you take over, written to its manifest signature |
 | 4 | The `register_detector` and `register_kernel_builder` calls, at module top level |
 
-With those four written, `pip install` is all it takes for the backend to take effect;
-the next section is an example that installs and runs as it stands.
+With those four written, `pip install` is all it takes. What follows: their signatures,
+how one call reaches them, and a [complete backend](#runnable) written to these four steps,
+installable as it stands.
 
-Then add a `build_kernel` per op. **Every op the target model uses has to be
-covered** — a missing one is an error, with no fall back to the implementation
-TileOPs ships, because those kernels cannot launch on this target's devices.
+After the first op comes a `build_kernel` per op. **Every op the target model uses has to
+be covered** — a missing one is an error, with no fall back to the implementation TileOPs
+ships, because those kernels cannot launch on this target's devices.
 
 ## The protocol: four functions
 
@@ -49,18 +50,18 @@ A backend writes two functions (`detect`, `build_kernel`) and calls two to regis
 them (`register_detector`, `register_kernel_builder`), alongside the protocol's
 `TensorSpec` and one entry point in `pyproject.toml`:
 
-| Name | Written by | Called by, and when |
-| --- | --- | --- |
-| `detect` | implemented by the backend | asked of every target while the op layer picks one for a call |
-| `register_detector` | the backend calls it | once, when the backend module is imported |
-| `register_kernel_builder` | the backend calls it | likewise, once per op it takes over |
-| `TensorSpec` | defined by the protocol | built by the op layer and passed into `build_kernel` |
-| `build_kernel` | implemented by the backend | called by the op layer on a memo miss |
-| the entry point | declared by the backend in `pyproject.toml` | enumerated by TileOPs when the first op is constructed |
+| # | Name | Written by | Called by, and when |
+| --- | --- | --- | --- |
+| 1 | `detect` | implemented by the backend | asked of every target while the op layer picks one for a call |
+| 2 | `build_kernel` | implemented by the backend | called by the op layer on a memo miss |
+| 3 | `register_detector` | the backend calls it | once, when the backend module is imported |
+| 4 | `register_kernel_builder` | the backend calls it | likewise, once per op it takes over |
+| — | `TensorSpec` | defined by the protocol | built by the op layer and passed into `build_kernel` |
+| — | the entry point | declared by the backend in `pyproject.toml` | enumerated by TileOPs when the first op is constructed |
 
-The five signatures, and what each is for.
+Their signatures follow in that order, and the protocol's `TensorSpec` after them.
 
-### `detect`
+### 1. `detect`
 
 ```python
 def detect(device: torch.device) -> bool: ...
@@ -70,7 +71,19 @@ Implemented by the backend. Answers whether such a device is served by this set 
 kernels: devices only, not dtypes or shapes; return `False` for someone else's device, and
 do not raise.
 
-### `build_kernel`
+```python
+# claiming a whole device type
+def detect(device: torch.device) -> bool:
+    return device.type == "acme"
+
+# reading an environment variable or asking a vendor runtime also belongs here
+def detect(device: torch.device) -> bool:
+    if device.type != "privateuseone":
+        return False
+    return acme_runtime.is_present(device.index)
+```
+
+### 2. `build_kernel`
 
 ```python
 def build_kernel(*inputs: "TensorSpec | None", **params) -> Callable[..., KernelResult]: ...
@@ -81,7 +94,15 @@ signature: `inputs` correspond one-to-one to `signature.inputs` in declaration o
 `params` are named after `signature.params`. An input declared optional that was not
 passed on this call arrives as `None`.
 
-### `register_detector`
+```python
+# GroupNormFwdOp's spec: weight and bias are optional, and arrive as None when absent
+def build_group_norm(x, weight, bias, *, num_groups, eps):
+    if weight is None:                                   # presence read off the slot
+        return AcmeGroupNorm(num_groups, eps, x.dtype)
+    return AcmeGroupNormAffine(num_groups, eps, x.dtype)
+```
+
+### 3. `register_detector`
 
 ```python
 def register_detector(target: str, detect: Callable[[torch.device], bool]) -> None: ...
@@ -90,7 +111,7 @@ def register_detector(target: str, detect: Callable[[torch.device], bool]) -> No
 Called by the backend, once per target, at module import time. Registers that target's
 device detection.
 
-### `register_kernel_builder`
+### 4. `register_kernel_builder`
 
 ```python
 def register_kernel_builder(op: str, target: str, build_kernel: BuildKernel) -> None: ...
@@ -111,6 +132,18 @@ class TensorSpec(NamedTuple):
 Defined by the protocol, built by the op layer and passed into `build_kernel`. What a
 tensor is, without the tensor.
 
+```python
+# what a build_kernel argument looks like
+TensorSpec(device=torch.device("acme:0"), dtype=torch.float16, shape=(4096, 4096))
+
+# and the three things it can be read for
+def build_gemm(a: TensorSpec, b: TensorSpec, *, trans_a, trans_b):
+    m, k = a.shape                    # shapes: compile-time constants, picking tiles
+    if a.dtype is not torch.float16:  # dtype: raise here when it is unsupported
+        raise ValueError(f"acme gemm needs fp16, got {a.dtype}")
+    ...
+```
+
 The return value has one structural requirement: **it must be callable**, invocable
 as `(*tensors)`, returning a tensor, a tuple of tensors, or `None` for a pure
 in-place write. What the op layer checks is `callable()`.
@@ -125,50 +158,93 @@ reference to a tensor". Two things are what such a rule would guard against:
 
 A `TensorSpec` carries neither data nor tensor, so neither is expressible.
 
-## One call, in sequence
+When each of the four gets called during a real call is the next section.
 
-The path one call takes. `detect`, `build_kernel` and `kernel` are the backend's;
-everything else is the op layer, and `kernel` is the callable `build_kernel` returned:
+## How one call reaches `build_kernel` {#from-op-layer}
 
-```mermaid
-%%{init: {'sequence': {'actorFontSize': 14, 'messageFontSize': 13, 'noteFontSize': 13, 'actorMargin': 42, 'width': 128, 'boxMargin': 8}}}%%
-sequenceDiagram
-    autonumber
-    actor Caller
-    participant Op as Op layer
-    participant Reg as Registry
-    participant Det as detect
-    participant Bld as build_kernel
-    participant K as kernel
+One call, from the user's line to a backend's `build_kernel`:
 
-    Caller->>Op: op(x, weight)
-    Op->>Op: validate dtypes and shapes, make contiguous
-    Op->>Reg: which target owns this device
-    loop every registered target
-        Reg->>Det: detect(device)
-        Det-->>Reg: True / False
-    end
-    Reg-->>Op: target
-    alt memo miss
-        Op->>Bld: build_kernel(TensorSpec..., **params)
-        Bld-->>Op: a callable
-        Op->>Op: store under (device, input signature)
-    else memo hit
-        Op->>Op: take the callable from last time
-    end
-    Op->>K: kernel(*tensors)
-    K-->>Op: output tensors
-    Op-->>Caller: output tensors
+```python
+# ── the caller ───────────────────────────────────────────────────────
+op = GemmFwdOp()                 # no target= in the constructor, so the inputs' device decides
+                                 #   target="acme" skips detection and uses it directly;
+                                 #   target=BUILTIN forces the kernels TileOPs ships
+a = torch.randn(4096, 4096, dtype=torch.float16, device="acme:0")
+b = torch.randn(4096, 4096, dtype=torch.float16, device="acme:0")
+d = op(a, b)                     # every input on one device: a.device == b.device
+
+# ── op layer: settle the target ──────────────────────────────────────
+# Every installed backend put a detect in the registry when it was imported, and the op
+# layer hands a.device to each of them in turn — "is this device yours?":
+#   acme's detect(device) → True       every other backend's → False
+#   exactly one True   → target = "acme", and this instance keeps it from here on
+#   none True          → the kernels TileOPs ships run
+#   two or more True   → AmbiguousTargetError, asking for an explicit target=
+
+# ── op layer: the one place GemmFwdOp.forward fetches a kernel ───────
+kernel = self.get_or_build_kernel(
+    "gemm_kernel",               # a name from kernel_map
+    (a, b),                      # the tensors the kernel is about to get, in signature.inputs order
+    key=(m, n, k, a.dtype),      # in-tree only; not used on this call
+    build=lambda: GemmKernel(m, n, k, a.dtype),   # in-tree only; not used on this call
+)
+
+# ── op layer: look up the external memo table — device, then input signature ──
+#   ("acme:0", (float16, (4096, 4096)), (float16, (4096, 4096)))
+#   the device first, then one (dtype, shape) per input
+#   first call on this instance, so the table is empty → a miss, and it builds
+#   a later call at the same device, dtypes and shapes hits and jumps to the last step
+
+# ── backend: the op layer calls build_gemm, with TensorSpecs, not tensors ──
+#   build_gemm(TensorSpec("acme:0", float16, (4096, 4096)),
+#              TensorSpec("acme:0", float16, (4096, 4096)),
+#              trans_a=False, trans_b=True)      # params by their manifest names
+#   → returns something callable
+
+# ── op layer: store it, then launch ─────────────────────────────────
+return kernel(a, b)              # d = a @ b.T, computed by acme's kernel
 ```
 
-Step 7 happens only on a memo miss, which is why `build_kernel` may compile; step 12
-happens on every call, which is why it may not compile or initialise lazily — see [phase
-limits](#phase-limits).
+A backend writes one step of that — `build_gemm` — and registers it:
 
-## Writing a backend that runs
+```python
+def build_gemm(a: TensorSpec, b: TensorSpec, *, trans_a, trans_b):
+    m = a.shape[1] if trans_a else a.shape[0]
+    if m == 1:                                  # the name is not passed in; decide from the specs
+        return AcmeGemv(a, b, trans_a, trans_b)
+    return AcmeGemm(a, b, trans_a, trans_b)
 
-[`tileops-backend-example`](https://github.com/lcy-seso/tileops-backend-example) is
-a complete backend written to those four steps. It implements its kernels in pure
+
+register_kernel_builder(op="GemmFwdOp", target="acme", build_kernel=build_gemm)
+```
+
+The op layer calls `build_gemm`; the backend never calls it itself. Importing the backend
+module only records it in the registry, and the call comes when an op call reaches
+`get_or_build_kernel` and misses the external memo table — once per device and input
+signature. Whatever it returns, the op layer stores and launches.
+
+Four things follow from that:
+
+- **`key` and `build` are the op author's, not a backend's.** They serve the in-tree path
+  only: `key` decides what the in-tree kernel is looked up on, `build` how it is built.
+  Neither is used once a target serves the call.
+- **Tensors arrive positionally, params by name.** `build_kernel(*inputs, **params)`: the
+  positional arguments are `TensorSpec`s (`None` for an optional input the call omitted),
+  the keywords the manifest's `params` names with the values this call settled on.
+- **One builder per `(op, target)`.** Which case the op split into internally — GEMM's
+  `gemm_kernel` versus `gemv_kernel` — is not passed in; `build_kernel` decides from the
+  `TensorSpec`s which kernel to return.
+- **No memoisation of its own is needed.** For the same device and input signature the op
+  layer does not call again; for a finer split, or fewer rebuilds, add a cache inside
+  `build_kernel`. An op with no in-tree implementation may omit `build`, and then a call
+  with no target claiming the device raises `OpNotAvailableError`.
+
+## Writing a backend that runs {#runnable}
+
+With the four functions and one call's path in hand, the quickest start is to copy a
+backend that already works.
+[`tileops-backend-example`](https://github.com/lcy-seso/tileops-backend-example) is one,
+written to those four steps. It implements its kernels in pure
 PyTorch and claims CPU, so it installs, runs and tests anywhere; apart from the
 kernels touching no dedicated hardware, every other part — entry point,
 registration, the `build_kernel` signature, the memoisation rule, the error
@@ -247,95 +323,7 @@ register_kernel_builder(
 )
 ```
 
-## Writing a kernel
-
-### The signature comes from the manifest
-
-**Writing a kernel needs the manifest, not the TileOPs source.** A builder's signature is
-the op's manifest signature. `RMSNormFwdOp` in
-[`src/tileops/manifest/normalization.yaml`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/normalization.yaml):
-
-```yaml
-signature:
-  inputs:                       # declaration order is call order
-    x: {dtype: "float16 | bfloat16"}
-    weight: {dtype: "same_as(x)"}
-  params:                       # passed as keyword arguments under these names
-    normalized_shape: {type: "list[int] | tuple[int, ...]"}
-    eps: {type: "float | None", default: null}
-```
-
-The corresponding builder signature:
-
-```python
-def build_rms_norm(x: TensorSpec, weight: TensorSpec, *, normalized_shape, eps):
-```
-
-Two things to note about it.
-
-- **`eps` arrives as `1e-6`, not `None`.** The manifest default is null, but the op
-  layer has already normalised it to a definite value. Every optional parameter behaves
-  this way.
-- **The return value follows `signature.outputs`** — a tensor for a single output,
-  a tuple in declaration order for several, `None` for a pure in-place write.
-
-### The constructor takes compile-time parameters only
-
-Values compiled into generated code — tile sizes, dimensions treated as constants,
-dtypes — belong in the constructor; the rest belongs to `__call__`.
-
-Decode makes this a hard requirement: `seq_len` grows step by step and batch changes with
-the running set, so putting them in the constructor means recompiling every step.
-
-### Shapes are the manifest's
-
-The op layer does not change shapes before handing tensors over: a kernel receives the
-shapes the manifest declares, and whatever layout it needs it arranges itself, inside its
-own call wrapper.
-
-Where the code and the manifest both describe something, the manifest governs. Output
-dtype, shape rules and parameter types are the manifest's, and a kernel does not rewrite
-them.
-
-### What a kernel's error has to say
-
-A kernel that cannot serve a call raises rather than degrading, and the error has to say
-two things:
-
-- **Which item is unmet** — dtype, shape, arch, no implementation available,
-  compilation failed.
-- **The value it actually received.**
-
-"Unsupported" on its own is not a diagnosis.
-
-## What each phase may do {#phase-limits}
-
-The decode path is captured by a CUDA graph, so each phase is bounded separately:
-
-| Phase | May | May not |
-| --- | --- | --- |
-| Memo lookup (its key and rebuild rules are [below](#memo)) | one dict lookup | anything else |
-| `detect` | one predicate | any import, any lock |
-| Building a kernel | select an implementation, compile, allocate, re-import, build handles | tuning that depends on real tensors |
-| Calling a kernel | launch a compiled kernel, allocate outputs through the torch allocator | compile, lazy init, build handles, host-side synchronisation |
-
-**A module-level import must not trigger compilation.** TileOPs imports the backend
-module while constructing the first op; compilation belongs in `build_kernel`.
-
-A kernel call has two further stream rules:
-
-- **Launch on the current stream**, under CUDA `torch.cuda.current_stream(device)`;
-  never fall through to the default stream. Backends with their own launcher break
-  this most easily.
-- **Internal allocations must outlive asynchronous execution.** Where only a raw
-  pointer is passed to a launch, the object has to stay alive until that stream has
-  finished. The protocol provides no workspace; this safety is the backend's.
-
-The caller warms up before capture — at least one non-captured call at the same
-shape — because building a kernel may compile. During capture only one path is
-allowed: memo hit, then call.
-
-## The template project: layout, tests, adapting it
+## The template project: layout, tests, and retargeting it
 
 ### Repository layout
 
@@ -388,6 +376,153 @@ that TileOPs is too old.
 4. Pick the first op to take over and write its `build_kernel` against the op's manifest signature.
 5. The four files under [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/main/tests) carry over largely as they are; substitute the op and target names.
 6. Add a `build_kernel` per op from there, until every op the target model uses is covered.
+
+## Writing a kernel
+
+### The signature comes from the manifest
+
+**Writing a kernel needs the manifest, not the TileOPs source.** A builder's signature
+is the op's manifest signature — `RMSNormFwdOp` in
+[`src/tileops/manifest/normalization.yaml`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/normalization.yaml):
+
+```yaml
+signature:
+  inputs:                       # declaration order is call order
+    x: {dtype: "float16 | bfloat16"}
+    weight: {dtype: "same_as(x)"}
+  params:                       # passed as keyword arguments under these names
+    normalized_shape: {type: "list[int] | tuple[int, ...]"}
+    eps: {type: "float | None", default: null}
+```
+
+The corresponding builder signature:
+
+```python
+def build_rms_norm(x: TensorSpec, weight: TensorSpec, *, normalized_shape, eps):
+```
+
+Two things to note about it.
+
+- **`eps` arrives as `1e-6`, not `None`.** The manifest default is null, and the op layer
+  has already normalised it to a definite value. Every optional parameter behaves this
+  way.
+- **The return value follows `signature.outputs`** — a tensor for a single output,
+  a tuple in declaration order for several, `None` for a pure in-place write.
+
+### The constructor takes compile-time parameters only
+
+Values compiled into generated code — tile sizes, dimensions treated as constants,
+dtypes — go in the constructor; the rest belongs to `__call__`.
+
+Decode makes this a hard requirement: `seq_len` grows step by step and batch changes with
+the running set, so putting them in the constructor means recompiling every step.
+
+### Shapes are the manifest's
+
+The op layer changes no shapes: a kernel receives what the manifest declares, and
+arranges whatever layout it needs inside its own call wrapper.
+
+Where the code and the manifest disagree, the manifest governs: output dtype, shape
+rules and parameter types are its, and a kernel does not rewrite them.
+
+### What a kernel's error has to say
+
+A kernel that cannot serve a call raises rather than degrading, and its error says two
+things:
+
+- **Which item is unmet** — dtype, shape, arch, no implementation available,
+  compilation failed.
+- **The value it actually received.**
+
+"Unsupported" on its own is not a diagnosis.
+
+## What each phase may do {#phase-limits}
+
+The decode path is captured by a CUDA graph, so each phase is bounded separately:
+
+| Phase | May | May not |
+| --- | --- | --- |
+| Memo lookup (its key and rebuild rules are [below](#memo)) | one dict lookup | anything else |
+| `detect` | one predicate | any import, any lock |
+| Building a kernel | select an implementation, compile, allocate, re-import, build handles | tuning that depends on real tensors |
+| Calling a kernel | launch a compiled kernel, allocate outputs through the torch allocator | compile, lazy init, build handles, host-side synchronisation |
+
+**A module-level import must not trigger compilation.** TileOPs imports the backend
+module while constructing the first op; compilation belongs in `build_kernel`.
+
+A kernel call has two further stream rules:
+
+- **Launch on the current stream**, under CUDA `torch.cuda.current_stream(device)`;
+  never fall through to the default stream. Backends with their own launcher break
+  this most easily.
+- **Internal allocations must outlive asynchronous execution.** Where only a raw
+  pointer is passed to a launch, the object has to stay alive until that stream has
+  finished. The protocol provides no workspace; this safety is the backend's.
+
+The caller warms up before capture — at least one non-captured call at the same
+shape — because building a kernel may compile. During capture only one path is
+allowed: memo hit, then call.
+
+## Three states after install
+
+Once `detect` claims a class of devices, **every** op on those devices is served by
+that target, a missing one is an error, and there is no fall back to the
+implementation TileOPs ships.
+
+The reason for not falling back: selecting a target means this device belongs to other
+hardware, where the shipped kernels cannot launch at all. Falling back would trade a
+clear "this target does not implement this op" for an incomprehensible launch
+failure.
+
+So after install, each op is in one of three states:
+
+| State | Example | Result |
+| --- | --- | --- |
+| A builder is registered, and the op passes its tensors at the kernel-fetch site | `RMSNormFwdOp` | runs |
+| A builder is registered, but the op does not pass its tensors yet | `GemmOp` | error — **TileOPs is what needs changing** |
+| No builder registered | every other op | error |
+
+The second state follows from where TileOPs is in its migration: the site where an
+op fetches its kernel has to pass the tensors that kernel will be called with, or
+TileOPs cannot compute the memo key for the external path.
+
+```python
+# inside TileOPs, in the op's own forward
+self.get_or_build_kernel("gemm_kernel", (a, b), key=..., build=...)
+#                                       ^^^^^^ this argument
+```
+
+As of August 2026, only `RMSNormFwdOp` passes it; the other 84 kernel-fetch sites
+do not. The change is mechanical and will be made op by op.
+
+`build_gemm` in the example's `src/tileops_cpu/pending.py` is exactly this case:
+correct, registered, and currently unreachable. Writing the builder before TileOPs
+supplies that argument is the normal order of work — the day `GemmOp` becomes
+available, this backend serves it unchanged.
+
+### Platform predicates
+
+Even for an op that can reach the external path, TileOPs' `forward` may still hold
+code bound to specific hardware. `GemmOp` is one:
+
+```
+tileops/ops/gemm.py:102       _get_kernel
+tileops/kernels/call_spec.py  CallSpec.__post_init__
+tileops/utils/utils.py:39     get_sm_version  ->  torch.cuda.current_device()
+```
+
+The selected target is a CPU one, and this code still queries the CUDA SM version.
+On a machine with no CUDA driver, the call fails before it reaches `build_kernel`.
+
+As of August 2026, TileOPs holds around 94 such predicates. Clearing them is a
+precondition for the first real heterogeneous backend and will proceed family by
+family. Until then a backend author meets them on their own hardware; file a
+TileOPs issue with the traceback when that happens — TileOPs is what needs
+changing.
+
+The example marks two tests `requires_cuda_runtime` for this reason, and they skip
+on a machine with no GPU. What they check is TileOPs' platform assumptions, not the
+backend.
 
 ## Error messages and what to do
 
@@ -510,6 +645,9 @@ back**, with no further call to `build_kernel`; a second card under the same tar
 builds again, because an artefact compiled for one device need not launch on
 another. Params are not part of the key — they are fixed for an op instance.
 
+How the op layer looks that table up, and what it does on a miss, is in [how one call
+reaches `build_kernel`](#from-op-layer).
+
 Two consequences:
 
 - **The memo table is bounded and an entry can be evicted at any time.** A backend
@@ -518,67 +656,6 @@ Two consequences:
 - **A finer or a coarser grain is resolved on the backend side.** Finer
   distinctions happen inside the backend; to rebuild less often, add a cache inside
   `build_kernel`.
-
-## Three states after install
-
-Once `detect` claims a class of devices, **every** op on those devices is served by
-that target, a missing one is an error, and there is no fall back to the
-implementation TileOPs ships.
-
-The reason for not falling back: selecting a target means this device belongs to other
-hardware, where the shipped kernels cannot launch at all. Falling back would trade a
-clear "this target does not implement this op" for an incomprehensible launch
-failure.
-
-So after install, each op is in one of three states:
-
-| State | Example | Result |
-| --- | --- | --- |
-| A builder is registered, and the op passes its tensors at the kernel-fetch site | `RMSNormFwdOp` | runs |
-| A builder is registered, but the op does not pass its tensors yet | `GemmOp` | error — **TileOPs is what needs changing** |
-| No builder registered | every other op | error |
-
-The second state follows from where TileOPs is in its migration: the site where an
-op fetches its kernel has to pass the tensors that kernel will be called with, or
-TileOPs cannot compute the memo key for the external path.
-
-```python
-# inside TileOPs, in the op's own forward
-self.get_or_build_kernel("gemm_kernel", (a, b), key=..., build=...)
-#                                       ^^^^^^ this argument
-```
-
-As of August 2026, only `RMSNormFwdOp` passes it; the other 84 kernel-fetch sites
-do not. The change is mechanical and will be made op by op.
-
-`build_gemm` in the example's `src/tileops_cpu/pending.py` is exactly this case:
-correct, registered, and currently unreachable. Writing the builder before TileOPs
-supplies that argument is the normal order of work — the day `GemmOp` becomes
-available, this backend serves it unchanged.
-
-### Platform predicates
-
-Even for an op that can reach the external path, TileOPs' `forward` may still hold
-code bound to specific hardware. `GemmOp` is one:
-
-```
-tileops/ops/gemm.py:102       _get_kernel
-tileops/kernels/call_spec.py  CallSpec.__post_init__
-tileops/utils/utils.py:39     get_sm_version  ->  torch.cuda.current_device()
-```
-
-The selected target is a CPU one, and this code still queries the CUDA SM version.
-On a machine with no CUDA driver, the call fails before it reaches `build_kernel`.
-
-As of August 2026, TileOPs holds around 94 such predicates. Clearing them is a
-precondition for the first real heterogeneous backend and will proceed family by
-family. Until then a backend author meets them on their own hardware; file a
-TileOPs issue with the traceback when that happens — TileOPs is what needs
-changing.
-
-The example marks two tests `requires_cuda_runtime` for this reason, and they skip
-on a machine with no GPU. What they check is TileOPs' platform assumptions, not the
-backend.
 
 ## What a caller can reach for
 
