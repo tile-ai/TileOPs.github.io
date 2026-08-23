@@ -32,7 +32,7 @@ listed in the order a backend author meets them:
 None of the seven depends on hardware, every target gets them, and adding a
 third-party backend does not bypass them.
 
-The kernels TileOPs ships (`src/tileops/kernels/`) are the **default
+The kernels TileOPs ships ([`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)) are the **default
 implementation**: they have no target name and are not in the registry. **The
 default state is no substitution** — with no backend claiming a device, calls run
 the shipped implementation, and only once a backend is installed and claims the
@@ -126,7 +126,7 @@ data nor tensor, so neither is expressible.
 
 **Writing a kernel needs the manifest, not the TileOPs source.** A builder's
 signature is the op's manifest signature. `RMSNormFwdOp` in
-`src/tileops/manifest/normalization.yaml`:
+[`src/tileops/manifest/normalization.yaml`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/normalization.yaml):
 
 ```yaml
 signature:
@@ -325,7 +325,7 @@ that TileOPs is too old.
 2. Change `_detect` to claim the corresponding device type.
 3. Replace `kernels.py` with real kernels — compile on construction, launch on `__call__`.
 4. Pick the first op to take over and write its `build_kernel` against the op's manifest signature.
-5. The four files under `tests/` carry over largely as they are; substitute the op and target names.
+5. The four files under [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/main/tests) carry over largely as they are; substitute the op and target names.
 6. Add a `build_kernel` per op from there, until every op the target model uses is covered.
 
 ## Three states after install

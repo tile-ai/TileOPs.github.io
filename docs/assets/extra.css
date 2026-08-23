@@ -55,7 +55,7 @@
   --md-primary-fg-color--light: var(--tf-violet-light);
   --md-primary-fg-color--dark: var(--tf-violet-dark);
   --md-accent-fg-color: var(--tf-teal);
-  --md-typeset-a-color: var(--tf-violet);
+  --md-typeset-a-color: var(--tf-teal);
   /* Translucent, so a code block is an inset in the sheet the wash carries on
    * through rather than a slab dropped on top of it. The old flat fill was the
    * one opaque mass on the page and read as dead weight.
@@ -407,14 +407,25 @@ body,
  * teal, which is the one place the second accent answers the first.
  */
 .md-typeset a {
+  color: var(--tf-teal);
   text-decoration: underline;
-  text-decoration-thickness: 0.07em;
+  text-decoration-thickness: 0.08em;
   text-underline-offset: 0.16em;
-  text-decoration-color: color-mix(in srgb, var(--tf-violet), transparent 58%);
+  text-decoration-color: color-mix(in srgb, var(--tf-teal), transparent 45%);
 }
 
-.md-typeset a:hover {
+.md-typeset a:hover,
+.md-typeset a:focus {
+  color: var(--tf-teal);
+  text-decoration-thickness: 0.14em;
   text-decoration-color: var(--tf-teal);
+}
+
+/* A link that is an identifier keeps the code chip and takes the same colour, so
+ * a linked path reads as a link and not as one more inline identifier.
+ */
+.md-typeset a code {
+  color: var(--tf-teal);
 }
 
 /* A rule between sections, drawn as light rather than as a line. */
@@ -474,6 +485,24 @@ body,
 .md-typeset .admonition.failure,
 .md-typeset details.failure {
   border-left-color: var(--tf-rose);
+}
+
+/* The claim a page rests on. It keeps its place in the paragraph and takes the
+ * emphasis in the type: bold and italic, in the structural violet. No block, no
+ * ground — a panel around one sentence stops the paragraph rather than pointing
+ * at it. One per page: as soon as there are two, neither is the point.
+ */
+.md-typeset .keystone {
+  color: var(--tf-violet);
+  font-style: italic;
+  font-weight: 700;
+}
+
+/* Italic Han glyphs are a synthetic slant, so the Chinese pages carry the
+ * emphasis in weight and colour alone.
+ */
+html[lang="zh"] .md-typeset .keystone {
+  font-style: normal;
 }
 
 .md-typeset .admonition-title,

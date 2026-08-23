@@ -22,7 +22,7 @@ TileLang 是多后端 DSL，每种硬件各有一套独立的 kernel，由各自
 
 这七项与硬件无关，任何 target 都直接得到，接入第三方后端不得绕过它们。
 
-TileOPs 自带的 kernel（`src/tileops/kernels/`）是**默认实现**：它没有 target 名，也不进注册表。**默认状态是不替换** —— 没有后端认领某块设备时，调用走自带实现；装上一个后端并由它认领了设备，这个算子的 kernel 才换成后端的。因此协议中不存在「默认 target」这一概念。
+TileOPs 自带的 kernel（[`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)）是**默认实现**：它没有 target 名，也不进注册表。**默认状态是不替换** —— 没有后端认领某块设备时，调用走自带实现；装上一个后端并由它认领了设备，这个算子的 kernel 才换成后端的。因此协议中不存在「默认 target」这一概念。
 
 ## 三个关键概念
 
@@ -85,7 +85,7 @@ def build_kernel(*inputs: "TensorSpec | None", **params) -> Callable[..., Kernel
 
 ## builder 签名与 manifest
 
-**编写 kernel 只需阅读 manifest，不需要阅读 TileOPs 的源码。** builder 的签名就是该算子的 manifest 签名。以 `src/tileops/manifest/normalization.yaml` 中的 `RMSNormFwdOp` 为例：
+**编写 kernel 只需阅读 manifest，不需要阅读 TileOPs 的源码。** builder 的签名就是该算子的 manifest 签名。以 [`src/tileops/manifest/normalization.yaml`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/normalization.yaml) 中的 `RMSNormFwdOp` 为例：
 
 ```yaml
 signature:
@@ -244,7 +244,7 @@ docker run --rm --gpus all -v "$PWD/..":/work -w /work \
 2. 修改 `_detect`，认领对应的设备类型。
 3. 把 `kernels.py` 替换为真实 kernel，构造时编译，`__call__` 时启动。
 4. 选定第一个要接管的算子，照它的 manifest 签名编写 `build_kernel`。
-5. `tests/` 中的四个文件大体可以直接沿用，替换其中的算子名与 target 名即可。
+5. [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/main/tests) 中的四个文件大体可以直接沿用，替换其中的算子名与 target 名即可。
 6. 之后逐个算子增加 `build_kernel`，直到覆盖目标模型用到的全部算子。
 
 ## 安装后的三种状态
