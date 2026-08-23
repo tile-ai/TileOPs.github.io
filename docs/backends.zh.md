@@ -22,7 +22,9 @@ TileLang 是多后端 DSL，每种硬件各有一套独立的 kernel，由各自
 
 这七项与硬件无关，任何 target 都直接得到，接入第三方后端不得绕过它们。
 
-TileOPs 自带的 kernel（[`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)）是**默认实现**：它没有 target 名，也不进注册表。**默认状态是不替换** —— 没有后端认领某块设备时，调用走自带实现；装上一个后端并由它认领了设备，这个算子的 kernel 才换成后端的。因此协议中不存在「默认 target」这一概念。
+TileOPs 自带的 kernel（[`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)）是**默认实现**：它没有 target 名，也不进注册表。
+
+**默认状态是不替换。** 没有后端认领某块设备时，这台设备上的调用走自带实现；装上一个后端、并且它认领了这块设备，该算子的 kernel 才换成后端的那一套。协议里因此不存在「默认 target」这个概念。
 
 ## 三个关键概念
 
@@ -36,11 +38,17 @@ TileOPs 自带的 kernel（[`src/tileops/kernels/`](https://github.com/tile-ai/T
 
 `detect` 只回答设备的归属，粒度到此为止。**本次调用是否受支持 —— 涉及 dtype、形状与参数组合 —— 由 `build_kernel` 回答**，因为只有它看得到完整的输入描述与参数；不支持时在那里报错。这些判断交给 `detect` 是做不到的，它只拿到一块 `torch.device`。
 
-TileOPs 不解析 `torch.device`，而是把它原样传给 `detect`。原因是设备类型与 target 并不构成一一对应的关系：同一个 device type 可能对应多套 kernel，分属不同厂商；部分硬件经 `privateuseone` 接入，字符串中不含任何厂商信息；还有一些后端需要读取环境变量或调用厂商 runtime 才能作出判断。
+TileOPs 不解析 `torch.device`，而是把它原样传给 `detect`。这样做是因为设备类型与 target 并不一一对应，有三种情形都会让解析出来的字符串失去意义：
+
+- 同一个 device type 可能对应多套 kernel，分属不同厂商。
+- 部分硬件经 `privateuseone` 接入，字符串里不含任何厂商信息。
+- 还有一些后端要读取环境变量、或调用厂商 runtime 才能作出判断。
 
 ## 协议：两个注册函数与一个构造函数
 
-`tileops.backend` 这个模块就是协议本身：它只定义对外的接口，不含任何实现。接口以 Python 的结构化类型（protocol）表达 —— 后端不继承任何基类，也不实现任何抽象方法，只要写出签名相符的普通函数并把它注册进来即可；算子层对后端返回值的检查同样只看结构，即 `callable()`。
+`tileops.backend` 这个模块就是协议本身：它只定义对外的接口，不含任何实现。
+
+接口以 Python 的结构化类型（protocol）表达，后端因此不继承任何基类，也不实现任何抽象方法 —— 写出签名相符的普通函数，再把它注册进来就够了。算子层对后端返回值的检查同样只看结构，即 `callable()`。
 
 后端要用到的名字共四个，加上一条 entry point，各自的分工如下：
 
@@ -81,7 +89,12 @@ def build_kernel(*inputs: "TensorSpec | None", **params) -> Callable[..., Kernel
 
 返回值只需满足一条结构约定：**它必须可调用**，能以 `(*tensors)` 的形式调用，返回一个张量、一个张量元组，或纯原地写入时的 `None`。算子层对它的检查就是 `callable()`。
 
-**协议传的是描述，不是张量。** 这样就不必再写一条「构造时不得读张量内容、不得保存对张量的引用」的规则 —— 这条规则算子层无法校验。读取数据会让构造结果依赖数据，而记忆表只按设备与形状记录；保存引用会让张量随着被缓存的 kernel 存活整个进程。`TensorSpec` 上既没有数据也没有张量，这两件事因此无法写出来。
+**协议传的是描述，不是张量。** 这样就不必再写一条「构造时不得读张量内容、不得保存对张量的引用」的规则，那条规则算子层根本无法校验。它要防的是两件事：
+
+- **读取数据**会让构造结果依赖数据，而记忆表只按设备与形状记录。
+- **保存引用**会让张量随着被缓存的 kernel 一起存活整个进程。
+
+`TensorSpec` 上既没有数据也没有张量，这两件事于是无从写起。
 
 ## builder 签名与 manifest
 
@@ -103,14 +116,21 @@ signature:
 def build_rms_norm(x: TensorSpec, weight: TensorSpec, *, normalized_shape, eps):
 ```
 
-两点需要注意。
+这份签名有两点要注意。
 
 - **`eps` 收到的是 `1e-6`，而不是 `None`。** manifest 中的默认值写作 null，但算子层已经把它规范化为确定的数值。所有可选参数都是如此。
 - **返回值按 `signature.outputs` 的声明给出** —— 单输出返回张量，多输出按声明顺序返回 tuple，纯原地写入的算子返回 `None`。
 
 **构造函数只接收编译期参数。** 会被编译进生成代码的值，例如 tile 尺寸、当作常量处理的维度以及 dtype，放进构造函数；其余参数留给 `__call__`。这一条对 decode 路径是硬性要求：`seq_len` 逐步递增，batch 随 running set 变化，把它们放进构造函数就意味着每一步都要重新编译。
 
-算子层在把张量传给 kernel 之前不改变形状。kernel 收到的是 manifest 声明的形状；需要何种 layout 由 kernel 自行处理，在它自己的调用包装中完成。当代码与 manifest 对同一件事都有描述时，以 manifest 为准：输出 dtype、形状规则与参数类型均由 manifest 规定，kernel 不得改写，能力不足时应当报错。错误信息必须指明未满足的是哪一项 —— dtype、形状、arch、无可用实现，还是编译失败 —— 以及实际收到的值。只写「不支持」不构成有效的诊断信息。
+算子层在把张量传给 kernel 之前不改变形状：kernel 收到的就是 manifest 声明的形状，需要何种 layout 由它自己在调用包装里处理。
+
+代码与 manifest 对同一件事都有描述时，以 manifest 为准。输出 dtype、形状规则与参数类型都由 manifest 规定，kernel 不得改写，能力不足时应当报错，而报错要说清两件事：
+
+- **未满足的是哪一项** —— dtype、形状、arch、无可用实现，还是编译失败。
+- **实际收到的值是什么。**
+
+只写「不支持」不构成有效的诊断信息。
 
 ## kernel 的重建条件
 
@@ -118,7 +138,7 @@ TileOPs 按**设备加输入签名**记住 `build_kernel` 的返回值。这个�
 
 > 本次调用张量所在的设备，加上按 `signature.inputs` 顺序逐项取出的 `(dtype, shape)`；声明为 optional 而本次没有传入的输入，这一项记 `None`。
 
-也就是说，**设备与输入签名都相同的两次调用，TileOPs 会把同一个 kernel 交回给后端**，不再调用 `build_kernel`；同一个 target 的第二块卡则会重新构造一次，因为为一块卡编译出的产物不一定能在另一块卡上启动。参数不进入这个键，它们对一个算子实例而言是固定的。
+也就是说，**设备与输入签名都相同的两次调用，TileOPs 会把同一个 kernel 交回给后端**，不再调用 `build_kernel`。同一个 target 的第二块卡会重新构造一次，因为为一块卡编译出的产物不一定能在另一块卡上启动。参数不进入这个键，它们对一个算子实例而言是固定的。
 
 两点由此而来：
 
@@ -209,7 +229,7 @@ register_kernel_builder(
 | `pyproject.toml` | entry point 声明，也就是全部安装机制 |
 | `src/tileops_cpu/__init__.py` | 全部注册代码 |
 | `src/tileops_cpu/kernels.py` | kernel 实现，真实后端在此处编译 |
-| `src/tileops_cpu/pending.py` | 一个已经注册、但当前调用不到的 builder，见[下文](#安装后的三种状态) |
+| `src/tileops_cpu/pending.py` | 一个已经注册、但当前调用不到的 builder，见[下文](#three-states) |
 | `tests/test_takeover.py` | 数值、校验、归一与输出 |
 | `tests/test_discovery.py` | entry point 与注册 |
 | `tests/test_errors.py` | 四条错误路径 |
@@ -247,9 +267,11 @@ docker run --rm --gpus all -v "$PWD/..":/work -w /work \
 5. [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/main/tests) 中的四个文件大体可以直接沿用，替换其中的算子名与 target 名即可。
 6. 之后逐个算子增加 `build_kernel`，直到覆盖目标模型用到的全部算子。
 
-## 安装后的三种状态
+## 安装后的三种状态 {#three-states}
 
-一旦 `detect` 认领了某一类设备，该设备上的**所有**算子都由这个 target 服务；其中任何一个缺失都会报错，不会改用 TileOPs 自带的实现。原因在于：选中一个 target 意味着该设备属于另一套硬件，自带的 kernel 在其上无法启动，改用自带实现只会把一条清楚的「该 target 未实现此算子」换成一次难以理解的启动失败。
+一旦 `detect` 认领了某一类设备，该设备上的**所有**算子都由这个 target 服务，其中任何一个缺失都会报错，不会改用 TileOPs 自带的实现。
+
+不回退的理由是：选中一个 target 就意味着这块设备属于另一套硬件，自带的 kernel 在它上面根本启动不了。真去回退，只会把一条清楚的「该 target 未实现此算子」换成一次难以理解的启动失败。
 
 因此安装之后，每个算子处于以下三种状态之一：
 

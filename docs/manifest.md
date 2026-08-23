@@ -1,71 +1,67 @@
-# Reading and writing a manifest entry
+# Reading and writing an op's spec
 
-A conventional operator library is organised around its implementations: kernels
-are written and tuned one at a time, and what shapes and dtypes each supports, and
-how fast it runs, are described afterwards. TileOPs is organised the other way — an
-op's specification is declared first and the implementation is derived from it. That
-specification lives in the entries under
-[`src/tileops/manifest/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest).
+A conventional operator library is organised around its implementations: kernels are
+written and tuned one at a time, and what shapes and dtypes each supports, and how fast
+it runs, is described afterwards.
 
-**An entry makes the op an input to the whole system.** Every stage reads the same
+TileOPs is organised the other way round: an op's specification is declared first, and
+the implementation is derived from it. That
+specification is the op's **spec**, a YAML declaration under
+[`src/tileops/manifest/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest); those files together are the manifest.
+
+**A spec makes the op an input to the whole system.** Every stage reads the same
 declaration rather than reading the implementation:
 
-| Consumer | Reads | Produces |
+| Consumer | Reads from the spec | Produces |
 | --- | --- | --- |
-| Code generation | `signature`, `shape_rules` | the op layer's parameter validation, shape inference, and the kernel's call signature |
-| Correctness tests | `ref_api`, the dtypes in `workloads` | a numerical comparison against the reference on every workload |
-| Performance measurement | `workloads` | the nightly device time on those shapes |
-| Roofline | the variables and formulas in `roofline` | the FLOPs and bytes one call moves — the denominator of efficiency |
-| The compile contract | `torch_compile_fullgraph` | the gate on whether `fullgraph=True` compiles |
-| Documentation | every field | the support matrix, the op list, the API reference |
-| [The validator](https://github.com/tile-ai/TileOPs/blob/main/scripts/validate_manifest.py) | every field | five levels of checking that declaration and implementation agree — see [How to write an entry](#how-to-write-an-entry) |
+| Codegen — the agent writing the op and kernel | `signature`, `shape_rules` | the op layer's parameter validation, shape inference, and the kernel's call signature |
+| [pytest](https://github.com/tile-ai/TileOPs/tree/main/tests) | `ref_api`, the dtypes in `workloads` | a numerical comparison against the reference on every workload |
+| [The nightly benchmark](https://github.com/tile-ai/TileOPs/tree/main/benchmarks) | `workloads` | the device time on those shapes |
+| [Roofline](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/perf) | the variables and formulas in `roofline` | the FLOPs and bytes one call moves — the denominator of efficiency |
+| CI's `compile-contract-gate` | `torch_compile_fullgraph` | the test that requires `fullgraph=True` to compile |
+| This site | every field | the support matrix, the op list, the API reference |
+| CI's [spec validator](https://github.com/tile-ai/TileOPs/blob/main/scripts/validate_manifest.py) | every field | five levels of checking that declaration and implementation agree — see [Writing a spec](#writing-a-spec) |
 
-**For an op with no entry, none of those rows happen**: no generated validation, no
-comparison, no performance data, and nothing in CI holding a regression back.
-**Writing a manifest entry is not documenting the op; it is connecting the op to that
-flow.**{ .keystone }
+**Every row above presupposes a spec**: without one there is no generated
+validation, no numerical comparison, no performance data, and nothing in CI holding a
+regression back.
+**Writing a spec is not documenting the op; it is connecting the op to that flow.**{ .keystone }
 
-This page has five parts: (1) what an entry is made of; (2) how to read one; (3) how
-to write one; (4) the dimensions committed at construction; (5) the rules worth
-remembering. Six real entries close it out.
+This page has six parts: (1) what a spec contains; (2) how to read one; (3) how to
+write one; (4) `static_dims`, the dimensions committed at construction; (5) optional
+inputs, where writing a spec goes wrong most often. After those come the rules at a
+six real specs read through as case studies, the rules at a glance to check a spec
+against before submitting it, and what the spec validator does and does not check.
 
-## The manifest first, the implementation after
+## Codegen and CI
 
-**The direction is one-way: the manifest is written first, the implementation
-follows.** An entry is written against an authoritative reference — usually
-PyTorch's public API — never derived from the TileOPs code as it stands. Ops, tests
-and benchmarks are generated from it and validated against it. Two things follow:
-an implementation can be regenerated from its spec while the reverse cannot, and
-where code and documentation disagree, the manifest governs.
+A spec puts the op inside CI's reach. The ops, tests and benchmarks TileOPs ships are
+generated from their specs, each reading its own part:
 
-**An entry puts the op inside CI's reach.** Every field has a definite consumer:
+- **The op layer's** parameter validation and shape inference follow `signature`.
+- **A test** takes its comparison target and dtypes from `ref_api` and `workloads`.
+- **A benchmark** reads its shapes through `load_workloads`.
 
-| Field | Read by | On a mismatch |
-| --- | --- | --- |
-| `signature.inputs` / `outputs` | the op layer's validation, `_infer_output_shapes`, a backend's `build_kernel` signature | L1 fails: parameter names or order disagree with `forward` |
-| `signature.shape_rules` | the op layer's shape validation | L2 fails: not valid Python, or disagrees with `_infer_output_shapes` |
-| `signature.dtype`, `dtype_combos` | the op layer's dtype validation | L3 fails: unknown dtype, or disagrees with `_validate_dtypes` |
-| `workloads` | the benchmark's shapes and dtypes | L4 fails: the benchmark does not take its shapes from `load_workloads` |
-| `roofline` | `op.eval_roofline()`, the efficiency column in a performance report | a variable that cannot be bound is an error |
-| `torch_compile_fullgraph` | the compile-contract gate | declared without a registered compile test fails `compile-contract-gate` |
-| `source` | the validator, locating the kernel, op, test and benchmark | a path that does not exist is an error |
+The spec validator then checks that generated code against the spec, level by level, and
+a declaration the implementation does not match is an error — which field surfaces how is
+in [the spec validator](#spec-validator).
 
-**None of those checks run for an op with no entry.** Writing a manifest entry is
-not documenting the op; it is placing it under automated checking.
+**An op with no spec is bound by none of these checks.** So the way to add one is to
+write its spec first: once the spec lands, CI holds every later change against it.
 
-## What an entry is made of
+## What a spec contains
 
-One YAML file per family — a large family may shard — with `op name → entry` at
-the top level. All files merge at load time, and a duplicate op name is an error.
+One YAML file per family — a large family may shard — with `op name → spec` at the
+top level. All files merge at load time, and a duplicate op name is an error.
 
 The key is the op's Python class name: `{Name}{Direction}Op`, where the direction
 is `Fwd` or `Bwd` and is required once both directions exist in the manifest. The
-validator requires `cls.__name__` to equal the key character for character; it
+spec validator requires `cls.__name__` to equal the key character for character; it
 resolves nothing by heuristic.
 
 | Field | Required | Contents |
 | --- | --- | --- |
-| `family` | yes | the family, which decides the file the entry lives in |
+| `family` | yes | the family, which decides the file the spec lives in |
 | `ref_api` | yes | the fully qualified reference API, e.g. `torch.nn.functional.rms_norm`, or `"none"` |
 | `status` | yes | `spec-only` or `implemented`, which decides how far validation runs |
 | `torch_compile_fullgraph` | no | literal `true` only; omit for no promise — `false` is invalid |
@@ -88,7 +84,7 @@ resolves nothing by heuristic.
 **Key order in `inputs`, `outputs` and `params` is signature position**, so
 reordering is a breaking change and readers need an order-preserving parser.
 
-## How to read an entry
+## Reading a spec
 
 Four steps, each answering one question.
 
@@ -104,12 +100,13 @@ Four steps, each answering one question.
 
 Four ways a dtype is written:
 
-| Written | Means |
-| --- | --- |
-| `float16 \| bfloat16` | one of these |
-| `same_as(x)` | the same dtype as `x` at runtime. It speaks only about dtype, never shape, and adds no axis to the combination count |
-| `promote_int_to_float(x)` | `float32` when `x` is integral, otherwise `same_as(x)`. Allowed in `outputs` only |
-| `dtype_combos` | the supported cross-tensor combinations, listed. Absent means every combination of the declared unions is supported |
+- `float16 | bfloat16` — one of these.
+- `same_as(x)` — the same dtype as `x` at runtime. It speaks only about dtype, never
+  shape, and adds no axis to the combination count.
+- `promote_int_to_float(x)` — `float32` when `x` is integral, otherwise `same_as(x)`.
+  Allowed in `outputs` only.
+- `dtype_combos` — the supported cross-tensor combinations, listed. Absent means every
+  combination of the declared unions is supported.
 
 For shapes, look first for `shape`:
 
@@ -118,24 +115,24 @@ For shapes, look first for `shape`:
 - **Without `shape`** — arbitrary rank, with every constraint in `params` and
   `shape_rules`.
 
-To read entries programmatically:
+To read specs programmatically:
 
 ```python
 from tileops.manifest import load_manifest, load_workloads
 
-ops = load_manifest()                      # every entry, merged
-entry = ops["RMSNormFwdOp"]
-entry["signature"]["inputs"].keys()        # dict_keys(['x', 'weight'])
+ops = load_manifest()                      # every spec, merged
+spec = ops["RMSNormFwdOp"]
+spec["signature"]["inputs"].keys()         # dict_keys(['x', 'weight'])
 
 load_workloads("RMSNormFwdOp")             # that op's workload rows
 ```
 
-## How to write an entry
+## Writing a spec
 
 Five steps, each one checkable immediately.
 
-1. **Name it and pick the family.** The key is the class name; the entry goes in
-   the file its `family` names.
+1. **Name it and pick the family.** The key is the class name; the spec goes in the
+   file its `family` names.
 2. **Write `signature`.** Tensors go in `inputs` / `outputs`, everything else in
    `params`, in call order, with optional inputs after the required ones. Declare
    the dtypes the reference API supports, not the ones the current kernel does.
@@ -148,22 +145,12 @@ Five steps, each one checkable immediately.
    `dtypes` / `label`.
 5. **Write `roofline` and `source`.**
 
-Validation is [`scripts/validate_manifest.py`](https://github.com/tile-ai/TileOPs/blob/main/scripts/validate_manifest.py).
+To land an interface before its implementation, write `status: spec-only`: only L0
+runs. Switching to `implemented` turns on all five levels. What each level checks, and
+what the validator cannot see, are in the last section: [the spec
+validator](#spec-validator).
 
-To land an interface before its implementation, write `status: spec-only`:
-validation then runs L0 only. Switching to `implemented` turns on L0 through L4.
-
-```bash
-python scripts/validate_manifest.py                           # every entry
-python scripts/validate_manifest.py --check-op SoftmaxFwdOp    # one entry, all five levels
-```
-
-The five levels: L0 structure, L1 parameter names and order against `forward`,
-L2 `shape_rules` syntax and agreement with shape inference, L3 dtype names and
-agreement with dtype validation, L4 whether the benchmark takes its shapes from
-`load_workloads`.
-
-## Dimensions committed at construction: `static_dims`
+## `static_dims`
 
 `static_dims` declares the dimension values a user commits to when constructing the
 op instance. It is for arbitrary-rank ops only — a fixed-rank op takes its
@@ -193,7 +180,18 @@ Four rules:
   integer literal must be a `signature.params` name.
 - Key order is the order those keywords appear in the generated `__init__`.
 
-The expression may reference any input tensor, not only the first. In
+Single-axis is the rule most often broken, and both rejected forms fail for the same
+reason — neither can be checked one axis at a time in `forward`:
+
+```yaml
+static_dims:
+  in_features: "input.shape[-1]"        # accepted
+  out_features: "weight.shape[0]"       # accepted: any input tensor may be referenced
+# numel: "product(x.shape)"             # rejected: multi-axis
+# last: "x.shape[x.ndim - 1] * 2"       # rejected: arithmetic over a shape
+```
+
+Which tensor is referenced is unrestricted; it need not be the first. In
 `torch.nn.functional.linear`, `out_features` can only be bound to `weight` — no
 expression over `input.shape` is equivalent:
 
@@ -215,34 +213,303 @@ LinearFwdOp:
       - "output.shape == input.shape[:-1] + (out_features,)"
 ```
 
-**An empty `static_dims` is legal** — typically a reduction that accepts
-`dim=None`, where the extent depends on the whole input shape rather than on a
-hyperparameter the user gives. The op author then **must override `_cache_key`**:
-the default keys on the full input shape, which is correct but recompiles for every
-distinct shape under dynamic shapes. The base class warns once when that happens.
+**An empty `static_dims` is legal.** The typical case is a reduction that accepts
+`dim=None`, where the extent depends on the whole input shape rather than on some
+hyperparameter the user gives, so there is nothing to commit at construction.
 
-## Rules worth remembering
+When it is empty, the op author **must override `_cache_key`**. The default keys on the
+full input shape, which is correct, but under dynamic shapes every new shape recompiles;
+the base class warns once when it sees this.
 
-| Rule | Detail |
-| --- | --- |
-| Order is position | Key order in `inputs`, `outputs` and `params` is signature position; reordering breaks callers |
-| Declare the whole interface | `params` covers every parameter of the reference API, even where the kernel supports only the default |
-| An output's shape is fully determined | By `shape` and `shape_rules` together. An input may omit `shape` |
-| No shape aliasing | Each tensor declares its own shape; relationships go in shared dimension names or `shape_rules` |
-| `optional` is for inputs | A tensor input declares `optional: true`; a param expresses optionality with `default` |
-| Output arity is fixed | The names and number of outputs are the same on every call. An op whose return changes with a switch is two entries |
-| One entry, one memory order | A different memory order is a different entry — it changes what an axis means |
-| A param never selects a shape | It may size a dimension; it may not decide which shape a tensor has |
-| Presence is a switch, contents are not | An op may read whether an optional input was passed and dispatch on it. It may not read the tensor's contents to dispatch |
-| Both sides of an optional input get measured | Passed and not passed each need at least one workload row. Counted per input, not per combination |
+```python
+class SumFwdOp(Op):
+    def _cache_key(self, x_shape):
+        return (math.prod(x_shape),)   # full reduce: equal numel shares a kernel
+```
 
-## Six entries
+## Optional inputs {#optional-inputs}
 
-All six are real entries, each covering one form: (1) fixed rank; (2) arbitrary
+An input that may be absent pulls `shape_rules`, `workloads`, `roofline` and the dtype
+declarations along with it, which is why this is where writing a spec goes wrong most
+often. The ten questions below each answer one concrete decision, every snippet comes
+from a real spec in the repository, and they run in this order:
+
+- **1–2**: what an optional input is, and when a call counts as having passed one.
+- **3–4**: the two decisions when writing the spec — whether to dispatch on presence,
+  and whether to add a `bool` beside it.
+- **5–6**: how `shape_rules` follows.
+- **7–9**: how `workloads`, `roofline` and the dtype declarations follow.
+- **10**: why output arity does not change with the switch.
+
+**1. How do optional inputs differ from optional params?**
+
+Different fields, because optional means different things for the two:
+
+- **A tensor input** uses `optional: true`. A tensor is either there or not, with
+  nothing in between.
+- **A param** uses `default`. A param always has a value and falls back to that
+  default when the caller gives none.
+
+Two boundaries go with it:
+
+- `optional` is allowed under `inputs` only. **An output cannot be optional** — the
+  caller has to know in advance how many values it will get back.
+- An output buffer the caller prepares for the op to write into (`out=`) is a param,
+  not an optional input.
+
+```yaml
+# MoePermuteNopadFwdOp
+inputs:
+  hidden_states: {dtype: "float16 | bfloat16"}
+  topk_ids: {dtype: "int32"}
+  expert_map: {dtype: "int32", optional: true}   # a tensor: optional
+params:
+  num_experts: {type: int}
+  num_experts_local: {type: int}                 # a param would use default
+```
+
+**2. When does a call count as having passed an optional input, and where does it sit
+in the parameter list?**
+
+Take `Mamba2FwdOp`. Its spec declares five required inputs and two optional ones:
+
+```yaml
+inputs:
+  x: {dtype: "float16 | bfloat16", shape: "[B, S, H, P]"}
+  dt: {dtype: "float32", shape: "[B, S, H]"}
+  A: {dtype: "float32", shape: "[H]"}
+  B: {dtype: "same_as(x)", shape: "[B, S, G, N]"}
+  C: {dtype: "same_as(x)", shape: "[B, S, G, N]"}
+  dt_bias: {dtype: "float32", shape: "[H]", optional: true}
+  initial_states: {dtype: "float32", shape: "[B, H, P, N]", optional: true}
+```
+
+`forward`'s parameters follow that declaration, and the two optional inputs default to
+`None`. So a call has four spellings:
+
+```python
+op = Mamba2FwdOp()
+
+y, final = op(x, dt, A, B, C)                        # neither dt_bias nor initial_states
+y, final = op(x, dt, A, B, C, dt_bias=None)          # identical to the line above
+y, final = op(x, dt, A, B, C, dt_bias=bias)          # dt_bias passed
+y, final = op(x, dt, A, B, C, initial_states=state)  # initial_states passed
+```
+
+Four spellings, two states. Three things read straight off that snippet:
+
+- **The test is the value after binding** — `None` means not passed.
+- **The first two lines land in the same place.** Omitting the keyword and passing
+  `None` are not two states, because absence is not a value in the domain; `None` is
+  only how Python spells it.
+- **What the op reads is that same value.** Where `dt_bias is None` holds, the call has
+  no `dt_bias`.
+
+The default is also what fixes the position: **optional inputs come after the required
+ones.** `forward` receives its arguments in `inputs` order, and a parameter with a
+default cannot precede one without. Where the reference API puts an optional argument
+in the middle, the spec reorders rather than copying that position.
+
+**3. May an op dispatch on whether an optional input was passed?**
+
+Yes; that is one of the reasons optional inputs exist. `expert_map` on
+`MoePermuteNopadFwdOp` is such a switch. Its spec declares it as:
+
+```yaml
+# Expert parallelism: supplied when this rank owns num_experts_local of the
+# num_experts global experts, absent when it owns them all. Presence picks
+# the scan kernel; the ids inside are read only at launch.
+expert_map: {dtype: "int32", optional: true}
+```
+
+In the op's `forward`, the dispatch reads nothing but whether the argument is there:
+
+```python
+# tileops/ops/moe/routed_expert/permute_nopad.py
+self.used_expert_map = expert_map is not None
+
+# A map-free kernel and a map-reading one are two different scans, so the
+# argument's presence — not the local expert count — picks between them.
+kernel = self._get_kernel(
+    (hidden_states, topk_ids)
+    if expert_map is None
+    else (hidden_states, topk_ids, expert_map),
+    ...
+)
+if expert_map is None:
+    return kernel(hidden_states, topk_ids)
+return kernel(hidden_states, topk_ids, expert_map)
+```
+
+That code tests `expert_map is None` and never a value inside `expert_map`, and that
+is as far as an optional input goes: **its presence may pick the kernel, its contents
+may not.** The shape and the presence are declared in the spec, the contents are not,
+and the ids in `expert_map` are read only once the kernel has launched.
+
+**4. A feature that can be switched off — an optional `inputs` entry, or a `bool` param?**
+
+An optional `inputs` entry, with no `bool` alongside it.
+
+Take GroupNorm's affine. The reference API spells it as an `affine=True` switch plus a
+pair of weights, and copying that over gives this spec:
+
+```yaml
+# not recommended: affine and the two optional tensors record the same fact
+inputs:
+  x: {dtype: "float32 | float16 | bfloat16"}
+  weight: {dtype: "same_as(x)", optional: true}
+  bias: {dtype: "same_as(x)", optional: true}
+params:
+  num_groups: {type: int}
+  eps: {type: float, default: 1.0e-05}
+  affine: {type: bool, default: true}
+```
+
+Whether this call does affine is a single fact, yet this spec records it twice: once in
+the value of `affine`, and once in whether `weight` was passed. Kept in two places, the
+two can drift apart, and spec validation accepts either way they do:
+
+- `affine: true` with no `weight` — the op is asked for affine and has no weights.
+- `affine: false` with a `weight` — a tensor arrives that nothing will read.
+
+The recommended spec keeps a single source and never names `affine`:
+
+```yaml
+# GroupNormFwdOp's spec
+inputs:
+  x: {dtype: "float32 | float16 | bfloat16"}
+  weight: {dtype: "same_as(x)", optional: true}
+  bias: {dtype: "same_as(x)", optional: true}
+params:
+  num_groups: {type: int}
+  eps: {type: float, default: 1.0e-05}
+```
+
+The op reads `weight is not None` where it would have read `affine`: same behaviour, and
+neither disagreement can be written down any more.
+
+The test generalises: **if a `bool` param's value always follows from whether some
+optional input is there, do not declare it.**
+
+**5. Where do I state that two optional inputs go together?**
+
+In `shape_rules`, treated no differently from a shape constraint, with no new field:
+
+```yaml
+shape_rules:
+  - "(weight is None) == (bias is None)"          # two halves of one switch
+  - "not (min is None and max is None)"           # at least one of them
+  - "running_mean is None or not use_input_stats" # presence tied to a param's value
+```
+
+**6. How is a rule that reads an optional input written?**
+
+With its own guard — `X is None or <the test that uses X>`. The guard has to precede
+the use, not lead the line.
+
+```yaml
+# MoePermuteNopadFwdOp
+shape_rules:
+  - "expert_map is None or expert_map.shape == (num_experts,)"       # accepted
+# - "expert_map is not None and expert_map.shape == (num_experts,)"  # not accepted
+```
+
+The `and` form is rejected: every `shape_rules` entry is a conjunct that must hold, and
+this one evaluates false on a legal call that omits the input, condemning a legal call.
+
+**7. How many workload rows does an optional input need?**
+
+One each for passed and not passed. **Counted per input, not per combination** — n
+optional inputs are 2n states, not 2ⁿ. The state is encoded by the key:
+`<input>_shape` present means passed, absent means not.
+
+```yaml
+# MoePermuteNopadFwdOp: a row on each side of expert_map
+workloads:
+  - {hidden_states_shape: [1, 7168], topk_ids_shape: [1, 8], num_experts: 384,
+     num_experts_local: 384, dtypes: [bfloat16], label: "kimi-k2-decode"}
+  - {hidden_states_shape: [1, 7168], topk_ids_shape: [1, 8], num_experts: 256,
+     num_experts_local: 128, expert_map_shape: [256], dtypes: [bfloat16],
+     label: "deepseek-v3-ep2-decode"}
+```
+
+A family whose rows give shapes as scalar dims writes the key anyway: the
+`GemmFp8FwdOp` row that passes `bias` carries `bias_shape: [2112]` next to `n: 2112`.
+
+**8. How does roofline account for an optional input?**
+
+In the inline form, presence is a boolean in `vars`, and `flops` and `bytes` reference
+that `vars` name — a tensor name does not resolve in the arithmetic layer at all.
+
+```yaml
+# GroupNormFwdOp
+roofline:
+  vars:
+    N: "x.shape[0]"
+    C: "x.shape[1]"
+    spatial_size: "product(x.shape[2:])"
+    affine: "weight is not None"                       # presence lives in vars
+  flops: "(5 if affine else 3) * N * C * spatial_size" # arithmetic reads the var
+```
+
+Where the formula needs the optional input's own shape, switch to
+`roofline: {func: ...}`, which reads it from the call.
+
+**9. Can `dtype_combos` or `same_as()` reference an optional input?**
+
+No. Both must hold on every call, and on a call that omits the input the name points
+at nothing.
+
+```yaml
+# not accepted: weight is optional, and both places below assume it is there
+inputs:
+  x: {dtype: "float32 | float16", shape: "[B, S, H]"}
+  weight: {dtype: "same_as(x)", shape: "[H]", optional: true}
+  bias: {dtype: "same_as(weight)", shape: "[H]", optional: true}
+dtype_combos:
+  - {x: float16, weight: float16}
+```
+
+Each place fails for its own reason:
+
+- A key of `dtype_combos` must exist on every call, and a call without `weight` cannot
+  make up this combination.
+- The ref in `same_as(weight)` is optional, so with `weight` absent there is nothing to
+  resolve `bias`'s dtype against.
+
+The fix anchors both to a required input:
+
+```yaml
+inputs:
+  x: {dtype: "float32 | float16", shape: "[B, S, H]"}
+  weight: {dtype: "same_as(x)", shape: "[H]", optional: true}
+  bias: {dtype: "same_as(x)", shape: "[H]", optional: true}
+dtype_combos:
+  - {x: float16}
+```
+
+**10. What about an op whose number of return values changes with a switch?**
+
+Two specs — or fix the outputs. One spec's output names and count are the same on
+every call, otherwise the caller cannot unpack a return whose shape it does not know.
+`Mamba2FwdOp` takes the second route and records the deviation in a comment:
+
+```yaml
+# ... one declared deviation: final_states is always returned (fixed output
+# arity; the Op protocol has no conditional-output mechanism), so the upstream
+# return_final_states switch does not exist here.
+outputs:
+  y: {dtype: "float32", shape: "[B, S, H, P]"}
+  final_states: {dtype: "float32", shape: "[B, H, P, N]"}
+```
+
+## Case studies
+
+Six real specs, each covering one form: (1) fixed rank; (2) arbitrary
 rank; (3) a param deciding the output shape; (4) optional inputs forming one
 switch; (5) an input the op writes; (6) an output dtype promoted from the input.
 
-### 1. Fixed rank, with shared names meaning equality
+### 1. Fixed rank and shared names
 
 All three tensors in `BmmFwdOp` declare a `shape`. `B` and `K` appear in both
 inputs, so those axes must match; `shape_rules` adds the divisibility the kernel
@@ -266,7 +533,7 @@ BmmFwdOp:
       - "d.shape == (a.shape[0], a.shape[1], b.shape[2])"
 ```
 
-### 2. Arbitrary rank, with the constraints in `shape_rules`
+### 2. Arbitrary rank
 
 `RMSNormFwdOp` puts no limit on the input's rank — the parameter
 `normalized_shape` names the axes reduced over — so no tensor declares a `shape`
@@ -289,7 +556,7 @@ and every relationship lands in `shape_rules`.
       - "output.shape == x.shape"
 ```
 
-### 3. A param deciding the output shape
+### 3. A param decides the shape
 
 The two layout flags on `GemmFwdOp` decide which axis carries M and which carries
 N, so the output shape is a rule with a conditional in it rather than a `shape`
@@ -309,13 +576,11 @@ declaration.
       - "d.shape == ((a.shape[1] if trans_a else a.shape[0]), (b.shape[0] if trans_b else b.shape[1]))"
 ```
 
-### 4. Optional tensor inputs forming one switch
+### 4. Optional inputs as a switch
 
 The affine transform on `GroupNormFwdOp` is expressed by two optional inputs. They
-are two halves of one switch, and that relationship goes in `shape_rules`, treated
-no differently from a shape constraint. A rule that reads an optional input writes
-its own guard rather than relying on the rule "not applying" when the input is
-absent.
+are two halves of one switch, and that relationship goes into `shape_rules`, treated no
+differently from a shape constraint.
 
 ```yaml
   signature:
@@ -336,11 +601,12 @@ absent.
       - "output.shape == x.shape"
 ```
 
-There is no `affine: bool` param: the tensors' presence *is* the switch, and a
-param beside it would record the same fact twice, with the two able to disagree.
+This spec is three rules from [Optional inputs](#optional-inputs) in practice: no
+`affine` among the params (question 4), each rule that reads an optional input writing
+its own guard (question 6), and a workload row on both sides of the switch (question 7).
 
-Both sides need a workload row — the `weight_shape` and `bias_shape` keys present
-means passed, absent means not:
+That last one is the two rows below — `weight_shape` and `bias_shape` present means
+passed, absent means not:
 
 ```yaml
   workloads:
@@ -384,11 +650,11 @@ Three things follow:
 - If contiguity normalisation had to copy that tensor, the op writes the result
   back after the launch.
 
-### 6. An output dtype promoted from the input
+### 6. A promoted output dtype
 
 `torch.reciprocal` accepts integral inputs and returns `float32`, while floating
 inputs round-trip. That promotion is written as `promote_int_to_float`; the op
-layer mirrors it, and the validator expands it to a concrete set before checking
+layer mirrors it, and the spec validator expands it to a concrete set before checking
 `_validate_dtypes`.
 
 ```yaml
@@ -401,17 +667,96 @@ ReciprocalFwdOp:
       output: {dtype: "promote_int_to_float(input)"}
 ```
 
-## What the validator does not do
+## Rules at a glance
 
-Manifest validation checks syntax and consistency; it does not evaluate:
+All ten of these appeared above. They are grouped here by what each one constrains, so a
+finished spec can be read against them one by one before the validator in the next
+section runs.
 
-- `shape_rules` are checked for syntax only. They are not evaluated, no call
-  pattern is enumerated, and a rule about presence is not distinguished from a
-  rule about shape.
-- A wrong call is caught by the op's own runtime checks. Passing `weight` without
-  `bias` passes manifest validation; the error comes from [`GroupNormFwdOp.forward`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops/norm/group_norm.py).
-- The manifest does not describe kernel internals: multi-kernel ordering,
-  accumulator dtypes, persistent state, tile sizes and autotuning config are all
-  outside it.
+**The signature**
+
+- **Order is position.** Key order in `inputs`, `outputs` and `params` is the parameter
+  position in `forward`, so reordering rewrites every caller's code — a breaking change.
+- **Declare the whole interface.** `params` covers every parameter of the reference API,
+  even where the kernel supports only the default: a spec describes the op's interface,
+  not this implementation's reach.
+
+**Shapes**
+
+- **An output's shape is fully determined.** `shape` and `shape_rules` together fix it
+  uniquely. An input may omit `shape`; an output may not.
+- **No shape aliasing.** Each tensor declares its own shape, and relationships between
+  tensors go in shared dimension names or in `shape_rules`.
+- **A param never selects a shape.** It may size a dimension, but it may not decide
+  which shape a tensor has — that would have one spec describe two interfaces.
+
+**Optionality and switches**
+
+- **`optional` is for inputs.** A tensor input declares `optional: true`, a param
+  expresses optionality with `default`, and the two are not interchanged.
+- **Presence is a switch, contents are not.** An op may read whether an optional input
+  was passed and dispatch on it; it may not read what is inside the tensor.
+- **Both sides of an optional input get measured.** Passed and not passed each need at
+  least one workload row, counted per input rather than per combination.
+
+**Outputs and memory order**
+
+- **Output arity is fixed.** The names and number of outputs are the same on every call.
+  An op whose return changes with a switch is two specs, or the caller cannot unpack a
+  return of unknown length.
+- **One spec, one memory order.** A different memory order is a different spec — it
+  changes what an axis means.
+
+## The spec validator {#spec-validator}
+
+Validation is [`scripts/validate_manifest.py`](https://github.com/tile-ai/TileOPs/blob/main/scripts/validate_manifest.py), and a spec can be run through it the
+moment it is written:
+
+```bash
+python scripts/validate_manifest.py                            # every spec
+python scripts/validate_manifest.py --check-op SoftmaxFwdOp    # one op, all five levels
+```
+
+How far it gets is decided by `status`: `spec-only` runs L0, `implemented` runs all
+five.
+
+### How each field fails {#per-field}
+
+Every field has a definite consumer and a definite failure:
+
+| Field | Read by | On a mismatch |
+| --- | --- | --- |
+| `signature.inputs` / `outputs` | the op layer's validation, `_infer_output_shapes`, a backend's `build_kernel` signature | The spec validator fails at L1: parameter names or order disagree with `forward` |
+| `signature.shape_rules` | the op layer's shape validation | L2: not valid Python, or disagrees with `_infer_output_shapes` |
+| `signature.dtype`, `dtype_combos` | the op layer's dtype validation | L3: unknown dtype, or disagrees with `_validate_dtypes` |
+| `workloads` | the benchmark's shapes and dtypes | L4: the benchmark does not take its shapes from `load_workloads` |
+| `roofline` | `op.eval_roofline()`, the efficiency column in a performance report | a variable that cannot be bound fails the benchmark |
+| `torch_compile_fullgraph` | CI's `compile-contract-gate` | declared without a registered compile test fails that check |
+| `source` | the spec validator, locating the kernel, op, test and benchmark | a path that does not exist is an error |
+
+### What each level checks {#the-five-levels}
+
+| Level | Checks |
+| --- | --- |
+| L0 | the spec's structure: whether the required fields are there and typed correctly |
+| L1 | parameter names and order against `forward` |
+| L2 | `shape_rules` syntax, and its agreement with `_infer_output_shapes` |
+| L3 | dtype names, and their agreement with `_validate_dtypes` |
+| L4 | whether the benchmark takes its shapes from `load_workloads` |
+
+### What the validator does not do {#not-checked}
+
+The five levels check syntax and consistency rather than evaluating anything, which
+leaves three things out of reach:
+
+- **`shape_rules` are not evaluated.** The validator only checks that each rule is a
+  well-formed Python expression; it enumerates no call pattern, and does not
+  distinguish a rule about presence from a rule about shape.
+- **A wrong call is caught by the op itself.** Passing `weight` without `bias` clears
+  spec validation, and the error comes from the runtime checks in
+  [`GroupNormFwdOp.forward`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops/norm/group_norm.py).
+- **Kernel internals are not in the manifest.** Multi-kernel ordering, accumulator
+  dtypes, persistent state, tile sizes and autotuning config are not what a spec
+  describes.
 
 The full field specification and every rule are in [Op Manifest](design/manifest.md).

@@ -487,12 +487,27 @@ body,
   border-left-color: var(--tf-rose);
 }
 
+/* Bold carries weight, not colour. A page has dozens of bold spans — a bullet's
+ * leading term, a rule's name, a claim mid-paragraph — and colouring them all left
+ * none of them standing out. The violet is spent on one sentence per page instead:
+ * `.keystone` below.
+ */
+
 /* The claim a page rests on. It keeps its place in the paragraph and takes the
  * emphasis in the type: bold and italic, in the structural violet. No block, no
  * ground — a panel around one sentence stops the paragraph rather than pointing
  * at it. One per page: as soon as there are two, neither is the point.
  */
 .md-typeset .keystone {
+  padding: 0.05em 0.15em;
+  /* A marker line under the text rather than a filled box: the sentence stays in
+   * its paragraph, and the ground stops below the x-height so the letters keep
+   * the page's own white behind them. */
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--tf-violet), transparent 82%) 0.62em,
+    transparent 0.62em
+  );
   color: var(--tf-violet);
   font-style: italic;
   font-weight: 700;

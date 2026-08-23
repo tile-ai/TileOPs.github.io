@@ -50,7 +50,7 @@ Two of dynamo's rules matter for bringing an op in:
 - **It inlines by default.** A called function is not itself a boundary, and its
   body is folded into the same trace. Keeping a stretch of Python out of the trace
   takes an explicit declaration.
-- **Untraceable code has two fates.** By default dynamo breaks the graph, falling
+- **Untraceable code is handled one of two ways.** By default dynamo breaks the graph, falling
   back to Python for that stretch, so one graph becomes several; under
   `fullgraph=True` it raises instead. Raising surfaces the problem during
   development, which is why an operator library treats `fullgraph=True` as its
@@ -69,7 +69,7 @@ things, of which only the last belongs in the graph:
 | Fetch or build the kernel | No — capturing this far fails |
 | Launch the kernel and produce the output | Yes, as a node in the graph |
 
-Three points about that.
+The table needs three qualifications.
 
 **"Should not be captured" is not "does not run."** All four happen on every call;
 the only question is what enters the graph.
@@ -81,11 +81,13 @@ implementation, and `register_fake` tells the compiler what the node outputs,
 receiving only the inputs' metadata and never touching real data.
 
 **Without the annotation, tracing goes in and fails.** With the boundary
-undeclared, `RMSNormFwdOp` fails in either state: an instance that has not built a
-kernel builds one during the call and dynamo traces into the TileLang JIT inside
-the constructor; an instance that already has one skips the construction but still
-re-parses the TileLang program on every call, so dynamo traces into
-`@tilelang.jit` and stops at `inspect.signature`.
+undeclared, `RMSNormFwdOp` compiles in neither of its two states:
+
+- An instance that has not built a kernel builds one during the call, and dynamo
+  traces into the TileLang JIT inside the constructor.
+- An instance that already has one skips the construction, but still re-parses the
+  TileLang program on every call, so dynamo traces into `@tilelang.jit` and stops at
+  `inspect.signature`.
 
 ## Why does the compile boundary belong at the op layer?
 
@@ -103,15 +105,20 @@ That position also settles how the fake is written. The op layer does not know h
 an external kernel tiles or pads internally; the one shape rule that holds for
 every target is the one in the manifest, so the fake derives from it.
 
-The node's interior is invisible to the compiler, but its contract is complete: the
-schema gives the name and argument types, the fake gives the output's shape, dtype,
-device and stride, and the alias annotations say it does not write to its inputs.
-Optimisation **between nodes** therefore proceeds as usual — buffer assignment,
-lifetimes, reordering against neighbours it does not depend on, deletion when
-nothing consumes it. What is given up is optimisation **inside** the node:
-neighbours cannot fuse in, and the output must be written to memory. The trade
-holds for an operator library: inside the node is a kernel TileLang has already
-compiled, which inductor need not touch.
+The node's interior is invisible to the compiler, but its contract to the outside is
+complete: the schema gives the name and argument types, the fake gives the output's
+shape, dtype, device and stride, and the alias annotations say it does not write to
+its inputs. With the contract complete, what is kept and what is given up separate
+cleanly:
+
+- **Optimisation between nodes proceeds as usual.** Buffer assignment, lifetimes,
+  reordering against neighbours it does not depend on, deletion when nothing
+  consumes it.
+- **Optimisation inside the node is gone.** Neighbours cannot fuse in, and the
+  output must be written to memory.
+
+For an operator library the trade is worth it: inside the node is a kernel TileLang
+has already compiled, which inductor need not touch.
 
 ## Once brought in: `RMSNormFwdOp` in code
 
@@ -169,11 +176,14 @@ Three things in this code are not free choices.
 directly.** The schema's type system has a fixed set of types — `Tensor`, `int`,
 `float`, `bool`, `str` and a few more — and no "arbitrary Python object", while
 what the operator body needs (`kernel_map`, the settled target, the memo table of
-built kernels) hangs off the instance and does not fit a schema argument. The key
-is a string rather than an integer, and never reused: a string is a compile-time
-constant during tracing where an integer is generalised to a `SymInt`, and because
-it is constant, inductor bakes the shape the fake gave into the artefact — an op
-reusing a key would inherit the previous instance's shape.
+built kernels) hangs off the instance and does not fit a schema argument. Two details of the key
+itself are not free either:
+
+- **A string, not an integer.** A string is a compile-time constant during tracing,
+  where an integer is generalised to a `SymInt`.
+- **Never reused.** Because it is constant, inductor bakes the shape the fake gave
+  into the artefact, and an op reusing a key would inherit the previous instance's
+  shape.
 
 **Second, the fake builds its result with `x.new_empty(shape)`, not
 `torch.empty_like(x)`.** What the fake returns has to match what real execution
@@ -188,10 +198,13 @@ fake declare a layout real execution never produces.
 `get_or_build_kernel`.** When traced code runs `self.x = ...`, dynamo records a
 pending side effect and applies it only after the whole graph has run, while the
 opaque node executes before that — so a resolution written just outside the node is
-unreadable inside it. Without the second resolution the first compiled call
-silently runs the wrong implementation; for the same reason, undoing a failed
-resolution is the job of whichever site made it, since a compiled artefact does not
-keep the call site's `try/except`.
+unreadable inside it. Two things follow, both of them
+inside the node:
+
+- Without the second resolution, the first compiled call silently runs the wrong
+  implementation.
+- Undoing a failed resolution is the job of whichever site made it, since a compiled
+  artefact does not keep the call site's `try/except`.
 
 All three follow from one fact: torch's compilation and declaration mechanisms
 work per function, while what needs compiling is one call on an object.
