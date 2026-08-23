@@ -10,7 +10,7 @@ LLM operators across backends, built on TileLang. MkDocs + Material, deployed to
 
 ```bash
 pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugin \
-  mkdocs-static-i18n jieba pyyaml
+  mkdocs-static-i18n jieba pyyaml black
 git clone --depth 1 https://github.com/tile-ai/TileOPs.git TileOPs   # or symlink one
 mkdocs serve
 ```

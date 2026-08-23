@@ -39,7 +39,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - run: pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugin mkdocs-static-i18n jieba pyyaml
+      - run: pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugin mkdocs-static-i18n jieba pyyaml black
 
       - name: Render benchmark page from nightly-bench
         run: bash scripts/render_bench.sh

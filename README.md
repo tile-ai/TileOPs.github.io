@@ -12,7 +12,7 @@ and re-renders the Benchmarks pages nightly.
 
 ```bash
 pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugin \
-  mkdocs-static-i18n jieba pyyaml
+  mkdocs-static-i18n jieba pyyaml black
 
 # The API and design pages read from a TileOPs checkout at ./TileOPs. The
 # workflows clone it there; locally, clone it too — or point a symlink at a

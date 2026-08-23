@@ -88,7 +88,8 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
-      toc_depth: 3
+      # 4, so a method under a class reaches the right-hand column.
+      toc_depth: 4
 
 extra_css:
   - assets/extra.css
@@ -101,6 +102,12 @@ extra_javascript:
 
 hooks:
   - hooks.py
+
+# mkdocs watches the docs tree and this file, but the API pages are built from
+# Python source that lives outside both. Without this, a docstring edit does not
+# reach `mkdocs serve` until the server restarts. Serve-only; `build` ignores it.
+watch:
+  - TileOPs/src/tileops
 
 plugins:
   - search
@@ -173,6 +180,17 @@ plugins:
             # Every op class states `Bases: Op`, which distinguishes none of
             # them from another.
             show_bases: false
+            # A chip before the name says whether the symbol is a class or a
+            # method, which is the one thing the dotted path does not.
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            # The signature is its own block, one parameter per line: an op with
+            # fourteen constructor parameters wraps mid-name in a heading, and a
+            # reader scanning for one parameter has to read the whole line to find
+            # it. `line_length: 1` is what makes black break every argument out;
+            # any width wide enough for two arguments packs the short ones.
+            separate_signature: true
+            line_length: 1
 
 extra:
   social:

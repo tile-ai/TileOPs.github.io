@@ -28,6 +28,9 @@
   /* Rules and the dot texture carry a trace of the accent rather than plain
    * ink, so the paper reads as one ground with the headings instead of two.
    */
+  /* The rule that marks a group: methods, examples, asides. Lighter than the
+   * teal itself, which at full strength reads as a second heading colour. */
+  --tf-rule: color-mix(in srgb, #16706b, transparent 40%);
   --tf-line: rgba(51, 35, 79, 0.18);
   --tf-line-soft: rgba(51, 35, 79, 0.08);
   /* Latin faces come first so technical terms inside Chinese prose keep the
@@ -343,13 +346,52 @@ body,
   font-size: 0.82em;
 }
 
-/* A block keeps the paler ground and is drawn instead — a hairline and a
- * radius contain it, which is what the heavy fill was doing by brute force.
+/* A block sits on a teal ground, the second accent: violet is the structural
+ * colour — headings, section rules, the inline-identifier chip — so a block of
+ * code reads as its own kind of material rather than more of the same. The tint
+ * stays faint enough for the syntax colours to carry the contrast.
  */
 .md-typeset pre > code {
-  border: 1px solid color-mix(in srgb, var(--tf-violet), transparent 88%);
+  border: 1px solid color-mix(in srgb, var(--tf-teal), transparent 70%);
   border-radius: 8px;
-  background: var(--md-code-bg-color);
+  background: color-mix(in srgb, var(--tf-teal), transparent 86%);
+}
+
+/* Inside an admonition the block would otherwise sit on the same ground twice. */
+.md-typeset .admonition pre > code,
+.md-typeset details pre > code {
+  background: color-mix(in srgb, var(--tf-teal), transparent 82%);
+}
+
+/* The line numbers are scenery: no fill of their own, a hairline to sit behind,
+ * and digits light enough that the eye reads the code and not the count.
+ */
+.md-typeset .highlighttable .linenos {
+  padding-right: 0.5rem;
+  border: 0;
+  border-right: 1px solid color-mix(in srgb, var(--tf-teal), transparent 78%);
+  background: transparent;
+  color: color-mix(in srgb, var(--tf-muted), transparent 45%);
+  font-size: 0.88em;
+  user-select: none;
+}
+
+.md-typeset .highlighttable .linenodiv pre {
+  border: 0;
+  background: transparent;
+}
+
+/* The table is the code block; only its outer edge is drawn. */
+.md-typeset .highlighttable {
+  border: 1px solid color-mix(in srgb, var(--tf-teal), transparent 70%);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tf-teal), transparent 86%);
+}
+
+.md-typeset .highlighttable .code pre > code,
+.md-typeset .highlighttable td > div > pre > code {
+  border: 0;
+  background: transparent;
 }
 
 .md-typeset .md-clipboard {
@@ -399,14 +441,38 @@ body,
 .md-typeset .admonition,
 .md-typeset details {
   border: 0;
-  border-left: 3px solid var(--tf-teal);
+  border-left: 3px solid var(--tf-rule);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
 
+/* Material colours each admonition type differently — example violet, note
+ * blue, tip green — which puts four more hues on the page. One rule for all of
+ * them: teal, the same line the API blocks use. Only a warning differs, because
+ * that one is a verdict rather than an aside.
+ */
+.md-typeset .admonition.example,
+.md-typeset details.example,
+.md-typeset .admonition.note,
+.md-typeset details.note,
+.md-typeset .admonition.info,
+.md-typeset details.info,
+.md-typeset .admonition.tip,
+.md-typeset details.tip,
+.md-typeset .admonition.abstract,
+.md-typeset details.abstract,
+.md-typeset .admonition.quote,
+.md-typeset details.quote {
+  border-left-color: var(--tf-rule);
+}
+
 .md-typeset .admonition.warning,
-.md-typeset details.warning {
+.md-typeset details.warning,
+.md-typeset .admonition.danger,
+.md-typeset details.danger,
+.md-typeset .admonition.failure,
+.md-typeset details.failure {
   border-left-color: var(--tf-rose);
 }
 
@@ -415,6 +481,34 @@ body,
   background: transparent;
   font-family: var(--tf-mono);
   font-size: 0.8rem;
+}
+
+/* Material sets an admonition two steps below body size, which is fine for a
+ * one-line aside and wrong for the API pages, where every Example is one of
+ * these blocks and its content is code.
+ */
+.md-typeset .admonition,
+.md-typeset details {
+  font-size: 0.78rem;
+}
+
+.md-typeset .admonition pre > code,
+.md-typeset details pre > code {
+  font-size: 0.74rem;
+}
+
+/* An `Example:` section in a docstring becomes an `example` admonition, whose
+ * default icon is a lab flask — a picture of something the section is not. The
+ * word and the teal rule already say what the block is.
+ */
+.md-typeset .admonition.example > .admonition-title,
+.md-typeset details.example > summary {
+  padding-left: 0.6rem;
+}
+
+.md-typeset .admonition.example > .admonition-title::before,
+.md-typeset details.example > summary::before {
+  display: none;
 }
 
 /* Three rules and nothing else: above the head, under it, under the last row.
@@ -674,12 +768,140 @@ body,
 
 /* The name inside the heading is already in the mono face at heading size;
  * the inline-identifier chip on top of that is a second treatment of the same
- * thing.
+ * thing. The symbol chip is a `code` element too, and it keeps its own fill.
  */
-.md-typeset .doc-heading code {
+.md-typeset .doc-heading code:not(.doc-symbol) {
   padding: 0;
   background: transparent;
   font-size: 1em;
+}
+
+/* The symbol chips: mkdocstrings ships its own palette, which lands two more
+ * hues on a page that already has two. A class takes the structural violet, a
+ * method the teal, and the rest sit at the muted weight.
+ */
+:root {
+  --doc-symbol-class-fg-color: var(--tf-violet);
+  --doc-symbol-class-bg-color: color-mix(in srgb, var(--tf-violet), transparent 92%);
+  --doc-symbol-method-fg-color: var(--tf-teal);
+  --doc-symbol-method-bg-color: color-mix(in srgb, var(--tf-teal), transparent 90%);
+  --doc-symbol-function-fg-color: var(--tf-teal);
+  --doc-symbol-function-bg-color: color-mix(in srgb, var(--tf-teal), transparent 90%);
+  --doc-symbol-attribute-fg-color: var(--tf-muted);
+  --doc-symbol-attribute-bg-color: color-mix(in srgb, var(--tf-muted), transparent 92%);
+  --doc-symbol-module-fg-color: var(--tf-muted);
+  --doc-symbol-module-bg-color: color-mix(in srgb, var(--tf-muted), transparent 92%);
+  --doc-symbol-parameter-fg-color: var(--tf-muted);
+  --doc-symbol-parameter-bg-color: color-mix(in srgb, var(--tf-muted), transparent 92%);
+}
+
+/* Only the class keeps its chip. A method is already inside its class, under a
+ * heading of its own, so `meth` repeats what the position says — and it lands
+ * right where the eye enters the line. Keyed on the object, not the heading
+ * level: a page that renders a package puts classes at h2 and methods at h3,
+ * one that renders each op puts them at h3 and h4.
+ */
+.md-typeset .doc-object.doc-function > .doc-heading .doc-symbol-heading,
+.md-typeset .doc-object.doc-attribute > .doc-heading .doc-symbol-heading {
+  display: none;
+}
+
+.md-typeset .doc-symbol-heading {
+  margin-right: 0.45em;
+  font-family: var(--tf-body);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  vertical-align: 0.12em;
+}
+
+/* A class and everything under it hang from one line: the signature, the
+ * parameters, and the methods are one group, marked by a spine rather than by a
+ * filled card — a panel over the wash reads as a patch of different paper.
+ */
+.md-typeset .doc-object.doc-class > .doc-contents {
+  margin-left: 0.15rem;
+  padding-left: 1.5rem;
+  border-left: 1px solid var(--tf-line-soft);
+}
+
+/* Everything under a class sits at one level: the prose, the constructor and the
+ * call are siblings, so a second indent for the methods only pushed them away
+ * from the parameters they belong with. The method's own contents keep a teal
+ * hairline, which marks the group without moving it.
+ */
+.md-typeset .doc-object.doc-function > .doc-contents {
+  padding-left: 0;
+  border-left: 0;
+}
+
+/* A member's heading repeats the name the signature under it already carries, so
+ * it collapses to a bare anchor: no text, no space, no permalink. It has to stay
+ * in the document for the right-hand column to link to — the table of contents
+ * still reads the heading, and reads only the name.
+ */
+.md-typeset .doc-object.doc-function > .doc-heading,
+.md-typeset .doc-object.doc-attribute > .doc-heading {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 0;
+  line-height: 0;
+}
+
+.md-typeset .doc-object.doc-function > .doc-heading .headerlink,
+.md-typeset .doc-object.doc-attribute > .doc-heading .headerlink {
+  display: none;
+}
+
+/* The signature carries the weight the heading gave up. */
+.md-typeset .doc-object.doc-function > .doc-contents {
+  margin-top: 1.7em;
+}
+
+/* The two method entries under one class are siblings, not a list: space them
+ * rather than ruling between them.
+ */
+.md-typeset .doc-object.doc-function + .doc-object.doc-function {
+  margin-top: 1.6em;
+}
+
+/* One op is one unit on the page. A rule above each symbol, and room around it,
+ * gives the reference a beat: without them the page is a single column of text
+ * where nothing marks where one op ends and the next begins.
+ */
+.md-typeset .doc-object.doc-class > .doc-heading {
+  margin-top: 3em;
+  padding-top: 1.3em;
+  border-top: 1px solid var(--tf-line-soft);
+}
+
+/* The first class under a family heading needs no rule: the heading is the break. */
+.md-typeset h2 + .doc-object.doc-class > .doc-heading,
+.md-typeset h2 + div > .doc-object.doc-class > .doc-heading {
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* A signature is a declaration, not a listing: violet like the other structural
+ * marks, no fill, no rounded box — so it does not read as a second example.
+ */
+.md-typeset .doc-signature > pre > code,
+.md-typeset div.doc-signature pre > code,
+.md-typeset pre > code.doc-signature {
+  border: 0;
+  border-left: 3px solid var(--tf-rule);
+  border-radius: 0;
+  background: transparent;
+  padding-left: 0.7rem;
+}
+
+/* Parameters, Returns, Raises: the label carries the break, the list stays tight
+ * under it.
+ */
+.md-typeset .doc-section-title {
+  margin-top: 1.4em;
+  margin-bottom: 0.3em;
 }
 
 /* `property`, `classmethod`, `async` — a note about the symbol, not part of
@@ -767,6 +989,39 @@ body,
 html[lang="zh"] .md-sidebar--secondary .md-nav__link {
   font-size: 0.7rem;
   line-height: 1.6;
+}
+
+/* Material maps the token classes onto --md-code-hl-*, which covers keywords,
+ * strings and numbers. A typical example is mostly names, operators and calls —
+ * all of which fell through to plain ink, so the block read as unhighlighted.
+ */
+.md-typeset .highlight .o,        /* operator: = * -> */
+.md-typeset .highlight .ow {
+  color: var(--tf-violet);
+}
+
+.md-typeset .highlight .p {       /* punctuation: ( ) , [ ] */
+  color: var(--tf-muted);
+}
+
+.md-typeset .highlight .nf,       /* function definition */
+.md-typeset .highlight .fm,
+.md-typeset .highlight .nc,       /* class */
+.md-typeset .highlight .nb,       /* builtin */
+.md-typeset .highlight .bp {
+  color: var(--tf-violet-light);
+}
+
+.md-typeset .highlight .nd,       /* decorator */
+.md-typeset .highlight .kn,       /* import */
+.md-typeset .highlight .kc {
+  color: var(--tf-teal);
+}
+
+.md-typeset .highlight .c1,       /* comment */
+.md-typeset .highlight .cm,
+.md-typeset .highlight .ch {
+  font-style: italic;
 }
 
 /* Language switcher: a quiet pill on the paper header, matching the source
