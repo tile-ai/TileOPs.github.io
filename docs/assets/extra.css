@@ -138,36 +138,6 @@ body,
   }
 }
 
-/* The wide sheet is for tables, code and signatures. Running prose keeps its
- * own measure inside it — around 80 characters, past which the eye loses the
- * line it came from on the way back. Only direct children are capped, so text
- * inside an admonition or a list item follows the box it sits in.
- */
-:root {
-  --tf-measure: 32rem;
-}
-
-.md-typeset > p,
-.md-typeset > ul,
-.md-typeset > ol,
-.md-typeset > dl,
-.md-typeset > blockquote,
-.md-typeset > .admonition,
-.md-typeset > details,
-.md-typeset > h1,
-.md-typeset > h2,
-.md-typeset > h3,
-.md-typeset > h4 {
-  max-width: var(--tf-measure);
-}
-
-/* Han glyphs are one em wide, so the same measure holds fewer characters per
- * line than in Latin copy — and a Chinese line reads comfortably longer.
- */
-html[lang="zh"] {
-  --tf-measure: 36rem;
-}
-
 /* Header sits on the paper rather than in the accent colour, and lets the wash
  * behind it through: an opaque band across the top would cut the ground in two
  * at exactly the place the violet is strongest.
@@ -452,6 +422,20 @@ html[lang="zh"] {
  * alignment, and every mark added beyond these three is one the reader has to
  * look past to get at the numbers.
  */
+/* Material sizes a table to its content (`display: inline-block`), which leaves
+ * every table a different width from the prose above it. A table is a block of
+ * the page like a paragraph or a code block, so it takes the column. The
+ * scroll wrapper Material puts around it still handles one too wide to fit.
+ */
+.md-typeset__table {
+  width: 100%;
+}
+
+.md-typeset table:not([class]) {
+  display: table;
+  width: 100%;
+}
+
 .md-typeset table:not([class]) {
   margin: 1em 0;
   /* Material fills a table with the page colour, which over the wash reads as
@@ -468,6 +452,15 @@ html[lang="zh"] {
  * the only place the palette can sit at all — those pages are columns of
  * figures with nowhere for a heading rule to go.
  */
+/* An identifier broken across two lines stops reading as one name, and in a
+ * table it is the first column — the one holding names — that gets squeezed. A
+ * code span never wraps, so the column claims the width its longest name needs;
+ * the scroll wrapper handles a table that then exceeds the page.
+ */
+.md-typeset table:not([class]) code {
+  white-space: nowrap;
+}
+
 .md-typeset table:not([class]) th {
   border: 0;
   border-bottom: 2px solid var(--tf-violet);
