@@ -334,7 +334,7 @@ Each file in the example covers one part of the work:
 | `pyproject.toml` | the entry point declaration, which is the whole install mechanism |
 | `src/tileops_cpu/__init__.py` | all registration code |
 | `src/tileops_cpu/kernels.py` | the kernel implementation; a real backend compiles here |
-| `src/tileops_cpu/pending.py` | a registered builder that cannot be called yet — see [below](#three-states-after-install) |
+| `src/tileops_cpu/pending.py` | a builder registered under `op="GemmOp"` — the manifest key is `GemmFwdOp`, and a name that does not match is never called |
 | `tests/test_takeover.py` | numerics, validation, normalisation, outputs |
 | `tests/test_discovery.py` | entry point and registration |
 | `tests/test_errors.py` | the four error paths |
@@ -463,7 +463,7 @@ The caller warms up before capture — at least one non-captured call at the sam
 shape — because building a kernel may compile. During capture only one path is
 allowed: memo hit, then call.
 
-## Three states after install
+## After install: two states {#three-states}
 
 Once `detect` claims a class of devices, **every** op on those devices is served by
 that target, a missing one is an error, and there is no fall back to the
@@ -474,61 +474,37 @@ hardware, where the shipped kernels cannot launch at all. Falling back would tra
 clear "this target does not implement this op" for an incomprehensible launch
 failure.
 
-So after install, each op is in one of three states:
+So after install, each op is in one of two states:
 
-| State | Example | Result |
-| --- | --- | --- |
-| A builder is registered, and the op passes its tensors at the kernel-fetch site | `RMSNormFwdOp` | runs |
-| A builder is registered, but the op does not pass its tensors yet | `GemmOp` | error — **TileOPs is what needs changing** |
-| No builder registered | every other op | error |
+| State | Result |
+| --- | --- |
+| The target registered a `build_kernel` for the op | it runs |
+| It did not | an error naming the target and the op, with no fall back to the shipped implementation |
 
-The second state follows from where TileOPs is in its migration: the site where an
-op fetches its kernel has to pass the tensors that kernel will be called with, or
-TileOPs cannot compute the memo key for the external path.
+Covering every op the target model uses is therefore work on the backend's side. The op
+side is settled by design: an op hands over the tensors its kernel is about to get, which
+is what lets the external path compute a memo key (see [how one call reaches
+`build_kernel`](#from-op-layer)).
 
-```python
-# inside TileOPs, in the op's own forward
-self.get_or_build_kernel("gemm_kernel", (a, b), key=..., build=...)
-#                                       ^^^^^^ this argument
-```
+### No hardware queried before the target is settled
 
-As of August 2026, only `RMSNormFwdOp` passes it; the other 84 kernel-fetch sites
-do not. The change is mechanical and will be made op by op.
-
-`build_gemm` in the example's `src/tileops_cpu/pending.py` is exactly this case:
-correct, registered, and currently unreachable. Writing the builder before TileOPs
-supplies that argument is the normal order of work — the day `GemmOp` becomes
-available, this backend serves it unchanged.
-
-### Platform predicates
-
-Even for an op that can reach the external path, TileOPs' `forward` may still hold
-code bound to specific hardware. `GemmOp` is one:
-
-```
-tileops/ops/gemm.py:102       _get_kernel
-tileops/kernels/call_spec.py  CallSpec.__post_init__
-tileops/utils/utils.py:39     get_sm_version  ->  torch.cuda.current_device()
-```
-
-The selected target is a CPU one, and this code still queries the CUDA SM version.
-On a machine with no CUDA driver, the call fails before it reaches `build_kernel`.
-
-As of August 2026, TileOPs holds around 94 such predicates. Clearing them is a
-precondition for the first real heterogeneous backend and will proceed family by
-family. Until then a backend author meets them on their own hardware; file a
-TileOPs issue with the traceback when that happens — TileOPs is what needs
-changing.
-
-The example marks two tests `requires_cuda_runtime` for this reason, and they skip
-on a machine with no GPU. What they check is TileOPs' platform assumptions, not the
+Until a target is settled, the op layer queries nothing bound to specific hardware — a
+CUDA SM version, say. Querying it would mean that on a machine without that driver the
+call fails before it reaches `build_kernel`, for a reason that has nothing to do with the
 backend.
+
+If such a failure does show up on your hardware, the traceback stops inside TileOPs rather
+than in the backend's `build_kernel`. That is a regression on the TileOPs side: file an
+issue with the traceback.
+
+The example marks two tests `requires_cuda_runtime`, and they skip on a machine with no
+GPU — what they check is this premise, not the backend.
 
 ## Error messages and what to do
 
 All four are measured output, each with one cause and one way to handle it.
 
-**A builder is registered, but the op does not pass its tensors yet:**
+**An op's kernel-fetch site handed over no tensors:**
 
 ```
 OpNotAvailableError: target 'torch_cpu' serves GemmOp, but its 'gemm_kernel' call site
@@ -536,8 +512,8 @@ does not hand over the tensors a builder is described with; that op is not wired
 external targets yet
 ```
 
-A gap on the TileOPs side, not a backend problem. Wait for `inputs=` to be added,
-or file an issue asking for that op to be prioritised.
+Every op in TileOPs hands its tensors over, so this error means a regression on the op
+side rather than a backend problem: file an issue naming the op.
 
 **No builder registered for the op:**
 

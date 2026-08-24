@@ -128,7 +128,7 @@ self.get_or_build_kernel("group_norm", (x, weight, bias), ...)  # 没传的可�
 
 没传的可选输入要留下位置、值为 `None`：后端由这个值判断输入传没传，而不是数位置个数 —— 挤掉空位，只给下界的 clamp 与只给上界的就成了同一个描述。
 
-`inputs` 漏掉当场不报错，装上后端才抛 `OpNotAvailableError`，说这个算子还没接到外部 target 上（见[安装后的三种状态](backends.md#three-states)）。
+`inputs` 漏掉当场不报错，装上后端才抛 `OpNotAvailableError` —— 这个算子于是只能用自带 kernel，外部 target 接管不了（见[安装之后：两种状态](backends.md#three-states)）。
 
 **`key`** —— 自带 kernel 特化在什么上，只有自带这条路用（换成外部后端服务这个算子时这两个参数怎么走，见[算子层这一侧的调用](backends.md#from-op-layer)）。
 

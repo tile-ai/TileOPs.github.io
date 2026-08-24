@@ -272,7 +272,7 @@ register_kernel_builder(
 | `pyproject.toml` | entry point 声明，也就是全部安装机制 |
 | `src/tileops_cpu/__init__.py` | 全部注册代码 |
 | `src/tileops_cpu/kernels.py` | kernel 实现，真实后端在此处编译 |
-| `src/tileops_cpu/pending.py` | 一个已经注册、但当前调用不到的 builder，见[下文](#three-states) |
+| `src/tileops_cpu/pending.py` | 一个用 `op="GemmOp"` 注册的 builder —— manifest 的键是 `GemmFwdOp`，名字不一致就永远不会被调到 |
 | `tests/test_takeover.py` | 数值、校验、归一与输出 |
 | `tests/test_discovery.py` | entry point 与注册 |
 | `tests/test_errors.py` | 四条错误路径 |
@@ -378,53 +378,34 @@ decode 路径会被 CUDA graph 捕获，因此各阶段允许执行的操作分�
 
 调用方需要在捕获之前完成预热，即至少执行一次同形状的非捕获调用，因为构造 kernel 允许编译。捕获期间只允许「查表命中后直接调用」这一条路径。
 
-## 安装后的三种状态 {#three-states}
+## 安装之后：两种状态 {#three-states}
 
 一旦 `detect` 认领了某一类设备，该设备上的**所有**算子都由这个 target 服务，其中任何一个缺失都会报错，不会改用 TileOPs 自带的实现。
 
 不回退的理由是：选中一个 target 就意味着这块设备属于另一套硬件，自带的 kernel 在它上面根本启动不了。真去回退，只会把一条清楚的「该 target 未实现此算子」换成一次难以理解的启动失败。
 
-因此安装之后，每个算子处于以下三种状态之一：
+因此安装之后，每个算子只有两种状态：
 
-| 状态 | 例子 | 结果 |
-| --- | --- | --- |
-| 已注册 builder，且该算子在取 kernel 处传入了张量 | `RMSNormFwdOp` | 正常执行 |
-| 已注册 builder，但该算子尚未在取 kernel 处传入张量 | `GemmOp` | 报错，**需要修改的是 TileOPs** |
-| 未注册 builder | 其余全部算子 | 报错 |
+| 状态 | 结果 |
+| --- | --- |
+| 该 target 为这个算子注册了 `build_kernel` | 正常执行 |
+| 没有注册 | 报错，指出这个 target 没有为该算子注册 builder，且不会改用自带实现 |
 
-第二种状态源于 TileOPs 当前的迁移进度：算子取 kernel 的位置必须把即将传给该 kernel 的张量一并传入，TileOPs 才能计算外部路径的记忆键。
+覆盖目标模型用到的每一个算子，因此是后端一侧的工作。算子那一侧的前提已经由设计保证：取 kernel 时必须把即将传给 kernel 的张量一并传入，外部路径才算得出记忆键（见[一次调用怎么走到 `build_kernel`](#from-op-layer)）。
 
-```python
-# TileOPs 内部，算子自身的 forward
-self.get_or_build_kernel("gemm_kernel", (a, b), key=..., build=...)
-#                                       ^^^^^^ 这一项
-```
+### 平台无关的前提
 
-截至 2026 年 8 月，只有 `RMSNormFwdOp` 传入了这一项，其余 84 处取 kernel 的位置尚未传入。这是一项机械改动，会逐个算子补齐。
+target 定下来之前，算子层不查询与特定硬件绑定的信息 —— 例如 CUDA 的 SM 版本。查了就意味着：在没有该驱动的机器上，调用会在到达 `build_kernel` 之前失败，而失败的原因与这个后端毫无关系。
 
-示例仓库 `src/tileops_cpu/pending.py` 中的 `build_gemm` 正是这种情况：实现正确，注册成功，但目前调用不到。在 TileOPs 补上这一项之前先把 builder 写好是正常的工作顺序 —— `GemmOp` 可用的当天，这个后端无需任何改动即可服务它。
+万一在自己的硬件上撞到这种失败，调用栈会停在 TileOPs 内部、而不是后端的 `build_kernel` 里。那是 TileOPs 一侧的回退，提 issue 并附上调用栈。
 
-### 平台判据
-
-即使一个算子已经能够走到外部路径，TileOPs 的 `forward` 中仍可能残留与特定硬件绑定的代码。`GemmOp` 就属于这种情况：
-
-```
-tileops/ops/gemm.py:102       _get_kernel
-tileops/kernels/call_spec.py  CallSpec.__post_init__
-tileops/utils/utils.py:39     get_sm_version  ->  torch.cuda.current_device()
-```
-
-选中的 target 面向 CPU，这段代码却仍然去查询 CUDA 的 SM 版本。在没有 CUDA 驱动的机器上，调用在到达 `build_kernel` 之前就已经失败。
-
-截至 2026 年 8 月，TileOPs 中约有 94 处这类判据。清除它们是接入第一个真实异构后端的前提，将按 family 分批进行。在此之前，后端作者会在自己的硬件上遇到它们；遇到时应向 TileOPs 提 issue 并附上调用栈，需要修改的是 TileOPs。
-
-示例仓库因此为两个测试加上了 `requires_cuda_runtime` 标记，在没有 GPU 的机器上自动跳过。这两个测试检验的是 TileOPs 的平台假设，而不是这个后端。
+示例仓库为两个测试加了 `requires_cuda_runtime` 标记，在没有 GPU 的机器上自动跳过 —— 它们检验的正是这条前提，而不是后端本身。
 
 ## 错误信息与处理
 
 以下四条均为实测输出，分别对应一种成因和一种处理方式。
 
-**已注册 builder，但该算子尚未在取 kernel 处传入张量：**
+**某个算子的取 kernel 处没有传入张量：**
 
 ```
 OpNotAvailableError: target 'torch_cpu' serves GemmOp, but its 'gemm_kernel' call site
@@ -432,7 +413,7 @@ does not hand over the tensors a builder is described with; that op is not wired
 external targets yet
 ```
 
-这是 TileOPs 一侧的缺口，不是后端的问题。可以等待它补上 `inputs=`，或者提 issue 请求优先处理该算子。
+TileOPs 的算子都按契约传入张量，所以见到这条错误意味着算子那一侧出现了回退，不是后端的问题：提 issue 并附上算子名。
 
 **未为该算子注册 builder：**
 

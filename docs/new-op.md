@@ -162,8 +162,8 @@ reads presence off, rather than counting slots. Squeeze the empty slots out, and
 with only a lower bound looks exactly like one with only an upper bound.
 
 Omitting `inputs` raises nothing until a backend is installed, and then
-`OpNotAvailableError` says this op is not wired to external targets yet (see [the three
-states after install](backends.md#three-states)).
+`OpNotAvailableError`: the op stays in-tree only, out of reach of any target (see [after
+install: two states](backends.md#three-states)).
 
 **`key`** — what the in-tree kernel specializes on; the in-tree path only. What becomes of
 these last two once a backend serves the op is in [how one call reaches
