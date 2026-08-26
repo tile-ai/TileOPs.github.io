@@ -1,13 +1,25 @@
-# Top-k Operators
+# Convolution Operators
 
 Every op on this page is used the same way: construct it once, then call it. The
 constructor takes what the kernel is compiled with; the call takes the tensors.
 Both are documented under each op — `__init__` and `forward`, where `forward` is
 what runs when you call `op(...)`.
 
-## Top-k selection
+## Forward convolution
 
-::: tileops.ops.topk_selector.TopkSelectorFwdOp
+::: tileops.ops.convolution.Conv1dFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
+::: tileops.ops.convolution.Conv2dFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
+::: tileops.ops.convolution.Conv3dFwdOp
     options:
       show_root_heading: true
       heading_level: 3

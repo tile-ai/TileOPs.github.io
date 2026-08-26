@@ -1,6 +1,14 @@
-# Quantization
+# Quantization Operators
 
-!!! note "Coming soon"
-    The `tileops.ops.fp8_quant` module is under active development in
-    [`tile-ai/TileOPs`](https://github.com/tile-ai/TileOPs) and will be
-    documented here once the public interface stabilizes.
+Every op on this page is used the same way: construct it once, then call it. The
+constructor takes what the kernel is compiled with; the call takes the tensors.
+Both are documented under each op — `__init__` and `forward`, where `forward` is
+what runs when you call `op(...)`.
+
+## FP8 quantization
+
+::: tileops.ops.fp8_quant.FP8QuantFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]

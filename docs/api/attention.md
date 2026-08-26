@@ -45,6 +45,12 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
+::: tileops.ops.attention.gqa.GroupedQueryAttentionDenseFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
 ::: tileops.ops.attention.gqa.GroupedQueryAttentionPrefillFwdOp
     options:
       show_root_heading: true
@@ -118,6 +124,14 @@ what runs when you call `op(...)`.
 ## DeepSeek sparse attention
 
 ::: tileops.ops.attention.deepseek_dsa.DeepSeekSparseAttentionDecodeWithKVCacheFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
+## Attention indexing
+
+::: tileops.ops.fp8_lightning_indexer.FP8LightningIndexerFwdOp
     options:
       show_root_heading: true
       heading_level: 3

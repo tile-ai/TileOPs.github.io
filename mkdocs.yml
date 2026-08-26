@@ -37,19 +37,23 @@ nav:
     - Using torch.compile: torch-compile.md
     - Adding a Backend: backends.md
   # Ordered along the stack a reader is working through: the dense matmul, then
-  # attention and its linear replacements, then the elementwise and reduction
-  # primitives, then FFT. The two pages still awaiting a stable interface sit
-  # after those, and Trace last — it is a tool, not an op family.
+  # attention, its position encodings and its linear replacements, then the
+  # elementwise and reduction primitives, then the convolutional family, then
+  # FFT, quantization and top-k, and Trace last — it is a tool, not an op family.
   - API Reference:
     - api/index.md
     - GEMM: api/linear-algebra.md
     - Attention: api/attention.md
+    - RoPE: api/rope.md
     - Linear Attention: api/linear-attention.md
     - Mamba: api/mamba.md
     - MHC: api/mhc.md
     - Normalization: api/normalization.md
     - Elementwise: api/elementwise.md
     - Reduction: api/reduction.md
+    - Convolution: api/convolution.md
+    - Pooling: api/pool.md
+    - Dropout: api/dropout.md
     - FFT: api/fft.md
     - Quantization: api/quantization.md
     - Top-k: api/topk.md
@@ -156,6 +160,10 @@ plugins:
             GEMM: GEMM
             Quantization: Quantization
             Attention: Attention
+            RoPE: RoPE
+            Convolution: Convolution
+            Pooling: Pooling
+            Dropout: Dropout
             Linear Attention: Linear Attention
             Mamba: Mamba
             FFT: FFT
