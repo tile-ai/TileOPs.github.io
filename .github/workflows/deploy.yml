@@ -21,6 +21,7 @@ jobs:
             docs/design
             docs/perf
             src/tileops
+            scripts/nightly_report.py
           sparse-checkout-cone-mode: false
       - uses: actions/setup-python@v5
         with:
