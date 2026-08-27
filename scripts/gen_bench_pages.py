@@ -502,7 +502,7 @@ def _ratio_cell(ratio: float | None, rated: bool = True) -> str:
 
 
 def _sol_cell(sol: dict | None) -> str:
-    """Share of the achievable ceiling, with the side that binds.
+    """Share of the achievable ceiling.
 
     Green means physics allows little more and the workload is done; plain ink
     is headroom. A latency-bound row and a reading above the ceiling both grey
@@ -512,14 +512,26 @@ def _sol_cell(sol: dict | None) -> str:
     if sol is None:
         return EMPTY
     pct = f"{sol['efficiency']:.0%}"
-    bound = "M" if sol["bound"] == "memory" else "C"
     if sol["verdict"] == "anomaly":
         return f'<span class="perf-unrated">⚠ {pct}</span>'
     if sol["verdict"] == "lat":
-        return '<span class="perf-unrated">lat-bound</span>'
+        return f'<span class="perf-unrated">{pct}</span>'
     if sol["verdict"] == "ceiling":
-        return f'<span class="perf-ahead">{pct} {bound}</span>'
-    return f"{pct} {bound}"
+        return f'<span class="perf-ahead">{pct}</span>'
+    return pct
+
+
+def _bound_cell(sol: dict | None) -> str:
+    """The resource that sets the workload's floor: memory, compute, or latency.
+
+    `lat` marks a row whose SOL number the model does not judge — launch
+    overhead dominates the measurement — and greys alongside it.
+    """
+    if sol is None:
+        return EMPTY
+    if sol["verdict"] == "lat":
+        return '<span class="perf-unrated">lat</span>'
+    return "mem" if sol["bound"] == "memory" else "comp"
 
 
 # --- Data tables -----------------------------------------------------------
@@ -541,6 +553,7 @@ DETAIL_HEADER = (
     '<th colspan="2">Alternatives</th>',
     "<th>Throughput</th>",
     "<th>SOL</th>",
+    "<th>Bound</th>",
     "</tr>",
     # The second row carries what a header word cannot: the unit, and which way
     # the ratio divides. Every numeric column states its own on the same line.
@@ -551,6 +564,7 @@ DETAIL_HEADER = (
     '<th class="subhead">ms</th>',
     '<th class="subhead">TFLOP/s</th>',
     '<th class="subhead">of ceiling</th>',
+    '<th class="subhead">by</th>',
     "</tr>",
     "</thead>",
     "<tbody>",
@@ -595,6 +609,7 @@ def detail_row(w: dict, m: dict) -> str:
         f"<td>{times}</td>"
         f"<td>{_sig(m['tflops'])}</td>"
         f"<td>{_sol_cell(m['sol'])}</td>"
+        f"<td>{_bound_cell(m['sol'])}</td>"
         "</tr>"
     )
 
@@ -714,8 +729,18 @@ def index_page(args, meta: dict, rows: list[tuple],
     return "\n".join(lines) + "\n"
 
 
-def reading_page() -> str:
+def reading_page(sol_engine=(None, None)) -> str:
     lo, hi = PAR_BAND
+    mod = sol_engine[0]
+    # The at-ceiling lines belong to the roofline tool; quote them from it so
+    # this page can never disagree with the nightly report.
+    if mod is not None and mod.SOL_GREEN_MEMORY == mod.SOL_GREEN_COMPUTE:
+        green_txt = f"from {mod.SOL_GREEN_MEMORY:.0%}"
+    elif mod is not None:
+        green_txt = (f"memory-bound from {mod.SOL_GREEN_MEMORY:.0%}, "
+                     f"compute-bound from {mod.SOL_GREEN_COMPUTE:.0%}")
+    else:
+        green_txt = "from the at-ceiling line the roofline spec sets"
     lines = [
         "# How these numbers are taken", "",
         "Every data page answers one question: **how does TileOPs compare to the "
@@ -768,6 +793,9 @@ def reading_page() -> str:
         "physics allows for the workload, divided by our device time. The "
         "`Ratio` column says whether someone is faster today; SOL says how much "
         "faster anyone could ever be. Details below. |",
+        "| **Bound** | The resource that sets the workload's floor: `mem` (HBM "
+        "traffic), `comp` (compute throughput), or `lat` — the workload is too "
+        "small for the model to judge, and its SOL number greys out with it. |",
         "",
         "How that device time is measured — what it counts, what it leaves out, "
         "and where it refuses to produce a number — is in "
@@ -796,22 +824,24 @@ def reading_page() -> str:
         "use** — declared per op, never inferred from the running kernel, so a "
         "kernel on the wrong unit is measured against the right ceiling.",
         "",
-        "| | Meaning |",
-        "| --- | --- |",
-        '| <span class="perf-ahead">92% M</span> | At the achievable ceiling — '
-        "memory-bound from 90%, compute-bound from 80% (the compute "
-        "calibration is noisier). Optimizing further buys at most the "
+        "| SOL | Bound | Meaning |",
+        "| --- | --- | --- |",
+        f'| <span class="perf-ahead">92%</span> | mem | At the achievable '
+        f"ceiling ({green_txt}). The ceiling is an envelope over access "
+        "mixes, and a kernel's own mix caps below it, so the line leaves "
+        "room for every mix. Optimizing further buys at most the "
         "remainder. |",
-        "| 63% M | Headroom remains. `M`/`C` names the bound: memory traffic "
-        "or compute throughput. |",
-        '| <span class="perf-unrated">lat-bound</span> | The workload is too '
+        "| 63% | mem | Headroom remains. |",
+        '| <span class="perf-unrated">41%</span> | '
+        '<span class="perf-unrated">lat</span> | The workload is too '
         "small for the model to judge — launch overhead dominates the "
-        "measurement, not the roofline. |",
-        '| <span class="perf-unrated">⚠ 108%</span> | Above the calibrated '
-        "ceiling: the formula or the calibration is wrong. Never read it as a "
-        "fast kernel. |",
-        f"| `{EMPTY}` | An input is missing: no roofline formula, a non-CUPTI "
-        "timing, or no GPU profile for the device. |",
+        "measurement, not the roofline — so the number is shown but not "
+        "graded. |",
+        '| <span class="perf-unrated">⚠ 108%</span> | mem | Above the '
+        "calibrated ceiling: the formula or the calibration is wrong. Never "
+        "read it as a fast kernel. |",
+        f"| `{EMPTY}` | `{EMPTY}` | An input is missing: no roofline formula, "
+        "a non-CUPTI timing, or no GPU profile for the device. |",
         "",
         "The model, its thresholds and the formula-audit machinery are "
         "specified in TileOPs "
@@ -958,7 +988,7 @@ def main():
         "index.md": index_page(args, meta, all_rows, by_page,
                                timing, len(workloads), len(failures),
                                len(skips)),
-        "reading.md": reading_page(),
+        "reading.md": reading_page(sol_engine),
     }
     for slug, title, fams in DATA_PAGES:
         if any(rows_by_fam.get(f) for f in fams):

@@ -45,7 +45,7 @@ implementation of the same op on that workload.
 | No aggregates | One table per op, one row per workload. An op's workloads span shapes orders of magnitude apart, so a median matches no reproducible run and a mean ratio hides which shape is behind. |
 | The colour is the verdict | `Ratio` sits right after the workload name: red behind, plain ink level, green ahead, grey where the only rival is an eager `-ref`. |
 | Device time | The compared quantity is `device_busy_ms`, never wall-clock span. |
-| Two questions, two columns | `Ratio` says whether someone else's kernel is faster; `SOL` says how much faster the hardware allows anyone to go. The SOL arithmetic is imported from the TileOPs checkout's roofline tool (M5) — never re-derived in this repo. |
+| Two questions | `Ratio` says whether someone else's kernel is faster; `SOL` says how much faster the hardware allows anyone to go, with the binding resource (`mem`/`comp`/`lat`) in its own `Bound` column. The SOL arithmetic and thresholds are imported from the TileOPs checkout's roofline tool (M5) — never re-derived in this repo. |
 
 ## Bilingual pages (en / zh)
 
