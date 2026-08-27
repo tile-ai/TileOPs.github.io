@@ -22,9 +22,10 @@ Rules this renderer follows:
     kernels by construction, so comparing spans would charge a multi-kernel
     implementation for the host's launch latency and credit a fused one for
     nothing it did.
-  * Utilisation against a hardware ceiling is a different question and is not
-    reported. How much of the machine a kernel uses says nothing about whether
-    someone else's kernel does the same work faster.
+  * Two questions, two columns: ``Ratio`` says whether someone else's kernel
+    does the same work faster; ``SOL`` says how much faster the hardware allows
+    anyone to go. The SOL arithmetic is imported from the TileOPs checkout's
+    roofline tool (M5), never re-derived here.
   * Every baseline present in the data is shown. Baselines are tiered
     (library kernel / PyTorch native op / eager reference), never discarded:
     a tag the tier table does not know is reported as unclassified. Only the
@@ -174,13 +175,15 @@ def dtype_of(config_name: str) -> str | None:
 _METRIC_SUFFIXES = (
     "device_busy_p10_ms", "device_busy_p90_ms", "device_busy_ms",
     "latency_p10_ms", "latency_p90_ms", "latency_ms", "gap_ms",
-    "bandwidth_tbs", "tflops", "ratio", "n_kernels", "n_samples",
-    "flops", "bytes", "dtype", "timing", "variant",
+    "uncounted_copy_ms", "bandwidth_tbs", "tflops", "ratio", "n_kernels",
+    "n_samples", "flops", "bytes", "compute_roof", "dtype", "timing",
+    "variant",
 )
 _NUMERIC_METRICS = {
     "device_busy_ms", "device_busy_p10_ms", "device_busy_p90_ms",
-    "latency_ms", "latency_p10_ms", "latency_p90_ms", "gap_ms", "tflops",
-    "bandwidth_tbs", "ratio", "flops", "bytes", "n_kernels", "n_samples",
+    "latency_ms", "latency_p10_ms", "latency_p90_ms", "gap_ms",
+    "uncounted_copy_ms", "tflops", "bandwidth_tbs", "ratio", "flops",
+    "bytes", "n_kernels", "n_samples",
 }
 # The alias the benchmark writes for its first baseline. Dropped whole: it
 # duplicates an implementation under a name none has, and its key set grows.
@@ -252,6 +255,60 @@ def parse_test_xml(path: str) -> dict[str, dict]:
     return dict(ops)
 
 
+# --- Speed of light ----------------------------------------------------------
+# The SOL reading is computed by TileOPs' own roofline tool (M5), imported from
+# the ./TileOPs checkout: the arithmetic, its exclusion rules and its verdict
+# thresholds must have exactly one implementation. Without the checkout, or
+# without a GPU profile for the measured device, every SOL cell renders as the
+# empty marker.
+
+
+def load_sol_engine(gpu: str):
+    """(nightly_report module, GPU profile) or (None, None) with a warning."""
+    try:
+        sys.path.insert(0, os.path.join(TILEOPS, "src"))
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "tileops_nightly_report",
+            os.path.join(TILEOPS, "scripts", "nightly_report.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        from tileops.perf.profile import find_profile
+        profile = find_profile(gpu)
+    except Exception as exc:  # noqa: BLE001 — degrade to an empty column
+        print(f"warning: SOL column disabled ({exc})", file=sys.stderr)
+        return None, None
+    if profile is None:
+        print(f"warning: SOL column disabled (no GPU profile matches {gpu!r})",
+              file=sys.stderr)
+        return None, None
+    return mod, profile
+
+
+def sol_of(tl: dict, engine) -> dict | None:
+    """M5's reading for one tileops row, with the verdict already graded.
+
+    The verdict grades against M5's own thresholds so the page and the nightly
+    report can never disagree on where the at-ceiling line sits.
+    """
+    mod, profile = engine
+    if mod is None:
+        return None
+    sol = mod._compute_sol({"tileops_" + k: v for k, v in tl.items()}, profile)
+    if sol is None:
+        return None
+    if sol["impossible"] or sol["efficiency"] > mod.SOL_ANOMALY:
+        verdict = "anomaly"
+    elif sol["latency_bound"]:
+        verdict = "lat"
+    else:
+        green = (mod.SOL_GREEN_MEMORY if sol["bound"] == "memory"
+                 else mod.SOL_GREEN_COMPUTE)
+        verdict = "ceiling" if sol["efficiency"] >= green else "below"
+    return {**sol, "verdict": verdict}
+
+
 # --- Per-workload metrics --------------------------------------------------
 # A recorded 0.0 for tflops/bandwidth means the op reported no FLOPs or no
 # bytes for the workload; the derived metric is unavailable, not zero.
@@ -270,7 +327,7 @@ def _busy_of(impl: dict) -> float | None:
     return _pos(impl.get("device_busy_ms")) or _pos(impl.get("latency_ms"))
 
 
-def workload_metrics(w: dict) -> dict:
+def workload_metrics(w: dict, sol_engine=(None, None)) -> dict:
     """Derive every displayed metric for one benchmarked workload."""
     tl = w["impls"].get("tileops", {})
     busy = _busy_of(tl)
@@ -282,6 +339,7 @@ def workload_metrics(w: dict) -> dict:
         "dtype": tl.get("dtype") or dtype_of(w["config"]),
         "n_samples": tl.get("n_samples"),
         "variant": tl.get("variant"),
+        "sol": sol_of(tl, sol_engine),
     }
 
     rivals = {}
@@ -443,6 +501,27 @@ def _ratio_cell(ratio: float | None, rated: bool = True) -> str:
     return f'<span class="{cls}">{_speed(ratio)}</span>'
 
 
+def _sol_cell(sol: dict | None) -> str:
+    """Share of the achievable ceiling, with the side that binds.
+
+    Green means physics allows little more and the workload is done; plain ink
+    is headroom. A latency-bound row and a reading above the ceiling both grey
+    out — the first is a workload the model cannot judge, the second a formula
+    or calibration error, and neither must read as a fast kernel.
+    """
+    if sol is None:
+        return EMPTY
+    pct = f"{sol['efficiency']:.0%}"
+    bound = "M" if sol["bound"] == "memory" else "C"
+    if sol["verdict"] == "anomaly":
+        return f'<span class="perf-unrated">⚠ {pct}</span>'
+    if sol["verdict"] == "lat":
+        return '<span class="perf-unrated">lat-bound</span>'
+    if sol["verdict"] == "ceiling":
+        return f'<span class="perf-ahead">{pct} {bound}</span>'
+    return f"{pct} {bound}"
+
+
 # --- Data tables -----------------------------------------------------------
 
 # Every number belongs to one workload; there is no per-op aggregate, since a
@@ -461,6 +540,7 @@ DETAIL_HEADER = (
     "<th>Device time</th>",
     '<th colspan="2">Alternatives</th>',
     "<th>Throughput</th>",
+    "<th>SOL</th>",
     "</tr>",
     # The second row carries what a header word cannot: the unit, and which way
     # the ratio divides. Every numeric column states its own on the same line.
@@ -470,6 +550,7 @@ DETAIL_HEADER = (
     '<th class="subhead">name</th>',
     '<th class="subhead">ms</th>',
     '<th class="subhead">TFLOP/s</th>',
+    '<th class="subhead">of ceiling</th>',
     "</tr>",
     "</thead>",
     "<tbody>",
@@ -513,6 +594,7 @@ def detail_row(w: dict, m: dict) -> str:
         f"<td>{names}</td>"
         f"<td>{times}</td>"
         f"<td>{_sig(m['tflops'])}</td>"
+        f"<td>{_sol_cell(m['sol'])}</td>"
         "</tr>"
     )
 
@@ -682,6 +764,10 @@ def reading_page() -> str:
         "a masked-out tile is therefore invisible here, and the figure is only "
         "comparable between implementations of the same op on the same "
         "workload. |",
+        "| **SOL** | Share of the algorithmic speed-of-light: the fastest time "
+        "physics allows for the workload, divided by our device time. The "
+        "`Ratio` column says whether someone is faster today; SOL says how much "
+        "faster anyone could ever be. Details below. |",
         "",
         "How that device time is measured — what it counts, what it leaves out, "
         "and where it refuses to produce a number — is in "
@@ -691,11 +777,46 @@ def reading_page() -> str:
         "(✅ passed · ❌ failed · ⏭️ all skipped · "
         f"`{EMPTY}` no test matched).",
         "",
-        "Utilisation against the hardware ceiling — what share of peak FLOP/s or "
-        "HBM bandwidth a kernel reached, and which of the two bounds it — is a "
-        "different question and is not on these pages. It says how much of the "
-        "machine a kernel uses, not whether someone else's kernel does the same "
-        "work faster.",
+        "## Speed of light", "",
+        "**SOL** is *algorithmic* speed-of-light efficiency: "
+        "`max(bytes / bandwidth, FLOPs / compute roof) / device time`, priced "
+        "against the machine's *calibrated* ceilings — the bandwidth and "
+        "compute rates microbenchmarks actually reach on this GPU, not the "
+        "spec sheet. 100% means no implementation of this algorithm on this "
+        "hardware can be faster.", "",
+        "Three statements delimit what a reading means:", "",
+        "1. **Bytes are the algorithm's minimum traffic** — each input read "
+        "once, each output written once — not the DRAM traffic the kernel "
+        "generated. A kernel that moves data twice scores low; that is the "
+        "point.",
+        "2. **FLOPs follow the TileOPs counting convention** (a transcendental "
+        "counts as one), not per-instruction hardware cost; the metric does "
+        "not certify a special-function-bound kernel as at its limit.",
+        "3. **The compute roof is the unit an optimal implementation would "
+        "use** — declared per op, never inferred from the running kernel, so a "
+        "kernel on the wrong unit is measured against the right ceiling.",
+        "",
+        "| | Meaning |",
+        "| --- | --- |",
+        '| <span class="perf-ahead">92% M</span> | At the achievable ceiling — '
+        "memory-bound from 90%, compute-bound from 80% (the compute "
+        "calibration is noisier). Optimizing further buys at most the "
+        "remainder. |",
+        "| 63% M | Headroom remains. `M`/`C` names the bound: memory traffic "
+        "or compute throughput. |",
+        '| <span class="perf-unrated">lat-bound</span> | The workload is too '
+        "small for the model to judge — launch overhead dominates the "
+        "measurement, not the roofline. |",
+        '| <span class="perf-unrated">⚠ 108%</span> | Above the calibrated '
+        "ceiling: the formula or the calibration is wrong. Never read it as a "
+        "fast kernel. |",
+        f"| `{EMPTY}` | An input is missing: no roofline formula, a non-CUPTI "
+        "timing, or no GPU profile for the device. |",
+        "",
+        "The model, its thresholds and the formula-audit machinery are "
+        "specified in TileOPs "
+        f"[`docs/design/roofline.md`]({_GH}/blob/main/docs/design/roofline.md); "
+        "the page imports that implementation rather than re-deriving it.",
         "",
         "## Empty cells", "",
         f"`{EMPTY}` means an input to that metric was not recorded, never that "
@@ -807,11 +928,13 @@ def main():
                       for w in workloads).most_common(1)
     timing = timings[0][0] if timings else None
 
+    sol_engine = load_sol_engine(args.gpu)
+
     metrics_by_op: dict[str, list[dict]] = defaultdict(list)
     workloads_of: dict[str, list[dict]] = defaultdict(list)
     module_of: dict[str, str | None] = {}
     for w in workloads:
-        metrics_by_op[w["op"]].append(workload_metrics(w))
+        metrics_by_op[w["op"]].append(workload_metrics(w, sol_engine))
         workloads_of[w["op"]].append(w)
         module_of.setdefault(w["op"], w["op_module"])
 
