@@ -32,10 +32,12 @@ and `design/` mirrors its `docs/design/`. Without it, mkdocstrings cannot import
 | `npx stylelint "docs/assets/**/*.css"` | No duplicate selector, no `color-mix()` — an engine that cannot parse a function drops the whole declaration, so a border vanishes and an SVG `fill` paints black |
 | `mkdocs build` | Fails on any warning of ours; griffe's are TileOPs' docstrings, not this repo's gate |
 
-A change to what the Benchmarks pages say fails the golden test by design: read
-the diff, then `python tests/refresh_golden.py`. `tests/fixtures/` is a trimmed
-snapshot with one testcase per path the renderer takes — extend it rather than
-reaching for the real nightly data.
+Seven tests, and that is the intended size. `tests/fixtures/` is a trimmed
+snapshot — one testcase per path the renderer takes — and `tests/golden/` the
+three data pages it must produce. A change to what those pages say fails by
+design: read the diff, then `python tests/refresh_golden.py`. A unit test is
+added only for a rule the pages do not show; anything the golden pages already
+cover is not worth a second assertion on a docs site.
 
 ## Generated pages
 

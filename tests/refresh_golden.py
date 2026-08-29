@@ -8,8 +8,10 @@ import os
 import shutil
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from test_render_e2e import GOLDEN, PROSE, render  # noqa: E402
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), "scripts"))
+from test_renderer import GOLDEN, PROSE, render  # noqa: E402
 
 if __name__ == "__main__":
     tmp = os.path.join(os.path.dirname(GOLDEN), ".golden-tmp")
