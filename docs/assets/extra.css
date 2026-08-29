@@ -1265,3 +1265,297 @@ html[lang="zh"] .md-nav__title {
   line-height: 1.6;
   text-align: left;
 }
+
+/* Roofline figure (performance-guides/memory-bound).  Log-log, so the
+   two decades between an elementwise kernel and the ridge stay legible.  Colours
+   come from the shared palette: teal for the roof itself, violet for the ridge,
+   rose for a kernel sitting below it — the same rose the benchmark tables use
+   for "behind". */
+.md-typeset figure.roofline {
+  display: block;
+  width: 100%;
+  margin: 1.4em auto;
+  text-align: center;
+}
+
+/* markdown="1" wraps the inline SVG in a <p>, whose bottom margin would open a
+   gap between the drawing and its caption. */
+.md-typeset figure.roofline p {
+  margin: 0;
+}
+
+/* max-width caps it at the drawing's own size, so on a wide screen it stays
+   centred at its natural scale instead of stretching to the column. */
+.md-typeset .tf-roofline {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  margin: 0 auto;
+  font-family: var(--tf-body);
+}
+
+.md-typeset .tf-roofline .tf-rl-region {
+  fill: color-mix(in srgb, var(--tf-teal), transparent 94%);
+}
+
+.md-typeset .tf-roofline .tf-rl-grid {
+  stroke: var(--tf-line-soft);
+  stroke-width: 1;
+}
+
+.md-typeset .tf-roofline .tf-rl-axis {
+  stroke: var(--tf-line);
+  stroke-width: 1.5;
+}
+
+.md-typeset .tf-roofline .tf-rl-roof {
+  fill: none;
+  stroke: var(--tf-teal);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.md-typeset .tf-roofline .tf-rl-drop {
+  stroke: color-mix(in srgb, var(--tf-violet), transparent 60%);
+  stroke-dasharray: 3 4;
+  stroke-width: 1.5;
+}
+
+.md-typeset .tf-roofline .tf-rl-ridge {
+  fill: var(--tf-violet);
+  stroke: var(--md-default-bg-color);
+  stroke-width: 2;
+}
+
+.md-typeset .tf-roofline .tf-rl-point {
+  fill: var(--tf-rose);
+  stroke: var(--md-default-bg-color);
+  stroke-width: 2;
+}
+
+.md-typeset .tf-roofline .tf-rl-tick,
+.md-typeset .tf-roofline .tf-rl-axis-title,
+.md-typeset .tf-roofline .tf-rl-sub,
+.md-typeset .tf-roofline .tf-rl-roof-label {
+  fill: var(--md-default-fg-color--light);
+  font-size: 13px;
+}
+
+.md-typeset .tf-roofline .tf-rl-axis-title {
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+
+.md-typeset .tf-roofline .tf-rl-roof-label {
+  fill: var(--tf-teal);
+  font-weight: 600;
+}
+
+.md-typeset .tf-roofline .tf-rl-label {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.md-typeset .tf-roofline .tf-rl-label--ridge {
+  fill: var(--tf-violet);
+}
+
+.md-typeset .tf-roofline .tf-rl-label--point {
+  fill: var(--tf-rose);
+}
+
+.md-typeset .tf-roofline .tf-rl-region-label {
+  fill: var(--md-default-fg-color--light);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.md-typeset figure.roofline figcaption {
+  max-width: none;
+  margin-top: 0.5rem;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.7rem;
+  line-height: 1.7;
+  text-align: left;
+}
+
+/* Access-pattern figure (global-memory-access).  One row of memory
+   cells per pattern; teal shading marks the sectors the hardware fetches, a
+   violet dot marks each element the instruction actually reads.  The ratio of
+   the two is the efficiency the prose quotes, so the two encodings carry the
+   whole argument and nothing else needs colour. */
+.md-typeset figure.access-patterns {
+  display: block;
+  width: 100%;
+  margin: 1.4em auto;
+  text-align: center;
+}
+
+.md-typeset figure.access-patterns p {
+  margin: 0;
+}
+
+.md-typeset .tf-access {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  margin: 0 auto;
+  font-family: var(--tf-body);
+}
+
+.md-typeset .tf-access .ap-sector {
+  fill: none;
+  stroke: var(--tf-line);
+  stroke-width: 1;
+}
+
+.md-typeset .tf-access .ap-sector--fetched {
+  fill: color-mix(in srgb, var(--tf-teal), transparent 88%);
+}
+
+/* shared memory: no sectors, so the row is drawn as one undivided surface */
+.md-typeset .tf-access .ap-sector--onchip {
+  fill: color-mix(in srgb, var(--tf-violet), transparent 92%);
+  stroke: color-mix(in srgb, var(--tf-violet), transparent 70%);
+  stroke-dasharray: 3 3;
+}
+
+.md-typeset .tf-access .ap-cell {
+  fill: none;
+  stroke: var(--tf-line-soft);
+  stroke-width: 0.75;
+}
+
+.md-typeset .tf-access .ap-dot {
+  fill: var(--tf-violet);
+}
+
+.md-typeset .tf-access .ap-title {
+  fill: var(--md-default-fg-color);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.md-typeset .tf-access .ap-sub {
+  fill: var(--md-default-fg-color--light);
+  font-family: var(--tf-mono);
+  font-size: 11px;
+}
+
+.md-typeset .tf-access .ap-note {
+  fill: var(--md-default-fg-color--light);
+  font-size: 12.5px;
+}
+
+/* --lighter maps to the hairline colour; as text it is illegible. */
+.md-typeset .tf-access .ap-scale {
+  fill: var(--md-default-fg-color--light);
+  font-size: 12px;
+}
+
+/* Material caps figcaption at 24rem and centres it; these captions carry the
+   figure's argument and want the full column. */
+.md-typeset figure.access-patterns figcaption {
+  max-width: none;
+  margin-top: 0.5rem;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.7rem;
+  line-height: 1.7;
+  text-align: left;
+}
+
+/* Winning cell in a measurement table. Bold alone does not survive a page of
+   tables; the rose is the same one the benchmark pages use for a verdict. */
+.md-typeset .win {
+  color: var(--tf-rose);
+  font-weight: 700;
+}
+
+/* Which thread owns which element, by alternating tone: same thread, same
+   tone. blocked banks four cells per tone, striped alternates every cell, and
+   the difference is visible without reading a label. Kept as a neutral ink wash
+   so it does not compete with the teal (fetched sector) and violet (element the
+   instruction reads) that carry the argument. */
+.md-typeset .tf-access .ap-cell--t1 {
+  fill: color-mix(in srgb, var(--tf-ink), transparent 78%);
+}
+
+/* t0…t7 above each thread's span. The alternating tone shows where the
+   boundaries fall; only the labels say how many threads there are. */
+.md-typeset .tf-access .ap-owner {
+  fill: var(--md-default-fg-color--light);
+  font-family: var(--tf-mono);
+  font-size: 10px;
+}
+
+/* ---------------------------------------------------------------------------
+   Bank-conflict figure (shared-memory-access). 32 bank columns per panel; the count printed
+   in a cell is how many of a warp's threads land on it, and the largest count
+   is the conflict degree. Teal = one thread per bank (the good case), rose =
+   several (the cost), empty = no thread lands there.
+   --------------------------------------------------------------------------- */
+
+.md-typeset .tf-bank {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  margin: 0 auto;
+  font-family: var(--tf-body);
+}
+
+.md-typeset .tf-bank .bk-cell {
+  fill: none;
+  stroke: var(--tf-line-soft);
+  stroke-width: 0.75;
+}
+
+.md-typeset .tf-bank .bk-cell--one {
+  fill: color-mix(in srgb, var(--tf-teal), transparent 82%);
+}
+
+.md-typeset .tf-bank .bk-cell--many {
+  fill: color-mix(in srgb, var(--tf-rose), transparent 74%);
+}
+
+.md-typeset .tf-bank .bk-count {
+  fill: var(--md-default-fg-color);
+  font-family: var(--tf-mono);
+  font-size: 9px;
+}
+
+.md-typeset .tf-bank .bk-title {
+  fill: var(--md-default-fg-color);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.md-typeset .tf-bank .bk-sub {
+  fill: var(--md-default-fg-color--light);
+  font-family: var(--tf-mono);
+  font-size: 11px;
+}
+
+.md-typeset .tf-bank .bk-note,
+.md-typeset .tf-bank .bk-scale {
+  fill: var(--md-default-fg-color--light);
+  font-size: 12px;
+}
+
+.md-typeset .tf-bank .bk-axis {
+  fill: var(--md-default-fg-color--light);
+  font-family: var(--tf-mono);
+  font-size: 10px;
+}
+
+.md-typeset figure.bank-conflict figcaption {
+  max-width: none;
+  margin-top: 0.5rem;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.7rem;
+  line-height: 1.7;
+  text-align: left;
+}

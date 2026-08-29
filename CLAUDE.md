@@ -53,14 +53,16 @@ English lives at the site root, Chinese under `/zh/`. A Chinese page is a
 `<name>.zh.md` beside the English `<name>.md` — full prose, never an
 `include-markdown` shell.
 
-`backends.md` and `torch-compile.md` were authored in Chinese: edit the `.zh.md`
-first, then bring the English page in line. Everything else goes the other way.
+`backends.md`, `torch-compile.md` and everything under `performance-guides/memory-bound/`
+were authored in Chinese: edit the `.zh.md` first, then bring the English page in
+line. Everything else goes the other way.
 
 | Rule | Detail |
 |------|--------|
-| Coverage | `index.md`, `manifest.md`, `new-op.md`, `timing.md`, `backends.md`, `torch-compile.md`, `user-guide/index.md`, `performance-guides/index.md`. |
+| Coverage | `index.md`, `manifest.md`, `new-op.md`, `timing.md`, `backends.md`, `torch-compile.md`, `user-guide/index.md`, `performance-guides/index.md`, `performance-guides/memory-bound/{index,global-memory-access,shared-memory-access}.md`. |
 | Never translate | `api/` and `benchmarks/` — both generated. `design/` is mirrored English. |
-| Missing translation | Falls back to English at the same URL, so the zh nav is never sparse. `hooks.py` prepends a "本页暂无中文版" notice. |
+| Missing translation | Falls back to English at the same URL, so the zh nav is never sparse. `hooks.py` prepends a "本页暂无中文版" notice. The fallback runs zh → en only: a page that exists only as `.zh.md` leaves its `nav` entry pointing at a missing file, and the English sidebar renders a dead link. |
+| Figures | A figure with text in it needs one SVG per language — translate the `<text>` nodes and the `aria-label`, keep the geometry. English runs longer than Chinese, so check the label column and grow the `viewBox` rather than letting text overflow. |
 | Nav labels | `nav_translations` in the `i18n` plugin block; keep an entry for every `nav` title. |
 | Chinese search | Requires `jieba`. |
 
