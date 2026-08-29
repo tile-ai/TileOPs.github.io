@@ -2,18 +2,18 @@
 
 ## What memory-bound means
 
-How fast a kernel runs on a GPU comes down to which of compute and bandwidth
-becomes the limit first. TileOPs measures a
+On a GPU, kernel speed is determined by whether compute or bandwidth becomes
+the bottleneck first. TileOPs measures a
 **[calibration factor](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/perf/profiles/h200.yaml)**
 with a [macro benchmark](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/hardware):
-the theoretical peak from the hardware spec times that factor gives the
-effective figure a kernel can actually reach, and that is what tuning is
-measured against. On an H200 we measure
+the hardware peak from the specification, multiplied by that factor, gives the
+effective peak a kernel can actually reach. That effective peak is the reference
+point for tuning. On an H200, the measured values are
 [**57.27** TFLOP/s for fp32 FMA and **4.07** TB/s of memory bandwidth](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/perf/profiles/h200.yaml).
 The **ridge point** of the roofline is where the bandwidth slope meets the
-compute ceiling; dividing one by the other puts it at an arithmetic intensity of
-**14.07 flop/byte** — the flop per byte moved when compute and bandwidth are
-saturated at the same time:
+compute ceiling. Dividing compute by bandwidth places it at an arithmetic
+intensity of **14.07 flop/byte**: the number of floating-point operations per
+byte moved when compute and bandwidth are saturated at the same time:
 
 <figure class="roofline" markdown="1">
 
@@ -63,7 +63,7 @@ saturated at the same time:
 <text class="tf-rl-roof-label" x="492.0" y="54.1" text-anchor="end">compute roof 57.3 TFLOP/s</text>
 </svg>
 
-<figcaption>The bent line is the roofline, and every kernel's performance point falls below it. Left of the ridge the ceiling is arithmetic intensity times bandwidth, so attainable compute rises linearly with intensity; right of it the ceiling is the compute peak and intensity no longer matters. <code>silu</code> does 5 operations per 4 bytes moved, an arithmetic intensity of 1.25 flop/byte — an eleventh of the ridge — so even with bandwidth fully saturated it reaches only 9% of the compute ceiling.</figcaption>
+<figcaption>The bent line is the roofline. Every kernel's performance point lies below it. To the left of the ridge, the ceiling is arithmetic intensity times bandwidth, so attainable compute rises linearly with intensity. To the right, the ceiling is the compute peak, and higher intensity no longer raises it. <code>silu</code> performs 5 operations per 4 bytes moved, for an arithmetic intensity of 1.25 flop/byte, one eleventh of the ridge. Even with bandwidth fully saturated, it can reach only 9% of the compute ceiling.</figcaption>
 
 </figure>
 

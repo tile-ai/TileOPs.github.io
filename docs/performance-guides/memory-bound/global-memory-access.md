@@ -1,29 +1,30 @@
 # Optimizing Global Memory Access
 
-A thread reading several elements of a row can be written four ways. This page
-measures all four on two workloads and says how to pick one.
+When a thread reads several elements from a row, the access can be written four
+ways. This page measures all four on two workloads and explains how to choose
+among them.
 
 ## Checking whether DRAM bandwidth is the current limit {#regime}
 
 [Elementwise](https://tile-ai.github.io/TileOPs.github.io/api/elementwise/) and
 [Reduction](https://tile-ai.github.io/TileOPs.github.io/api/reduction/) are the
-typical memory-bound kernels. Each recommendation below states the condition
-that triggers it, the cause, and code for both the wrong and the right form.
+typical memory-bound kernels. Each recommendation below states when it applies,
+why it applies, and what the wrong and right code look like.
 
-Every measurement on this page was taken under one set of conditions: **an input
-larger than the 60 MiB L2, and enough blocks to fill the whole card** (an H200
-has 132 SMs). DRAM bandwidth is the main limit there, and a difference in access
-pattern shows up directly in performance.
+Every measurement on this page uses the same conditions: **an input larger than
+the 60 MiB L2, and enough blocks to fill the whole card** (an H200 has 132
+SMs). Under those conditions, DRAM bandwidth is the main bottleneck, and
+differences in access pattern show up directly in performance.
 
 !!! warning "Where this applies"
 
-    Outside these conditions something else may set the limit, and some of the
-    conclusions here reverse.
+    Outside these conditions, another factor may set the limit, and some of the
+    conclusions here can reverse.
 
-The table below splits the space into three regimes along those two conditions,
-giving the test for each and how the conclusions of these two pages apply in it.
-The limit named is the dominant one; the more complex the kernel, the more
-factors act at once:
+The table below uses those two conditions to divide the space into three
+regimes. It gives the test for each regime and how the conclusions of these two
+pages apply there. The named limit is the dominant factor; more complex kernels
+usually have more factors active at the same time:
 
 | Regime | Test | Main limit | How to use the conclusions |
 | --- | --- | --- | --- |
@@ -31,18 +32,18 @@ factors act at once:
 | Small data | Input fits in L2, one call takes tens of microseconds or less | Fixed launch overhead, cache state | Avoid the wrong forms; changing access pattern buys nothing |
 | Few blocks | Blocks fewer than twice the SM count | The width of each load instruction, bytes in flight | Keep load width first, and measure every change |
 
-- **With small data, launch overhead and cache state dominate.** The four access
-  patterns of one row-reduction kernel (fp16, 256 threads, clocks unlocked)
-  measure 4.20 to 4.43 TB/s on 65536 × 4096 (512 MB), within 6% of each other;
-  at 2048 × 4096 (16 MB, which fits in L2) one call takes a dozen or so
-  microseconds and two measurements of the *same* access pattern can differ
-  threefold. Changing access pattern buys nothing in this regime, because
-  something else is setting the pace.
-- **With few blocks, load width is worth more than the coalescing rules
-  predict.** There are too few warps to hide memory latency behind concurrent
-  requests, so the only lever left is making each request wider and each thread
-  hold more bytes in flight. Any change that trades load width for something
-  else can reverse here.
+- **With small data, launch overhead and cache state dominate.** On 65536 × 4096
+  (512 MB), the four access patterns of the same row-reduction kernel (fp16, 256
+  threads, clocks unlocked) measure 4.20 to 4.43 TB/s, within 6% of each other.
+  On 2048 × 4096 (16 MB, which fits in L2), one call takes a dozen or so
+  microseconds, and two measurements of the *same* access pattern can differ by
+  threefold. Changing the access pattern has no benefit in this regime, because
+  another factor is setting the pace.
+- **With few blocks, load width matters more than the coalescing rules predict.**
+  There are too few warps to hide memory latency behind concurrent requests, so
+  the remaining lever is to make each request wider and keep more bytes in
+  flight per thread. Any change that trades load width for something else can
+  reverse here.
 
 ## Coalescing global memory accesses {#coalescing}
 
@@ -53,10 +54,10 @@ factors act at once:
 | cache line | 128 bytes | The L1 and L2 line, and the unit a cache lookup uses |
 | **sector** | **32 bytes** | A cache line is 4 sectors; L1 and L2 transfer whole sectors |
 
-Lookup works in cache lines, transfer works in sectors: on a sector miss L1
-requests just that sector from L2 rather than pulling the whole line. Which
-means **fetching 1 byte costs the same as fetching all 32**. The quality of a
-memory instruction is therefore measured by its **sector utilization**:
+Lookups operate on cache lines, while transfers operate on sectors. On a sector
+miss, L1 requests only that sector from L2 instead of pulling the whole line.
+Therefore **fetching 1 byte costs the same as fetching all 32**. The quality of
+a memory instruction is measured by its **sector utilization**:
 `bytes actually used / (sectors touched × 32)`.
 
 The hardware coalesces a warp's 32 accesses into as few 32-byte transactions as
@@ -75,7 +76,7 @@ A thread reading $V$ elements ($V$ = elements per row / threads) has four access
 patterns available.
 
 **blocked** — each thread takes one contiguous run. For a fixed `c`, adjacent
-threads are $V$ elements apart, which breaks the first requirement; sector
+threads are $V$ elements apart. This breaks the first requirement, and sector
 utilization is $1/V$:
 
 ```python
@@ -83,9 +84,9 @@ for c in T.serial(V):
     acc[0] = acc[0] * X[row, tx * V + c]
 ```
 
-**striped** — adjacent threads take adjacent elements. Addresses are contiguous
-now, but each thread fetches a single element per instruction, breaking the
-third requirement: $V$ elements take $V$ instructions.
+**striped** — adjacent threads take adjacent elements. The addresses are now
+contiguous, but each thread fetches only one element per instruction, which
+breaks the third requirement. Reading $V$ elements takes $V$ instructions.
 
 ```python
 for c in T.serial(V):
@@ -117,29 +118,28 @@ for c in T.serial(V):
     acc[0] = acc[0] * sh[tx, c]
 ```
 
-What separates the four is this: **who decides which thread reads which elements,
-and how wide each read is.**
+The four patterns differ in **who decides which thread reads which elements, and
+how wide each read is.**
 
-`T.serial` means the loop body runs sequentially on a single thread, and the
-index expression is translated literally into memory instructions — no
-coalescing, no vectorization. The pattern written is the pattern the hardware
-sees.
+With `T.serial`, the loop body runs sequentially on a single thread. The index
+expression is translated directly into memory instructions, with no coalescing
+or vectorization. The pattern in the source is the pattern the hardware sees.
 
-`T.vectorized`, `T.Parallel`, and `T.copy` leave that to TileLang's **layout
-inference**, and differ in how much is still written by hand: `T.vectorized`
-takes the width of one access per thread and infers the thread mapping;
-`T.Parallel` takes neither, deciding both how loop dimensions are split across
-threads and how wide each read is; `T.copy` takes only a source and a
-destination region and generates the whole copy (`coalesced_width` and
-`loop_layout` are there for taking the inferred result back over). Vectorization,
-address alignment, and avoiding bank conflicts on the shared memory side are all
-left to layout inference — exactly the parts that are friendly to the hardware
-and easy to get wrong by hand.
+`T.vectorized`, `T.Parallel`, and `T.copy` hand that decision to TileLang's
+**layout inference**. They differ in how much the programmer still specifies:
+`T.vectorized` specifies the access width per thread and infers the thread
+mapping; `T.Parallel` specifies neither, so it decides both how loop dimensions
+are split across threads and how wide each read is; `T.copy` specifies only a
+source region and a destination region, then generates the whole copy
+(`coalesced_width` and `loop_layout` are available when the inferred result
+needs to be overridden). Layout inference handles vectorization, address
+alignment, and avoiding bank conflicts on the shared-memory side. Those are the
+hardware-friendly details that are easy to get wrong by hand.
 
 **Writing indices by hand with `T.serial` means guaranteeing those three
-requirements yourself; handing the copy to layout inference means writing only
-its extent.** Which to choose, and what bandwidth each reaches, is measured
-below.
+requirements directly; handing the copy to layout inference means specifying
+only the copy extent.** The measurements below show which one to choose and what
+bandwidth each reaches.
 
 <figure class="access-patterns" markdown="1">
 
@@ -479,27 +479,28 @@ below.
 <text class="ap-scale" x="0" y="362.0">The measurements below use bf16, 256 threads, V = 16 — the same shape.</text>
 </svg>
 
-<figcaption>One read instruction. A violet dot is an element that thread reads in this instruction, and the teal ground is a sector the hardware fetches because of it; thread numbers sit above the cells, with alternating shades marking thread boundaries. The dashed violet row at the bottom is shared memory, which is not organized in sectors.</figcaption>
+<figcaption>One read instruction. A violet dot marks an element read by a thread in this instruction. The teal background marks a sector fetched by the hardware as a result. Thread numbers appear above the cells, and alternating shades mark thread boundaries. The dashed violet row at the bottom is shared memory, which is not organized in sectors.</figcaption>
 
 </figure>
 
 ## Measurements
 
-We measure both workloads on an H200, comparing what **memory bandwidth** each
-of the four access patterns reaches (bytes moved divided by kernel time, in
-TB/s). The two workloads place different demands on the order in which elements
-are processed — and that demand decides which access patterns are available.
+Both workloads are measured on an H200. The comparison is the **memory
+bandwidth** reached by each of the four access patterns: bytes moved divided by
+kernel time, in TB/s. The two workloads impose different requirements on the
+order in which elements are processed, and that requirement determines which
+access patterns are available.
 
-The SM clock is locked at 1830 MHz; the input is bf16 $65536 \times 4096$
-(512 MB, which **has to exceed the 60 MiB L2**, or the number measured is L2
-bandwidth). Each configuration runs three times, and the three agree to within
-±0.5%. staged takes two columns: one without padding (where the stride is
-exactly $V$ words, which produces bank conflicts — see
-[Optimizing Shared Memory Access](shared-memory-access.md)) and one at the best
-of several padding values measured.
+The SM clock is locked at 1830 MHz. The input is bf16 $65536 \times 4096$
+(512 MB, which **must exceed the 60 MiB L2**; otherwise the measured number is
+L2 bandwidth). Each configuration runs three times, with the three results
+agreeing to within ±0.5%. staged uses two columns: one without padding, where
+the stride is exactly $V$ words and produces bank conflicts (see
+[Optimizing Shared Memory Access](shared-memory-access.md)), and one using the
+best value among several measured padding choices.
 
-**Workload 1, product along a row**: the elements of a row are multiplied
-together, order does not affect the result, and each row writes one value. All
+**Workload 1, product along a row**: the elements of each row are multiplied
+together. Order does not affect the result, and each row writes one value. All
 four access patterns are available.
 
 | Threads | $V$ | blocked<br>TB/s | striped<br>TB/s | blocked + vectorized<br>TB/s | staged, no pad<br>TB/s | staged, padded<br>TB/s |
@@ -511,8 +512,8 @@ four access patterns are available.
 | 32 | 128 | 0.47 | 3.43 | 3.11 | 2.83 | **3.88**{ .win } |
 
 **Workload 2, serial prefix product along a row**: each position depends on
-every element to its left, the order cannot change, and the whole row is written
-back. striped is unavailable here, because a thread cannot hold a contiguous run.
+every element to its left. The order cannot change, and the whole row is written
+back. striped is unavailable here because a thread cannot hold a contiguous run.
 
 | Threads | $V$ | blocked<br>TB/s | blocked + vectorized<br>TB/s | staged, no pad<br>TB/s | staged, padded<br>TB/s |
 | --- | --- | --- | --- | --- | --- |
@@ -526,17 +527,17 @@ back. striped is unavailable here, because a thread cannot hold a contiguous run
 
 1. **Element-by-element blocked is the worst access pattern whenever $V > 1$.**
    For a fixed `c`, adjacent threads are $V$ elements apart and sector
-   utilization is $1/V$, so it gets worse as $V$ grows — workload 1 falls from
-   3.02 at $V = 8$ to 0.48 at $V = 64$. That relation follows from the
-   coalescing rules and does not change with shape.
+   utilization is $1/V$, so performance drops as $V$ grows. In workload 1, it
+   falls from 3.02 at $V = 8$ to 0.48 at $V = 64$. That relation follows from
+   the coalescing rules and does not change with shape.
 
 2. **Use vectorized blocked at small $V$; once $V$ grows enough that register
-   pressure cuts occupancy, switch to padded staged.** Vectorizing keeps the run
-   in registers ($V/2$ of them per thread for bf16); staged puts it in shared
-   memory, buying the registers back for one synchronization. The crossover
-   depends on how much register budget the rest of the kernel leaves, not on a
-   fixed $V$: the two workloads above cross at $V = 64$ and $V = 32$ at the same
-   row width. **Measure that crossover on your own kernel.**
+   pressure cuts occupancy, switch to padded staged.** Vectorized blocked keeps
+   the run in registers ($V/2$ registers per thread for bf16). staged puts the
+   run in shared memory and pays one synchronization to recover those registers.
+   The crossover depends on the register budget left by the rest of the kernel,
+   not on a fixed $V$: at the same row width, the two workloads above cross at
+   $V = 64$ and $V = 32$. **Measure that crossover on the target kernel.**
 
 3. **The shared buffer of staged has to avoid bank conflicts.** Declared as
    `(threads, V)` the stride is exactly $V$ words, which conflicts whenever $V$
@@ -545,17 +546,17 @@ back. striped is unavailable here, because a thread cannot hold a contiguous run
    In workload 2 the same configuration measures 0.46 unpadded and 3.69 padded.
 
 4. **striped coalesces fully, but spends one instruction per element.** That
-   puts it above element-by-element blocked and below vectorized blocked (3.31
-   against 1.83 and 3.81 at $V = 16$), which suits cases where the size of the
-   change matters more than the last bit of bandwidth. It leaves each thread
-   holding non-contiguous elements, so a computation that needs a thread to hold
-   a contiguous run — a serial prefix, for one — cannot use it.
+   puts it above element-by-element blocked and below vectorized blocked: 3.31
+   versus 1.83 and 3.81 at $V = 16$. It fits cases where minimizing the code
+   change matters more than extracting the last bit of bandwidth. Because each
+   thread holds non-contiguous elements, computations that require a contiguous
+   run per thread, such as a serial prefix, cannot use it.
 
 The two listings below are complete templates for the recommended access
-patterns, where `M`, `N`, `V`, `threads`, `pad`, and `dtype` are all
-compile-time constants. Of the four listings at the top of this page,
-element-by-element blocked is the wrong form and should not be copied; striped
-works but is not the fastest (see point 4 above).
+patterns. `M`, `N`, `V`, `threads`, `pad`, and `dtype` are all compile-time
+constants. Among the four listings at the top of this page, element-by-element
+blocked is the wrong form and should not be copied. striped works, but it is
+not the fastest option (see point 4 above).
 
 **Recommended at small $V$** — vectorized blocked:
 
