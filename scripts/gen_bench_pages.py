@@ -49,9 +49,13 @@ import sys
 import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import workload_shape  # noqa: E402
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 TILEOPS = os.path.join(REPO, "TileOPs")
+MANIFEST_DIR = os.path.join(TILEOPS, "src", "tileops", "manifest")
 _GH = "https://github.com/tile-ai/TileOPs"
 _NB = f"{_GH}/tree/nightly-bench"
 
@@ -547,7 +551,8 @@ DETAIL_HEADER = (
     "<tr>",
     # `colsep` draws the hairline between the workload name and the numbers.
     # Its own cell spans both header rows, so the rule has no gap.
-    '<th rowspan="2" class="colsep">Workload</th>',
+    '<th rowspan="2" class="colsep">Workload<br>'
+    '<span class="subhead">shapes · dtype</span></th>',
     "<th>Ratio</th>",
     "<th>Device time</th>",
     '<th colspan="2">Alternatives</th>',
@@ -589,7 +594,39 @@ def _stack(cells: list[str]) -> str:
     return f"{head}<br>{tail}"
 
 
-def detail_row(w: dict, m: dict) -> str:
+def workload_cell(w: dict, spec) -> str:
+    """The row's identity: what it ran on, then what the benchmark calls it.
+
+    The shapes come first because they are the question a reader brings to the
+    row — which tensors, how big, in what dtype. The benchmark's own id follows,
+    muted: it names the scenario the shapes were chosen for (`llama-8b-prefill`)
+    and is what to grep for in TileOPs, but it is not a measurement.
+
+    A workload the manifest does not declare keeps the id alone. Inventing a
+    shape for it would be worse than saying nothing.
+    """
+    if not spec:
+        return f'<td class="colsep"><code>{html.escape(w["config"])}</code></td>'
+    parts = []
+    for names, shape, dtype in spec.tensors:
+        tail = (f' <span class="wl-dt">{html.escape(workload_shape.abbr_dtype(dtype))}</span>'
+                if dtype and dtype != spec.dtype else "")
+        parts.append(f'<span class="wl-name">{html.escape(names)}</span> '
+                     f"{html.escape(shape)}{tail}")
+    parts += [f'<span class="wl-name">{html.escape(k)}</span> {html.escape(v)}'
+              for k, v in spec.dims]
+    parts += [f'<span class="wl-param">{html.escape(k)}={html.escape(v)}</span>'
+              for k, v in spec.params]
+    return (
+        '<td class="colsep">'
+        f'<span class="wl-shape">{" · ".join(parts)}</span>'
+        f'<span class="wl-id"><code>{html.escape(spec.label)}</code> '
+        f"{html.escape(workload_shape.abbr_dtype(spec.dtype))}</span>"
+        "</td>"
+    )
+
+
+def detail_row(w: dict, m: dict, spec=None) -> str:
     ordered = sorted(m["rivals"].items(), key=lambda kv: kv[1]["busy_ms"])
     names = _stack([f"<code>{html.escape(t)}</code>" for t, _ in ordered])
     times = _stack([_sig_ms(r["busy_ms"]) for _, r in ordered])
@@ -602,7 +639,7 @@ def detail_row(w: dict, m: dict) -> str:
                       rated=bool(real))
     return (
         "<tr>"
-        f'<td class="colsep"><code>{html.escape(w["config"])}</code></td>'
+        f"{workload_cell(w, spec)}"
         f"<td>{gap}</td>"
         f"<td>{_sig_ms(m['busy_ms'])}</td>"
         f"<td>{names}</td>"
@@ -768,8 +805,12 @@ def reading_page(sol_engine=(None, None)) -> str:
         "## Columns", "",
         "| Column | Meaning |",
         "| --- | --- |",
-        "| **Workload** | The shape and dtype the row was measured on, as the "
-        "benchmark names it. |",
+        "| **Workload** | What the row ran on: every input tensor with its "
+        "shape, then the dimensions and the parameters that are not tensors. A "
+        "dtype after a shape is that tensor's own, where it differs from the "
+        "row's; the row's dtype sits on the second line, after the benchmark's "
+        "id for the workload. Names, shapes and defaults are the spec "
+        "manifest's — a parameter left at its default is not printed. |",
         "| **Ratio** | `alt / ours` — the fastest alternative's device time "
         "divided by ours, the one number the colour grades. |",
         "| **Device time** | Milliseconds the device spent executing the call's "
@@ -848,6 +889,14 @@ def reading_page(sol_engine=(None, None)) -> str:
         f"[`docs/design/roofline.md`]({_GH}/blob/main/docs/design/roofline.md); "
         "the page imports that implementation rather than re-deriving it.",
         "",
+        "## Where the shapes come from", "",
+        "The snapshot records what each workload measured, not what it ran on: "
+        "the shapes are read from the TileOPs [spec manifest]"
+        f"({_GH}/tree/main/src/tileops/manifest), joined to a row by the label "
+        "and dtype the benchmark id is built from. A workload the manifest does "
+        "not declare — a benchmark written by hand rather than driven by a spec "
+        "— shows that id alone, with no shapes under it.",
+        "",
         "## Empty cells", "",
         f"`{EMPTY}` means an input to that metric was not recorded, never that "
         "the value is zero: the op reported no FLOP count for that workload, or "
@@ -901,7 +950,7 @@ def data_page(title: str, fams: list[str], rows_by_fam: dict,
                       '<div class="datatable">', *DETAIL_HEADER]
             for w, m in sorted(zip(workloads_of[op], metrics_by_op[op]),
                                key=lambda z: z[0]["config"]):
-                lines.append(detail_row(w, m))
+                lines.append(detail_row(w, m, w.get("spec")))
             lines += [*DETAIL_FOOTER, "</div>", ""]
     return "\n".join(lines) + "\n"
 
@@ -939,6 +988,9 @@ def main():
     ap.add_argument("--gpu", default="unknown")
     ap.add_argument("--rendered", default=None)
     ap.add_argument("--out-dir", default=None)
+    ap.add_argument("--manifest-dir", default=MANIFEST_DIR,
+                    help="TileOPs spec manifest the workload shapes are read "
+                         "from (default: the checkout at ./TileOPs)")
     args = ap.parse_args()
     ref = args.commit if args.commit and args.commit != "unknown" else "main"
 
@@ -959,6 +1011,18 @@ def main():
     timing = timings[0][0] if timings else None
 
     sol_engine = load_sol_engine(args.gpu)
+
+    # The snapshot names a workload but does not carry its shapes; the spec
+    # manifest declares both, under the same label. Ops it does not declare
+    # keep the benchmark's own id — see `workload_cell`.
+    manifest = (workload_shape.load_manifest(args.manifest_dir)
+                if os.path.isdir(args.manifest_dir) else {})
+    undeclared = set()
+    for w in workloads:
+        entry = manifest.get(w["op"])
+        w["spec"] = workload_shape.describe(entry, w["config"]) if entry else None
+        if not w["spec"]:
+            undeclared.add(w["op"])
 
     metrics_by_op: dict[str, list[dict]] = defaultdict(list)
     workloads_of: dict[str, list[dict]] = defaultdict(list)
@@ -1007,6 +1071,12 @@ def main():
     if unclassified:
         print("warning: baseline tags with no tier: "
               + ", ".join(unclassified), file=sys.stderr)
+    n_undeclared = sum(1 for w in workloads if not w["spec"])
+    if n_undeclared:
+        print(f"warning: {n_undeclared} workloads across "
+              f"{len(undeclared)} ops have no manifest entry, so they show "
+              "their benchmark id and no shapes: "
+              + ", ".join(sorted(undeclared)), file=sys.stderr)
 
 
 if __name__ == "__main__":

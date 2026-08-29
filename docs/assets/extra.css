@@ -1265,3 +1265,52 @@ html[lang="zh"] .md-nav__title {
   line-height: 1.6;
   text-align: left;
 }
+
+/* The workload cell: what the row ran on, then what the benchmark calls it.
+ *
+ * Every other cell in these tables is a number kept on one line, and the table
+ * scrolls rather than wraps. This one carries a tensor list — two lines for an
+ * elementwise op, five for a backward pass over ten tensors — so it is the one
+ * cell allowed to wrap, inside a width that leaves the numbers where they are.
+ */
+.md-typeset .datatable table:not([class]) td.colsep {
+  white-space: normal;
+  max-width: 26rem;
+}
+
+.md-typeset .datatable table:not([class]) .wl-shape {
+  display: block;
+  font-family: var(--tf-mono);
+  line-height: 1.4;
+}
+
+/* A tensor's name is not its shape. Teal separates the two the way it separates
+ * the label column from the measurements — the same colour, so a reader learns
+ * it once.
+ */
+.md-typeset .datatable table:not([class]) .wl-name {
+  color: color-mix(in srgb, var(--tf-teal), var(--tf-muted) 32%);
+}
+
+/* A dtype printed beside a shape is the exception — an index in int32 among
+ * half-precision tensors — so it is set apart from the shape it qualifies.
+ */
+.md-typeset .datatable table:not([class]) .wl-dt,
+.md-typeset .datatable table:not([class]) .wl-param {
+  color: var(--tf-muted);
+}
+
+/* The benchmark's own id: what to grep for in TileOPs, and the scenario the
+ * shapes above were chosen for. Below them and lighter, because it names the
+ * row rather than measuring it.
+ */
+.md-typeset .datatable table:not([class]) .wl-id {
+  display: block;
+  margin-top: 0.2em;
+  font-size: 0.92em;
+  color: var(--tf-muted);
+}
+
+.md-typeset .datatable table:not([class]) .wl-id code {
+  color: inherit;
+}

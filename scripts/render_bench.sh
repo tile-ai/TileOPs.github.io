@@ -13,9 +13,10 @@
 #   * branch present but fetch fails -> transient 404/network error; exit
 #     non-zero so the deploy aborts and the live page is left intact.
 #
-# Requires python3 on PATH (3.9 is enough; CI pins 3.12). A ./TileOPs checkout is
-# optional: it only makes gen_bench_pages.py resolve an op's source link to its
-# file instead of a code search.
+# Requires python3 on PATH (3.9 is enough; CI pins 3.12) and pyyaml. A ./TileOPs
+# checkout supplies the spec manifest the workload shapes are read from, and
+# resolves an op's source link to its file instead of a code search. Without it
+# the pages still render, with each workload named only by its benchmark id.
 set -euo pipefail
 
 repo="https://github.com/tile-ai/TileOPs"
@@ -61,8 +62,36 @@ rendered="$(date -u +'%Y-%m-%d %H:%M UTC')"
 test_arg=()
 [ -f "$work/test_results.xml" ] && test_arg=(--test-xml "$work/test_results.xml")
 
+# The workload shapes on the pages come from the spec manifest, so they must be
+# the manifest as it stood when the benchmark ran: the ./TileOPs checkout is at
+# main, which is ahead of the snapshot's commit and may have moved a shape under
+# a label since. Read the manifest out of that commit's tree instead. Failing
+# that, gen_bench_pages.py falls back to the checkout, which is right for every
+# label the two commits agree on and wrong only where the shapes moved.
+manifest_arg=()
+manifest_dir="$work/manifest"
+if [ -d TileOPs/.git ] && [ "$bench_commit" != "unknown" ]; then
+  if git -C TileOPs fetch --quiet --depth 1 origin "$bench_commit" 2>/dev/null; then
+    mkdir -p "$manifest_dir"
+    n=0
+    while read -r path; do
+      [ -n "$path" ] || continue
+      git -C TileOPs show "$bench_commit:$path" > "$manifest_dir/$(basename "$path")" && n=$((n + 1))
+    done < <(git -C TileOPs ls-tree --name-only "$bench_commit" src/tileops/manifest/ \
+             | grep '\.yaml$' || true)
+    if [ "$n" -gt 0 ]; then
+      manifest_arg=(--manifest-dir "$manifest_dir")
+      echo "read $n manifest files from TileOPs ${bench_commit:0:12}"
+    fi
+  fi
+fi
+if [ ${#manifest_arg[@]} -eq 0 ]; then
+  echo "::warning::could not read the manifest at ${bench_commit:0:12}; workload shapes come from the ./TileOPs checkout instead"
+fi
+
 python3 scripts/gen_bench_pages.py \
   --bench-xml "$work/bench_results.xml" \
   ${test_arg[@]+"${test_arg[@]}"} \
+  ${manifest_arg[@]+"${manifest_arg[@]}"} \
   --meta "$work/meta.json" \
   --commit "$bench_commit" --date "$bench_date" --gpu "$bench_gpu" --rendered "$rendered"
