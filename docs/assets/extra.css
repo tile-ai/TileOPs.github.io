@@ -360,7 +360,7 @@ body,
 /* Inside an admonition the block would otherwise sit on the same ground twice. */
 .md-typeset .admonition pre > code,
 .md-typeset details pre > code {
-  background: color-mix(in srgb, var(--tf-teal), transparent 82%);
+  background: color-mix(in srgb, var(--tf-teal), transparent 88%);
 }
 
 /* The line numbers are scenery: no fill of their own, a hairline to sit behind,
@@ -1287,134 +1287,196 @@ html[lang="zh"] .md-nav__title {
  * holds only `W1`, `W2`, … and the measurements, which is what a reader
  * compares down a column.
  */
-/* The workload key: one closed line per workload, opening into a tensor per
- * line. Material styles every `details` as an admonition — box, tinted summary
- * bar, icon — and none of that belongs on a line of small mono type.
+/* The workload key: what an op's workloads have in common, stated once, and
+ * what varies, one line per workload. Three columns — code, what varies, the
+ * benchmark's own id — so a reader compares down a column.
  */
 .md-typeset .wl-key {
-  margin: 0.5em 0 1em;
+  margin: 0.35em 0 0.8em;
   font-family: var(--tf-mono);
   font-size: 0.68rem;
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
-.md-typeset .wl-key details.wl-item,
-.md-typeset .wl-key p.wl-item {
+/* One rule per group, teal like every other label on these pages: it says how
+ * far the shared line above reaches.
+ */
+.md-typeset .wl-key .wl-group {
+  margin: 0 0 0.55em;
+  padding-left: 0.8em;
+  border-left: 2px solid color-mix(in srgb, var(--tf-teal), transparent 55%);
+}
+
+.md-typeset .wl-key .wl-group:last-child {
+  margin-bottom: 0;
+}
+
+/* A row of entries, not a sentence: each cell holds together and the line
+ * wraps between them, so a long op's second line starts under the first
+ * instead of breaking a shape in half.
+ */
+.md-typeset .wl-key .wl-shared {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15em 0.32em;
+  margin: 0 0 0.15em;
+  font-size: inherit;
+  line-height: inherit;
+  color: color-mix(in srgb, var(--tf-ink), transparent 20%);
+}
+
+.md-typeset .wl-key .wl-shared + .wl-shared {
+  margin-bottom: 0.2em;
+}
+
+.md-typeset .wl-key .wl-cell {
+  white-space: nowrap;
+}
+
+/* Between entries, a middot rather than a second rule: the rule after the code
+ * falls in the same place on every row and reads as a column, while a rule
+ * between entries would land wherever the previous name happened to end. A
+ * middot is punctuation — it separates without claiming to align anything.
+ */
+.md-typeset .wl-key .wl-cell + .wl-cell::before {
+  content: "·";
+  margin-right: 0.32em;
+  color: color-mix(in srgb, var(--tf-ink), transparent 50%);
+  font-weight: 400;
+}
+
+/* Two kinds of thing on these lines, and they are read differently: a tensor
+ * is a shape the op takes, a scalar is a number it was given. The tensor's
+ * name carries the weight; the scalars stay plain text beside it.
+ */
+.md-typeset .wl-key .wl-tensor .wl-k {
+  color: color-mix(in srgb, var(--tf-teal), var(--tf-ink) 30%);
+  font-weight: 700;
+}
+
+.md-typeset .wl-key .wl-scalar {
+  color: var(--tf-muted);
+}
+
+/* The number is what varies down the page; its name is the same every row. */
+.md-typeset .wl-key .wl-scalar .wl-v {
+  color: color-mix(in srgb, var(--tf-ink), transparent 15%);
+}
+
+.md-typeset .wl-key .wl-dim .wl-v {
+  color: inherit;
+}
+
+/* Narrow windows have no width to hold a tensor list on one line; there,
+ * breaking inside a cell beats a line running off the page.
+ */
+@media (max-width: 50rem) {
+  .md-typeset .wl-key .wl-cell {
+    white-space: normal;
+  }
+}
+
+.md-typeset .wl-key ul.wl-rows {
   margin: 0;
   padding: 0;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  background: none;
-  font-size: inherit;
-}
-
-/* Closed, the eight sit as a block of lines; open, the one that is open is
- * spaced off the next line so its entries read as belonging to it.
- */
-.md-typeset .wl-key details.wl-item[open] {
-  margin-bottom: 0.5em;
-}
-
-.md-typeset .wl-key p.wl-item {
-  padding-left: 1.35em;
-}
-
-.md-typeset .wl-key details.wl-item > summary {
-  position: relative;
-  margin: 0;
-  padding: 0.06em 0 0.06em 1.35em;
-  border: 0;
-  background: none;
-  font-family: inherit;
-  font-size: inherit;
-  font-weight: 400;
-  cursor: pointer;
   list-style: none;
 }
 
-.md-typeset .wl-key details.wl-item > summary::-webkit-details-marker {
-  display: none;
-}
-
-/* Material's own marker is a mask-image on the same pseudo-element, so the
- * mask is cleared rather than layered under a glyph.
+/* The id ranges right, off the same edge on every row, so the middle column is
+ * free to be as long as one workload needs without ragging the rest.
  */
-.md-typeset .wl-key details.wl-item > summary::before {
-  content: "\25B8";
-  position: absolute;
-  top: 0.06em;
-  left: 0.3em;
-  width: auto;
-  height: auto;
-  background: none;
-  -webkit-mask-image: none;
-  mask-image: none;
-  color: color-mix(in srgb, var(--tf-violet), transparent 45%);
-}
-
-.md-typeset .wl-key details.wl-item[open] > summary::before {
-  content: "\25BE";
-  color: var(--tf-violet);
-}
-
-.md-typeset .wl-key details.wl-item > summary:hover .wl-id {
-  color: var(--tf-violet);
-}
-
-.md-typeset .wl-key details.wl-item > summary:hover::before {
-  color: var(--tf-violet);
-}
-
-/* One tensor or parameter per line, ranged under the workload's own name
- * rather than under its `W` code: the dash hangs into the indent, so the names
- * form a column of their own.
- */
-.md-typeset .wl-key ul.wl-sub {
-  margin: 0.15em 0 0;
-  padding: 0 0 0 2.5em;
-  list-style: none;
-}
-
-.md-typeset .wl-key ul.wl-sub li {
+.md-typeset .wl-key ul.wl-rows li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.9em;
   margin: 0;
-  padding-left: 0.9em;
-  text-indent: -0.9em;
 }
 
-.md-typeset .wl-key ul.wl-sub li::before {
-  content: "\2013";
-  display: inline-block;
-  width: 0.9em;
-  color: color-mix(in srgb, var(--tf-ink), transparent 60%);
-  text-indent: 0;
-}
-
-/* The code is the one thing the eye jumps between here and the table. It sits
- * against the parenthesis that follows it, so no width is reserved after it.
- */
-.md-typeset .wl-key b {
+.md-typeset .wl-key ul.wl-rows b {
+  flex: 0 0 2.1em;
   color: var(--tf-violet);
   font-weight: 700;
 }
 
-/* A tensor's name is not its shape. Teal separates the two the way it separates
- * the workload column from the measurements — the same colour, learned once.
+/* A hairline between the code and what it ran on — the same rule the table
+ * draws between the workload column and its measurements, so the two read as
+ * the same division seen twice.
+ */
+.md-typeset .wl-key .wl-delta {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 0.15em 0.32em;
+  padding-left: 0.9em;
+  border-left: 1px solid color-mix(in srgb, var(--tf-ink), transparent 80%);
+}
+
+.md-typeset .wl-key .wl-delta:empty {
+  border-left: 0;
+}
+
+/* A tensor list wider than the column: one tensor per line, and no middots —
+ * stacked entries are already separated by the line break.
+ */
+.md-typeset .wl-key .wl-shared.wl-stack {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.md-typeset .wl-key .wl-shared.wl-stack .wl-cell + .wl-cell::before {
+  content: none;
+  margin-right: 0;
+}
+
+/* A row whose own scalars are wider than the column: the id takes the first
+ * line beside the code, the scalars the second. The rule runs down both, so a
+ * workload set this way is still one object with one left edge.
+ */
+.md-typeset .wl-key ul.wl-long li {
+  margin-bottom: 0.3em;
+}
+
+.md-typeset .wl-key ul.wl-long li:last-child {
+  margin-bottom: 0;
+}
+
+.md-typeset .wl-key ul.wl-long .wl-id {
+  order: 1;
+  flex: 1 1 auto;
+  margin-left: 0;
+  padding-left: 0.9em;
+  border-left: 1px solid color-mix(in srgb, var(--tf-ink), transparent 80%);
+}
+
+.md-typeset .wl-key ul.wl-long .wl-delta {
+  order: 2;
+  flex: 0 0 calc(100% - 3em);
+  margin-left: 3em;
+}
+
+.md-typeset .wl-key .wl-id {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 0;
+  background: transparent;
+  color: var(--tf-muted);
+}
+
+/* A tensor's name is not its shape, and a symbol is not its value. Teal
+ * separates the two the way it separates the workload column from the
+ * measurements — the same colour, learned once.
  */
 .md-typeset .wl-key .wl-k {
   color: color-mix(in srgb, var(--tf-teal), var(--tf-muted) 32%);
 }
 
+/* Parameters are how the op was called, not how big it is. */
 .md-typeset .wl-key .wl-dt,
 .md-typeset .wl-key .wl-dim,
 .md-typeset .wl-key .wl-dim .wl-k {
   color: var(--tf-muted);
-}
-
-.md-typeset .wl-key .wl-id {
-  color: var(--md-default-fg-color);
-  background: transparent;
-  padding: 0;
 }
 
 /* The workload column is now two characters wide, so it centres like the
@@ -1975,72 +2037,4 @@ html[lang="zh"] .md-nav__title {
   font-size: 0.7rem;
   line-height: 1.6;
   text-align: left;
-}
-
-/* What a row *is* takes three columns — name, shape, dtype — so shapes line up
- * under shapes and two workloads compare down one column instead of across two
- * paragraphs. Every other column is a number held on one line and the table
- * scrolls; these three are the ones allowed to wrap.
- */
-.md-typeset .datatable table:not([class]) td.wl {
-  white-space: normal;
-  text-align: left;
-  vertical-align: top;
-}
-
-/* The shape cell is a list, not a sentence: one input per line, each reading
- * `name: shape, dtype` on its own so nothing has to be paired against a column
- * further right.
- */
-.md-typeset .datatable table:not([class]) .wl-line {
-  display: block;
-  font-family: var(--tf-mono);
-  line-height: 1.45;
-  max-width: 24rem;
-  overflow-wrap: anywhere;
-}
-
-/* A tensor's name is not its shape. Teal separates the two the way it separates
- * this block of columns from the measurements — the same colour, learned once.
- */
-.md-typeset .datatable table:not([class]) .wl-k {
-  color: color-mix(in srgb, var(--tf-teal), var(--tf-muted) 32%);
-}
-
-.md-typeset .datatable table:not([class]) .wl-dt {
-  color: var(--tf-muted);
-}
-
-/* The key to an op's scalar names, above the table it applies to. Set small and
- * muted: it is read once, not down the page.
- */
-.md-typeset .wl-legend {
-  font-family: var(--tf-mono);
-  font-size: 0.66rem;
-  line-height: 1.6;
-  color: var(--tf-muted);
-  margin: 0 0 0.4em;
-}
-
-.md-typeset .wl-legend b {
-  color: color-mix(in srgb, var(--tf-teal), var(--tf-muted) 32%);
-  font-weight: 700;
-}
-
-/* Parameters, below the sizes: how the op was called, not how big it is. */
-.md-typeset .datatable table:not([class]) .wl-dim,
-.md-typeset .datatable table:not([class]) .wl-dim .wl-k {
-  color: var(--tf-muted);
-}
-
-/* The benchmark's own id: what to search for in TileOPs, and the scenario the
- * shapes beside it were chosen for. It is the longest name on the page and the
- * least numeric thing in the table, so it wraps inside a narrow column rather
- * than setting the table's width.
- */
-.md-typeset .datatable table:not([class]) .wl-id {
-  display: block;
-  max-width: 13rem;
-  overflow-wrap: anywhere;
-  line-height: 1.35;
 }

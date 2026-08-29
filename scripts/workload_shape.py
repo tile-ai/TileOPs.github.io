@@ -52,12 +52,19 @@ def abbr_dtype(name: str) -> str:
 class Spec:
     """One benchmarked workload, described in the manifest's own terms."""
 
-    def __init__(self, label, dtype, tensors, dims, params):
+    def __init__(self, label, dtype, tensors, dims, params,
+                 symbolic=None, bindings=None):
         self.label = label          # "hidden-state-prefill"
         self.dtype = dtype          # "float16" — the workload's dtype row
         self.tensors = tensors      # [(names, "[2048, 4096]", dtype or None)]
         self.dims = dims            # [("heads", "32"), ...]
         self.params = params        # [("is_causal", "true"), ...]
+        # The same tensors in the manifest's own symbols — [(names, "[B, H, DK]",
+        # dtype)] — with what those symbols were set to on this workload.
+        # None where the signature templates no shape, or where one symbol would
+        # have to stand for two values.
+        self.symbolic = symbolic
+        self.bindings = bindings or OrderedDict()
 
     def __bool__(self) -> bool:
         return bool(self.tensors or self.dims or self.params)
@@ -134,6 +141,80 @@ def _split_dims(body: str) -> list[str]:
             start = i + 1
     parts.append(body[start:])
     return [p for p in (p.strip() for p in parts) if p]
+
+
+_SYMBOL = re.compile(r"[A-Za-z_][A-Za-z_0-9]*$")
+
+
+def _bind(template: str, dims: list) -> tuple[list, dict] | None:
+    """Read a concrete shape back through the template that declares it.
+
+    ``"[B, H, DK]"`` against ``[1, 8, 128]`` gives ``["B", "H", "DK"]`` and
+    ``{B: 1, H: 8, DK: 128}``. A position holding an expression rather than a
+    plain name keeps its number: ``[B * H, D]`` is not two symbols to solve for.
+    """
+    body = (template or "").strip()
+    if not (body.startswith("[") and body.endswith("]")):
+        return None
+    parts = _split_dims(body[1:-1])
+    if len(parts) != len(dims):
+        return None
+    symbols, binds = [], {}
+    for part, value in zip(parts, dims):
+        if _SYMBOL.match(part):
+            symbols.append(part)
+            binds[part] = value
+        else:
+            symbols.append(str(value))
+    return symbols, binds
+
+
+def _restated_by_symbol(entry: dict, bindings: dict, workload: dict) -> set:
+    """Scalars a shape symbol already states, per the manifest's own rules.
+
+    ``shape_rules`` carries the identities: ``B == batch`` means the row prints
+    the same number twice, once as the first dimension of every tensor and once
+    as a parameter. Only one-name identities count — ``S == num_chunks *
+    chunk_len`` does not let a reader recover ``num_chunks`` from ``S``, so both
+    stay.
+    """
+    rules = (entry.get("signature") or {}).get("shape_rules") or []
+    out = set()
+    for rule in rules:
+        parts = str(rule).split("==")
+        if len(parts) != 2:
+            continue
+        left, right = (p.strip() for p in parts)
+        if not (_SYMBOL.match(left) and _SYMBOL.match(right)):
+            continue
+        for symbol, name in ((left, right), (right, left)):
+            if symbol in bindings and workload.get(name) == bindings[symbol]:
+                out.add(name)
+    return out
+
+
+def _symbolic(shapes: list, inputs: dict):
+    """Every tensor in the manifest's symbols, or (None, None).
+
+    All or nothing, and only where the symbols hold: one name standing for two
+    values on the same workload means the template does not describe it, and
+    printing the shapes in symbols would then say something untrue.
+    """
+    if not shapes or not inputs:
+        return None, None
+    out, binds = [], OrderedDict()
+    for name, dims, tensor_dtype in shapes:
+        spec = inputs.get(name)
+        template = spec.get("shape") if isinstance(spec, dict) else None
+        bound = _bind(str(template), dims) if template else None
+        if bound is None:
+            return None, None
+        symbols, values = bound
+        for symbol, value in values.items():
+            if binds.setdefault(symbol, value) != value:
+                return None, None
+        out.append((name, "[" + ", ".join(symbols) + "]", tensor_dtype))
+    return out, binds
 
 
 # --- Formatting -------------------------------------------------------------
@@ -307,13 +388,14 @@ def describe(entry: dict, config: str) -> Spec | None:
             shapes, consumed = templated, consumed | used
 
     # Tensors of one shape and one dtype are named together on one line.
-    grouped: "OrderedDict[tuple, list]" = OrderedDict()
-    for name, dims, tensor_dtype in shapes:
-        grouped.setdefault((fmt_shape(dims), tensor_dtype), []).append(name)
-    tensors = [(" ".join(names), shape, tensor_dtype)
-               for (shape, tensor_dtype), names in grouped.items()]
+    tensors = _group_tensors((name, fmt_shape(dims), dt) for name, dims, dt in shapes)
+    sym_shapes, bindings = _symbolic(shapes, inputs)
+    # Grouped by the symbolic shape, not the concrete one: `q: [B, H, DK]` and
+    # `v: [B, H, DV]` are one line only on the workloads where DK == DV.
+    symbolic = _group_tensors(sym_shapes) if sym_shapes else None
 
-    derived = _derived_keys(entry)
+    derived = _derived_keys(entry) | _restated_by_symbol(entry, bindings or {},
+                                                        workload)
     dims_out, params_out = [], []
     for key, value in workload.items():
         if key in consumed or key in _LABEL_KEYS or key in _DTYPE_KEYS:
@@ -328,4 +410,16 @@ def describe(entry: dict, config: str) -> Spec | None:
         if isinstance(value, (int, float, str, list, bool)):
             dims_out.append((key, _fmt_value(value)))
 
-    return Spec(label, dtype, tensors, _pair_counts(dims_out), params_out)
+    return Spec(label, dtype, tensors, _pair_counts(dims_out), params_out,
+                symbolic, bindings)
+
+
+def _group_tensors(shapes) -> list:
+    """Tensors of one shape and one dtype, named together on one line."""
+    grouped: "OrderedDict[tuple, list]" = OrderedDict()
+    for name, shape, tensor_dtype in shapes:
+        grouped.setdefault((shape, tensor_dtype), []).append(name)
+    # Comma-separated: `q, k` is two tensors of one shape, and a space alone
+    # does not say that at a glance.
+    return [(", ".join(names), shape, tensor_dtype)
+            for (shape, tensor_dtype), names in grouped.items()]

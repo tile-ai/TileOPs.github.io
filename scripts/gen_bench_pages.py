@@ -47,7 +47,7 @@ import os
 import statistics
 import sys
 import xml.etree.ElementTree as ET
-from collections import Counter, defaultdict
+from collections import Counter, OrderedDict, defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import workload_shape  # noqa: E402
@@ -598,53 +598,168 @@ def _stack(cells: list[str]) -> str:
 WORKLOAD_CODE = "W"
 
 
+def _facts(spec) -> "OrderedDict":
+    """Every scalar a workload sets, as name -> (value, kind).
+
+    The symbols of the tensor templates come first, since those are the numbers
+    the shapes are made of; then the dimensions the manifest names outright,
+    then the parameters, which are how the op was called rather than how big it
+    is and stay dimmed wherever they are printed.
+    """
+    facts = OrderedDict()
+    if spec.dtype:
+        facts["dtype"] = (workload_shape.abbr_dtype(spec.dtype), "dim")
+    if spec.symbolic:
+        for name, value in spec.bindings.items():
+            facts[name] = (str(value), "dim")
+    for name, value in spec.dims:
+        facts.setdefault(name, (value, "dim"))
+    for name, value in spec.params:
+        facts[name] = (value, "param")
+    return facts
+
+
+def _fact_html(name: str, value: str, kind: str) -> str:
+    body = (f'<span class="wl-k">{html.escape(name)}</span>='
+            f'<span class="wl-v">{html.escape(value)}</span>')
+    return (f'<span class="wl-dim">{body}</span>' if kind == "param" else body,
+            "wl-scalar")
+
+
+def _tensors_html(entries, spec_dtype: str) -> list:
+    """Each tensor as `name [shape]`, with a dtype only where it differs.
+
+    The group states its own dtype once. A tensor that was measured in another
+    one — a `mask` in `bool` among tensors in `bf16` — says so where it sits.
+    """
+    out = []
+    for names, shape, dtype in entries:
+        cell = (f'<span class="wl-k">{html.escape(names)}</span>: '
+                f"{html.escape(shape)}")
+        if dtype and dtype != spec_dtype:
+            dt = html.escape(workload_shape.abbr_dtype(dtype))
+            cell += f', <span class="wl-dt">{dt}</span>'
+        out.append((cell, "wl-tensor"))
+    return out
+
+
+def _cells(entries) -> str:
+    """One unbreakable cell per entry, tensors marked apart from scalars."""
+    return "".join(f'<span class="wl-cell {cls}">{body}</span>'
+                   for body, cls in entries)
+
+
+_TAG = __import__("re").compile(r"<[^>]+>")
+
+# How wide a line of entries may be before it is set differently. Measured in
+# characters of the key's monospace, against the width of the content column:
+# past this a line wraps, and a wrapped line of entries reads worse than the
+# same entries stacked.
+WRAP_TENSORS = 96   # a tensor list wraps -> one tensor per line
+WRAP_DELTA = 74     # a row's own scalars wrap -> id and scalars on two lines
+
+
+def _width(entries) -> int:
+    """The characters an entry list takes, separators included."""
+    return sum(len(_TAG.sub("", body)) + 3 for body, _ in entries)
+
+
+def _cluster(rows: list) -> list:
+    """An op's workloads, grouped by what they have in common.
+
+    The grouping key is the description itself with every size taken out: which
+    tensors, named together how, in a shape written in the manifest's symbols.
+    Neither the sizes nor the dtype are part of it — a workload measured in
+    `f16` beside one in `bf16` carries that as one more thing that varies,
+    rather than splitting the group and repeating the tensor list for each half.
+    A tensor in a dtype of its own still splits the group, since then the
+    tensor list itself differs.
+    """
+    groups = OrderedDict()
+    for code, w in rows:
+        spec = w.get("spec")
+        if not spec:
+            key = None
+        elif spec.symbolic:
+            key = ("sym", *(c for c, _ in _tensors_html(spec.symbolic,
+                                                        spec.dtype)))
+        else:
+            # No template to write the shapes in: the row prints its own, so
+            # the group is only there to hold workloads taking the same tensors.
+            key = ("con", *(n for n, _, _ in spec.tensors))
+        groups.setdefault(key, []).append((code, w))
+    return list(groups.values())
+
+
 def workload_key(rows: list) -> list:
     """What each row of an op's table ran on, listed above it.
 
-    The table's first column is `W1`, `W2`, … and nothing else. A workload's
-    shapes are a list of a dozen names and numbers, and inside a column they
-    either squeeze the measurements out of the window or wrap into a paragraph
-    per row.
+    The table's first column is `W1`, `W2`, … and nothing else: a workload's
+    shapes are a dozen names and numbers, and inside a column they either
+    squeeze the measurements out of the window or wrap into a paragraph per row.
 
-    Here each workload is one closed line, and opens on its own into a tensor
-    per line. A reader scanning ratios sees eight short lines above the table;
-    a reader whom one row surprised opens that row alone.
+    An op's workloads are nearly the same run at eight sizes, so what they share
+    is stated once — in the manifest's own symbols, `q k [B, H, DK]` — and each
+    row carries only the symbols that vary on it. The reader gets the shape of
+    the experiment in one line and the axis it was swept along in the next.
 
     Order follows the table's rows, so `W3` is the third row.
     """
     if not rows:
         return []
-    items = []
-    for code, w in rows:
-        spec = w.get("spec")
-        if not spec:
-            items.append(f'<p class="wl-item wl-bare"><b>{code}</b>('
-                         f'<code class="wl-id">{html.escape(w["config"])}</code>'
-                         ")</p>")
+    blocks = []
+    for group in _cluster(rows):
+        specs = [w.get("spec") for _, w in group]
+        if not specs[0]:
+            for code, w in group:
+                blocks.append(f'<li><b>{code}</b><span class="wl-delta">'
+                              f'</span><code class="wl-id">'
+                              f'{html.escape(w["config"])}</code></li>')
             continue
-        parts = []
-        for names, shape, dtype in spec.tensors:
-            # Each tensor carries its own dtype, so an entry reads on its own:
-            # a `mask` in `bool` beside tensors in `bf16` says so where it sits.
-            dt = workload_shape.abbr_dtype(dtype or spec.dtype)
-            parts.append(f'<span class="wl-k">{html.escape(names)}</span>: '
-                         f"{html.escape(shape)}, "
-                         f'<span class="wl-dt">{html.escape(dt)}</span>')
-        parts += [f'<span class="wl-k">{html.escape(k)}</span>: {html.escape(v)}'
-                  for k, v in spec.dims]
-        # Parameters last and dimmed: how the op was called, not how big it is.
-        parts += [f'<span class="wl-dim"><span class="wl-k">{html.escape(k)}'
-                  f"</span>: {html.escape(v)}</span>" for k, v in spec.params]
-        # One entry per line: an op takes as many as a dozen tensors and
-        # parameters, and a run of them on one line is read by counting
-        # separators. The workload's own dtype is not repeated in the summary —
-        # every entry under it carries the dtype it was measured in.
-        sub = "".join(f"<li>{p}</li>" for p in parts)
-        items.append(
-            f'<details class="wl-item"><summary><b>{code}</b>('
-            f'<code class="wl-id">{html.escape(spec.label)}</code>)</summary>'
-            f'<ul class="wl-sub">{sub}</ul></details>')
-    return ['<div class="wl-key">', *items, "</div>", ""]
+        facts = [_facts(s) for s in specs]
+        # A symbolic template describes the whole group only where every
+        # workload in it resolved to the same symbols.
+        symbolic = specs[0].symbolic
+        if not all(s.symbolic == symbolic for s in specs):
+            symbolic = None
+        shared = [n for n in facts[0]
+                  if all(f.get(n) == facts[0][n] for f in facts)]
+
+        head = _tensors_html(symbolic, specs[0].dtype) if symbolic else []
+        scalars = [_fact_html(n, *facts[0][n]) for n in shared]
+
+        rows_html, deltas = [], []
+        for (code, _), spec, fact in zip(group, specs, facts):
+            varies = [_fact_html(n, *v) for n, v in fact.items()
+                      if n not in shared]
+            # Without a template the group has nothing to hold in common, so
+            # the row states its own tensors outright.
+            if not symbolic:
+                varies = _tensors_html(spec.tensors, spec.dtype) + varies
+            deltas.append(varies)
+            rows_html.append(
+                f'<li><b>{code}</b><span class="wl-delta">'
+                + _cells(varies) +
+                f'</span><code class="wl-id">{html.escape(spec.label)}</code></li>')
+        # Where one row's scalars are wider than the column, the whole group is
+        # set on two lines — id under the code, scalars under that — so every
+        # row in it breaks the same way.
+        long = (" wl-long" if any(_width(d) > WRAP_DELTA for d in deltas)
+                else "")
+
+        block = []
+        # Tensors and scalars on lines of their own: what the op takes, then how
+        # big it was made. Each entry is one unbreakable cell, so a line too long
+        # for the page wraps between entries and the next line starts under the
+        # first — a paragraph of names broken mid-shape reads as neither.
+        if head:
+            stack = " wl-stack" if _width(head) > WRAP_TENSORS else ""
+            block.append(f'<p class="wl-shared{stack}">{_cells(head)}</p>')
+        if scalars:
+            block.append(f'<p class="wl-shared">{_cells(scalars)}</p>')
+        block.append(f'<ul class="wl-rows{long}">' + "".join(rows_html) + "</ul>")
+        blocks.append(f'<div class="wl-group">{"".join(block)}</div>')
+    return ['<div class="wl-key">', *blocks, "</div>", ""]
 
 
 def detail_row(code: str, m: dict) -> str:
