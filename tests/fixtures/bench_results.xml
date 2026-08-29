@@ -62,7 +62,29 @@
       </properties>
     </testcase>
 
-    <!-- An op the manifest fragment does not declare: named by its id alone. -->
+    <!-- Shapes the signature templates resolve, one of them in `bool`. -->
+    <testcase classname="bench" name="test_bench[templated-64x256-float16]">
+      <properties>
+        <property name="op" value="TemplatedFwdOp"/>
+        <property name="op_module" value="tileops.ops.elementwise.templated"/>
+        <property name="tileops_device_busy_ms" value="0.0060"/>
+        <property name="tileops_timing" value="cupti"/>
+        <property name="torch_device_busy_ms" value="0.0090"/>
+      </properties>
+    </testcase>
+
+    <testcase classname="bench" name="test_bench[templated-128x256-float16]">
+      <properties>
+        <property name="op" value="TemplatedFwdOp"/>
+        <property name="op_module" value="tileops.ops.elementwise.templated"/>
+        <property name="tileops_device_busy_ms" value="0.0070"/>
+        <property name="tileops_timing" value="cupti"/>
+        <property name="torch_device_busy_ms" value="0.0100"/>
+      </properties>
+    </testcase>
+
+    <!-- An op the manifest fragment does not declare, measured against a
+         baseline whose tag the tier table does not know. -->
     <testcase classname="bench" name="test_bench[undeclared-op-case-float16]">
       <properties>
         <property name="op" value="MysteryFwdOp"/>
@@ -71,6 +93,8 @@
         <property name="tileops_timing" value="cupti"/>
         <property name="triton_device_busy_ms" value="0.0080"/>
         <property name="triton_ratio" value="2.0"/>
+        <property name="brand-new-lib_device_busy_ms" value="0.0120"/>
+        <property name="brand-new-lib_ratio" value="3.0"/>
       </properties>
     </testcase>
 

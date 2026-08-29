@@ -79,6 +79,22 @@ def test_a_template_no_symbol_can_describe_falls_back_to_concrete(manifest):
     assert s.tensors == [("a", "[64, 32]", "float16")]  # pinned in the signature
 
 
+def test_shapes_the_signature_templates_are_resolved(manifest):
+    # No `*_shape` key here: the shapes come from evaluating the templates
+    # against the scalars the workload sets.
+    s = spec(manifest, "TemplatedFwdOp", "templated-64x256-float16")
+    assert s.tensors == [("x", "[64, 256]", None), ("mask", "[64]", "bool")]
+    assert s.symbolic == [("x", "[rows, cols]", None), ("mask", "[rows]", "bool")]
+    assert s.bindings == {"rows": 64, "cols": 256}
+
+
+def test_a_scalar_a_template_consumed_is_not_repeated(manifest):
+    # `rows` and `cols` are in the shapes; printing them again as dimensions
+    # would say the same thing twice.
+    s = spec(manifest, "TemplatedFwdOp", "templated-64x256-float16")
+    assert s.dims == []
+
+
 def test_scalars_the_manifest_names_are_reported(manifest):
     s = spec(manifest, "ChunkScanFwdOp", "scan-b2-bfloat16")
     assert ("num_chunks", "4") in s.dims

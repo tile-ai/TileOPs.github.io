@@ -42,8 +42,20 @@ def rendered(tmp_path_factory):
     return render(str(tmp_path_factory.mktemp("bench")))
 
 
-def test_pages_match_the_committed_output(rendered):
+# `reading.md` is the method note: prose written in the renderer, with nothing
+# read out of the snapshot. Holding it byte for byte would mean refreshing a
+# golden file every time a sentence is edited, and the sentence is already in
+# the diff. The data pages are the ones where logic meets data.
+PROSE = {"reading.md"}
+
+
+def test_the_method_note_is_written(rendered):
     pages, _ = rendered
+    assert "## Where the shapes come from" in pages["reading.md"]
+
+
+def test_pages_match_the_committed_output(rendered):
+    pages = {n: t for n, t in rendered[0].items() if n not in PROSE}
     assert sorted(pages) == sorted(os.listdir(GOLDEN))
     for name, text in pages.items():
         expected = open(os.path.join(GOLDEN, name), encoding="utf-8").read()
@@ -64,8 +76,9 @@ def test_a_run_reports_what_it_could_not_describe(rendered):
     _, stderr = rendered
     # One op is absent from the manifest fragment, and one recorded ratio
     # disagrees with the times published beside it. Both must be said out loud.
-    assert "MysteryFwdOp" in stderr
-    assert "recorded ratio disagrees" in stderr
+    assert "MysteryFwdOp" in stderr                 # no manifest entry
+    assert "recorded ratio disagrees" in stderr     # ratio against the times
+    assert "brand-new-lib" in stderr                # a tag with no tier
 
 
 def test_without_a_manifest_the_pages_still_render(tmp_path):

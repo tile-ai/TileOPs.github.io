@@ -41,6 +41,20 @@ ChunkScanFwdOp:
     - {batch: 4, num_chunks: 4, chunk_len: 64, N: 128, dtypes: [bfloat16],
        is_causal: false, label: scan-b4}
 
+# Shapes the signature templates and the workload's own scalars resolve, and
+# one tensor in a dtype of its own.
+TemplatedFwdOp:
+  family: elementwise
+  status: implemented
+  signature:
+    inputs:
+      x: {dtype: "float16 | bfloat16", shape: "[rows, cols]"}
+      mask: {dtype: bool, shape: "[rows]"}
+    params: {}
+  workloads:
+    - {rows: 64, cols: 256, dtypes: [float16], label: templated-64x256}
+    - {rows: 128, cols: 256, dtypes: [float16], label: templated-128x256}
+
 # A template whose one name would have to stand for two values on this
 # workload: `[D, D]` against a square that is not square.
 SquareFwdOp:

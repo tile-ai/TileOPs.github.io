@@ -2,7 +2,7 @@
 
 !!! info "Nightly snapshot"
 
-    **GPU** NVIDIA H200 · **commit** [`0123456789ab`](https://github.com/tile-ai/TileOPs/commit/0123456789abcdef0123456789abcdef01234567) · **run date** 2026-01-01 · **4 ops**, 6 workloads
+    **GPU** NVIDIA H200 · **commit** [`0123456789ab`](https://github.com/tile-ai/TileOPs/commit/0123456789abcdef0123456789abcdef01234567) · **run date** 2026-01-01 · **5 ops**, 8 workloads
     · [nightly run](https://github.com/tile-ai/TileOPs/actions/runs/1234567890)
 
 ## Environment
@@ -22,7 +22,7 @@ Not published by this run: `image`, `driver`, `cuda`, `torch`, `tilelang`.
 
 ## Coverage
 
-- **4 of 4 ops** are measured against a real alternative — a tuned library kernel or a native PyTorch op — on the identical workload. The rest run against an eager reference only, which is not a bar worth reporting a win against.
+- **5 of 5 ops** are measured against a real alternative — a tuned library kernel or a native PyTorch op — on the identical workload. The rest run against an eager reference only, which is not a bar worth reporting a win against.
 - **Absent from every table**: 1 workloads errored and 1 were skipped in this run.
 
 [How these numbers are taken](reading.md)
@@ -32,4 +32,4 @@ Not published by this run: `image`, `driver`, `cuda`, `torch`, `tilelang`.
 | Page | Ops | Workloads |
 | --- | --- | --- |
 | [Linear Attention & SSM](linear-attention.md) | 2 | 4 |
-| [Elementwise & Reduction](elementwise-reduction.md) | 2 | 2 |
+| [Elementwise & Reduction](elementwise-reduction.md) | 3 | 4 |

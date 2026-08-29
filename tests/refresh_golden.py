@@ -9,7 +9,7 @@ import shutil
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from test_render_e2e import GOLDEN, render  # noqa: E402
+from test_render_e2e import GOLDEN, PROSE, render  # noqa: E402
 
 if __name__ == "__main__":
     tmp = os.path.join(os.path.dirname(GOLDEN), ".golden-tmp")
@@ -18,8 +18,12 @@ if __name__ == "__main__":
     pages, _ = render(tmp)
     shutil.rmtree(GOLDEN, ignore_errors=True)
     os.makedirs(GOLDEN)
+    written = 0
     for name, text in pages.items():
+        if name in PROSE:
+            continue
         with open(os.path.join(GOLDEN, name), "w", encoding="utf-8") as f:
             f.write(text)
+        written += 1
     shutil.rmtree(tmp, ignore_errors=True)
-    print(f"wrote {len(pages)} pages to {GOLDEN}")
+    print(f"wrote {written} pages to {GOLDEN}")

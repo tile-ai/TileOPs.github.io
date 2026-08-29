@@ -129,9 +129,12 @@ _KEYWORD_FAMILY = [
      "reduction"),
 ]
 # The package an op is defined in decides its family, and the keywords below
-# only speak for ops the layout does not place. Every directory under
-# `tileops/ops/` belongs here: `linear_attention` left out of it fell through to
-# the keyword `linear` and published linear-attention ops on the GEMM page.
+# only speak for ops the layout does not place: an op defined in a module rather
+# than a package (`rope.py`, `pool.py`, `fft.py`), and the mixed
+# `sequence_modeling` package, whose ops belong to no one family. Every package
+# that does map to a family belongs here — `linear_attention` left out of it
+# fell through to the keyword `linear` and published linear-attention ops on the
+# GEMM page.
 _MODULE_FAMILY = {"attention": "attention", "elementwise": "elementwise",
                   "reduction": "reduction", "norm": "normalization",
                   "moe": "moe", "gemm": "linear_algebra",
@@ -723,10 +726,15 @@ def workload_key(rows: list) -> list:
     for group in _cluster(rows):
         specs = [w.get("spec") for _, w in group]
         if not specs[0]:
-            for code, w in group:
-                blocks.append(f'<li><b>{code}</b><span class="wl-delta">'
-                              f'</span><code class="wl-id">'
-                              f'{html.escape(w["config"])}</code></li>')
+            # No manifest entry: the id is all there is to say. Still a group
+            # and still a list, so the code column lines up with every other
+            # op's and the styling is the one thing that does not vary.
+            bare = "".join(
+                f'<li><b>{code}</b><span class="wl-delta"></span>'
+                f'<code class="wl-id">{html.escape(w["config"])}</code></li>'
+                for code, w in group)
+            blocks.append('<div class="wl-group"><ul class="wl-rows">'
+                          + bare + "</ul></div>")
             continue
         facts = [_facts(s) for s in specs]
         # A symbolic template describes the whole group only where every

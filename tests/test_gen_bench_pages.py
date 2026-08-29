@@ -14,7 +14,8 @@ def test_parse_splits_passing_failing_and_skipped(fixtures):
     workloads, failures, skips = _workloads(fixtures)
     assert [w["config"] for w in workloads] == [
         "decode-b1-h8-bfloat16", "decode-b8-h8-bfloat16", "scan-b2-bfloat16",
-        "scan-b4-bfloat16", "undeclared-op-case-float16", "oblong-float16"]
+        "scan-b4-bfloat16", "templated-64x256-float16", "templated-128x256-float16",
+        "undeclared-op-case-float16", "oblong-float16"]
     assert [f["op"] for f in failures] == ["MysteryFwdOp"]
     assert [s["op"] for s in skips] == ["ChunkScanFwdOp"]
 
@@ -48,12 +49,14 @@ def test_torch_native_and_library_tiers():
     assert g.tier_of("fla") == g.TIER_LIB
 
 
-def test_an_unknown_tag_is_reported_rather_than_silently_rated(fixtures):
-    # Unknown tags are rendered as library kernels, so the run has to say which
-    # ones it did not recognise — `triton` is known, a made-up one is not.
+def test_an_unknown_tag_is_rated_as_a_library_kernel(fixtures):
+    # A tag the tier table does not know is rendered as a library kernel, which
+    # is the strongest reading it could be given. The run says which ones those
+    # were — see the end-to-end test for the report itself.
     workloads, _, _ = _workloads(fixtures)
     tags = {t for w in workloads for t in w["impls"] if not t.startswith("tileops")}
-    assert tags - g._KNOWN_TAGS == set()
+    assert "brand-new-lib" in tags - g._KNOWN_TAGS
+    assert g.tier_of("brand-new-lib") == g.TIER_LIB
 
 
 def test_rated_against_the_fastest_real_alternative(fixtures):

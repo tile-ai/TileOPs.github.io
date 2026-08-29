@@ -6,3 +6,6 @@ mkdocs-include-markdown-plugin
 mkdocs-static-i18n
 jieba
 pyyaml
+# mkdocstrings formats the signatures it renders with whichever of these it
+# finds; without one it warns on every build.
+black
