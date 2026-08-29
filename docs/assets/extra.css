@@ -30,15 +30,15 @@
    */
   /* The rule that marks a group: methods, examples, asides. Lighter than the
    * teal itself, which at full strength reads as a second heading colour. */
-  --tf-rule: color-mix(in srgb, #16706b, transparent 40%);
+  --tf-rule: rgba(22, 112, 107, 0.6);
   --tf-line: rgba(51, 35, 79, 0.18);
   --tf-line-soft: rgba(51, 35, 79, 0.08);
-  /* Washes for the inline SVG figures, written out rather than mixed from the
-   * palette above. An engine that does not resolve `color-mix()` drops the
-   * whole declaration, and a dropped `fill` falls back to SVG's own default,
-   * black: the roofline's tinted region paints as a black wedge over the
-   * grid. `background` degrades to nothing and can be mixed; `fill` degrades
-   * to the wrong colour, so every fill on this page is stated literally.
+  /* Washes and tints of the palette above, written out rather than mixed.
+   * `color-mix()` is not resolved by every engine a reader arrives with, and a
+   * declaration it cannot parse is dropped whole: a rule with a mixed colour
+   * loses its border, a `fill` falls back to SVG's own default of black. This
+   * stylesheet states every mixed colour literally for that reason — the
+   * values below, and the rgba() written at each use site.
    */
   --tf-teal-wash: rgba(22, 112, 107, 0.06);
   --tf-teal-soft: rgba(22, 112, 107, 0.08);
@@ -77,7 +77,7 @@
    * through rather than a slab dropped on top of it. The old flat fill was the
    * one opaque mass on the page and read as dead weight.
    */
-  --md-code-bg-color: color-mix(in srgb, var(--tf-paper-2), transparent 45%);
+  --md-code-bg-color: rgba(233, 229, 241, 0.55);
   --md-code-fg-color: var(--tf-ink);
   --md-footer-bg-color: #241a33;
   --md-footer-bg-color--dark: #1b1327;
@@ -114,12 +114,12 @@ html {
   background-image: radial-gradient(var(--tf-line-soft) 1px, transparent 1.5px),
     radial-gradient(
       130% 95% at 4% -8%,
-      color-mix(in srgb, var(--tf-violet), transparent 94%),
+      rgba(90, 62, 133, 0.06),
       transparent 58%
     ),
     radial-gradient(
       110% 85% at 100% 104%,
-      color-mix(in srgb, var(--tf-teal), transparent 93%),
+      rgba(22, 112, 107, 0.07),
       transparent 55%
     );
   background-size: 26px 26px, auto, auto;
@@ -165,7 +165,7 @@ body,
 .md-header,
 .md-tabs {
   color: var(--tf-ink);
-  background: color-mix(in srgb, var(--tf-paper), transparent 22%);
+  background: rgba(245, 243, 248, 0.78);
   backdrop-filter: blur(10px);
   box-shadow: none;
 }
@@ -221,15 +221,15 @@ body,
  */
 .md-search__form {
   border-radius: 999px;
-  background: color-mix(in srgb, var(--tf-paper-2), transparent 35%);
+  background: rgba(233, 229, 241, 0.65);
   box-shadow: inset 0 0 0 1px var(--tf-line-soft);
 }
 
 .md-search__form:hover,
 [data-md-toggle="search"]:checked ~ .md-header .md-search__form {
-  background: color-mix(in srgb, var(--tf-paper-2), transparent 15%);
+  background: rgba(233, 229, 241, 0.85);
   box-shadow: inset 0 0 0 1px
-    color-mix(in srgb, var(--tf-violet), transparent 70%);
+    rgba(90, 62, 133, 0.3);
 }
 
 .md-search__input,
@@ -291,7 +291,7 @@ body,
  * the page.
  */
 ::selection {
-  background: color-mix(in srgb, var(--tf-violet-light), transparent 78%);
+  background: rgba(124, 92, 174, 0.22);
 }
 
 /* Headings carry a violet rule whose weight tracks the level. Only h1 takes the
@@ -357,7 +357,7 @@ body,
 .md-typeset code {
   padding: 0.05em 0.28em;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--tf-violet), transparent 93%);
+  background: rgba(90, 62, 133, 0.07);
   color: var(--md-code-fg-color);
   font-family: var(--tf-mono);
   font-size: 0.82em;
@@ -369,15 +369,15 @@ body,
  * stays faint enough for the syntax colours to carry the contrast.
  */
 .md-typeset pre > code {
-  border: 1px solid color-mix(in srgb, var(--tf-teal), transparent 70%);
+  border: 1px solid rgba(22, 112, 107, 0.3);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--tf-teal), transparent 86%);
+  background: rgba(22, 112, 107, 0.14);
 }
 
 /* Inside an admonition the block would otherwise sit on the same ground twice. */
 .md-typeset .admonition pre > code,
 .md-typeset details pre > code {
-  background: color-mix(in srgb, var(--tf-teal), transparent 88%);
+  background: rgba(22, 112, 107, 0.12);
 }
 
 /* The line numbers are scenery: no fill of their own, a hairline to sit behind,
@@ -386,9 +386,9 @@ body,
 .md-typeset .highlighttable .linenos {
   padding-right: 0.5rem;
   border: 0;
-  border-right: 1px solid color-mix(in srgb, var(--tf-teal), transparent 78%);
+  border-right: 1px solid rgba(22, 112, 107, 0.22);
   background: transparent;
-  color: color-mix(in srgb, var(--tf-muted), transparent 45%);
+  color: rgba(106, 100, 120, 0.55);
   font-size: 0.88em;
   user-select: none;
 }
@@ -400,9 +400,9 @@ body,
 
 /* The table is the code block; only its outer edge is drawn. */
 .md-typeset .highlighttable {
-  border: 1px solid color-mix(in srgb, var(--tf-teal), transparent 70%);
+  border: 1px solid rgba(22, 112, 107, 0.3);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--tf-teal), transparent 86%);
+  background: rgba(22, 112, 107, 0.14);
 }
 
 .md-typeset .highlighttable .code pre > code,
@@ -428,7 +428,7 @@ body,
   text-decoration: underline;
   text-decoration-thickness: 0.08em;
   text-underline-offset: 0.16em;
-  text-decoration-color: color-mix(in srgb, var(--tf-teal), transparent 45%);
+  text-decoration-color: rgba(22, 112, 107, 0.55);
 }
 
 .md-typeset a:hover,
@@ -453,8 +453,8 @@ body,
   background: linear-gradient(
     90deg,
     transparent,
-    color-mix(in srgb, var(--tf-violet), transparent 70%) 18%,
-    color-mix(in srgb, var(--tf-teal), transparent 76%) 82%,
+    rgba(90, 62, 133, 0.3) 18%,
+    rgba(22, 112, 107, 0.24) 82%,
     transparent
   );
 }
@@ -522,7 +522,7 @@ body,
    * the page's own white behind them. */
   background: linear-gradient(
     to top,
-    color-mix(in srgb, var(--tf-violet), transparent 82%) 0.62em,
+    rgba(90, 62, 133, 0.18) 0.62em,
     transparent 0.62em
   );
   color: var(--tf-violet);
@@ -598,8 +598,8 @@ html[lang="zh"] .md-typeset .keystone {
    */
   background: none;
   border: 0;
-  border-top: 2px solid color-mix(in srgb, var(--tf-ink), transparent 55%);
-  border-bottom: 2px solid color-mix(in srgb, var(--tf-ink), transparent 55%);
+  border-top: 2px solid rgba(26, 23, 32, 0.45);
+  border-bottom: 2px solid rgba(26, 23, 32, 0.45);
   font-size: 0.75rem;
 }
 
@@ -679,7 +679,7 @@ html[lang="zh"] .md-typeset .keystone {
  * left, what it measured on the right.
  */
 .md-typeset .datatable table:not([class]) .colsep {
-  border-right: 1px solid color-mix(in srgb, var(--tf-ink), transparent 78%);
+  border-right: 1px solid rgba(26, 23, 32, 0.22);
   padding-right: 1em;
 }
 
@@ -718,7 +718,7 @@ html[lang="zh"] .md-typeset .keystone {
  * columns rather than as further divisions of the table.
  */
 .md-typeset .datatable table:not([class]) thead tr:first-child th:not([rowspan]) {
-  border-bottom: 1px solid color-mix(in srgb, var(--tf-ink), transparent 74%);
+  border-bottom: 1px solid rgba(26, 23, 32, 0.26);
 }
 
 /* Second header row: units and the ratio's direction. Subordinate to the
@@ -726,7 +726,7 @@ html[lang="zh"] .md-typeset .keystone {
  * own — which is exactly what teal marks everywhere else on the site.
  */
 .md-typeset .datatable table:not([class]) th.subhead {
-  color: color-mix(in srgb, var(--tf-teal), var(--tf-muted) 25%);
+  color: #2b6d6e;
   font-family: var(--tf-mono);
   font-size: 0.66rem;
   font-weight: 400;
@@ -744,7 +744,7 @@ html[lang="zh"] .md-typeset .keystone {
  * the verdict: a colour that never varies cannot be reporting a result.
  */
 .md-typeset .datatable table:not([class]) td.colsep code {
-  color: color-mix(in srgb, var(--tf-teal), var(--tf-muted) 32%);
+  color: #316c6f;
 }
 
 /* Benchmark verdicts. The ratio's colour *is* the result, so these carry the
@@ -859,17 +859,17 @@ html[lang="zh"] .md-typeset .keystone {
  */
 :root {
   --doc-symbol-class-fg-color: var(--tf-violet);
-  --doc-symbol-class-bg-color: color-mix(in srgb, var(--tf-violet), transparent 92%);
+  --doc-symbol-class-bg-color: rgba(90, 62, 133, 0.08);
   --doc-symbol-method-fg-color: var(--tf-teal);
-  --doc-symbol-method-bg-color: color-mix(in srgb, var(--tf-teal), transparent 90%);
+  --doc-symbol-method-bg-color: rgba(22, 112, 107, 0.1);
   --doc-symbol-function-fg-color: var(--tf-teal);
-  --doc-symbol-function-bg-color: color-mix(in srgb, var(--tf-teal), transparent 90%);
+  --doc-symbol-function-bg-color: rgba(22, 112, 107, 0.1);
   --doc-symbol-attribute-fg-color: var(--tf-muted);
-  --doc-symbol-attribute-bg-color: color-mix(in srgb, var(--tf-muted), transparent 92%);
+  --doc-symbol-attribute-bg-color: rgba(106, 100, 120, 0.08);
   --doc-symbol-module-fg-color: var(--tf-muted);
-  --doc-symbol-module-bg-color: color-mix(in srgb, var(--tf-muted), transparent 92%);
+  --doc-symbol-module-bg-color: rgba(106, 100, 120, 0.08);
   --doc-symbol-parameter-fg-color: var(--tf-muted);
-  --doc-symbol-parameter-bg-color: color-mix(in srgb, var(--tf-muted), transparent 92%);
+  --doc-symbol-parameter-bg-color: rgba(106, 100, 120, 0.08);
 }
 
 /* Only the class keeps its chip. A method is already inside its class, under a
@@ -985,7 +985,7 @@ html[lang="zh"] .md-typeset .keystone {
  * its name.
  */
 .md-typeset .doc-labels .doc-label {
-  background: color-mix(in srgb, var(--tf-teal), transparent 90%);
+  background: rgba(22, 112, 107, 0.1);
   color: var(--tf-teal);
   font-family: var(--tf-body);
   font-size: 0.62rem;
@@ -1254,7 +1254,7 @@ html[lang="zh"] .md-nav__title {
 
 .md-typeset figure.callpath .cp-traced {
   border: 1px solid var(--tf-violet);
-  background: color-mix(in srgb, var(--tf-violet), transparent 92%);
+  background: rgba(90, 62, 133, 0.08);
 }
 
 .md-typeset figure.callpath .cp-traced > code {
@@ -1263,7 +1263,7 @@ html[lang="zh"] .md-nav__title {
 
 .md-typeset figure.callpath .cp-opaque {
   border: 1px dashed var(--tf-rule);
-  background: color-mix(in srgb, var(--tf-teal), transparent 95%);
+  background: rgba(22, 112, 107, 0.05);
 }
 
 .md-typeset figure.callpath .cp-opaque > code {
@@ -1287,7 +1287,7 @@ html[lang="zh"] .md-nav__title {
 .md-typeset figure.callpath .cp-boundary::after {
   flex: 1;
   height: 2px;
-  background: color-mix(in srgb, var(--tf-violet), transparent 55%);
+  background: rgba(90, 62, 133, 0.45);
   content: "";
 }
 
@@ -1321,7 +1321,7 @@ html[lang="zh"] .md-nav__title {
 .md-typeset .wl-key .wl-group {
   margin: 0 0 0.55em;
   padding-left: 0.8em;
-  border-left: 2px solid color-mix(in srgb, var(--tf-teal), transparent 55%);
+  border-left: 2px solid rgba(22, 112, 107, 0.45);
 }
 
 .md-typeset .wl-key .wl-group:last-child {
@@ -1339,7 +1339,7 @@ html[lang="zh"] .md-nav__title {
   margin: 0 0 0.15em;
   font-size: inherit;
   line-height: inherit;
-  color: color-mix(in srgb, var(--tf-ink), transparent 20%);
+  color: rgba(26, 23, 32, 0.8);
 }
 
 .md-typeset .wl-key .wl-shared + .wl-shared {
@@ -1358,7 +1358,7 @@ html[lang="zh"] .md-nav__title {
 .md-typeset .wl-key .wl-cell + .wl-cell::before {
   content: "·";
   margin-right: 0.32em;
-  color: color-mix(in srgb, var(--tf-ink), transparent 50%);
+  color: rgba(26, 23, 32, 0.5);
   font-weight: 400;
 }
 
@@ -1367,7 +1367,7 @@ html[lang="zh"] .md-nav__title {
  * name carries the weight; the scalars stay plain text beside it.
  */
 .md-typeset .wl-key .wl-tensor .wl-k {
-  color: color-mix(in srgb, var(--tf-teal), var(--tf-ink) 30%);
+  color: #175554;
   font-weight: 700;
 }
 
@@ -1377,7 +1377,7 @@ html[lang="zh"] .md-nav__title {
 
 /* The number is what varies down the page; its name is the same every row. */
 .md-typeset .wl-key .wl-scalar .wl-v {
-  color: color-mix(in srgb, var(--tf-ink), transparent 15%);
+  color: rgba(26, 23, 32, 0.85);
 }
 
 .md-typeset .wl-key .wl-dim .wl-v {
@@ -1426,7 +1426,7 @@ html[lang="zh"] .md-nav__title {
   flex-wrap: wrap;
   gap: 0.15em 0.32em;
   padding-left: 0.9em;
-  border-left: 1px solid color-mix(in srgb, var(--tf-ink), transparent 80%);
+  border-left: 1px solid rgba(26, 23, 32, 0.2);
 }
 
 .md-typeset .wl-key .wl-delta:empty {
@@ -1464,7 +1464,7 @@ html[lang="zh"] .md-nav__title {
   flex: 1 1 auto;
   margin-left: 0;
   padding-left: 0.9em;
-  border-left: 1px solid color-mix(in srgb, var(--tf-ink), transparent 80%);
+  border-left: 1px solid rgba(26, 23, 32, 0.2);
 }
 
 .md-typeset .wl-key ul.wl-long .wl-delta {
@@ -1486,7 +1486,7 @@ html[lang="zh"] .md-nav__title {
  * measurements — the same colour, learned once.
  */
 .md-typeset .wl-key .wl-k {
-  color: color-mix(in srgb, var(--tf-teal), var(--tf-muted) 32%);
+  color: #316c6f;
 }
 
 /* Parameters are how the op was called, not how big it is. */
