@@ -33,6 +33,23 @@
   --tf-rule: color-mix(in srgb, #16706b, transparent 40%);
   --tf-line: rgba(51, 35, 79, 0.18);
   --tf-line-soft: rgba(51, 35, 79, 0.08);
+  /* Washes for the inline SVG figures, written out rather than mixed from the
+   * palette above. An engine that does not resolve `color-mix()` drops the
+   * whole declaration, and a dropped `fill` falls back to SVG's own default,
+   * black: the roofline's tinted region paints as a black wedge over the
+   * grid. `background` degrades to nothing and can be mixed; `fill` degrades
+   * to the wrong colour, so every fill on this page is stated literally.
+   */
+  --tf-teal-wash: rgba(22, 112, 107, 0.06);
+  --tf-teal-soft: rgba(22, 112, 107, 0.08);
+  --tf-teal-tint: rgba(22, 112, 107, 0.12);
+  --tf-teal-fill: rgba(22, 112, 107, 0.18);
+  --tf-violet-wash: rgba(90, 62, 133, 0.08);
+  --tf-violet-soft: rgba(90, 62, 133, 0.12);
+  --tf-violet-tint: rgba(90, 62, 133, 0.3);
+  --tf-violet-mid: rgba(90, 62, 133, 0.4);
+  --tf-rose-fill: rgba(164, 63, 70, 0.26);
+  --tf-ink-tint: rgba(26, 23, 32, 0.22);
   /* Latin faces come first so technical terms inside Chinese prose keep the
    * site's voice; Han glyphs fall through to the platform UI face. No CJK
    * webfont: a Simplified Chinese subset costs megabytes, which is not worth
@@ -1187,12 +1204,12 @@ html[lang="zh"] .md-nav__title {
  * source, so both schemes stay right and the .md stays readable. The boundary edge is the
  * one thick link on the page. */
 .md-typeset .mermaid g.node.traced > rect {
-  fill: color-mix(in srgb, var(--tf-violet), transparent 88%);
+  fill: var(--tf-violet-soft);
   stroke: var(--tf-violet);
 }
 
 .md-typeset .mermaid g.node.opaque > rect {
-  fill: color-mix(in srgb, var(--tf-teal), transparent 92%);
+  fill: var(--tf-teal-soft);
   stroke: var(--tf-rule);
   stroke-dasharray: 5 3;
 }
@@ -1487,557 +1504,7 @@ html[lang="zh"] .md-nav__title {
   font-weight: 700;
 }
 
-/* Benchmark verdicts. The ratio's colour *is* the result, so these carry the
- * weight no separate status glyph does: rose behind the alternative, plain ink
- * level with it, green ahead. Tabular figures keep a column of them aligned.
- *
- * Neither verdict colour is the link violet or the aside teal: a reader
- * scanning a Ratio column must not have to decide whether a coloured figure is
- * a verdict or a link. The green sits well away from the teal in both hue and
- * lightness for the same reason.
- */
-.md-typeset .perf-ahead,
-.md-typeset .perf-par,
-.md-typeset .perf-behind {
-  font-family: var(--tf-mono);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  white-space: nowrap;
-}
 
-.md-typeset .perf-ahead {
-  color: var(--tf-green);
-}
-
-.md-typeset .perf-par {
-  color: var(--md-default-fg-color);
-}
-
-.md-typeset .perf-behind {
-  color: var(--tf-rose);
-}
-
-/* A ratio against an eager reference only. Shown, but never as a win: the bar
- * is a naive composition of PyTorch ops that nobody competes at.
- */
-.md-typeset .perf-unrated {
-  color: var(--tf-muted);
-  font-family: var(--tf-mono);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.md-typeset .perf-none {
-  color: var(--md-default-fg-color--light);
-}
-
-/* The count beside an op name is what the heading is *about*, not part of it:
- * teal, in the body face, at the weight of running text. In the display face
- * at 800 it was reading as a second half of the op's name.
- */
-.md-typeset h3 > small {
-  color: var(--tf-teal);
-  font-family: var(--tf-body);
-  font-size: 0.72em;
-  font-weight: 500;
-}
-
-/* A verdict repeated in an op heading sits in the display face around it. */
-.md-typeset h3 .perf-ahead,
-.md-typeset h3 .perf-par,
-.md-typeset h3 .perf-behind {
-  font-size: 0.82em;
-}
-
-/* mkdocstrings: a symbol heading is a name, not prose. It carries the mono
- * face at a size close to the body text — an op class set at the prose h2 size
- * turns a reference page into forty display-weight banners, and the accent bar
- * beside each one is what makes the column look striped.
- */
-.md-typeset h2.doc-heading,
-.md-typeset h3.doc-heading,
-.md-typeset h4.doc-heading,
-.md-typeset h5.doc-heading {
-  font-family: var(--tf-mono);
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  line-height: 1.35;
-}
-
-.md-typeset h2.doc-heading {
-  margin: 2.1em 0 0.5em;
-  border-left-width: 4px;
-  font-size: 0.88rem;
-}
-
-.md-typeset h3.doc-heading {
-  margin: 1.5em 0 0.4em;
-  border-left-width: 3px;
-  border-left-color: var(--tf-violet-light);
-  font-size: 0.78rem;
-}
-
-.md-typeset h4.doc-heading,
-.md-typeset h5.doc-heading {
-  border-left-color: var(--tf-line);
-  font-size: 0.76rem;
-}
-
-/* The name inside the heading is already in the mono face at heading size;
- * the inline-identifier chip on top of that is a second treatment of the same
- * thing. The symbol chip is a `code` element too, and it keeps its own fill.
- */
-.md-typeset .doc-heading code:not(.doc-symbol) {
-  padding: 0;
-  background: transparent;
-  font-size: 1em;
-}
-
-/* The symbol chips: mkdocstrings ships its own palette, which lands two more
- * hues on a page that already has two. A class takes the structural violet, a
- * method the teal, and the rest sit at the muted weight.
- */
-:root {
-  --doc-symbol-class-fg-color: var(--tf-violet);
-  --doc-symbol-class-bg-color: color-mix(in srgb, var(--tf-violet), transparent 92%);
-  --doc-symbol-method-fg-color: var(--tf-teal);
-  --doc-symbol-method-bg-color: color-mix(in srgb, var(--tf-teal), transparent 90%);
-  --doc-symbol-function-fg-color: var(--tf-teal);
-  --doc-symbol-function-bg-color: color-mix(in srgb, var(--tf-teal), transparent 90%);
-  --doc-symbol-attribute-fg-color: var(--tf-muted);
-  --doc-symbol-attribute-bg-color: color-mix(in srgb, var(--tf-muted), transparent 92%);
-  --doc-symbol-module-fg-color: var(--tf-muted);
-  --doc-symbol-module-bg-color: color-mix(in srgb, var(--tf-muted), transparent 92%);
-  --doc-symbol-parameter-fg-color: var(--tf-muted);
-  --doc-symbol-parameter-bg-color: color-mix(in srgb, var(--tf-muted), transparent 92%);
-}
-
-/* Only the class keeps its chip. A method is already inside its class, under a
- * heading of its own, so `meth` repeats what the position says — and it lands
- * right where the eye enters the line. Keyed on the object, not the heading
- * level: a page that renders a package puts classes at h2 and methods at h3,
- * one that renders each op puts them at h3 and h4.
- */
-.md-typeset .doc-object.doc-function > .doc-heading .doc-symbol-heading,
-.md-typeset .doc-object.doc-attribute > .doc-heading .doc-symbol-heading {
-  display: none;
-}
-
-.md-typeset .doc-symbol-heading {
-  margin-right: 0.45em;
-  font-family: var(--tf-body);
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  vertical-align: 0.12em;
-}
-
-/* A class and everything under it hang from one line: the signature, the
- * parameters, and the methods are one group, marked by a spine rather than by a
- * filled card — a panel over the wash reads as a patch of different paper.
- */
-.md-typeset .doc-object.doc-class > .doc-contents {
-  margin-left: 0.15rem;
-  padding-left: 1.5rem;
-  border-left: 1px solid var(--tf-line-soft);
-}
-
-/* Everything under a class sits at one level: the prose, the constructor and the
- * call are siblings, so a second indent for the methods only pushed them away
- * from the parameters they belong with. The method's own contents keep a teal
- * hairline, which marks the group without moving it.
- */
-.md-typeset .doc-object.doc-function > .doc-contents {
-  padding-left: 0;
-  border-left: 0;
-}
-
-/* A member's heading repeats the name the signature under it already carries, so
- * it collapses to a bare anchor: no text, no space, no permalink. It has to stay
- * in the document for the right-hand column to link to — the table of contents
- * still reads the heading, and reads only the name.
- */
-.md-typeset .doc-object.doc-function > .doc-heading,
-.md-typeset .doc-object.doc-attribute > .doc-heading {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  font-size: 0;
-  line-height: 0;
-}
-
-.md-typeset .doc-object.doc-function > .doc-heading .headerlink,
-.md-typeset .doc-object.doc-attribute > .doc-heading .headerlink {
-  display: none;
-}
-
-/* The signature carries the weight the heading gave up. */
-.md-typeset .doc-object.doc-function > .doc-contents {
-  margin-top: 1.7em;
-}
-
-/* The two method entries under one class are siblings, not a list: space them
- * rather than ruling between them.
- */
-.md-typeset .doc-object.doc-function + .doc-object.doc-function {
-  margin-top: 1.6em;
-}
-
-/* One op is one unit on the page. A rule above each symbol, and room around it,
- * gives the reference a beat: without them the page is a single column of text
- * where nothing marks where one op ends and the next begins.
- */
-.md-typeset .doc-object.doc-class > .doc-heading {
-  margin-top: 3em;
-  padding-top: 1.3em;
-  border-top: 1px solid var(--tf-line-soft);
-}
-
-/* The first class under a family heading needs no rule: the heading is the break. */
-.md-typeset h2 + .doc-object.doc-class > .doc-heading,
-.md-typeset h2 + div > .doc-object.doc-class > .doc-heading {
-  padding-top: 0;
-  border-top: 0;
-}
-
-/* A signature is a declaration, not a listing: violet like the other structural
- * marks, no fill, no rounded box — so it does not read as a second example.
- */
-.md-typeset .doc-signature > pre > code,
-.md-typeset div.doc-signature pre > code,
-.md-typeset pre > code.doc-signature {
-  border: 0;
-  border-left: 3px solid var(--tf-rule);
-  border-radius: 0;
-  background: transparent;
-  padding-left: 0.7rem;
-}
-
-/* Parameters, Returns, Raises: the label carries the break, the list stays tight
- * under it.
- */
-.md-typeset .doc-section-title {
-  margin-top: 1.4em;
-  margin-bottom: 0.3em;
-}
-
-/* `property`, `classmethod`, `async` — a note about the symbol, not part of
- * its name.
- */
-.md-typeset .doc-labels .doc-label {
-  background: color-mix(in srgb, var(--tf-teal), transparent 90%);
-  color: var(--tf-teal);
-  font-family: var(--tf-body);
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-/* Parameters render as a definition list. The section label heads it in the
- * display face, and each parameter name stays in mono so the list reads as a
- * signature rather than a paragraph.
- */
-.md-typeset .doc-section-title {
-  color: var(--tf-muted);
-  font-family: var(--tf-display);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-.md-typeset .doc-section-item {
-  margin: 0.2em 0;
-}
-
-/* Right column: the page's own headings. It is a locator, so it is set quieter
- * and tighter than the left nav — smaller type, muted ink, and a hairline that
- * gives the column an edge instead of leaving it floating in the margin.
- */
-.md-sidebar--secondary .md-nav__title {
-  color: var(--tf-muted);
-  font-family: var(--tf-display);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  padding-bottom: 0.5rem;
-  text-transform: uppercase;
-}
-
-.md-sidebar--secondary .md-nav__list {
-  border-left: 1px solid var(--tf-line-soft);
-}
-
-.md-sidebar--secondary .md-nav__link {
-  color: var(--tf-muted);
-  font-size: 0.68rem;
-  line-height: 1.45;
-  margin-top: 0.42rem;
-  padding-left: 0.7rem;
-}
-
-/* The section being read is marked on the rule the list hangs from, so the
- * text itself does not have to change weight to say where you are.
- */
-.md-sidebar--secondary .md-nav__link--active,
-.md-sidebar--secondary .md-nav__link--passed:hover,
-.md-sidebar--secondary .md-nav__link:hover {
-  color: var(--tf-violet);
-}
-
-.md-sidebar--secondary .md-nav__link--active {
-  box-shadow: inset 2px 0 var(--tf-violet);
-}
-
-/* A third-level entry is subordinate to the h2 above it: indented once, and a
- * step down in size rather than a second bullet level.
- */
-.md-sidebar--secondary .md-nav__list .md-nav__list .md-nav__link {
-  border-left: 0;
-  font-size: 0.65rem;
-  padding-left: 1.35rem;
-}
-
-.md-sidebar--secondary .md-nav__list .md-nav__list {
-  border-left: 0;
-}
-
-/* Han glyphs need the extra leading in a column this narrow. */
-html[lang="zh"] .md-sidebar--secondary .md-nav__link {
-  font-size: 0.7rem;
-  line-height: 1.6;
-}
-
-/* Material maps the token classes onto --md-code-hl-*, which covers keywords,
- * strings and numbers. A typical example is mostly names, operators and calls —
- * all of which fell through to plain ink, so the block read as unhighlighted.
- */
-.md-typeset .highlight .o,        /* operator: = * -> */
-.md-typeset .highlight .ow {
-  color: var(--tf-violet);
-}
-
-.md-typeset .highlight .p {       /* punctuation: ( ) , [ ] */
-  color: var(--tf-muted);
-}
-
-.md-typeset .highlight .nf,       /* function definition */
-.md-typeset .highlight .fm,
-.md-typeset .highlight .nc,       /* class */
-.md-typeset .highlight .nb,       /* builtin */
-.md-typeset .highlight .bp {
-  color: var(--tf-violet-light);
-}
-
-.md-typeset .highlight .nd,       /* decorator */
-.md-typeset .highlight .kn,       /* import */
-.md-typeset .highlight .kc {
-  color: var(--tf-teal);
-}
-
-.md-typeset .highlight .c1,       /* comment */
-.md-typeset .highlight .cm,
-.md-typeset .highlight .ch {
-  font-style: italic;
-}
-
-/* Language switcher: a quiet pill on the paper header, matching the source
- * link beside it rather than Material's default bare-icon dropdown.
- */
-.md-header__option .md-select__inner {
-  border-radius: 999px;
-}
-
-.md-header__option .md-select__link {
-  font-family: var(--tf-body);
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-/* A page served from the default language because this locale has no
- * translation yet. Reads as a status line, not as a warning.
- */
-.md-typeset .locale-notice {
-  margin: -0.4rem 0 1.4rem;
-  padding: 0.5rem 0.8rem;
-  border-left: 3px solid var(--tf-line);
-  background: var(--tf-line-soft);
-  color: var(--tf-muted);
-  font-size: 0.78rem;
-  line-height: 1.6;
-}
-
-.md-typeset .locale-notice strong {
-  margin-right: 0.35em;
-  color: var(--md-default-fg-color);
-  font-weight: 700;
-}
-
-/* Chinese type metrics. Han glyphs fill their em box, so the Latin line height
- * reads as cramped; headings set in a Latin display face at 800 fall through to
- * a CJK face where that weight closes up the strokes. The size stays at the
- * Latin one — a step up on top of the fuller em box makes the column heavy.
- *
- * Scoped away from pages carrying .locale-notice: their body text is English,
- * and Latin copy under Chinese metrics reads as loose.
- */
-html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) {
-  line-height: 1.75;
-}
-
-html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) h1,
-html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) h2,
-html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) h3,
-html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) h4 {
-  font-weight: 700;
-}
-
-/* Inline code sits in the middle of Chinese sentences far more often than in
- * English ones; at the larger Chinese body size it needs less box around it.
- * Inline only — unscoped, this took the padding off code blocks too.
- */
-html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) code:not(pre > code) {
-  font-size: 0.8em;
-  padding: 0.04em 0.24em;
-}
-
-/* Underlines otherwise cut into the descender-free baseline of Han glyphs. */
-html[lang="zh"] .md-typeset a {
-  text-underline-offset: 0.18em;
-}
-
-html[lang="zh"] .md-nav,
-html[lang="zh"] .md-nav__title {
-  line-height: 1.5;
-}
-
-/* Sequence diagrams. The fence sets the type a size up from mermaid's default, which the
- * diagram can afford once it fits the column; a wider one scrolls rather than shrinking
- * the page. The autonumber bubble defaults to near-black, which reads as a blob at this
- * size, so it takes the structural violet. */
-.md-typeset .mermaid {
-  overflow-x: auto;
-  --md-mermaid-sequence-number-bg-color: var(--tf-violet);
-}
-
-.md-typeset .mermaid text.sequenceNumber {
-  font-size: 12px !important;
-  font-weight: 700;
-}
-
-/* Sequence diagrams. The fence sets the type a size up from mermaid's default, which the
- * diagram can afford once it fits the column; a wider one scrolls rather than shrinking
- * the page. The autonumber bubble defaults to near-black, which reads as a blob at this
- * size, so it takes the structural violet. */
-.md-typeset .mermaid {
-  overflow-x: auto;
-  --md-mermaid-sequence-number-bg-color: var(--tf-violet);
-}
-
-.md-typeset .mermaid text.sequenceNumber {
-  font-size: 12px !important;
-  font-weight: 700;
-}
-
-/* Flowcharts. Two roles to tell apart at a glance: the layers dynamo traces, and the
- * opaque node's interior. Colour comes from the palette rather than from the diagram
- * source, so both schemes stay right and the .md stays readable. The boundary edge is the
- * one thick link on the page. */
-.md-typeset .mermaid g.node.traced > rect {
-  fill: color-mix(in srgb, var(--tf-violet), transparent 88%);
-  stroke: var(--tf-violet);
-}
-
-.md-typeset .mermaid g.node.opaque > rect {
-  fill: color-mix(in srgb, var(--tf-teal), transparent 92%);
-  stroke: var(--tf-rule);
-  stroke-dasharray: 5 3;
-}
-
-.md-typeset .mermaid .edgeLabel {
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.md-typeset .mermaid .edgeLabel .label foreignObject > div {
-  color: var(--tf-violet);
-}
-
-/* The call-path figure on the torch.compile page. Four layers of one call, every row the
- * same width — a diagram engine sizes each box to its text, which reads as clutter when
- * the rows are meant to be read as a stack. Colour separates the two roles: violet for
- * what dynamo traces, a dashed teal for the opaque node's interior. */
-.md-typeset figure.callpath {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  margin: 1.2em 0;
-}
-
-.md-typeset figure.callpath .cp-step {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.6rem;
-  padding: 0.5rem 0.8rem;
-  border-radius: 0.2rem;
-  font-size: 0.75rem;
-  line-height: 1.5;
-}
-
-.md-typeset figure.callpath .cp-step > code {
-  background: none;
-  padding: 0;
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.md-typeset figure.callpath .cp-traced {
-  border: 1px solid var(--tf-violet);
-  background: color-mix(in srgb, var(--tf-violet), transparent 92%);
-}
-
-.md-typeset figure.callpath .cp-traced > code {
-  color: var(--tf-violet);
-}
-
-.md-typeset figure.callpath .cp-opaque {
-  border: 1px dashed var(--tf-rule);
-  background: color-mix(in srgb, var(--tf-teal), transparent 95%);
-}
-
-.md-typeset figure.callpath .cp-opaque > code {
-  color: var(--tf-teal);
-}
-
-/* The boundary itself: a rule across the stack with its name sitting on it. */
-.md-typeset figure.callpath .cp-boundary {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin: 0.15rem 0;
-  color: var(--tf-violet);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.md-typeset figure.callpath .cp-boundary::before,
-.md-typeset figure.callpath .cp-boundary::after {
-  flex: 1;
-  height: 2px;
-  background: color-mix(in srgb, var(--tf-violet), transparent 55%);
-  content: "";
-}
-
-.md-typeset figure.callpath figcaption {
-  margin-top: 0.3rem;
-  color: var(--md-default-fg-color--light);
-  font-size: 0.7rem;
-  line-height: 1.6;
-  text-align: left;
-}
 
 /* Roofline figure (performance-guides/memory-bound).  Log-log, so the
    two decades between an elementwise kernel and the ridge stay legible.  Colours
@@ -2069,7 +1536,7 @@ html[lang="zh"] .md-nav__title {
 }
 
 .md-typeset .tf-roofline .tf-rl-region {
-  fill: color-mix(in srgb, var(--tf-teal), transparent 94%);
+  fill: var(--tf-teal-wash);
 }
 
 .md-typeset .tf-roofline .tf-rl-grid {
@@ -2090,7 +1557,7 @@ html[lang="zh"] .md-nav__title {
 }
 
 .md-typeset .tf-roofline .tf-rl-drop {
-  stroke: color-mix(in srgb, var(--tf-violet), transparent 60%);
+  stroke: var(--tf-violet-mid);
   stroke-dasharray: 3 4;
   stroke-width: 1.5;
 }
@@ -2186,13 +1653,13 @@ html[lang="zh"] .md-nav__title {
 }
 
 .md-typeset .tf-access .ap-sector--fetched {
-  fill: color-mix(in srgb, var(--tf-teal), transparent 88%);
+  fill: var(--tf-teal-tint);
 }
 
 /* shared memory: no sectors, so the row is drawn as one undivided surface */
 .md-typeset .tf-access .ap-sector--onchip {
-  fill: color-mix(in srgb, var(--tf-violet), transparent 92%);
-  stroke: color-mix(in srgb, var(--tf-violet), transparent 70%);
+  fill: var(--tf-violet-wash);
+  stroke: var(--tf-violet-tint);
   stroke-dasharray: 3 3;
 }
 
@@ -2253,7 +1720,7 @@ html[lang="zh"] .md-nav__title {
    so it does not compete with the teal (fetched sector) and violet (element the
    instruction reads) that carry the argument. */
 .md-typeset .tf-access .ap-cell--t1 {
-  fill: color-mix(in srgb, var(--tf-ink), transparent 78%);
+  fill: var(--tf-ink-tint);
 }
 
 /* t0…t7 above each thread's span. The alternating tone shows where the
@@ -2287,11 +1754,11 @@ html[lang="zh"] .md-nav__title {
 }
 
 .md-typeset .tf-bank .bk-cell--one {
-  fill: color-mix(in srgb, var(--tf-teal), transparent 82%);
+  fill: var(--tf-teal-fill);
 }
 
 .md-typeset .tf-bank .bk-cell--many {
-  fill: color-mix(in srgb, var(--tf-rose), transparent 74%);
+  fill: var(--tf-rose-fill);
 }
 
 .md-typeset .tf-bank .bk-count {
