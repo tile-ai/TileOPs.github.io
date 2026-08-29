@@ -63,6 +63,10 @@ nav:
   - Performance Guides:
     - performance-guides/index.md
     - Timeline Trace: performance-guides/trace-timeline.md
+    - Memory-Bound Kernels:
+      - performance-guides/memory-bound/index.md
+      - Global Memory Access: performance-guides/memory-bound/global-memory-access.md
+      - Shared Memory Access: performance-guides/memory-bound/shared-memory-access.md
   - Design:
     - design/index.md
     - Architecture: design/architecture.md
@@ -172,6 +176,9 @@ plugins:
             Trace: Trace
             Benchmarks: 性能数据
             Performance Guides: 性能指南
+            Memory-Bound Kernels: 访存受限 kernel
+            Global Memory Access: 优化 global memory 访问
+            Shared Memory Access: 优化 shared memory 访问
             Timeline Trace: 时间线追踪
   - include-markdown:
       rewrite_relative_urls: false
