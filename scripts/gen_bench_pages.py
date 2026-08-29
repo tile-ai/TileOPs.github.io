@@ -274,15 +274,20 @@ def parse_test_xml(path: str) -> dict[str, dict]:
 # empty marker.
 
 
-def load_sol_engine(gpu: str):
-    """(nightly_report module, GPU profile) or (None, None) with a warning."""
+def load_sol_engine(gpu: str, tileops: str = TILEOPS):
+    """(nightly_report module, GPU profile) or (None, None) with a warning.
+
+    `tileops` is the checkout the roofline tool is imported from, so a caller
+    that has none — a test, a build without the checkout — gets the same
+    degraded column the deploy would get, rather than a different one.
+    """
     try:
-        sys.path.insert(0, os.path.join(TILEOPS, "src"))
+        sys.path.insert(0, os.path.join(tileops, "src"))
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
             "tileops_nightly_report",
-            os.path.join(TILEOPS, "scripts", "nightly_report.py"))
+            os.path.join(tileops, "scripts", "nightly_report.py"))
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         from tileops.perf.profile import find_profile
@@ -1137,6 +1142,9 @@ def main():
     ap.add_argument("--gpu", default="unknown")
     ap.add_argument("--rendered", default=None)
     ap.add_argument("--out-dir", default=None)
+    ap.add_argument("--tileops", default=TILEOPS,
+                    help="TileOPs checkout the roofline tool is imported from "
+                         "(default: ./TileOPs)")
     ap.add_argument("--manifest-dir", default=MANIFEST_DIR,
                     help="TileOPs spec manifest the workload shapes are read "
                          "from (default: the checkout at ./TileOPs)")
@@ -1159,7 +1167,7 @@ def main():
                       for w in workloads).most_common(1)
     timing = timings[0][0] if timings else None
 
-    sol_engine = load_sol_engine(args.gpu)
+    sol_engine = load_sol_engine(args.gpu, args.tileops)
 
     # The snapshot names a workload but does not carry its shapes; the spec
     # manifest declares both, under the same label. Ops it does not declare

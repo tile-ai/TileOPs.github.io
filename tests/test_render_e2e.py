@@ -17,8 +17,14 @@ COMMIT = "0123456789abcdef0123456789abcdef01234567"
 
 
 def render(out_dir: str, manifest_dir: str = os.path.join(FIXTURES, "manifest")):
-    """Run the renderer as the deploy runs it, and return what it wrote."""
+    """Run the renderer as the deploy runs it, and return what it wrote.
+
+    The roofline tool is pointed at a directory that holds nothing: the SOL
+    column is then the degraded one, and the pages depend on this repository
+    alone. A machine with a TileOPs checkout beside it renders what CI renders.
+    """
     cmd = [sys.executable, os.path.join(REPO, "scripts", "gen_bench_pages.py"),
+           "--tileops", os.path.join(FIXTURES, "no-tileops"),
            "--bench-xml", os.path.join(FIXTURES, "bench_results.xml"),
            "--test-xml", os.path.join(FIXTURES, "test_results.xml"),
            "--meta", os.path.join(FIXTURES, "meta.json"),

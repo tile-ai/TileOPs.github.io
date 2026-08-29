@@ -56,6 +56,15 @@ jobs:
           python-version: '3.12'
           cache: pip
       - run: pip install -r requirements-docs.txt
-      # --strict, so a broken nav entry, a missing anchor in mirrored content or
-      # a docstring mkdocstrings cannot import fails here rather than at deploy.
-      - run: mkdocs build --strict
+      # Every warning fails the job except one class: mkdocstrings reports one
+      # per parameter in TileOPs whose docstring carries no type, and the
+      # docstrings of another repository are not this repository's gate.
+      # `--strict` cannot make that distinction, so the log is read instead.
+      - name: Build the site, and fail on any warning of our own
+        run: |
+          set -o pipefail
+          mkdocs build 2>&1 | tee build.log
+          if grep -E '^WARNING' build.log | grep -v 'griffe:'; then
+            echo "::error::mkdocs reported the warnings above"
+            exit 1
+          fi

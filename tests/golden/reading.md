@@ -42,7 +42,7 @@ Three statements delimit what a reading means:
 
 | SOL | Bound | Meaning |
 | --- | --- | --- |
-| <span class="perf-ahead">92%</span> | mem | At the achievable ceiling (from 80%). The ceiling is an envelope over access mixes, and a kernel's own mix caps below it, so the line leaves room for every mix. Optimizing further buys at most the remainder. |
+| <span class="perf-ahead">92%</span> | mem | At the achievable ceiling (from the at-ceiling line the roofline spec sets). The ceiling is an envelope over access mixes, and a kernel's own mix caps below it, so the line leaves room for every mix. Optimizing further buys at most the remainder. |
 | 63% | mem | Headroom remains. |
 | <span class="perf-unrated">41%</span> | <span class="perf-unrated">lat</span> | The workload is too small for the model to judge — launch overhead dominates the measurement, not the roofline — so the number is shown but not graded. |
 | <span class="perf-unrated">⚠ 108%</span> | mem | Above the calibrated ceiling: the formula or the calibration is wrong. Never read it as a fast kernel. |
