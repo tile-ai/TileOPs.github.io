@@ -549,10 +549,9 @@ DETAIL_HEADER = (
     "<table>",
     "<thead>",
     "<tr>",
-    # `colsep` draws the hairline between the workload name and the numbers.
-    # Its own cell spans both header rows, so the rule has no gap.
-    '<th rowspan="2" class="colsep">Workload<br>'
-    '<span class="subhead">shapes · dtype</span></th>',
+    # These three say what the row is; the rule after them divides that from
+    # what it measured. Each spans both header rows, so the rule has no gap.
+    '<th rowspan="2" class="colsep">Workload</th>',
     "<th>Ratio</th>",
     "<th>Device time</th>",
     '<th colspan="2">Alternatives</th>',
@@ -574,6 +573,8 @@ DETAIL_HEADER = (
     "</thead>",
     "<tbody>",
 )
+
+
 DETAIL_FOOTER = ("</tbody>", "</table>")
 
 
@@ -594,39 +595,59 @@ def _stack(cells: list[str]) -> str:
     return f"{head}<br>{tail}"
 
 
-def workload_cell(w: dict, spec) -> str:
-    """The row's identity: what it ran on, then what the benchmark calls it.
+WORKLOAD_CODE = "W"
 
-    The shapes come first because they are the question a reader brings to the
-    row — which tensors, how big, in what dtype. The benchmark's own id follows,
-    muted: it names the scenario the shapes were chosen for (`llama-8b-prefill`)
-    and is what to grep for in TileOPs, but it is not a measurement.
 
-    A workload the manifest does not declare keeps the id alone. Inventing a
-    shape for it would be worse than saying nothing.
+def workload_key(rows: list) -> list:
+    """What each row of an op's table ran on, listed above it.
+
+    The table's first column is `W1`, `W2`, … and nothing else. A workload's
+    shapes are a list of a dozen names and numbers, and inside a column they
+    either squeeze the measurements out of the window or wrap into a paragraph
+    per row.
+
+    Here each workload is one closed line, and opens on its own into a tensor
+    per line. A reader scanning ratios sees eight short lines above the table;
+    a reader whom one row surprised opens that row alone.
+
+    Order follows the table's rows, so `W3` is the third row.
     """
-    if not spec:
-        return f'<td class="colsep"><code>{html.escape(w["config"])}</code></td>'
-    parts = []
-    for names, shape, dtype in spec.tensors:
-        tail = (f' <span class="wl-dt">{html.escape(workload_shape.abbr_dtype(dtype))}</span>'
-                if dtype and dtype != spec.dtype else "")
-        parts.append(f'<span class="wl-name">{html.escape(names)}</span> '
-                     f"{html.escape(shape)}{tail}")
-    parts += [f'<span class="wl-name">{html.escape(k)}</span> {html.escape(v)}'
-              for k, v in spec.dims]
-    parts += [f'<span class="wl-param">{html.escape(k)}={html.escape(v)}</span>'
-              for k, v in spec.params]
-    return (
-        '<td class="colsep">'
-        f'<span class="wl-shape">{" · ".join(parts)}</span>'
-        f'<span class="wl-id"><code>{html.escape(spec.label)}</code> '
-        f"{html.escape(workload_shape.abbr_dtype(spec.dtype))}</span>"
-        "</td>"
-    )
+    if not rows:
+        return []
+    items = []
+    for code, w in rows:
+        spec = w.get("spec")
+        if not spec:
+            items.append(f'<p class="wl-item wl-bare"><b>{code}</b>('
+                         f'<code class="wl-id">{html.escape(w["config"])}</code>'
+                         ")</p>")
+            continue
+        parts = []
+        for names, shape, dtype in spec.tensors:
+            # Each tensor carries its own dtype, so an entry reads on its own:
+            # a `mask` in `bool` beside tensors in `bf16` says so where it sits.
+            dt = workload_shape.abbr_dtype(dtype or spec.dtype)
+            parts.append(f'<span class="wl-k">{html.escape(names)}</span>: '
+                         f"{html.escape(shape)}, "
+                         f'<span class="wl-dt">{html.escape(dt)}</span>')
+        parts += [f'<span class="wl-k">{html.escape(k)}</span>: {html.escape(v)}'
+                  for k, v in spec.dims]
+        # Parameters last and dimmed: how the op was called, not how big it is.
+        parts += [f'<span class="wl-dim"><span class="wl-k">{html.escape(k)}'
+                  f"</span>: {html.escape(v)}</span>" for k, v in spec.params]
+        # One entry per line: an op takes as many as a dozen tensors and
+        # parameters, and a run of them on one line is read by counting
+        # separators. The workload's own dtype is not repeated in the summary —
+        # every entry under it carries the dtype it was measured in.
+        sub = "".join(f"<li>{p}</li>" for p in parts)
+        items.append(
+            f'<details class="wl-item"><summary><b>{code}</b>('
+            f'<code class="wl-id">{html.escape(spec.label)}</code>)</summary>'
+            f'<ul class="wl-sub">{sub}</ul></details>')
+    return ['<div class="wl-key">', *items, "</div>", ""]
 
 
-def detail_row(w: dict, m: dict, spec=None) -> str:
+def detail_row(code: str, m: dict) -> str:
     ordered = sorted(m["rivals"].items(), key=lambda kv: kv[1]["busy_ms"])
     names = _stack([f"<code>{html.escape(t)}</code>" for t, _ in ordered])
     times = _stack([_sig_ms(r["busy_ms"]) for _, r in ordered])
@@ -639,7 +660,7 @@ def detail_row(w: dict, m: dict, spec=None) -> str:
                       rated=bool(real))
     return (
         "<tr>"
-        f"{workload_cell(w, spec)}"
+        f'<td class="colsep"><b>{code}</b></td>' 
         f"<td>{gap}</td>"
         f"<td>{_sig_ms(m['busy_ms'])}</td>"
         f"<td>{names}</td>"
@@ -805,12 +826,15 @@ def reading_page(sol_engine=(None, None)) -> str:
         "## Columns", "",
         "| Column | Meaning |",
         "| --- | --- |",
-        "| **Workload** | What the row ran on: every input tensor with its "
-        "shape, then the dimensions and the parameters that are not tensors. A "
-        "dtype after a shape is that tensor's own, where it differs from the "
-        "row's; the row's dtype sits on the second line, after the benchmark's "
-        "id for the workload. Names, shapes and defaults are the spec "
-        "manifest's — a parameter left at its default is not printed. |",
+        "| **Workload** | `W1`, `W2`, … — the key above each table spells each "
+        "one out: the benchmark's own id for it, the dtype it ran at, and every "
+        "input tensor as `name: shape, dtype`. Tensors sharing a shape are "
+        "named together, and each carries its own dtype, so a `mask` in `bool` "
+        "says so where it is read. After the tensors come the dimensions the op "
+        "is sized by rather than shaped by (`m`, `n`, `k` for a GEMM, "
+        "`num_experts` for MoE routing), then dimmed, the parameters the call "
+        "did not leave at the signature's default. A quantity the others "
+        "already fix — `max_seqlen_q` is `max(q_lens)` — is not repeated. |",
         "| **Ratio** | `alt / ours` — the fastest alternative's device time "
         "divided by ours, the one number the colour grades. |",
         "| **Device time** | Milliseconds the device spent executing the call's "
@@ -943,14 +967,17 @@ def data_page(title: str, fams: list[str], rows_by_fam: dict,
             note = f"{s['workloads']} workloads"
             if tmark != EMPTY:
                 note += f" · {tmark}"
+            ordered = sorted(zip(workloads_of[op], metrics_by_op[op]),
+                             key=lambda z: z[0]["config"])
+            coded = [(f"{WORKLOAD_CODE}{i}", w)
+                     for i, (w, _) in enumerate(ordered, 1)]
             lines += [f"### {_op_cell(op, module, ref)} <small>({note})</small>",
-                      "",
+                      "", *workload_key(coded),
                       # No `markdown="1"`, and no blank line until `</div>`: a
                       # blank line would end the raw-HTML block mid-table.
                       '<div class="datatable">', *DETAIL_HEADER]
-            for w, m in sorted(zip(workloads_of[op], metrics_by_op[op]),
-                               key=lambda z: z[0]["config"]):
-                lines.append(detail_row(w, m, w.get("spec")))
+            for (code, _), (_, m) in zip(coded, ordered):
+                lines.append(detail_row(code, m))
             lines += [*DETAIL_FOOTER, "</div>", ""]
     return "\n".join(lines) + "\n"
 

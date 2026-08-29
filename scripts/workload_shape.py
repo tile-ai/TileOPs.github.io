@@ -55,7 +55,7 @@ class Spec:
     def __init__(self, label, dtype, tensors, dims, params):
         self.label = label          # "hidden-state-prefill"
         self.dtype = dtype          # "float16" — the workload's dtype row
-        self.tensors = tensors      # [(names, "2048×4096", dtype or None)]
+        self.tensors = tensors      # [(names, "[2048, 4096]", dtype or None)]
         self.dims = dims            # [("heads", "32"), ...]
         self.params = params        # [("is_causal", "true"), ...]
 
@@ -140,7 +140,7 @@ def _split_dims(body: str) -> list[str]:
 
 
 def fmt_shape(dims) -> str:
-    return "×".join(str(d) for d in dims)
+    return "[" + ", ".join(str(d) for d in dims) + "]"
 
 
 def _fmt_value(value) -> str:
@@ -187,25 +187,77 @@ def _workload_of(entry: dict, config: str):
     return None
 
 
-def _derived_keys(workload: dict) -> set:
-    """Keys whose value is the sum or the maximum of a list already shown.
+def _int_lists(workload: dict) -> list:
+    return [v for v in workload.values()
+            if isinstance(v, list) and len(v) > 1 and all(isinstance(x, int) for x in v)]
 
-    ``total_q`` is ``sum(q_lens)`` and ``max_seqlen_q`` is ``max(q_lens)``; a
-    row that prints all three says one thing three times.
+
+def _restates(workload: dict, key: str):
+    """Whether one key only restates lists the row already prints.
+
+    ``total_q`` is ``sum(q_lens)``, ``max_seqlen_q`` is ``max(q_lens)``, and a
+    paged run's ``max_position`` is ``max(cache_lens) + max(q_lens)``. Returns
+    None where the key is absent or the row prints no list to check against, so
+    a row that cannot settle the question does not vote either way.
     """
-    lists = [v for v in workload.values()
-             if isinstance(v, list) and v and all(isinstance(x, int) for x in v)]
+    value = workload.get(key)
+    if not isinstance(value, int) or isinstance(value, bool):
+        return None
+    lists = _int_lists(workload)
     if not lists:
-        return set()
+        return None
+    if any(value in (sum(seq), max(seq)) for seq in lists):
+        return True
+    maxes = [max(seq) for seq in lists]
+    return any(value == a + b for i, a in enumerate(maxes) for b in maxes[i + 1:])
+
+
+_DERIVED_CACHE = "_workload_shape_derived"
+
+
+def _derived_keys(entry: dict) -> set:
+    """Keys the whole op restates, across every workload that carries them.
+
+    Judged per op rather than per row: one row where a sum happens to match a
+    length is a coincidence, and dropping on it would hide a real dimension.
+    A key is dropped only where every row that can settle it agrees, so a
+    manifest that stops holding the identity brings the column straight back.
+    """
+    cached = entry.get(_DERIVED_CACHE)
+    if cached is not None:
+        return cached
+    workloads = entry.get("workloads") or []
+    candidates = {k for w in workloads for k, v in w.items()
+                  if isinstance(v, int) and not isinstance(v, bool)}
     derived = set()
-    for key, value in workload.items():
-        if not isinstance(value, int) or isinstance(value, bool):
-            continue
-        for seq in lists:
-            if len(seq) > 1 and value in (sum(seq), max(seq)):
-                derived.add(key)
-                break
+    for key in candidates:
+        verdicts = [v for v in (_restates(w, key) for w in workloads) if v is not None]
+        if verdicts and all(verdicts):
+            derived.add(key)
+    entry[_DERIVED_CACHE] = derived
     return derived
+
+
+# A count and its key/value counterpart are one fact about the op's shape, read
+# together everywhere the op is discussed: 32 query heads over 8 KV heads is
+# `32/8`, not two entries a reader has to pair up.
+_PAIRED_SUFFIX = "_kv"
+
+
+def _pair_counts(items: list) -> list:
+    """Fold ``heads 32 · heads_kv 8`` into ``heads 32/8``."""
+    values = dict(items)
+    folded, dropped = [], set()
+    for key, value in items:
+        if key in dropped:
+            continue
+        mate = key + _PAIRED_SUFFIX
+        if mate in values:
+            folded.append((key, f"{value}/{values[mate]}"))
+            dropped.add(mate)
+        else:
+            folded.append((key, value))
+    return [(k, v) for k, v in folded if k not in dropped]
 
 
 def describe(entry: dict, config: str) -> Spec | None:
@@ -261,7 +313,7 @@ def describe(entry: dict, config: str) -> Spec | None:
     tensors = [(" ".join(names), shape, tensor_dtype)
                for (shape, tensor_dtype), names in grouped.items()]
 
-    derived = _derived_keys(workload)
+    derived = _derived_keys(entry)
     dims_out, params_out = [], []
     for key, value in workload.items():
         if key in consumed or key in _LABEL_KEYS or key in _DTYPE_KEYS:
@@ -276,4 +328,4 @@ def describe(entry: dict, config: str) -> Spec | None:
         if isinstance(value, (int, float, str, list, bool)):
             dims_out.append((key, _fmt_value(value)))
 
-    return Spec(label, dtype, tensors, dims_out, params_out)
+    return Spec(label, dtype, tensors, _pair_counts(dims_out), params_out)
