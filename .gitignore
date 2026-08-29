@@ -1,6 +1,9 @@
 site/
 __pycache__/
 .cache/
+.pytest_cache/
+.ruff_cache/
+tests/.golden-tmp/
 TileOPs
 docs/benchmarks/*.md
 !docs/benchmarks/index.md

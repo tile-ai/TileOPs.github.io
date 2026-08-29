@@ -1,0 +1,10 @@
+{
+  "image": "ghcr.io/tile-ai/tileops-runner:test",
+  "gpu": "NVIDIA H200",
+  "driver": "999.99.99",
+  "cuda": "13.2",
+  "torch": "2.13.0+cu132",
+  "tilelang": "0.1.11+test",
+  "timer": "cupti",
+  "run_id": "1234567890"
+}

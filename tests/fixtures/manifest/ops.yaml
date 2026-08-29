@@ -1,0 +1,54 @@
+# A manifest fragment in the shape of TileOPs' own, holding one op per
+# resolution path the renderer has to take.
+
+# Shapes given outright, and a signature that names their dimensions. The
+# symbols come from reading the concrete shapes back through the templates.
+DeltaDecodeFwdOp:
+  family: linear_attention
+  status: implemented
+  signature:
+    inputs:
+      q: {dtype: "float16 | bfloat16", shape: "[B, H, DK]"}
+      k: {dtype: same_as(q), shape: "[B, H, DK]"}
+      v: {dtype: same_as(q), shape: "[B, H, DV]"}
+      state: {dtype: same_as(q), shape: "[B, H, DK, DV]"}
+    params: {}
+    shape_rules:
+      - "q.shape == (B, H, DK)"
+  workloads:
+    - {q_shape: [1, 8, 128], k_shape: [1, 8, 128], v_shape: [1, 8, 128],
+       state_shape: [1, 8, 128, 128], dtypes: [bfloat16], label: decode-b1-h8}
+    - {q_shape: [8, 8, 128], k_shape: [8, 8, 128], v_shape: [8, 8, 128],
+       state_shape: [8, 8, 128, 128], dtypes: [bfloat16], label: decode-b8-h8}
+
+# Dimensions declared as scalars and shapes left to the templates, plus a
+# parameter that only restates a symbol (`B == batch`) and one that does not.
+ChunkScanFwdOp:
+  family: mamba
+  status: implemented
+  signature:
+    inputs:
+      x: {dtype: bfloat16, shape: "[B, S, N]"}
+      mask: {dtype: bool, shape: "[B, S]"}
+    params:
+      is_causal: {type: bool, default: true}
+    shape_rules:
+      - "B == batch"
+      - "S == num_chunks * chunk_len"
+  workloads:
+    - {batch: 2, num_chunks: 4, chunk_len: 64, N: 128, dtypes: [bfloat16],
+       is_causal: true, label: scan-b2}
+    - {batch: 4, num_chunks: 4, chunk_len: 64, N: 128, dtypes: [bfloat16],
+       is_causal: false, label: scan-b4}
+
+# A template whose one name would have to stand for two values on this
+# workload: `[D, D]` against a square that is not square.
+SquareFwdOp:
+  family: elementwise
+  status: implemented
+  signature:
+    inputs:
+      a: {dtype: float16, shape: "[D, D]"}
+    params: {}
+  workloads:
+    - {a_shape: [64, 32], dtypes: [float16], label: oblong}

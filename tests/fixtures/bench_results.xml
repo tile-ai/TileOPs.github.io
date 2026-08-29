@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A trimmed nightly snapshot: one testcase per row the renderer has to
+     produce. Property names are <tag>_<metric>, exactly as the benchmark
+     writes them. -->
+<testsuites>
+  <testsuite name="pytest" tests="7">
+
+    <!-- Ahead of a library kernel, and of an eager reference. -->
+    <testcase classname="bench" name="test_bench[decode-b1-h8-bfloat16]">
+      <properties>
+        <property name="op" value="DeltaDecodeFwdOp"/>
+        <property name="op_module" value="tileops.ops.linear_attention.delta"/>
+        <property name="tileops_device_busy_ms" value="0.0031"/>
+        <property name="tileops_latency_ms" value="0.0090"/>
+        <property name="tileops_tflops" value="0.508"/>
+        <property name="tileops_flops" value="1572864"/>
+        <property name="tileops_bytes" value="8388608"/>
+        <property name="tileops_timing" value="cupti"/>
+        <property name="tileops_n_kernels" value="1"/>
+        <property name="fla_device_busy_ms" value="0.0142"/>
+        <property name="fla_ratio" value="4.58"/>
+        <property name="torch-ref_device_busy_ms" value="0.0353"/>
+        <property name="torch-ref_ratio" value="11.39"/>
+      </properties>
+    </testcase>
+
+    <!-- Behind the same library kernel. -->
+    <testcase classname="bench" name="test_bench[decode-b8-h8-bfloat16]">
+      <properties>
+        <property name="op" value="DeltaDecodeFwdOp"/>
+        <property name="op_module" value="tileops.ops.linear_attention.delta"/>
+        <property name="tileops_device_busy_ms" value="0.0200"/>
+        <property name="tileops_tflops" value="0.629"/>
+        <property name="tileops_timing" value="cupti"/>
+        <property name="fla_device_busy_ms" value="0.0100"/>
+        <property name="fla_ratio" value="0.5"/>
+      </properties>
+    </testcase>
+
+    <!-- Only an eager reference to compare against: unrated. -->
+    <testcase classname="bench" name="test_bench[scan-b2-bfloat16]">
+      <properties>
+        <property name="op" value="ChunkScanFwdOp"/>
+        <property name="op_module" value="tileops.ops.mamba.scan"/>
+        <property name="tileops_device_busy_ms" value="0.0500"/>
+        <property name="tileops_timing" value="cupti"/>
+        <property name="torch-ref_device_busy_ms" value="0.2000"/>
+        <property name="torch-ref_ratio" value="4.0"/>
+      </properties>
+    </testcase>
+
+    <!-- Level with a torch-native op, and the recorded ratio disagrees with
+         the published times by more than the drift threshold. -->
+    <testcase classname="bench" name="test_bench[scan-b4-bfloat16]">
+      <properties>
+        <property name="op" value="ChunkScanFwdOp"/>
+        <property name="op_module" value="tileops.ops.mamba.scan"/>
+        <property name="tileops_device_busy_ms" value="0.1000"/>
+        <property name="tileops_timing" value="cupti"/>
+        <property name="torch_device_busy_ms" value="0.1000"/>
+        <property name="torch_ratio" value="1.60"/>
+      </properties>
+    </testcase>
+
+    <!-- An op the manifest fragment does not declare: named by its id alone. -->
+    <testcase classname="bench" name="test_bench[undeclared-op-case-float16]">
+      <properties>
+        <property name="op" value="MysteryFwdOp"/>
+        <property name="op_module" value="tileops.ops.elementwise.mystery"/>
+        <property name="tileops_device_busy_ms" value="0.0040"/>
+        <property name="tileops_timing" value="cupti"/>
+        <property name="triton_device_busy_ms" value="0.0080"/>
+        <property name="triton_ratio" value="2.0"/>
+      </properties>
+    </testcase>
+
+    <!-- A template one symbol cannot describe: falls back to concrete shapes. -->
+    <testcase classname="bench" name="test_bench[oblong-float16]">
+      <properties>
+        <property name="op" value="SquareFwdOp"/>
+        <property name="op_module" value="tileops.ops.elementwise.square"/>
+        <property name="tileops_device_busy_ms" value="0.0020"/>
+        <property name="tileops_timing" value="cupti"/>
+        <property name="torch_device_busy_ms" value="0.0030"/>
+      </properties>
+    </testcase>
+
+    <testcase classname="bench" name="test_bench[skipped-case-float16]">
+      <properties><property name="op" value="ChunkScanFwdOp"/></properties>
+      <skipped message="no baseline available on this GPU"/>
+    </testcase>
+
+    <testcase classname="bench" name="test_bench[failing-case-float16]">
+      <properties><property name="op" value="MysteryFwdOp"/></properties>
+      <failure message="CUDA error: out of memory"/>
+    </testcase>
+
+  </testsuite>
+</testsuites>

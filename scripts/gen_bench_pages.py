@@ -128,8 +128,15 @@ _KEYWORD_FAMILY = [
     (("reduce", "argmax", "argmin", "argreduce", "mean", "sum", "max", "min"),
      "reduction"),
 ]
+# The package an op is defined in decides its family, and the keywords below
+# only speak for ops the layout does not place. Every directory under
+# `tileops/ops/` belongs here: `linear_attention` left out of it fell through to
+# the keyword `linear` and published linear-attention ops on the GEMM page.
 _MODULE_FAMILY = {"attention": "attention", "elementwise": "elementwise",
-                  "reduction": "reduction", "norm": "normalization", "moe": "moe"}
+                  "reduction": "reduction", "norm": "normalization",
+                  "moe": "moe", "gemm": "linear_algebra",
+                  "linear_attention": "linear_attention",
+                  "mamba": "linear_attention"}
 
 
 def family_of(op: str, op_module: str | None) -> str:
@@ -598,7 +605,7 @@ def _stack(cells: list[str]) -> str:
 WORKLOAD_CODE = "W"
 
 
-def _facts(spec) -> "OrderedDict":
+def _facts(spec) -> OrderedDict:
     """Every scalar a workload sets, as name -> (value, kind).
 
     The symbols of the tensor templates come first, since those are the numbers
@@ -729,7 +736,7 @@ def workload_key(rows: list) -> list:
         scalars = [_fact_html(n, *facts[0][n]) for n in shared]
 
         rows_html, deltas = [], []
-        for (code, _), spec, fact in zip(group, specs, facts):
+        for (code, _), spec, fact in zip(group, specs, facts, strict=True):
             varies = [_fact_html(n, *v) for n, v in fact.items()
                       if n not in shared]
             # Without a template the group has nothing to hold in common, so
@@ -775,7 +782,7 @@ def detail_row(code: str, m: dict) -> str:
                       rated=bool(real))
     return (
         "<tr>"
-        f'<td class="colsep"><b>{code}</b></td>' 
+        f'<td class="colsep"><b>{code}</b></td>'
         f"<td>{gap}</td>"
         f"<td>{_sig_ms(m['busy_ms'])}</td>"
         f"<td>{names}</td>"
@@ -1082,7 +1089,7 @@ def data_page(title: str, fams: list[str], rows_by_fam: dict,
             note = f"{s['workloads']} workloads"
             if tmark != EMPTY:
                 note += f" · {tmark}"
-            ordered = sorted(zip(workloads_of[op], metrics_by_op[op]),
+            ordered = sorted(zip(workloads_of[op], metrics_by_op[op], strict=True),
                              key=lambda z: z[0]["config"])
             coded = [(f"{WORKLOAD_CODE}{i}", w)
                      for i, (w, _) in enumerate(ordered, 1)]
@@ -1091,7 +1098,7 @@ def data_page(title: str, fams: list[str], rows_by_fam: dict,
                       # No `markdown="1"`, and no blank line until `</div>`: a
                       # blank line would end the raw-HTML block mid-table.
                       '<div class="datatable">', *DETAIL_HEADER]
-            for (code, _), (_, m) in zip(coded, ordered):
+            for (code, _), (_, m) in zip(coded, ordered, strict=True):
                 lines.append(detail_row(code, m))
             lines += [*DETAIL_FOOTER, "</div>", ""]
     return "\n".join(lines) + "\n"
@@ -1112,7 +1119,7 @@ def collect_ratio_drift(workloads: list[dict], metrics: list[dict]) -> list[tupl
     page last went wrong.
     """
     drift = []
-    for w, m in zip(workloads, metrics):
+    for w, m in zip(workloads, metrics, strict=True):
         for tag, r in m["rivals"].items():
             rec, comp = r["recorded_ratio"], r["computed_ratio"]
             if rec and comp and abs(rec - comp) / rec > RATIO_DRIFT:

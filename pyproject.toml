@@ -1,0 +1,16 @@
+# The repo ships no package: this file configures the checks that run over the
+# scripts behind the site.
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"       # `zip(..., strict=)`; CI and the deploy run 3.12
+
+[tool.ruff.lint]
+# E501 is left out on purpose: the prose in these files is wrapped by hand and a
+# formatter's idea of a line is not the author's.
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

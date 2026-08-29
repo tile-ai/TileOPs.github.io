@@ -7,6 +7,12 @@ on:
 permissions:
   contents: write
 
+# Shared with the daily refresh: two `gh-deploy --force` runs at once would race
+# to publish gh-pages.
+concurrency:
+  group: gh-pages
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -26,7 +32,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugin mkdocs-static-i18n jieba pyyaml black
+      - run: pip install -r requirements-docs.txt
       # Regenerate the Benchmarks page from the latest nightly snapshot so a
       # push deploy never serves a stale page. Falls back to the placeholder if
       # the snapshot is unavailable.

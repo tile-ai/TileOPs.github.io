@@ -1,0 +1,8 @@
+# What building the site needs. Kept here rather than in the workflows so a
+# local build and a deploy install the same set.
+mkdocs-material
+mkdocstrings[python]
+mkdocs-include-markdown-plugin
+mkdocs-static-i18n
+jieba
+pyyaml

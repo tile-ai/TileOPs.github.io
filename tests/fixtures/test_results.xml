@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The correctness run behind the same snapshot: one op passing, one failing. -->
+<testsuites>
+  <testsuite name="pytest" tests="3">
+    <testcase classname="tests" name="test_delta[bf16]">
+      <properties>
+        <property name="op" value="DeltaDecodeFwdOp"/>
+        <property name="max_abs_err" value="0.0009765625"/>
+      </properties>
+    </testcase>
+    <testcase classname="tests" name="test_scan[bf16]">
+      <properties><property name="op" value="ChunkScanFwdOp"/></properties>
+      <failure message="mismatch at 12 elements"/>
+    </testcase>
+    <testcase classname="tests" name="test_mystery[f16]">
+      <properties><property name="op" value="MysteryFwdOp"/></properties>
+      <skipped message="not implemented on sm90"/>
+    </testcase>
+  </testsuite>
+</testsuites>

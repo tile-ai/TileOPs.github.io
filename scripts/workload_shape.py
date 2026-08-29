@@ -160,8 +160,13 @@ def _bind(template: str, dims: list) -> tuple[list, dict] | None:
     if len(parts) != len(dims):
         return None
     symbols, binds = [], {}
-    for part, value in zip(parts, dims):
+    for part, value in zip(parts, dims, strict=True):
         if _SYMBOL.match(part):
+            # One name twice in one shape means the two positions are equal.
+            # `[B, B]` against `[1, 2]` is not that shape, so the template is
+            # rejected rather than bound to whichever value came last.
+            if binds.get(part, value) != value:
+                return None
             symbols.append(part)
             binds[part] = value
         else:
@@ -416,7 +421,7 @@ def describe(entry: dict, config: str) -> Spec | None:
 
 def _group_tensors(shapes) -> list:
     """Tensors of one shape and one dtype, named together on one line."""
-    grouped: "OrderedDict[tuple, list]" = OrderedDict()
+    grouped: OrderedDict[tuple, list] = OrderedDict()
     for name, shape, tensor_dtype in shapes:
         grouped.setdefault((shape, tensor_dtype), []).append(name)
     # Comma-separated: `q, k` is two tensors of one shape, and a space alone

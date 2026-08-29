@@ -18,8 +18,11 @@ on:
 permissions:
   contents: write
 
+# Both this job and the push deploy publish gh-pages with `--force`, so the two
+# share one queue: a scheduled refresh and a merge landing together would
+# otherwise race, and the loser's pages would be the ones served.
 concurrency:
-  group: daily-refresh
+  group: gh-pages
   cancel-in-progress: false
 
 jobs:
@@ -44,7 +47,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - run: pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugin mkdocs-static-i18n jieba pyyaml black
+      - run: pip install -r requirements-docs.txt
 
       - name: Render benchmark page from nightly-bench
         run: bash scripts/render_bench.sh

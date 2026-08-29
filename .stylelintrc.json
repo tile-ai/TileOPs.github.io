@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "no-duplicate-selectors": true,
+    "declaration-block-no-duplicate-properties": [
+      true,
+      { "ignore": ["consecutive-duplicates-with-different-values"] }
+    ],
+    "function-disallowed-list": ["color-mix"],
+    "no-invalid-double-slash-comments": true,
+    "block-no-empty": true
+  }
+}

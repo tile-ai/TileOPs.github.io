@@ -60,6 +60,23 @@
   --tf-display: "Bricolage Grotesque", var(--tf-cjk);
   --tf-body: "Hanken Grotesk", var(--tf-cjk);
   --tf-mono: "Space Mono", ui-monospace, monospace;
+
+  /* The symbol chips mkdocstrings draws in the API reference: it ships its own
+   * palette, which lands two more hues on a page that already has two. A class
+   * takes the structural violet, a method the teal, the rest the muted weight.
+   */
+  --doc-symbol-class-fg-color: var(--tf-violet);
+  --doc-symbol-class-bg-color: rgba(90, 62, 133, 0.08);
+  --doc-symbol-method-fg-color: var(--tf-teal);
+  --doc-symbol-method-bg-color: rgba(22, 112, 107, 0.1);
+  --doc-symbol-function-fg-color: var(--tf-teal);
+  --doc-symbol-function-bg-color: rgba(22, 112, 107, 0.1);
+  --doc-symbol-attribute-fg-color: var(--tf-muted);
+  --doc-symbol-attribute-bg-color: rgba(106, 100, 120, 0.08);
+  --doc-symbol-module-fg-color: var(--tf-muted);
+  --doc-symbol-module-bg-color: rgba(106, 100, 120, 0.08);
+  --doc-symbol-parameter-fg-color: var(--tf-muted);
+  --doc-symbol-parameter-bg-color: rgba(106, 100, 120, 0.08);
 }
 
 [data-md-color-scheme="default"] {
@@ -378,6 +395,7 @@ body,
 .md-typeset .admonition pre > code,
 .md-typeset details pre > code {
   background: rgba(22, 112, 107, 0.12);
+  font-size: 0.74rem;
 }
 
 /* The line numbers are scenery: no fill of their own, a hairline to sit behind,
@@ -473,6 +491,11 @@ body,
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+/* Material sets an admonition two steps below body size, which is fine for a
+ * one-line aside and wrong for the API pages, where every Example is one of
+ * these blocks and its content is code.
+ */
+  font-size: 0.78rem;
 }
 
 /* Material colours each admonition type differently — example violet, note
@@ -544,20 +567,6 @@ html[lang="zh"] .md-typeset .keystone {
   font-size: 0.8rem;
 }
 
-/* Material sets an admonition two steps below body size, which is fine for a
- * one-line aside and wrong for the API pages, where every Example is one of
- * these blocks and its content is code.
- */
-.md-typeset .admonition,
-.md-typeset details {
-  font-size: 0.78rem;
-}
-
-.md-typeset .admonition pre > code,
-.md-typeset details pre > code {
-  font-size: 0.74rem;
-}
-
 /* An `Example:` section in a docstring becomes an `example` admonition, whose
  * default icon is a lab flask — a picture of something the section is not. The
  * word and the teal rule already say what the block is.
@@ -589,9 +598,6 @@ html[lang="zh"] .md-typeset .keystone {
 .md-typeset table:not([class]) {
   display: table;
   width: 100%;
-}
-
-.md-typeset table:not([class]) {
   margin: 1em 0;
   /* Material fills a table with the page colour, which over the wash reads as
    * a lighter panel laid on the sheet.
@@ -655,18 +661,10 @@ html[lang="zh"] .md-typeset .keystone {
 .md-typeset .datatable table:not([class]) td {
   padding-left: 0.75em;
   padding-right: 0.75em;
-}
-
-.md-typeset .datatable table:not([class]) td,
-.md-typeset .datatable table:not([class]) th {
   white-space: nowrap;
-}
-
 /* Everything centred in its column, except the workload name: it is the row's
  * label, of varying length, and reads as a list only when flush left.
  */
-.md-typeset .datatable table:not([class]) th,
-.md-typeset .datatable table:not([class]) td {
   text-align: center;
 }
 
@@ -693,19 +691,16 @@ html[lang="zh"] .md-typeset .keystone {
   padding-bottom: 0.55em;
   line-height: 1.35;
   border-bottom: 0;
+/* The Alternatives sub-columns stack one line per alternative. Top alignment is
+ * what makes them read across, and keeps Ratio level with the fastest one.
+ */
+  vertical-align: top;
 }
 
 /* Everything but the fastest alternative is context. */
 .md-typeset .datatable table:not([class]) .alt-slow,
 .md-typeset .datatable table:not([class]) .alt-slow code {
   color: var(--tf-muted);
-}
-
-/* The Alternatives sub-columns stack one line per alternative. Top alignment is
- * what makes them read across, and keeps Ratio level with the fastest one.
- */
-.md-typeset .datatable table:not([class]) td {
-  vertical-align: top;
 }
 
 /* Two header rows, still one middle rule: it belongs under the whole header
@@ -853,25 +848,6 @@ html[lang="zh"] .md-typeset .keystone {
   font-size: 1em;
 }
 
-/* The symbol chips: mkdocstrings ships its own palette, which lands two more
- * hues on a page that already has two. A class takes the structural violet, a
- * method the teal, and the rest sit at the muted weight.
- */
-:root {
-  --doc-symbol-class-fg-color: var(--tf-violet);
-  --doc-symbol-class-bg-color: rgba(90, 62, 133, 0.08);
-  --doc-symbol-method-fg-color: var(--tf-teal);
-  --doc-symbol-method-bg-color: rgba(22, 112, 107, 0.1);
-  --doc-symbol-function-fg-color: var(--tf-teal);
-  --doc-symbol-function-bg-color: rgba(22, 112, 107, 0.1);
-  --doc-symbol-attribute-fg-color: var(--tf-muted);
-  --doc-symbol-attribute-bg-color: rgba(106, 100, 120, 0.08);
-  --doc-symbol-module-fg-color: var(--tf-muted);
-  --doc-symbol-module-bg-color: rgba(106, 100, 120, 0.08);
-  --doc-symbol-parameter-fg-color: var(--tf-muted);
-  --doc-symbol-parameter-bg-color: rgba(106, 100, 120, 0.08);
-}
-
 /* Only the class keeps its chip. A method is already inside its class, under a
  * heading of its own, so `meth` repeats what the position says — and it lands
  * right where the eye enters the line. Keyed on the object, not the heading
@@ -910,6 +886,8 @@ html[lang="zh"] .md-typeset .keystone {
 .md-typeset .doc-object.doc-function > .doc-contents {
   padding-left: 0;
   border-left: 0;
+/* The signature carries the weight the heading gave up. */
+  margin-top: 1.7em;
 }
 
 /* A member's heading repeats the name the signature under it already carries, so
@@ -929,11 +907,6 @@ html[lang="zh"] .md-typeset .keystone {
 .md-typeset .doc-object.doc-function > .doc-heading .headerlink,
 .md-typeset .doc-object.doc-attribute > .doc-heading .headerlink {
   display: none;
-}
-
-/* The signature carries the weight the heading gave up. */
-.md-typeset .doc-object.doc-function > .doc-contents {
-  margin-top: 1.7em;
 }
 
 /* The two method entries under one class are siblings, not a list: space them
@@ -979,6 +952,16 @@ html[lang="zh"] .md-typeset .keystone {
 .md-typeset .doc-section-title {
   margin-top: 1.4em;
   margin-bottom: 0.3em;
+/* Parameters render as a definition list. The section label heads it in the
+ * display face, and each parameter name stays in mono so the list reads as a
+ * signature rather than a paragraph.
+ */
+  color: var(--tf-muted);
+  font-family: var(--tf-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 /* `property`, `classmethod`, `async` — a note about the symbol, not part of
@@ -991,19 +974,6 @@ html[lang="zh"] .md-typeset .keystone {
   font-size: 0.62rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-}
-
-/* Parameters render as a definition list. The section label heads it in the
- * display face, and each parameter name stays in mono so the list reads as a
- * signature rather than a paragraph.
- */
-.md-typeset .doc-section-title {
-  color: var(--tf-muted);
-  font-family: var(--tf-display);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
 }
 
 .md-typeset .doc-section-item {
@@ -1169,20 +1139,6 @@ html[lang="zh"] .md-typeset a {
 html[lang="zh"] .md-nav,
 html[lang="zh"] .md-nav__title {
   line-height: 1.5;
-}
-
-/* Sequence diagrams. The fence sets the type a size up from mermaid's default, which the
- * diagram can afford once it fits the column; a wider one scrolls rather than shrinking
- * the page. The autonumber bubble defaults to near-black, which reads as a blob at this
- * size, so it takes the structural violet. */
-.md-typeset .mermaid {
-  overflow-x: auto;
-  --md-mermaid-sequence-number-bg-color: var(--tf-violet);
-}
-
-.md-typeset .mermaid text.sequenceNumber {
-  font-size: 12px !important;
-  font-weight: 700;
 }
 
 /* Sequence diagrams. The fence sets the type a size up from mermaid's default, which the

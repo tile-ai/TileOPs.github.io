@@ -1,0 +1,4 @@
+# What the checks need. The site's own dependencies are in requirements-docs.txt.
+pytest
+ruff
+pyyaml
