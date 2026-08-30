@@ -1,20 +1,16 @@
 #!/usr/bin/env python3
 """Resolve a benchmarked workload to the shape and dtype of each input tensor.
 
-The nightly benchmark snapshot names a workload only by its pytest parameter id
-(``hidden-state-prefill-float16``). The shapes behind that name live in the
-TileOPs spec manifest, ``src/tileops/manifest/*.yaml``, which the docs build
-already checks out. This module joins the two: a manifest workload entry is
-addressed by ``<label>-<dtype>``, which is exactly the id the benchmark writes.
+The snapshot names a workload only by its pytest id
+(``hidden-state-prefill-float16``); the shapes live in the TileOPs spec
+manifest, ``src/tileops/manifest/*.yaml``, addressed by the ``<label>-<dtype>``
+that id is built from.
 
-What a workload entry carries is not uniform, so three sources are read in this
-order and merged into one description:
-
-  1. ``<tensor>_shape`` keys — a tensor's shape, given outright.
-  2. ``signature.inputs.<tensor>.shape`` templates (``"[batch, seq_len, heads]"``)
-     evaluated against the workload's own scalars, for the ops that declare
-     dimensions rather than shapes.
-  3. whatever scalar dimensions are left, named as the manifest names them.
+A workload entry carries its shapes one of two ways: ``<tensor>_shape`` keys
+outright, or ``signature.inputs.<tensor>.shape`` templates evaluated against
+the workload's own scalars. Templates are read only where no shape is given
+outright — all or nothing, so a tensor list is never half the op's inputs.
+Whatever scalars are left over are reported as the manifest names them.
 
 Anything the manifest declares as a parameter rather than a dimension
 (``is_causal``, ``page_size``) is reported separately and only when it differs
@@ -150,8 +146,8 @@ def _bind(template: str, dims: list) -> tuple[list, dict] | None:
     """Read a concrete shape back through the template that declares it.
 
     ``"[B, H, DK]"`` against ``[1, 8, 128]`` gives ``["B", "H", "DK"]`` and
-    ``{B: 1, H: 8, DK: 128}``. A position holding an expression rather than a
-    plain name keeps its number: ``[B * H, D]`` is not two symbols to solve for.
+    ``{B: 1, H: 8, DK: 128}``. A position holding an expression keeps its
+    number: ``[B * H, D]`` is not two symbols to solve for.
     """
     body = (template or "").strip()
     if not (body.startswith("[") and body.endswith("]")):
@@ -177,11 +173,9 @@ def _bind(template: str, dims: list) -> tuple[list, dict] | None:
 def _restated_by_symbol(entry: dict, bindings: dict, workload: dict) -> set:
     """Scalars a shape symbol already states, per the manifest's own rules.
 
-    ``shape_rules`` carries the identities: ``B == batch`` means the row prints
-    the same number twice, once as the first dimension of every tensor and once
-    as a parameter. Only one-name identities count — ``S == num_chunks *
-    chunk_len`` does not let a reader recover ``num_chunks`` from ``S``, so both
-    stay.
+    ``B == batch`` means the row prints the same number twice. Only one-name
+    identities count: ``S == num_chunks * chunk_len`` does not let a reader
+    recover ``num_chunks`` from ``S``, so both stay.
     """
     rules = (entry.get("signature") or {}).get("shape_rules") or []
     out = set()
@@ -201,9 +195,9 @@ def _restated_by_symbol(entry: dict, bindings: dict, workload: dict) -> set:
 def _symbolic(shapes: list, inputs: dict):
     """Every tensor in the manifest's symbols, or (None, None).
 
-    All or nothing, and only where the symbols hold: one name standing for two
-    values on the same workload means the template does not describe it, and
-    printing the shapes in symbols would then say something untrue.
+    All or nothing: one name standing for two values means the template does not
+    describe this workload, and printing it in symbols would say something
+    untrue.
     """
     if not shapes or not inputs:
         return None, None
@@ -281,10 +275,9 @@ def _int_lists(workload: dict) -> list:
 def _restates(workload: dict, key: str):
     """Whether one key only restates lists the row already prints.
 
-    ``total_q`` is ``sum(q_lens)``, ``max_seqlen_q`` is ``max(q_lens)``, and a
-    paged run's ``max_position`` is ``max(cache_lens) + max(q_lens)``. Returns
-    None where the key is absent or the row prints no list to check against, so
-    a row that cannot settle the question does not vote either way.
+    ``total_q`` is ``sum(q_lens)``; a paged run's ``max_position`` is
+    ``max(cache_lens) + max(q_lens)``. None where the row prints no list to
+    check against, so a row that cannot settle the question does not vote.
     """
     value = workload.get(key)
     if not isinstance(value, int) or isinstance(value, bool):
@@ -304,10 +297,9 @@ _DERIVED_CACHE = "_workload_shape_derived"
 def _derived_keys(entry: dict) -> set:
     """Keys the whole op restates, across every workload that carries them.
 
-    Judged per op rather than per row: one row where a sum happens to match a
-    length is a coincidence, and dropping on it would hide a real dimension.
-    A key is dropped only where every row that can settle it agrees, so a
-    manifest that stops holding the identity brings the column straight back.
+    Per op, not per row: one row where a sum happens to match a length is a
+    coincidence. A key is dropped only where every row that can settle it
+    agrees.
     """
     cached = entry.get(_DERIVED_CACHE)
     if cached is not None:

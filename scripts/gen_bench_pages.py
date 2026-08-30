@@ -60,19 +60,16 @@ _GH = "https://github.com/tile-ai/TileOPs"
 # Where the nightly publishes: one commit per run, the newest rendered here.
 _NB = "https://github.com/tile-ai/TileOPs-nightly/tree/snapshots"
 
-# How an op stands against the fastest real alternative measured on its
-# workloads. The verdict is carried by the colour of the ratio itself rather
-# than by a separate status glyph, so a reader gets it from the number they
-# were already reading.
+# How an op stands against the fastest real alternative on its workloads. The
+# colour of the ratio is the verdict, so no separate status glyph is needed.
 AHEAD, PAR, BEHIND, UNRATED = "ahead", "par", "behind", "unrated"
 PAR_BAND = (0.95, 1.05)  # inside this the two implementations are level
 NA = "—"
 EMPTY = "·"  # a metric whose input was not recorded
 
 # --- Baseline tiers ---------------------------------------------------------
-# A baseline's tier decides how a comparison against it reads, not whether it
-# is shown. Unknown tags fall into "lib" and are reported on stderr so a newly
-# added baseline gets classified deliberately.
+# A tier decides how a comparison reads, not whether it is shown. An unknown tag
+# falls into "lib" and is reported on stderr, so it gets classified deliberately.
 TIER_LIB, TIER_TORCH, TIER_REF = "lib", "torch", "ref"
 _TORCH_NATIVE = {"torch", "torch-autograd", "torch-dequantized-matmul"}
 _KNOWN_TAGS = _TORCH_NATIVE | {
@@ -129,13 +126,11 @@ _KEYWORD_FAMILY = [
     (("reduce", "argmax", "argmin", "argreduce", "mean", "sum", "max", "min"),
      "reduction"),
 ]
-# The package an op is defined in decides its family, and the keywords below
-# only speak for ops the layout does not place: an op defined in a module rather
-# than a package (`rope.py`, `pool.py`, `fft.py`), and the mixed
-# `sequence_modeling` package, whose ops belong to no one family. Every package
-# that does map to a family belongs here — `linear_attention` left out of it
-# fell through to the keyword `linear` and published linear-attention ops on the
-# GEMM page.
+# The package decides the family; the keywords below only speak for ops the
+# layout does not place — a module rather than a package (`rope.py`), and the
+# mixed `sequence_modeling`. Every package that maps to a family belongs here:
+# `linear_attention` left out of it fell through to the keyword `linear` and
+# published linear-attention ops on the GEMM page.
 _MODULE_FAMILY = {"attention": "attention", "elementwise": "elementwise",
                   "reduction": "reduction", "norm": "normalization",
                   "moe": "moe", "gemm": "linear_algebra",
@@ -271,11 +266,9 @@ def parse_test_xml(path: str) -> dict[str, dict]:
 
 
 # --- Speed of light ----------------------------------------------------------
-# The SOL reading is computed by TileOPs' own roofline tool (M5), imported from
-# the ./TileOPs checkout: the arithmetic, its exclusion rules and its verdict
-# thresholds must have exactly one implementation. Without the checkout, or
-# without a GPU profile for the measured device, every SOL cell renders as the
-# empty marker.
+# Computed by TileOPs' own roofline tool (M5), imported from the ./TileOPs
+# checkout: the arithmetic, its exclusions and its thresholds have exactly one
+# implementation. Without it, every SOL cell is the empty marker.
 
 
 def load_sol_engine(gpu: str, tileops: str = TILEOPS):
@@ -387,9 +380,8 @@ def best_rival(metrics: list[dict], tiers: tuple[str, ...]):
     """Fastest rival within `tiers` across an op's workloads, and the aggregate
     speedup against that one rival.
 
-    Ratios aggregate by geometric mean, matching how TileOPs PR bodies report a
-    speedup across workloads: an arithmetic mean of ratios would let one large
-    win outweigh several losses of the same magnitude.
+    Geometric mean, as TileOPs PR bodies report it: an arithmetic mean of ratios
+    lets one large win outweigh several losses of the same magnitude.
     """
     per_workload = []
     for m in metrics:
@@ -424,10 +416,9 @@ def op_summary(metrics: list[dict]) -> dict:
         ref_only = tag is not None
     s.update(rival=tag, speedup=ratio, rival_ref_only=ref_only)
 
-    # Only a real alternative measured on the identical workload says anything
-    # about the gap to the state of the art. An eager reference does not: beating
-    # a naive composition of PyTorch ops is not a result, so those ops stay
-    # unrated rather than being scored against a bar nobody competes at.
+    # Only a real alternative on the identical workload says anything about the
+    # gap to the state of the art. Beating an eager composition of PyTorch ops
+    # is not a result, so those ops stay unrated.
     if ratio is not None and not ref_only:
         lo, hi = PAR_BAND
         s["status"] = AHEAD if ratio >= hi else PAR if ratio >= lo else BEHIND
@@ -504,13 +495,9 @@ def _op_cell(op: str, module: str | None, ref: str) -> str:
 def _ratio_cell(ratio: float | None, rated: bool = True) -> str:
     """The gap to the alternative, coloured by which side of parity it lands on.
 
-    Red for behind, plain ink for level, green for ahead — the reader gets the
-    verdict from the number itself instead of a legend.
-
-    `rated=False` for a ratio against an eager reference only: the number is
-    still shown, because it says the kernel does something, but it stays grey.
-    Painting a 18x win over a naive composition of PyTorch ops the same green as
-    a win over a tuned library kernel would overstate it.
+    `rated=False` where the only rival is an eager reference: the number is
+    shown but stays grey. A win over a naive composition of PyTorch ops must not
+    be painted the same green as a win over a tuned library kernel.
     """
     if ratio is None:
         return f'<span class="perf-none">{NA}</span>'
@@ -522,12 +509,11 @@ def _ratio_cell(ratio: float | None, rated: bool = True) -> str:
 
 
 def _sol_cell(sol: dict | None) -> str:
-    """Share of the achievable ceiling.
+    """Share of the achievable ceiling: green is done, plain ink is headroom.
 
-    Green means physics allows little more and the workload is done; plain ink
-    is headroom. A latency-bound row and a reading above the ceiling both grey
-    out — the first is a workload the model cannot judge, the second a formula
-    or calibration error, and neither must read as a fast kernel.
+    A latency-bound row and a reading above the ceiling both grey out — one the
+    model cannot judge, the other a formula or calibration error. Neither may
+    read as a fast kernel.
     """
     if sol is None:
         return EMPTY
@@ -556,11 +542,9 @@ def _bound_cell(sol: dict | None) -> str:
 
 # --- Data tables -----------------------------------------------------------
 
-# Every number belongs to one workload; there is no per-op aggregate, since a
-# median over shapes orders of magnitude apart matches no reproducible run.
-# HTML rather than Markdown because Markdown cannot span a heading across
-# columns. No class on the `<table>`: the Material and `extra.css` rules key off
-# `table:not([class])`.
+# Every number belongs to one workload: a median over shapes orders of magnitude
+# apart matches no reproducible run. HTML because Markdown cannot span a heading
+# across columns; no class, because the CSS keys off `table:not([class])`.
 DETAIL_HEADER = (
     "<table>",
     "<thead>",
@@ -667,10 +651,8 @@ def _cells(entries) -> str:
 
 _TAG = __import__("re").compile(r"<[^>]+>")
 
-# How wide a line of entries may be before it is set differently. Measured in
-# characters of the key's monospace, against the width of the content column:
-# past this a line wraps, and a wrapped line of entries reads worse than the
-# same entries stacked.
+# How wide a line of entries may be before it is set differently, in characters
+# of the key's monospace against the content column.
 WRAP_TENSORS = 96   # a tensor list wraps -> one tensor per line
 WRAP_DELTA = 74     # a row's own scalars wrap -> id and scalars on two lines
 
@@ -683,12 +665,10 @@ def _width(entries) -> int:
 def _cluster(rows: list) -> list:
     """An op's workloads, grouped by what they have in common.
 
-    The grouping key is the description itself with every size taken out: which
-    tensors, named together how, in a shape written in the manifest's symbols.
-    Neither the sizes nor the dtype are part of it — a workload measured in
-    `f16` beside one in `bf16` carries that as one more thing that varies,
-    rather than splitting the group and repeating the tensor list for each half.
-    A tensor in a dtype of its own still splits the group, since then the
+    The key is the description with every size taken out: which tensors, named
+    together how, in the manifest's symbols. The dtype is not part of it — a
+    workload in `f16` beside one in `bf16` carries that as one more thing that
+    varies. A tensor in a dtype of its own does split the group, since then the
     tensor list itself differs.
     """
     groups = OrderedDict()
@@ -710,14 +690,10 @@ def _cluster(rows: list) -> list:
 def workload_key(rows: list) -> list:
     """What each row of an op's table ran on, listed above it.
 
-    The table's first column is `W1`, `W2`, … and nothing else: a workload's
-    shapes are a dozen names and numbers, and inside a column they either
-    squeeze the measurements out of the window or wrap into a paragraph per row.
-
-    An op's workloads are nearly the same run at eight sizes, so what they share
-    is stated once — in the manifest's own symbols, `q k [B, H, DK]` — and each
-    row carries only the symbols that vary on it. The reader gets the shape of
-    the experiment in one line and the axis it was swept along in the next.
+    An op's workloads are nearly the same run at several sizes, so what they
+    share is stated once — in the manifest's own symbols, `q k [B, H, DK]` — and
+    each row carries only the symbols that vary on it. Inside the table's first
+    column the same shapes would squeeze the measurements off the window.
 
     Order follows the table's rows, so `W3` is the third row.
     """
@@ -770,9 +746,8 @@ def workload_key(rows: list) -> list:
 
         block = []
         # Tensors and scalars on lines of their own: what the op takes, then how
-        # big it was made. Each entry is one unbreakable cell, so a line too long
-        # for the page wraps between entries and the next line starts under the
-        # first — a paragraph of names broken mid-shape reads as neither.
+        # big it was made. Each entry is unbreakable, so an over-long line wraps
+        # between entries rather than through a shape.
         if head:
             stack = " wl-stack" if _width(head) > WRAP_TENSORS else ""
             block.append(f'<p class="wl-shared{stack}">{_cells(head)}</p>')
@@ -846,10 +821,9 @@ def env_block(meta: dict, timing: str | None) -> list[str]:
         if missing:
             lines += ["", "Not published by this run: "
                       + ", ".join(f"`{k}`" for k in missing) + "."]
-    # The full installed-package inventory is not published here. It is a few
-    # hundred rows nobody reads to understand a benchmark number, and the
-    # versions that do matter are named in the table above. The snapshot itself
-    # carries the inventory for anyone reproducing a run.
+    # The installed-package inventory is not published here: a few hundred rows,
+    # and the versions that matter are in the table above. The snapshot carries
+    # it for anyone reproducing a run.
     return lines + [""]
 
 
@@ -1099,9 +1073,8 @@ def data_page(title: str, fams: list[str], rows_by_fam: dict,
         # otherwise repeat down the widest column of every row. The `datatable`
         # wrapper is a styling hook — see extra.css.
         for op, module, _summary, tmark, _ in rows:
-            # The heading is the op's name and nothing else: it is what the
-            # page's table of contents shows, the workload count is the length
-            # of the list right under it, and a mark that says every op passed
+            # The heading is what the table of contents shows, the workload
+            # count is the length of the list under it, and a tick on every op
             # says nothing. Only a mark that warns survives.
             warn = f" <small>{tmark}</small>" if tmark in ("❌", "⏭️") else ""
             ordered = sorted(zip(workloads_of[op], metrics_by_op[op], strict=True),

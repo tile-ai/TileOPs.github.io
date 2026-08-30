@@ -3,20 +3,14 @@
 # regenerate docs/benchmarks/index.md.
 #
 # index.md is a build artifact, not source: the committed file is a placeholder.
-# Both deploy.yml (push) and render-benchmarks.yml (schedule) call this before
-# `mkdocs gh-deploy`, so every deploy serves fresh data.
+# Both deploy.yml and render-benchmarks.yml call this before `mkdocs gh-deploy`.
 #
-# Failure policy (gh-deploy --force republishes the whole site, so a bad render
-# must not overwrite the live page):
-#   * no snapshot published yet    -> keep the placeholder and succeed
-#     (first-deploy bootstrap).
-#   * published but fetch fails    -> transient 404/network error; exit
-#     non-zero so the deploy aborts and the live page is left intact.
+# `gh-deploy --force` republishes the whole site, so a bad render must not
+# overwrite the live page: nothing published yet keeps the placeholder and
+# succeeds, anything else aborts the deploy.
 #
-# Requires python3 on PATH (3.9 is enough; CI pins 3.12) and pyyaml. A ./TileOPs
-# checkout supplies the spec manifest the workload shapes are read from, and
-# resolves an op's source link to its file instead of a code search. Without it
-# the pages still render, with each workload named only by its benchmark id.
+# Needs python3 and pyyaml. A ./TileOPs checkout supplies the spec manifest the
+# shapes are read from; without it each workload is named by its benchmark id.
 set -euo pipefail
 
 # One commit per run on `snapshots`; the newest is what this renders, and

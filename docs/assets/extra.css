@@ -1,15 +1,9 @@
 /* Palette and typography shared with tile-ai/TileFoundry.github.io, plus the
  * rules the benchmark data tables need.
  *
- * Single light scheme: a paper carrying the faintest violet, a dot texture,
- * one iris-violet accent for structure, teal reserved for asides. Violet and
- * teal are both dark and low-chroma — a saturated pair at this size reads as
- * candy rather than as an editorial page.
- *
- * The ground takes its cast from the accent rather than from cream: a warm
- * yellow paper under two cool hues leaves the page arguing with itself, and
- * the yellow is what the eye reads first on a wall of white space. Ink and the
- * muted grey follow it, so nothing on the sheet is warm.
+ * One light scheme: violet for structure, teal for asides, both dark and
+ * low-chroma. Nothing on the sheet is warm — the ground takes its cast from
+ * the accent, so the page does not argue with itself.
  */
 
 @import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap");
@@ -33,12 +27,9 @@
   --tf-rule: rgba(22, 112, 107, 0.6);
   --tf-line: rgba(51, 35, 79, 0.18);
   --tf-line-soft: rgba(51, 35, 79, 0.08);
-  /* Washes and tints of the palette above, written out rather than mixed.
-   * `color-mix()` is not resolved by every engine a reader arrives with, and a
-   * declaration it cannot parse is dropped whole: a rule with a mixed colour
-   * loses its border, a `fill` falls back to SVG's own default of black. This
-   * stylesheet states every mixed colour literally for that reason — the
-   * values below, and the rgba() written at each use site.
+  /* Written out, not mixed: an engine that cannot parse `color-mix()` drops the
+   * whole declaration — a border vanishes, an SVG `fill` paints black. Every
+   * mixed colour in this file is literal for that reason.
    */
   --tf-teal-wash: rgba(22, 112, 107, 0.06);
   --tf-teal-soft: rgba(22, 112, 107, 0.08);
@@ -50,10 +41,8 @@
   --tf-violet-mid: rgba(90, 62, 133, 0.4);
   --tf-rose-fill: rgba(164, 63, 70, 0.26);
   --tf-ink-tint: rgba(26, 23, 32, 0.22);
-  /* Latin faces come first so technical terms inside Chinese prose keep the
-   * site's voice; Han glyphs fall through to the platform UI face. No CJK
-   * webfont: a Simplified Chinese subset costs megabytes, which is not worth
-   * paying on every page for a partly translated site.
+  /* Latin first, Han falling through to the platform UI face. No CJK webfont: a
+   * Simplified Chinese subset costs megabytes on every page load.
    */
   --tf-cjk: "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei",
     "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
@@ -116,15 +105,9 @@
   --md-code-hl-name-color: var(--md-code-fg-color);
 }
 
-/* The ground: paper, a dot texture, and a wash of each accent thrown in from
- * opposite corners. The wash is what puts the two hues on a page that is
- * otherwise a wall of tables — but it stays under 10% and is pushed to the
- * edges, so the column of text and numbers still sits on clean paper. Fixed
- * attachment keeps it reading as light on the sheet rather than as a graphic
- * scrolling past.
- *
- * Applied to html alone and propagated to the canvas: the containers used to
- * repeat it, which multiplied the dot alpha four times over.
+/* Paper, a dot texture, and a wash of each accent from opposite corners: under
+ * 10% and pushed to the edges, so the text still sits on clean paper. On html
+ * alone — repeated on the containers, the dot alpha multiplied four times over.
  */
 html {
   background-color: var(--md-default-bg-color);
@@ -156,11 +139,8 @@ body,
   font-family: var(--tf-body);
 }
 
-/* Material's sheet is 61rem wide, sized for a page with one nav column. This
- * site has two — nav on the left, the page's own headings on the right — which
- * leaves the prose about 34rem, where every table wraps. The sheet widens to
- * hold a 46rem prose column; the reading measure is then set by the content
- * column below, not by the window.
+/* Material's 61rem sheet assumes one nav column; this site has two, which left
+ * the prose at 34rem and wrapped every table. Widened to hold 46rem of prose.
  */
 .md-grid {
   max-width: 76rem;
@@ -217,11 +197,9 @@ body,
   font-weight: 800;
 }
 
-/* The logo is a wordmark: it already reads TileOPs, so the site name beside it
- * says the same thing twice. Hidden rather than removed, because the second
- * topic in the same slot — the page's own title, which takes over once the h1
- * has scrolled away — still needs the space. The logo link carries the site
- * name as its label, so nothing is lost to a screen reader.
+/* The logo is a wordmark, so the site name beside it says the same thing
+ * twice. Hidden, not removed: the second topic in that slot is the page title,
+ * which takes over once the h1 scrolls away. The logo link keeps the label.
  */
 .md-header__topic:first-child {
   visibility: hidden;
@@ -266,10 +244,9 @@ body,
   font-weight: 800;
 }
 
-/* On wide screens the sidebar is part of the sheet, so nothing in it may paint
- * its own paper — an opaque panel over the wash reads as a patch of a slightly
- * different white. The drawer at narrow widths keeps its background, which it
- * needs to sit over the content.
+/* On wide screens the sidebar is part of the sheet: an opaque panel over the
+ * wash reads as a patch of different white. The narrow-width drawer keeps its
+ * background, which it needs to sit over the content.
  */
 @media screen and (min-width: 76.25em) {
   .md-sidebar,
@@ -281,10 +258,9 @@ body,
     box-shadow: none;
   }
 
-  /* Material pins that title to the top of the nav and hides what scrolls
-   * under it behind its own paper. With the paper gone the items ran straight
-   * through it, and it has nothing to stay for anyway: it repeats the site
-   * name already in the header. It scrolls with the list it heads.
+  /* Material pins this title and hides what scrolls under it behind its own
+   * paper; with the paper gone the items ran through it. It repeats the site
+   * name anyway, so it scrolls with the list it heads.
    */
   .md-nav--primary .md-nav__title {
     position: static;
@@ -380,10 +356,9 @@ body,
   font-size: 0.82em;
 }
 
-/* A block sits on a teal ground, the second accent: violet is the structural
- * colour — headings, section rules, the inline-identifier chip — so a block of
- * code reads as its own kind of material rather than more of the same. The tint
- * stays faint enough for the syntax colours to carry the contrast.
+/* Teal, the second accent: violet is structural — headings, rules, the inline
+ * chip — so a code block reads as its own material. Faint enough that the
+ * syntax colours still carry the contrast.
  */
 .md-typeset pre > code {
   border: 1px solid rgba(22, 112, 107, 0.3);
@@ -498,10 +473,9 @@ body,
   font-size: 0.78rem;
 }
 
-/* Material colours each admonition type differently — example violet, note
- * blue, tip green — which puts four more hues on the page. One rule for all of
- * them: teal, the same line the API blocks use. Only a warning differs, because
- * that one is a verdict rather than an aside.
+/* Material gives each admonition type its own hue, which puts four more on the
+ * page. One teal rule for all of them; only a warning differs, being a verdict
+ * rather than an aside.
  */
 .md-typeset .admonition.example,
 .md-typeset details.example,
@@ -527,16 +501,14 @@ body,
   border-left-color: var(--tf-rose);
 }
 
-/* Bold carries weight, not colour. A page has dozens of bold spans — a bullet's
- * leading term, a rule's name, a claim mid-paragraph — and colouring them all left
- * none of them standing out. The violet is spent on one sentence per page instead:
- * `.keystone` below.
+/* Bold carries weight, not colour: a page has dozens of bold spans, and
+ * colouring them all left none standing out. The violet is spent on one
+ * sentence per page instead — `.keystone` below.
  */
 
-/* The claim a page rests on. It keeps its place in the paragraph and takes the
- * emphasis in the type: bold and italic, in the structural violet. No block, no
- * ground — a panel around one sentence stops the paragraph rather than pointing
- * at it. One per page: as soon as there are two, neither is the point.
+/* The claim a page rests on: bold and italic in the structural violet, in
+ * place in the paragraph. No panel — that stops the paragraph rather than
+ * pointing at it. One per page; with two, neither is the point.
  */
 .md-typeset .keystone {
   padding: 0.05em 0.15em;
@@ -582,14 +554,11 @@ html[lang="zh"] .md-typeset .keystone {
 }
 
 /* Three rules and nothing else: above the head, under it, under the last row.
- * No verticals, no zebra, no fill — the columns are held apart by their own
- * alignment, and every mark added beyond these three is one the reader has to
- * look past to get at the numbers.
+ * Every mark beyond them is one the reader looks past to reach the numbers.
  */
-/* Material sizes a table to its content (`display: inline-block`), which leaves
- * every table a different width from the prose above it. A table is a block of
- * the page like a paragraph or a code block, so it takes the column. The
- * scroll wrapper Material puts around it still handles one too wide to fit.
+/* Material sizes a table to its content, leaving every table a different width
+ * from the prose above it. A table is a block of the page, so it takes the
+ * column; Material's scroll wrapper still handles one too wide to fit.
  */
 .md-typeset__table {
   width: 100%;
@@ -613,10 +582,9 @@ html[lang="zh"] .md-typeset .keystone {
  * the only place the palette can sit at all — those pages are columns of
  * figures with nowhere for a heading rule to go.
  */
-/* An identifier broken across two lines stops reading as one name, and in a
- * table it is the first column — the one holding names — that gets squeezed. A
- * code span never wraps, so the column claims the width its longest name needs;
- * the scroll wrapper handles a table that then exceeds the page.
+/* An identifier broken across two lines stops reading as one name, and it is
+ * the name column that gets squeezed. A code span never wraps; the scroll
+ * wrapper handles a table that then exceeds the page.
  */
 .md-typeset table:not([class]) code {
   white-space: nowrap;
@@ -637,18 +605,16 @@ html[lang="zh"] .md-typeset .keystone {
   background: none;
 }
 
-/* Benchmark data tables: many short numeric cells. Keeping each cell on one
- * line and letting the table scroll beats wrapping every column to fit, which
- * turns one row into four. The wrapper comes from
- * scripts/gen_bench_pages.py.
+/* Benchmark data tables: many short numeric cells. One line per cell and let
+ * the table scroll — wrapping every column turns one row into four. The
+ * wrapper comes from scripts/gen_bench_pages.py.
  */
 .md-typeset .datatable {
   overflow-x: auto;
 }
 
-/* Width follows the content, not the page. Stretched to the full column,
- * eight short numeric cells sit an inch apart and a row stops reading as one
- * measurement; the padding below is what sets the distance between columns.
+/* Width follows the content: stretched to the full column, eight short numeric
+ * cells sit an inch apart and a row stops reading as one measurement.
  */
 .md-typeset .datatable table:not([class]) {
   width: auto;
@@ -681,10 +647,9 @@ html[lang="zh"] .md-typeset .keystone {
   padding-right: 1em;
 }
 
-/* A cell holding four stacked alternatives is four lines tall while its
- * neighbours are one. Tighter leading gives back most of a line; the row
- * padding is what separates one workload from the next, since nothing is
- * drawn between them.
+/* A cell holding four stacked alternatives is four lines tall beside
+ * one-line neighbours. Tighter leading gives back most of a line; the row
+ * padding is what separates one workload from the next.
  */
 .md-typeset .datatable table:not([class]) td {
   padding-top: 0.55em;
@@ -707,18 +672,16 @@ html[lang="zh"] .md-typeset .keystone {
  * block, not between its halves. The `Workload` cell spans both rows, so its
  * own bottom edge already sits on that line.
  */
-/* Each header word is underlined thin and grey — under `Alternatives` that is
- * also what says how far a header spanning two columns reaches. The block's
- * own heavy rule stays below the units, so these read as brackets over their
- * columns rather than as further divisions of the table.
+/* Each header word underlined thin and grey — under `Alternatives` that also
+ * says how far a header spanning two columns reaches. The heavy rule stays
+ * below the units, so these read as brackets rather than as more divisions.
  */
 .md-typeset .datatable table:not([class]) thead tr:first-child th:not([rowspan]) {
   border-bottom: 1px solid rgba(26, 23, 32, 0.26);
 }
 
-/* Second header row: units and the ratio's direction. Subordinate to the
- * header word above it, so it reads as a qualifier rather than a column of its
- * own — which is exactly what teal marks everywhere else on the site.
+/* Units and the ratio's direction: subordinate to the header word above, so it
+ * reads as a qualifier. Teal marks exactly that everywhere else on the site.
  */
 .md-typeset .datatable table:not([class]) th.subhead {
   color: #2b6d6e;
@@ -733,23 +696,17 @@ html[lang="zh"] .md-typeset .keystone {
   color: var(--md-default-fg-color--light);
 }
 
-/* The workload names take a cool cast, so the teal rule reads as dividing a
- * teal label column from ink measurements rather than as a line dropped
- * between them. It is the same in every row, which is what keeps it clear of
- * the verdict: a colour that never varies cannot be reporting a result.
+/* A cool cast on the names, so the teal rule divides a label column from ink
+ * measurements rather than sitting between them. The same in every row: a
+ * colour that never varies cannot be mistaken for a verdict.
  */
 .md-typeset .datatable table:not([class]) td.colsep code {
   color: #316c6f;
 }
 
-/* Benchmark verdicts. The ratio's colour *is* the result, so these carry the
- * weight no separate status glyph does: rose behind the alternative, plain ink
- * level with it, green ahead. Tabular figures keep a column of them aligned.
- *
- * Neither verdict colour is the link violet or the aside teal: a reader
- * scanning a Ratio column must not have to decide whether a coloured figure is
- * a verdict or a link. The green sits well away from the teal in both hue and
- * lightness for the same reason.
+/* Benchmark verdicts: the ratio's colour is the result — rose behind, plain
+ * ink level, green ahead. Neither is the link violet or the aside teal, so a
+ * coloured figure in a Ratio column is never mistaken for a link.
  */
 .md-typeset .perf-ahead,
 .md-typeset .perf-par,
@@ -786,9 +743,8 @@ html[lang="zh"] .md-typeset .keystone {
   color: var(--md-default-fg-color--light);
 }
 
-/* The count beside an op name is what the heading is *about*, not part of it:
- * teal, in the body face, at the weight of running text. In the display face
- * at 800 it was reading as a second half of the op's name.
+/* What the heading is about, not part of it: body face, running-text weight.
+ * In the display face at 800 it read as a second half of the op's name.
  */
 .md-typeset h3 > small {
   color: var(--tf-teal);
@@ -804,10 +760,8 @@ html[lang="zh"] .md-typeset .keystone {
   font-size: 0.82em;
 }
 
-/* mkdocstrings: a symbol heading is a name, not prose. It carries the mono
- * face at a size close to the body text — an op class set at the prose h2 size
- * turns a reference page into forty display-weight banners, and the accent bar
- * beside each one is what makes the column look striped.
+/* A symbol heading is a name, not prose: mono, near body size. At the prose h2
+ * size a reference page becomes forty display-weight banners.
  */
 .md-typeset h2.doc-heading,
 .md-typeset h3.doc-heading,
@@ -838,9 +792,8 @@ html[lang="zh"] .md-typeset .keystone {
   font-size: 0.76rem;
 }
 
-/* The name inside the heading is already in the mono face at heading size;
- * the inline-identifier chip on top of that is a second treatment of the same
- * thing. The symbol chip is a `code` element too, and it keeps its own fill.
+/* The name is already mono at heading size; the inline chip on top of it is a
+ * second treatment of the same thing. The symbol chip keeps its own fill.
  */
 .md-typeset .doc-heading code:not(.doc-symbol) {
   padding: 0;
@@ -848,11 +801,9 @@ html[lang="zh"] .md-typeset .keystone {
   font-size: 1em;
 }
 
-/* Only the class keeps its chip. A method is already inside its class, under a
- * heading of its own, so `meth` repeats what the position says — and it lands
- * right where the eye enters the line. Keyed on the object, not the heading
- * level: a page that renders a package puts classes at h2 and methods at h3,
- * one that renders each op puts them at h3 and h4.
+/* Only the class keeps its chip: a method is already inside one, so `meth`
+ * repeats what the position says. Keyed on the object, not the heading level —
+ * the levels shift between a package page and an op page.
  */
 .md-typeset .doc-object.doc-function > .doc-heading .doc-symbol-heading,
 .md-typeset .doc-object.doc-attribute > .doc-heading .doc-symbol-heading {
@@ -868,9 +819,8 @@ html[lang="zh"] .md-typeset .keystone {
   vertical-align: 0.12em;
 }
 
-/* A class and everything under it hang from one line: the signature, the
- * parameters, and the methods are one group, marked by a spine rather than by a
- * filled card — a panel over the wash reads as a patch of different paper.
+/* A class and everything under it hang from one line — a spine, not a filled
+ * card: a panel over the wash reads as a patch of different paper.
  */
 .md-typeset .doc-object.doc-class > .doc-contents {
   margin-left: 0.15rem;
@@ -878,10 +828,9 @@ html[lang="zh"] .md-typeset .keystone {
   border-left: 1px solid var(--tf-line-soft);
 }
 
-/* Everything under a class sits at one level: the prose, the constructor and the
- * call are siblings, so a second indent for the methods only pushed them away
- * from the parameters they belong with. The method's own contents keep a teal
- * hairline, which marks the group without moving it.
+/* Everything under a class sits at one level; a second indent for the methods
+ * only pushed them away from the parameters they belong with. Their contents
+ * keep a teal hairline, which marks the group without moving it.
  */
 .md-typeset .doc-object.doc-function > .doc-contents {
   padding-left: 0;
@@ -890,10 +839,8 @@ html[lang="zh"] .md-typeset .keystone {
   margin-top: 1.7em;
 }
 
-/* A member's heading repeats the name the signature under it already carries, so
- * it collapses to a bare anchor: no text, no space, no permalink. It has to stay
- * in the document for the right-hand column to link to — the table of contents
- * still reads the heading, and reads only the name.
+/* A member's heading repeats the name the signature carries, so it collapses to
+ * a bare anchor. It stays in the document for the right-hand column to link to.
  */
 .md-typeset .doc-object.doc-function > .doc-heading,
 .md-typeset .doc-object.doc-attribute > .doc-heading {
@@ -916,9 +863,8 @@ html[lang="zh"] .md-typeset .keystone {
   margin-top: 1.6em;
 }
 
-/* One op is one unit on the page. A rule above each symbol, and room around it,
- * gives the reference a beat: without them the page is a single column of text
- * where nothing marks where one op ends and the next begins.
+/* One op is one unit: a rule above each symbol and room around it, or the page
+ * is a single column where nothing marks where one op ends.
  */
 .md-typeset .doc-object.doc-class > .doc-heading {
   margin-top: 3em;
@@ -952,9 +898,8 @@ html[lang="zh"] .md-typeset .keystone {
 .md-typeset .doc-section-title {
   margin-top: 1.4em;
   margin-bottom: 0.3em;
-/* Parameters render as a definition list. The section label heads it in the
- * display face, and each parameter name stays in mono so the list reads as a
- * signature rather than a paragraph.
+/* Parameters render as a definition list: the label in the display face, each
+ * name in mono, so the list reads as a signature rather than a paragraph.
  */
   color: var(--tf-muted);
   font-family: var(--tf-display);
@@ -980,9 +925,8 @@ html[lang="zh"] .md-typeset .keystone {
   margin: 0.2em 0;
 }
 
-/* Right column: the page's own headings. It is a locator, so it is set quieter
- * and tighter than the left nav — smaller type, muted ink, and a hairline that
- * gives the column an edge instead of leaving it floating in the margin.
+/* The page's own headings: a locator, so quieter and tighter than the left nav
+ * — smaller, muted, with a hairline to give the column an edge.
  */
 .md-sidebar--secondary .md-nav__title {
   color: var(--tf-muted);
@@ -1038,9 +982,8 @@ html[lang="zh"] .md-sidebar--secondary .md-nav__link {
   line-height: 1.6;
 }
 
-/* Material maps the token classes onto --md-code-hl-*, which covers keywords,
- * strings and numbers. A typical example is mostly names, operators and calls —
- * all of which fell through to plain ink, so the block read as unhighlighted.
+/* Material's token map covers keywords, strings and numbers. A typical example
+ * is mostly names, operators and calls, which fell through to plain ink.
  */
 .md-typeset .highlight .o,        /* operator: = * -> */
 .md-typeset .highlight .ow {
@@ -1103,13 +1046,10 @@ html[lang="zh"] .md-sidebar--secondary .md-nav__link {
   font-weight: 700;
 }
 
-/* Chinese type metrics. Han glyphs fill their em box, so the Latin line height
- * reads as cramped; headings set in a Latin display face at 800 fall through to
- * a CJK face where that weight closes up the strokes. The size stays at the
- * Latin one — a step up on top of the fuller em box makes the column heavy.
- *
- * Scoped away from pages carrying .locale-notice: their body text is English,
- * and Latin copy under Chinese metrics reads as loose.
+/* Han glyphs fill their em box: the Latin leading reads as cramped, and a
+ * display face at 800 falls through to a CJK face where that weight closes up
+ * the strokes. The size stays Latin. Scoped away from .locale-notice pages,
+ * whose body text is English.
  */
 html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) {
   line-height: 1.75;
@@ -1122,9 +1062,8 @@ html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) h4 {
   font-weight: 700;
 }
 
-/* Inline code sits in the middle of Chinese sentences far more often than in
- * English ones; at the larger Chinese body size it needs less box around it.
- * Inline only — unscoped, this took the padding off code blocks too.
+/* Inline code sits mid-sentence far more often in Chinese, and needs less box
+ * at that body size. Inline only: unscoped, this stripped code blocks too.
  */
 html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) code:not(pre > code) {
   font-size: 0.8em;
@@ -1141,10 +1080,9 @@ html[lang="zh"] .md-nav__title {
   line-height: 1.5;
 }
 
-/* Sequence diagrams. The fence sets the type a size up from mermaid's default, which the
- * diagram can afford once it fits the column; a wider one scrolls rather than shrinking
- * the page. The autonumber bubble defaults to near-black, which reads as a blob at this
- * size, so it takes the structural violet. */
+/* Sequence diagrams, a size up from mermaid's default; a wider one scrolls
+ * rather than shrinking the page. The autonumber bubble defaults to near-black,
+ * a blob at this size, so it takes the structural violet. */
 .md-typeset .mermaid {
   overflow-x: auto;
   --md-mermaid-sequence-number-bg-color: var(--tf-violet);
@@ -1155,10 +1093,9 @@ html[lang="zh"] .md-nav__title {
   font-weight: 700;
 }
 
-/* Flowcharts. Two roles to tell apart at a glance: the layers dynamo traces, and the
- * opaque node's interior. Colour comes from the palette rather than from the diagram
- * source, so both schemes stay right and the .md stays readable. The boundary edge is the
- * one thick link on the page. */
+/* Flowcharts. Two roles: the layers dynamo traces, and the opaque node's
+ * interior. Colour comes from the palette rather than the diagram source, so
+ * the .md stays readable. */
 .md-typeset .mermaid g.node.traced > rect {
   fill: var(--tf-violet-soft);
   stroke: var(--tf-violet);
@@ -1179,10 +1116,9 @@ html[lang="zh"] .md-nav__title {
   color: var(--tf-violet);
 }
 
-/* The call-path figure on the torch.compile page. Four layers of one call, every row the
- * same width — a diagram engine sizes each box to its text, which reads as clutter when
- * the rows are meant to be read as a stack. Colour separates the two roles: violet for
- * what dynamo traces, a dashed teal for the opaque node's interior. */
+/* The call-path figure on the torch.compile page: four layers of one call, every
+ * row the same width — a diagram engine sizes each box to its text, which reads
+ * as clutter when the rows are a stack. Violet traces, dashed teal is opaque. */
 .md-typeset figure.callpath {
   display: flex;
   flex-direction: column;
@@ -1255,10 +1191,8 @@ html[lang="zh"] .md-nav__title {
   text-align: left;
 }
 
-/* The workload key: one bullet per row of the table below it, carrying the
- * shapes at the width of the page instead of inside a column. The table then
- * holds only `W1`, `W2`, … and the measurements, which is what a reader
- * compares down a column.
+/* The workload key carries the shapes at the width of the page, so the table
+ * holds only `W1`, `W2`, … and the measurements.
  */
 /* The workload key: what an op's workloads have in common, stated once, and
  * what varies, one line per workload. Three columns — code, what varies, the
@@ -1284,9 +1218,8 @@ html[lang="zh"] .md-nav__title {
   margin-bottom: 0;
 }
 
-/* A row of entries, not a sentence: each cell holds together and the line
- * wraps between them, so a long op's second line starts under the first
- * instead of breaking a shape in half.
+/* A row of entries, not a sentence: each cell holds together, so a long line
+ * wraps between entries rather than through a shape.
  */
 .md-typeset .wl-key .wl-shared {
   display: flex;
@@ -1306,10 +1239,9 @@ html[lang="zh"] .md-nav__title {
   white-space: nowrap;
 }
 
-/* Between entries, a middot rather than a second rule: the rule after the code
- * falls in the same place on every row and reads as a column, while a rule
- * between entries would land wherever the previous name happened to end. A
- * middot is punctuation — it separates without claiming to align anything.
+/* A middot between entries, not a second rule: the rule after the code falls in
+ * the same place on every row, a rule between entries would land wherever the
+ * previous name ended. Punctuation separates without claiming to align.
  */
 .md-typeset .wl-key .wl-cell + .wl-cell::before {
   content: "·";
@@ -1318,9 +1250,8 @@ html[lang="zh"] .md-nav__title {
   font-weight: 400;
 }
 
-/* Two kinds of thing on these lines, and they are read differently: a tensor
- * is a shape the op takes, a scalar is a number it was given. The tensor's
- * name carries the weight; the scalars stay plain text beside it.
+/* A tensor is a shape the op takes, a scalar a number it was given: the
+ * tensor's name carries the weight, the scalars stay plain text.
  */
 .md-typeset .wl-key .wl-tensor .wl-k {
   color: #175554;
@@ -1373,8 +1304,7 @@ html[lang="zh"] .md-nav__title {
 }
 
 /* A hairline between the code and what it ran on — the same rule the table
- * draws between the workload column and its measurements, so the two read as
- * the same division seen twice.
+ * draws between the workload column and its measurements.
  */
 .md-typeset .wl-key .wl-delta {
   display: flex;
@@ -1403,9 +1333,8 @@ html[lang="zh"] .md-nav__title {
   margin-right: 0;
 }
 
-/* A row whose own scalars are wider than the column: the id takes the first
- * line beside the code, the scalars the second. The rule runs down both, so a
- * workload set this way is still one object with one left edge.
+/* Scalars wider than the column: the id takes the first line beside the code,
+ * the scalars the second, with the rule running down both.
  */
 .md-typeset .wl-key ul.wl-long li {
   margin-bottom: 0.3em;
@@ -1437,9 +1366,8 @@ html[lang="zh"] .md-nav__title {
   color: var(--tf-muted);
 }
 
-/* A tensor's name is not its shape, and a symbol is not its value. Teal
- * separates the two the way it separates the workload column from the
- * measurements — the same colour, learned once.
+/* A tensor's name is not its shape, and a symbol is not its value: teal
+ * separates them as it separates the label column from the measurements.
  */
 .md-typeset .wl-key .wl-k {
   color: #316c6f;
@@ -1462,11 +1390,9 @@ html[lang="zh"] .md-nav__title {
 
 
 
-/* Roofline figure (performance-guides/memory-bound).  Log-log, so the
-   two decades between an elementwise kernel and the ridge stay legible.  Colours
-   come from the shared palette: teal for the roof itself, violet for the ridge,
-   rose for a kernel sitting below it — the same rose the benchmark tables use
-   for "behind". */
+/* Roofline figure (performance-guides/memory-bound). Log-log, so the two decades
+   between an elementwise kernel and the ridge stay legible. Teal is the roof,
+   violet the ridge, rose a kernel below it — the tables' rose for "behind". */
 .md-typeset figure.roofline {
   display: block;
   width: 100%;
@@ -1577,11 +1503,9 @@ html[lang="zh"] .md-nav__title {
   text-align: left;
 }
 
-/* Access-pattern figure (global-memory-access).  One row of memory
-   cells per pattern; teal shading marks the sectors the hardware fetches, a
-   violet dot marks each element the instruction actually reads.  The ratio of
-   the two is the efficiency the prose quotes, so the two encodings carry the
-   whole argument and nothing else needs colour. */
+/* Access-pattern figure (global-memory-access). One row of memory cells per
+   pattern: teal is a sector the hardware fetches, a violet dot an element the
+   instruction reads. Their ratio is the efficiency the prose quotes. */
 .md-typeset figure.access-patterns {
   display: block;
   width: 100%;
@@ -1670,11 +1594,9 @@ html[lang="zh"] .md-nav__title {
   font-weight: 700;
 }
 
-/* Which thread owns which element, by alternating tone: same thread, same
-   tone. blocked banks four cells per tone, striped alternates every cell, and
-   the difference is visible without reading a label. Kept as a neutral ink wash
-   so it does not compete with the teal (fetched sector) and violet (element the
-   instruction reads) that carry the argument. */
+/* Which thread owns which element, by alternating tone: blocked banks four
+   cells per tone, striped alternates every cell. A neutral ink wash, so it does
+   not compete with the teal and violet that carry the argument. */
 .md-typeset .tf-access .ap-cell--t1 {
   fill: var(--tf-ink-tint);
 }
@@ -1687,12 +1609,9 @@ html[lang="zh"] .md-nav__title {
   font-size: 10px;
 }
 
-/* ---------------------------------------------------------------------------
-   Bank-conflict figure (shared-memory-access). 32 bank columns per panel; the count printed
-   in a cell is how many of a warp's threads land on it, and the largest count
-   is the conflict degree. Teal = one thread per bank (the good case), rose =
-   several (the cost), empty = no thread lands there.
-   --------------------------------------------------------------------------- */
+/* Bank-conflict figure (shared-memory-access). 32 bank columns per panel; the
+   count in a cell is how many of a warp's threads land on it, and the largest
+   is the conflict degree. Teal is one thread, rose several, empty none. */
 
 .md-typeset .tf-bank {
   display: block;
