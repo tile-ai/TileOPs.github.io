@@ -6,7 +6,7 @@ One table per op, one row per workload. `Ratio` is the fastest other implementat
 
 ## Elementwise
 
-### [MysteryFwd](https://github.com/tile-ai/TileOPs/search?q=repo%3Atile-ai%2FTileOPs+MysteryFwdOp&type=code) <small>(1 workloads · ⏭️)</small>
+### [MysteryFwd](https://github.com/tile-ai/TileOPs/search?q=repo%3Atile-ai%2FTileOPs+MysteryFwdOp&type=code) <small>⏭️</small>
 
 <div class="wl-key">
 <div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"></span><code class="wl-id">undeclared-op-case-float16</code></li></ul></div>
@@ -40,7 +40,7 @@ One table per op, one row per workload. `Ratio` is the fastest other implementat
 </table>
 </div>
 
-### [SquareFwd](https://github.com/tile-ai/TileOPs/search?q=repo%3Atile-ai%2FTileOPs+SquareFwdOp&type=code) <small>(1 workloads)</small>
+### [SquareFwd](https://github.com/tile-ai/TileOPs/search?q=repo%3Atile-ai%2FTileOPs+SquareFwdOp&type=code)
 
 <div class="wl-key">
 <div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></p><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">a</span>: [64, 32]</span></span><code class="wl-id">oblong</code></li></ul></div>
@@ -74,7 +74,7 @@ One table per op, one row per workload. `Ratio` is the fastest other implementat
 </table>
 </div>
 
-### [TemplatedFwd](https://github.com/tile-ai/TileOPs/search?q=repo%3Atile-ai%2FTileOPs+TemplatedFwdOp&type=code) <small>(2 workloads)</small>
+### [TemplatedFwd](https://github.com/tile-ai/TileOPs/search?q=repo%3Atile-ai%2FTileOPs+TemplatedFwdOp&type=code)
 
 <div class="wl-key">
 <div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [rows, cols]</span><span class="wl-cell wl-tensor"><span class="wl-k">mask</span>: [rows], <span class="wl-dt">bool</span></span></p><p class="wl-shared"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span><span class="wl-cell wl-scalar"><span class="wl-k">cols</span>=<span class="wl-v">256</span></span></p><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-scalar"><span class="wl-k">rows</span>=<span class="wl-v">128</span></span></span><code class="wl-id">templated-128x256</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-scalar"><span class="wl-k">rows</span>=<span class="wl-v">64</span></span></span><code class="wl-id">templated-64x256</code></li></ul></div>

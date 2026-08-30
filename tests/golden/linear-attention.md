@@ -6,7 +6,7 @@ One table per op, one row per workload. `Ratio` is the fastest other implementat
 
 ## Linear Attention / SSM
 
-### [ChunkScanFwd](https://github.com/tile-ai/TileOPs/search?q=repo%3Atile-ai%2FTileOPs+ChunkScanFwdOp&type=code) <small>(2 workloads · ❌)</small>
+### [ChunkScanFwd](https://github.com/tile-ai/TileOPs/search?q=repo%3Atile-ai%2FTileOPs+ChunkScanFwdOp&type=code) <small>❌</small>
 
 <div class="wl-key">
 <div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span><span class="wl-cell wl-scalar"><span class="wl-k">num_chunks</span>=<span class="wl-v">4</span></span><span class="wl-cell wl-scalar"><span class="wl-k">chunk_len</span>=<span class="wl-v">64</span></span><span class="wl-cell wl-scalar"><span class="wl-k">N</span>=<span class="wl-v">128</span></span></p><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-scalar"><span class="wl-k">batch</span>=<span class="wl-v">2</span></span></span><code class="wl-id">scan-b2</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-scalar"><span class="wl-k">batch</span>=<span class="wl-v">4</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">is_causal</span>=<span class="wl-v">false</span></span></span></span><code class="wl-id">scan-b4</code></li></ul></div>
@@ -41,7 +41,7 @@ One table per op, one row per workload. `Ratio` is the fastest other implementat
 </table>
 </div>
 
-### [DeltaDecodeFwd](https://github.com/tile-ai/TileOPs/search?q=repo%3Atile-ai%2FTileOPs+DeltaDecodeFwdOp&type=code) <small>(2 workloads · ✅)</small>
+### [DeltaDecodeFwd](https://github.com/tile-ai/TileOPs/search?q=repo%3Atile-ai%2FTileOPs+DeltaDecodeFwdOp&type=code)
 
 <div class="wl-key">
 <div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">q, k</span>: [B, H, DK]</span><span class="wl-cell wl-tensor"><span class="wl-k">v</span>: [B, H, DV]</span><span class="wl-cell wl-tensor"><span class="wl-k">state</span>: [B, H, DK, DV]</span></p><p class="wl-shared"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span><span class="wl-cell wl-scalar"><span class="wl-k">H</span>=<span class="wl-v">8</span></span><span class="wl-cell wl-scalar"><span class="wl-k">DK</span>=<span class="wl-v">128</span></span><span class="wl-cell wl-scalar"><span class="wl-k">DV</span>=<span class="wl-v">128</span></span></p><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-scalar"><span class="wl-k">B</span>=<span class="wl-v">1</span></span></span><code class="wl-id">decode-b1-h8</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-scalar"><span class="wl-k">B</span>=<span class="wl-v">8</span></span></span><code class="wl-id">decode-b8-h8</code></li></ul></div>

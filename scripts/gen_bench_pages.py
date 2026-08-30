@@ -1098,16 +1098,17 @@ def data_page(title: str, fams: list[str], rows_by_fam: dict,
         # One table per op rather than one per family: the op name would
         # otherwise repeat down the widest column of every row. The `datatable`
         # wrapper is a styling hook — see extra.css.
-        for op, module, s, tmark, _ in rows:
-            # `·` after the separator reads as punctuation, so it is dropped.
-            note = f"{s['workloads']} workloads"
-            if tmark != EMPTY:
-                note += f" · {tmark}"
+        for op, module, _summary, tmark, _ in rows:
+            # The heading is the op's name and nothing else: it is what the
+            # page's table of contents shows, the workload count is the length
+            # of the list right under it, and a mark that says every op passed
+            # says nothing. Only a mark that warns survives.
+            warn = f" <small>{tmark}</small>" if tmark in ("❌", "⏭️") else ""
             ordered = sorted(zip(workloads_of[op], metrics_by_op[op], strict=True),
                              key=lambda z: z[0]["config"])
             coded = [(f"{WORKLOAD_CODE}{i}", w)
                      for i, (w, _) in enumerate(ordered, 1)]
-            lines += [f"### {_op_cell(op, module, ref)} <small>({note})</small>",
+            lines += [f"### {_op_cell(op, module, ref)}{warn}",
                       "", *workload_key(coded),
                       # No `markdown="1"`, and no blank line until `</div>`: a
                       # blank line would end the raw-HTML block mid-table.
