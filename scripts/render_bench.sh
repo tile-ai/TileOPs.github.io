@@ -19,10 +19,10 @@
 # the pages still render, with each workload named only by its benchmark id.
 set -euo pipefail
 
-# The nightly writes one commit per run here; the newest is what this renders,
-# and `git log` on that repository is where an older one is read back from.
+# One commit per run on `snapshots`; the newest is what this renders, and
+# `git log snapshots` is where an older one is read back from.
 snapshots="https://github.com/tile-ai/TileOPs-nightly"
-base="https://raw.githubusercontent.com/tile-ai/TileOPs-nightly/main"
+base="https://raw.githubusercontent.com/tile-ai/TileOPs-nightly/snapshots"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
@@ -31,10 +31,8 @@ fetch() {  # fetch <name> <dest>; prints the HTTP status, 000 if it never got on
     -o "$2" -w '%{http_code}' "$base/$1" 2>/dev/null || echo 000
 }
 
-# 404 is the bootstrap case — the nightly has not published yet — and is the
-# one status that may keep the placeholder and succeed. Anything else is a
-# transport error or a half-published snapshot, and must not overwrite the
-# live page with a placeholder.
+# 404 means nothing has been published yet, and is the one status that may keep
+# the placeholder and succeed.
 code="$(fetch bench_results.xml "$work/bench_results.xml")"
 if [ "$code" = "404" ]; then
   echo "::warning::${snapshots} has published no snapshot yet; keeping placeholder benchmark page"

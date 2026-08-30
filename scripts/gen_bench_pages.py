@@ -58,7 +58,7 @@ TILEOPS = os.path.join(REPO, "TileOPs")
 MANIFEST_DIR = os.path.join(TILEOPS, "src", "tileops", "manifest")
 _GH = "https://github.com/tile-ai/TileOPs"
 # Where the nightly publishes: one commit per run, the newest rendered here.
-_NB = "https://github.com/tile-ai/TileOPs-nightly"
+_NB = "https://github.com/tile-ai/TileOPs-nightly/tree/snapshots"
 
 # How an op stands against the fastest real alternative measured on its
 # workloads. The verdict is carried by the colour of the ratio itself rather
