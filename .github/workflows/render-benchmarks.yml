@@ -1,7 +1,7 @@
 name: Daily refresh
 
-# Daily refresh of the whole site: the Benchmarks pages from the nightly snapshot on
-# tile-ai/TileOPs' `nightly-bench` orphan branch, and every page that reads the TileOPs
+# Daily refresh of the whole site: the Benchmarks pages from the newest snapshot in
+# tile-ai/TileOPs-nightly, and every page that reads the TileOPs
 # checkout — the API reference from its docstrings, the mirrored design docs — since this
 # job checks that repository out fresh each run. Nothing is committed; the rendered HTML
 # lives on gh-pages.
@@ -49,7 +49,7 @@ jobs:
 
       - run: pip install -r requirements-docs.txt
 
-      - name: Render benchmark page from nightly-bench
+      - name: Render benchmark page from the newest snapshot
         run: bash scripts/render_bench.sh
 
       - name: Deploy site

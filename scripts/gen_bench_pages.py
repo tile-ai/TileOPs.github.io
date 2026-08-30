@@ -57,7 +57,8 @@ REPO = os.path.dirname(HERE)
 TILEOPS = os.path.join(REPO, "TileOPs")
 MANIFEST_DIR = os.path.join(TILEOPS, "src", "tileops", "manifest")
 _GH = "https://github.com/tile-ai/TileOPs"
-_NB = f"{_GH}/tree/nightly-bench"
+# Where the nightly publishes: one commit per run, the newest rendered here.
+_NB = "https://github.com/tile-ai/TileOPs-nightly"
 
 # How an op stands against the fastest real alternative measured on its
 # workloads. The verdict is carried by the colour of the ratio itself rather
@@ -890,7 +891,7 @@ def index_page(args, meta: dict, rows: list[tuple],
         head.append(f"    · [nightly run]({_GH}/actions/runs/{run_id})")
     if args.rendered:
         head += ["", f"    Page rendered {args.rendered} from the "
-                 f"[`nightly-bench`]({_NB}) snapshot."]
+                 f"[latest snapshot]({_NB})."]
     head.append("")
 
     lines = head + env_block(meta, timing) + method_block()
