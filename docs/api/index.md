@@ -21,8 +21,7 @@ its op families in.
 
 | Page | What it covers |
 | --- | --- |
-| [Elementwise](elementwise.md) | unary and binary maps, activations, and the in-place forms |
-| [Dropout](dropout.md) | dropout with deterministic replay |
+| [Elementwise](elementwise.md) | unary and binary maps, activations, dropout, and the in-place forms |
 | [Reduction](reduction.md) | sums, extrema, arg-reductions, cumulative scans, softmax |
 | [Normalization](normalization.md) | RMSNorm, LayerNorm, GroupNorm, BatchNorm and the fused variants |
 | [Quantization](quantization.md) | fp8 quantization |

@@ -46,7 +46,6 @@ nav:
   - API Reference:
     - api/index.md
     - Elementwise: api/elementwise.md
-    - Dropout: api/dropout.md
     - Reduction: api/reduction.md
     - Normalization: api/normalization.md
     - Quantization: api/quantization.md
@@ -172,7 +171,6 @@ plugins:
             RoPE: RoPE
             Convolution: Convolution
             Pooling: Pooling
-            Dropout: Dropout
             Linear Attention: Linear Attention
             Mamba: Mamba
             FFT: FFT

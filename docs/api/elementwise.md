@@ -263,6 +263,12 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
+::: tileops.elementwise.DropoutFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
 ## Gated activations
 
 ::: tileops.elementwise.SiluAndMulFwdOp
