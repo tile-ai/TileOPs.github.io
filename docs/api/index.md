@@ -7,33 +7,34 @@ dtypes — and the call takes the tensors. Both appear under each op as `__init_
 
 ```python
 import torch
-from tileops.ops import GemmOp
+from tileops.ops import GemmFwdOp
 
-op = GemmOp()                        # construct once, reuse
+op = GemmFwdOp()                        # construct once, reuse
 d = op(a, b)                         # the specialized kernel is built on first call
 ```
 
-The pages are ordered along the stack a caller works through: the dense matmul first,
-then attention, its position encodings and its linear replacements, then the
-elementwise and reduction primitives, then the convolutional family and FFT.
+The pages are ordered by how much an op composes: the pointwise transforms first, then
+the axis reductions and the normalizations built on them, then the matmul, then the
+windowed and spectral transforms, then the sequence-model kernels built on all of the
+above. This is the order `tileops.ops.__all__` uses.
 
 | Page | What it covers |
 | --- | --- |
-| [GEMM](linear-algebra.md) | dense matmul — plain, batched, and the fp8 variants |
-| [Attention](attention.md) | forward and backward attention, including the paged and decode kernels |
-| [RoPE](rope.md) | rotary position embedding — NeoX and interleaved layouts, Llama 3.1, YaRN, LongRoPE |
-| [Linear Attention](linear-attention.md) | the linear-attention family: DeltaNet, GLA, KDA, and their kin |
-| [Mamba](mamba.md) | the SSD scan, its decode step, and the chunked forms |
-| [MHC](mhc.md) | multi-head compression |
-| [Normalization](normalization.md) | RMSNorm, LayerNorm, GroupNorm, BatchNorm and the fused variants |
 | [Elementwise](elementwise.md) | unary and binary maps, activations, and the in-place forms |
-| [Reduction](reduction.md) | sums, extrema, arg-reductions, cumulative scans, softmax |
-| [Convolution](convolution.md) | forward convolution over 1D, 2D and 3D inputs |
-| [Pooling](pool.md) | average, max and adaptive pooling, with and without indices |
 | [Dropout](dropout.md) | dropout with deterministic replay |
-| [FFT](fft.md) | the discrete transform |
+| [Reduction](reduction.md) | sums, extrema, arg-reductions, cumulative scans, softmax |
+| [Normalization](normalization.md) | RMSNorm, LayerNorm, GroupNorm, BatchNorm and the fused variants |
 | [Quantization](quantization.md) | fp8 quantization |
 | [Top-k](topk.md) | top-k selection |
+| [GEMM](linear-algebra.md) | dense matmul — plain, batched, and the fp8 variants |
+| [Pooling](pool.md) | average, max and adaptive pooling, with and without indices |
+| [Convolution](convolution.md) | forward convolution over 1D, 2D and 3D inputs |
+| [FFT](fft.md) | the discrete transform |
+| [RoPE](rope.md) | rotary position embedding — NeoX and interleaved layouts, Llama 3.1, YaRN, LongRoPE |
+| [Attention](attention.md) | forward and backward attention, including the paged and decode kernels |
+| [Linear Attention](linear-attention.md) | the linear-attention family: DeltaNet, GLA, KDA, and their kin |
+| [Mamba](mamba.md) | the SSD scan, its decode step, and the chunked forms |
+| [mHC](mhc.md) | Manifold-Constrained Hyper-Connections — the pre/post pair around a layer |
 | [Trace](trace.md) | the in-kernel timeline tracer, a tool rather than an op |
 
 Two things this reference does not carry:

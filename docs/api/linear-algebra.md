@@ -5,32 +5,6 @@ constructor takes what the kernel is compiled with; the call takes the tensors.
 Both are documented under each op — `__init__` and `forward`, where `forward` is
 what runs when you call `op(...)`.
 
-## Batched GEMM
-
-::: tileops.ops.gemm.bmm.BmmFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-      merge_init_into_class: false
-      show_signature_annotations: false
-
-::: tileops.ops.gemm.bmm.BmmFp8KNFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-      merge_init_into_class: false
-      show_signature_annotations: false
-
-::: tileops.ops.gemm.bmm.BmmFp8NKFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-      merge_init_into_class: false
-      show_signature_annotations: false
-
 ## Dense GEMM
 
 ::: tileops.ops.gemm.gemm.GemmFwdOp
@@ -50,6 +24,32 @@ what runs when you call `op(...)`.
       show_signature_annotations: false
 
 ::: tileops.ops.gemm.gemm.GemmW4A16FwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+      merge_init_into_class: false
+      show_signature_annotations: false
+
+## Batched GEMM
+
+::: tileops.ops.gemm.bmm.BmmFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+      merge_init_into_class: false
+      show_signature_annotations: false
+
+::: tileops.ops.gemm.bmm.BmmFp8KNFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+      merge_init_into_class: false
+      show_signature_annotations: false
+
+::: tileops.ops.gemm.bmm.BmmFp8NKFwdOp
     options:
       show_root_heading: true
       heading_level: 3

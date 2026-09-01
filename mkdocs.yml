@@ -36,27 +36,28 @@ nav:
     - Timing Benchmarks: timing.md
     - Using torch.compile: torch-compile.md
     - Adding a Backend: backends.md
-  # Ordered along the stack a reader is working through: the dense matmul, then
-  # attention, its position encodings and its linear replacements, then the
-  # elementwise and reduction primitives, then the convolutional family, then
-  # FFT, quantization and top-k, and Trace last — it is a tool, not an op family.
+  # Ordered simple to composite, the same order as `tileops.ops.__all__`: the
+  # pointwise transforms, then the axis reductions and the normalizations built
+  # on them, then the matmul, then the windowed and spectral transforms, then the
+  # sequence-model kernels built on all of the above. mHC is one algorithm rather
+  # than an op family, and Trace is a tool rather than an op; both come last.
   - API Reference:
     - api/index.md
-    - GEMM: api/linear-algebra.md
-    - Attention: api/attention.md
-    - RoPE: api/rope.md
-    - Linear Attention: api/linear-attention.md
-    - Mamba: api/mamba.md
-    - MHC: api/mhc.md
-    - Normalization: api/normalization.md
     - Elementwise: api/elementwise.md
-    - Reduction: api/reduction.md
-    - Convolution: api/convolution.md
-    - Pooling: api/pool.md
     - Dropout: api/dropout.md
-    - FFT: api/fft.md
+    - Reduction: api/reduction.md
+    - Normalization: api/normalization.md
     - Quantization: api/quantization.md
     - Top-k: api/topk.md
+    - GEMM: api/linear-algebra.md
+    - Pooling: api/pool.md
+    - Convolution: api/convolution.md
+    - FFT: api/fft.md
+    - RoPE: api/rope.md
+    - Attention: api/attention.md
+    - Linear Attention: api/linear-attention.md
+    - Mamba: api/mamba.md
+    - mHC: api/mhc.md
     - Trace: api/trace.md
   - Benchmarks:
     - benchmarks/index.md
@@ -171,7 +172,7 @@ plugins:
             Linear Attention: Linear Attention
             Mamba: Mamba
             FFT: FFT
-            MHC: MHC
+            mHC: mHC
             Top-k: Top-k
             Trace: Trace
             Benchmarks: 性能数据
