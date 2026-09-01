@@ -82,3 +82,15 @@ what runs when you call `op(...)`.
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
+
+## Chunked sequence mean
+
+The one op on this page with no PyTorch counterpart. It averages the sequence axis of
+a `[batch, seq, heads, dim]` tensor in fixed-size chunks, and can follow ragged
+sequence boundaries rather than a uniform split.
+
+::: tileops.pool.MeanPoolingForwardOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]

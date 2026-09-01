@@ -28,7 +28,7 @@ its op families in.
 | [Quantization](quantization.md) | fp8 quantization |
 | [Top-k](topk.md) | top-k selection |
 | [GEMM](linear-algebra.md) | dense matmul — plain, batched, and the fp8 variants |
-| [Pooling](pool.md) | average, max and adaptive pooling, with and without indices |
+| [Pooling](pool.md) | average, max and adaptive pooling, with and without indices, plus the chunked sequence mean |
 | [Convolution](convolution.md) | forward convolution over 1D, 2D and 3D inputs |
 | [FFT](fft.md) | the discrete transform |
 | [MoE](moe.md) | the routed mixture-of-experts FFN and its separately callable stages |
