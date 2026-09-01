@@ -7,7 +7,7 @@ what runs when you call `op(...)`.
 
 ## Dropout
 
-::: tileops.dropout.DropoutFwdOp
+::: tileops.elementwise.DropoutFwdOp
     options:
       show_root_heading: true
       heading_level: 3

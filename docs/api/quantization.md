@@ -7,7 +7,7 @@ what runs when you call `op(...)`.
 
 ## FP8 quantization
 
-::: tileops.fp8_quant.FP8QuantFwdOp
+::: tileops.quantization.FP8QuantFwdOp
     options:
       show_root_heading: true
       heading_level: 3

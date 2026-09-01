@@ -131,7 +131,7 @@ what runs when you call `op(...)`.
 
 ## Attention indexing
 
-::: tileops.fp8_lightning_indexer.FP8LightningIndexerFwdOp
+::: tileops.attention.FP8LightningIndexerFwdOp
     options:
       show_root_heading: true
       heading_level: 3

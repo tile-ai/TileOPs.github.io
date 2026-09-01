@@ -434,26 +434,3 @@ what runs when you call `op(...)`.
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
-
-## Template base classes
-
-Subclass one of these to add an elementwise op. Each supplies the shape and dtype
-handling its arity needs, and leaves the kernel to the subclass.
-
-::: tileops.elementwise.UnaryOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-::: tileops.elementwise.BinaryOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-::: tileops.elementwise.FusedGatedOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]

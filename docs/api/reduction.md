@@ -113,12 +113,6 @@ what runs when you call `op(...)`.
 
 ## Cumulative
 
-::: tileops.reduction.CumulativeOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
 ::: tileops.reduction.CumsumFwdOp
     options:
       show_root_heading: true
