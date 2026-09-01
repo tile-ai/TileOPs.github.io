@@ -200,7 +200,7 @@ register_kernel_builder(op="GemmFwdOp", target="acme", build_kernel=build_gemm)
 安装这个包前后的差别如下：
 
 ```console
-$ python -c "import torch; from tileops.ops.norm.rms_norm import RMSNormFwdOp; \
+$ python -c "import torch; from tileops.norm import RMSNormFwdOp; \
              RMSNormFwdOp(normalized_shape=(64,))(torch.randn(4,64,dtype=torch.float16), \
                                                   torch.randn(64,dtype=torch.float16))"
 ValueError: RMSNormKernel is a CUDA kernel; got x on cpu and weight on cpu.

@@ -8,7 +8,7 @@
 | --- | --- | --- | --- |
 | 1 | [`src/tileops/manifest/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest)`<family>.yaml` | 顶层的名字就是算子类名 | spec 本身 |
 | 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/…` | `source.op` | 算子类，继承 `Op` |
-| 2 | [`src/tileops/ops/__init__.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops/__init__.py) | —— | 导出算子名 |
+| 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/__init__.py` 与 [`src/tileops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops)`<family>.py` | —— | 算子名，由所属家族导出，并出现在公开路径 `tileops.<family>.<Op>` 上 |
 | 3 | [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)`<family>/…` | `source.kernel` | kernel 类，继承 `Kernel` |
 | 4 | [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)`test_<名字>.py` | `source.test` | 与 `ref_api` 的数值比对 |
 | 5 | [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)`bench_<名字>.py` | `source.bench` | benchmark |
@@ -152,7 +152,7 @@ build=lambda: self.kernel_map[slot](m, n, k, a.dtype, tune=self.tune)
 两件事收尾，都是几行的事：
 
 - **要支持 `torch.compile`**，得多声明一条编译边界：`forward` 只调用那个不透明算子，校验、取 kernel、launch kernel 挪进 `_eager_forward`。上面这个算子没有声明，所以 `forward` 里就是全部工作。做法见[接入 torch.compile](torch-compile.md)。
-- **把算子名加进** [`src/tileops/ops/__init__.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops/__init__.py) 的导入与 `__all__`，`from tileops.ops import ...` 才拿得到它。
+- **把算子名加进两处的导入与 `__all__`**：算子所属家族的 [`src/tileops/ops/<family>/__init__.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops)（类的实现位置），以及 [`src/tileops/<family>.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops)（公开路径）。缺了后者，`from tileops.<family> import ...` 拿不到这个算子，API 参考也收不到它。
 
 ## 第三步：写 kernel
 

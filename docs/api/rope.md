@@ -7,13 +7,13 @@ what runs when you call `op(...)`.
 
 ## NeoX layout
 
-::: tileops.ops.rope.RopeNeoxFwdOp
+::: tileops.rope.RopeNeoxFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.rope.RopeNeoxPositionIdsFwdOp
+::: tileops.rope.RopeNeoxPositionIdsFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -21,7 +21,7 @@ what runs when you call `op(...)`.
 
 ## Interleaved layout
 
-::: tileops.ops.rope.RopeNonNeoxFwdOp
+::: tileops.rope.RopeNonNeoxFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -29,19 +29,19 @@ what runs when you call `op(...)`.
 
 ## Scaled frequencies
 
-::: tileops.ops.rope.RopeLlama31FwdOp
+::: tileops.rope.RopeLlama31FwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.rope.RopeYarnFwdOp
+::: tileops.rope.RopeYarnFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.rope.RopeLongRopeFwdOp
+::: tileops.rope.RopeLongRopeFwdOp
     options:
       show_root_heading: true
       heading_level: 3

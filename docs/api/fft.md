@@ -7,7 +7,7 @@ what runs when you call `op(...)`.
 
 ## Complex-to-complex
 
-::: tileops.ops.fft.FFTC2CFwdOp
+::: tileops.fft.FFTC2CFwdOp
     options:
       show_root_heading: true
       heading_level: 3

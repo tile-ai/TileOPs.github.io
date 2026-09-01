@@ -7,25 +7,25 @@ what runs when you call `op(...)`.
 
 ## Multi-head attention
 
-::: tileops.ops.attention.mha.MultiHeadAttentionFwdOp
+::: tileops.attention.MultiHeadAttentionFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.attention.mha.MultiHeadAttentionBwdOp
+::: tileops.attention.MultiHeadAttentionBwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.attention.mha.MultiHeadAttentionDecodeWithKVCacheFwdOp
+::: tileops.attention.MultiHeadAttentionDecodeWithKVCacheFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.attention.mha.MultiHeadAttentionDecodePagedWithKVCacheFwdOp
+::: tileops.attention.MultiHeadAttentionDecodePagedWithKVCacheFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -33,61 +33,61 @@ what runs when you call `op(...)`.
 
 ## Grouped-query attention
 
-::: tileops.ops.attention.gqa.GroupedQueryAttentionFwdOp
+::: tileops.attention.GroupedQueryAttentionFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.attention.gqa.GroupedQueryAttentionBwdOp
+::: tileops.attention.GroupedQueryAttentionBwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.attention.gqa.GroupedQueryAttentionDenseFwdOp
+::: tileops.attention.GroupedQueryAttentionDenseFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.attention.gqa.GroupedQueryAttentionPrefillFwdOp
+::: tileops.attention.GroupedQueryAttentionPrefillFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.attention.gqa.GroupedQueryAttentionPrefillVarlenFwdOp
+::: tileops.attention.GroupedQueryAttentionPrefillVarlenFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.attention.gqa.GroupedQueryAttentionPrefillPagedWithKVCacheFwdOp
+::: tileops.attention.GroupedQueryAttentionPrefillPagedWithKVCacheFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.attention.gqa.GroupedQueryAttentionDecodeWithKVCacheFwdOp
+::: tileops.attention.GroupedQueryAttentionDecodeWithKVCacheFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.attention.gqa.GroupedQueryAttentionDecodePagedWithKVCacheFwdOp
+::: tileops.attention.GroupedQueryAttentionDecodePagedWithKVCacheFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.attention.gqa.GroupedQueryAttentionSlidingWindowFwdOp
+::: tileops.attention.GroupedQueryAttentionSlidingWindowFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.attention.gqa.GroupedQueryAttentionSlidingWindowVarlenFwdOp
+::: tileops.attention.GroupedQueryAttentionSlidingWindowVarlenFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -95,7 +95,7 @@ what runs when you call `op(...)`.
 
 ## Multi-head latent attention
 
-::: tileops.ops.attention.deepseek_mla.MultiHeadLatentAttentionDecodeWithKVCacheFwdOp
+::: tileops.attention.MultiHeadLatentAttentionDecodeWithKVCacheFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -103,19 +103,19 @@ what runs when you call `op(...)`.
 
 ## Native sparse attention
 
-::: tileops.ops.attention.deepseek_nsa.NSACmpFwdVarlenOp
+::: tileops.attention.NSACmpFwdVarlenOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.attention.deepseek_nsa.NSATopkVarlenOp
+::: tileops.attention.NSATopkVarlenOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.attention.deepseek_nsa.NSAFwdVarlenOp
+::: tileops.attention.NSAFwdVarlenOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -123,7 +123,7 @@ what runs when you call `op(...)`.
 
 ## DeepSeek sparse attention
 
-::: tileops.ops.attention.deepseek_dsa.DeepSeekSparseAttentionDecodeWithKVCacheFwdOp
+::: tileops.attention.DeepSeekSparseAttentionDecodeWithKVCacheFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -131,7 +131,7 @@ what runs when you call `op(...)`.
 
 ## Attention indexing
 
-::: tileops.ops.fp8_lightning_indexer.FP8LightningIndexerFwdOp
+::: tileops.fp8_lightning_indexer.FP8LightningIndexerFwdOp
     options:
       show_root_heading: true
       heading_level: 3

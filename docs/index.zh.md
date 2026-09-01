@@ -18,12 +18,12 @@ pip install tileops
 
 ```python
 import torch
-from tileops.ops import GemmOp
+from tileops.gemm import GemmFwdOp
 
 a = torch.randn(4096, 4096, device="cuda", dtype=torch.float16)
 b = torch.randn(4096, 4096, device="cuda", dtype=torch.float16)
 
-op = GemmOp()                        # 默认 NT 布局：a=[M, K], b=[N, K]
+op = GemmFwdOp()                        # 默认 NT 布局：a=[M, K], b=[N, K]
 d = op(a, b)                         # -> [M, N]
 flops, nbytes = op.eval_roofline()   # 本次调用所需的计算量与访存量
 ```

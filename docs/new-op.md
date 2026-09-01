@@ -11,7 +11,7 @@ from it.**{ .keystone }
 | --- | --- | --- | --- |
 | 1 | [`src/tileops/manifest/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest)`<family>.yaml` | the key is the op's class name | the spec itself |
 | 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/…` | `source.op` | the op class, subclassing `Op` |
-| 2 | [`src/tileops/ops/__init__.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops/__init__.py) | — | the op's name, exported |
+| 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/__init__.py` and [`src/tileops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops)`<family>.py` | — | the op's name, exported by its family and on the public path `tileops.<family>.<Op>` |
 | 3 | [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)`<family>/…` | `source.kernel` | the kernel class, subclassing `Kernel` |
 | 4 | [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)`test_<name>.py` | `source.test` | the comparison against `ref_api` |
 | 5 | [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)`bench_<name>.py` | `source.bench` | the benchmark |
@@ -200,8 +200,11 @@ Two things to finish, a few lines each:
   the opaque operator, and the validation, the kernel lookup and the launch move into
   `_eager_forward`. The op above declares none, so its `forward` holds all the work. How to
   declare it is in [bringing an op into torch.compile](torch-compile.md).
-- **Add the op's name** to the imports and `__all__` in
-  [`src/tileops/ops/__init__.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops/__init__.py), or `from tileops.ops import ...` will not find it.
+- **Add the op's name** to the imports and `__all__` in two places: its family's
+  [`src/tileops/ops/<family>/__init__.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops), where the class
+  is implemented, and [`src/tileops/<family>.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops), the public
+  path. Without the second, `from tileops.<family> import ...` will not find the op and
+  the API reference cannot collect it.
 
 ## Step 3: write the kernel
 

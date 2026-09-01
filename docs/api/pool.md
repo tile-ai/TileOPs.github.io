@@ -7,19 +7,19 @@ what runs when you call `op(...)`.
 
 ## Average pooling
 
-::: tileops.ops.pool.AvgPool1dFwdOp
+::: tileops.pool.AvgPool1dFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.pool.AvgPool2dFwdOp
+::: tileops.pool.AvgPool2dFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.pool.AvgPool3dFwdOp
+::: tileops.pool.AvgPool3dFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -27,37 +27,37 @@ what runs when you call `op(...)`.
 
 ## Max pooling
 
-::: tileops.ops.pool.MaxPool1dFwdOp
+::: tileops.pool.MaxPool1dFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.pool.MaxPool1dIndicesFwdOp
+::: tileops.pool.MaxPool1dIndicesFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.pool.MaxPool2dFwdOp
+::: tileops.pool.MaxPool2dFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.pool.MaxPool2dIndicesFwdOp
+::: tileops.pool.MaxPool2dIndicesFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.pool.MaxPool3dFwdOp
+::: tileops.pool.MaxPool3dFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.pool.MaxPool3dIndicesFwdOp
+::: tileops.pool.MaxPool3dIndicesFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -65,19 +65,19 @@ what runs when you call `op(...)`.
 
 ## Adaptive pooling
 
-::: tileops.ops.pool.AdaptiveAvgPool2dFwdOp
+::: tileops.pool.AdaptiveAvgPool2dFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.pool.AdaptiveMaxPool2dFwdOp
+::: tileops.pool.AdaptiveMaxPool2dFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.pool.AdaptiveMaxPool2dIndicesFwdOp
+::: tileops.pool.AdaptiveMaxPool2dIndicesFwdOp
     options:
       show_root_heading: true
       heading_level: 3

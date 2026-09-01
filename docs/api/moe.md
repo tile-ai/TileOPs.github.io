@@ -1,75 +1,84 @@
-# Normalization Operators
+# MoE Operators
 
 Every op on this page is used the same way: construct it once, then call it. The
 constructor takes what the kernel is compiled with; the call takes the tensors.
 Both are documented under each op — `__init__` and `forward`, where `forward` is
 what runs when you call `op(...)`.
 
-## Layer norm
+A routed mixture-of-experts layer is available two ways here. `FusedMoeFwdOp` runs
+the whole FFN. The rest are its stages, callable on their own: the ops that move
+tokens into an expert-contiguous layout and back, and the expert GEMMs that run on
+that layout. Two layouts appear throughout — one padding each expert's token count
+up to the GEMM's block size, one packing them tight. The routing op and the GEMM
+have to agree on which.
 
-::: tileops.norm.LayerNormFwdOp
+## Fused forward
+
+::: tileops.moe.FusedMoeFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.norm.FusedAddLayerNormFwdOp
+## Routing and layout
+
+::: tileops.moe.MoePrePermuteFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-## RMS norm
-
-::: tileops.norm.RMSNormFwdOp
+::: tileops.moe.MoePermuteAlignFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.norm.FusedAddRMSNormFwdOp
+::: tileops.moe.MoePermuteNopadFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-## Adaptive layer norm
-
-::: tileops.norm.AdaLayerNormFwdOp
+::: tileops.moe.MoePostPermuteFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.norm.AdaLayerNormZeroFwdOp
+::: tileops.moe.MoeUnpermuteFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-## Batch norm
+## Expert GEMMs
 
-::: tileops.norm.BatchNormFwdOp
+::: tileops.moe.MoeGroupedGemmFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.norm.BatchNormBwdOp
+::: tileops.moe.MoeGroupedGemmNopadFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-## Group and instance norm
-
-::: tileops.norm.GroupNormFwdOp
+::: tileops.moe.MoeGateUpFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.norm.InstanceNormFwdOp
+::: tileops.moe.MoeExpertMLPFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
+::: tileops.moe.FusedMoEExpertsNopadPersistent3WGFwdOp
     options:
       show_root_heading: true
       heading_level: 3

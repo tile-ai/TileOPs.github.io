@@ -7,7 +7,7 @@ what runs when you call `op(...)`.
 
 ## Full forward
 
-::: tileops.ops.mamba.mamba2_fwd.Mamba2FwdOp
+::: tileops.mamba.Mamba2FwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -15,31 +15,31 @@ what runs when you call `op(...)`.
 
 ## SSD stages
 
-::: tileops.ops.mamba.da_cumsum.DaCumsumFwdOp
+::: tileops.mamba.DaCumsumFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.mamba.cb_producer.CBProducerFwdOp
+::: tileops.mamba.CBProducerFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.mamba.ssd_chunk_state.SSDChunkStateFwdOp
+::: tileops.mamba.SSDChunkStateFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.mamba.ssd_state_passing.SSDStatePassingFwdOp
+::: tileops.mamba.SSDStatePassingFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.mamba.ssd_chunk_scan.SSDChunkScanFwdOp
+::: tileops.mamba.SSDChunkScanFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -47,7 +47,7 @@ what runs when you call `op(...)`.
 
 ## Decode
 
-::: tileops.ops.mamba.ssd_decode.SSDDecodeFwdOp
+::: tileops.mamba.SSDDecodeFwdOp
     options:
       show_root_heading: true
       heading_level: 3

@@ -19,7 +19,7 @@ Read the class attribute `compile_op_names`: non-empty means the boundary is at 
 layer and `fullgraph=True` works, an empty tuple means the op has not migrated yet.
 
 ```python
->>> from tileops.ops import RMSNormFwdOp
+>>> from tileops.norm import RMSNormFwdOp
 >>> RMSNormFwdOp.compile_op_names
 ('tileops::norm_rms_norm_fwd',)
 ```
@@ -34,7 +34,7 @@ that is all:
 
 ```python
 import torch
-from tileops.ops import RMSNormFwdOp
+from tileops.norm import RMSNormFwdOp
 
 op = RMSNormFwdOp(normalized_shape=(4096,))     # construct once, reuse
 

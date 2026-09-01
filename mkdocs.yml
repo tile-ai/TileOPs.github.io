@@ -36,11 +36,13 @@ nav:
     - Timing Benchmarks: timing.md
     - Using torch.compile: torch-compile.md
     - Adding a Backend: backends.md
-  # Ordered simple to composite, the same order as `tileops.ops.__all__`: the
-  # pointwise transforms, then the axis reductions and the normalizations built
-  # on them, then the matmul, then the windowed and spectral transforms, then the
-  # sequence-model kernels built on all of the above. mHC is one algorithm rather
-  # than an op family, and Trace is a tool rather than an op; both come last.
+  # In `tileops._FAMILIES` order — simple to composite: the pointwise transforms,
+  # then the axis reductions and the normalizations built on them, then the matmul
+  # and the expert routing over it, then the windowed and spectral transforms, then
+  # the sequence-model kernels built on all of the above. Pages are not one per
+  # family. The FP8 lightning indexer is a section of the Attention page, where its
+  # single op is used, and the sequence-modeling family is two pages, mHC and Engram,
+  # being two unrelated algorithms. Trace comes last — a tool rather than an op.
   - API Reference:
     - api/index.md
     - Elementwise: api/elementwise.md
@@ -53,11 +55,13 @@ nav:
     - Pooling: api/pool.md
     - Convolution: api/convolution.md
     - FFT: api/fft.md
+    - MoE: api/moe.md
     - RoPE: api/rope.md
     - Attention: api/attention.md
     - Linear Attention: api/linear-attention.md
     - Mamba: api/mamba.md
     - mHC: api/mhc.md
+    - Engram: api/engram.md
     - Trace: api/trace.md
   - Benchmarks:
     - benchmarks/index.md
@@ -173,6 +177,8 @@ plugins:
             Mamba: Mamba
             FFT: FFT
             mHC: mHC
+            MoE: MoE
+            Engram: Engram
             Top-k: Top-k
             Trace: Trace
             Benchmarks: 性能数据

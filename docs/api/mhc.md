@@ -7,13 +7,13 @@ what runs when you call `op(...)`.
 
 ## Manifold-Constrained Hyper-Connections
 
-::: tileops.ops.sequence_modeling.mhc.MHCPreFwdOp
+::: tileops.sequence_modeling.MHCPreFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.sequence_modeling.mhc.MHCPostFwdOp
+::: tileops.sequence_modeling.MHCPostFwdOp
     options:
       show_root_heading: true
       heading_level: 3

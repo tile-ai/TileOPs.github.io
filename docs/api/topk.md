@@ -7,7 +7,7 @@ what runs when you call `op(...)`.
 
 ## Top-k selection
 
-::: tileops.ops.topk_selector.TopkSelectorFwdOp
+::: tileops.topk_selector.TopkSelectorFwdOp
     options:
       show_root_heading: true
       heading_level: 3

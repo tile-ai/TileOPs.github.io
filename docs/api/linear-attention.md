@@ -7,25 +7,25 @@ what runs when you call `op(...)`.
 
 ## DeltaNet
 
-::: tileops.ops.linear_attention.deltanet.DeltaNetOp
+::: tileops.linear_attention.DeltaNetOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.linear_attention.deltanet.DeltaNetFwdOp
+::: tileops.linear_attention.DeltaNetFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.linear_attention.deltanet.DeltaNetBwdOp
+::: tileops.linear_attention.DeltaNetBwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.linear_attention.deltanet_recurrence.DeltaNetDecodeFwdOp
+::: tileops.linear_attention.DeltaNetDecodeFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -33,43 +33,43 @@ what runs when you call `op(...)`.
 
 ## Gated DeltaNet
 
-::: tileops.ops.linear_attention.gated_deltanet.GatedDeltaNetOp
+::: tileops.linear_attention.GatedDeltaNetOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.linear_attention.gated_deltanet.GatedDeltaNetBTHDFwdOp
+::: tileops.linear_attention.GatedDeltaNetBTHDFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.linear_attention.gated_deltanet.GatedDeltaNetBHTDFwdOp
+::: tileops.linear_attention.GatedDeltaNetBHTDFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.linear_attention.gated_deltanet.GatedDeltaNetPrefillBTHDFwdOp
+::: tileops.linear_attention.GatedDeltaNetPrefillBTHDFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.linear_attention.gated_deltanet.GatedDeltaNetPrefillBHTDFwdOp
+::: tileops.linear_attention.GatedDeltaNetPrefillBHTDFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.linear_attention.gated_deltanet.GatedDeltaNetDecodeFwdOp
+::: tileops.linear_attention.GatedDeltaNetDecodeFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.linear_attention.gated_deltanet.GatedDeltaNetBwdOp
+::: tileops.linear_attention.GatedDeltaNetBwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -77,19 +77,19 @@ what runs when you call `op(...)`.
 
 ## Gated linear attention
 
-::: tileops.ops.linear_attention.gla.GLAFwdOp
+::: tileops.linear_attention.GLAFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.linear_attention.gla.GLABwdOp
+::: tileops.linear_attention.GLABwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.linear_attention.gla_recurrence.GLADecodeFwdOp
+::: tileops.linear_attention.GLADecodeFwdOp
     options:
       show_root_heading: true
       heading_level: 3

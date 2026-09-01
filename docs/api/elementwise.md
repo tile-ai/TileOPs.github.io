@@ -7,67 +7,67 @@ what runs when you call `op(...)`.
 
 ## Arithmetic
 
-::: tileops.ops.elementwise.arithmetic.AddFwdOp
+::: tileops.elementwise.AddFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.arithmetic.SubFwdOp
+::: tileops.elementwise.SubFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.arithmetic.MulFwdOp
+::: tileops.elementwise.MulFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.arithmetic.DivFwdOp
+::: tileops.elementwise.DivFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.arithmetic.FloorDivideFwdOp
+::: tileops.elementwise.FloorDivideFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.arithmetic.RemainderFwdOp
+::: tileops.elementwise.RemainderFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.arithmetic.PowFwdOp
+::: tileops.elementwise.PowFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.arithmetic.MaximumFwdOp
+::: tileops.elementwise.MaximumFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.arithmetic.MinimumFwdOp
+::: tileops.elementwise.MinimumFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.arithmetic.LerpFwdOp
+::: tileops.elementwise.LerpFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.arithmetic.LerpTensorFwdOp
+::: tileops.elementwise.LerpTensorFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -75,103 +75,103 @@ what runs when you call `op(...)`.
 
 ## Unary math
 
-::: tileops.ops.elementwise.math_unary.ExpFwdOp
+::: tileops.elementwise.ExpFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.math_unary.Expm1FwdOp
+::: tileops.elementwise.Expm1FwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.math_unary.LogFwdOp
+::: tileops.elementwise.LogFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.math_unary.Log1pFwdOp
+::: tileops.elementwise.Log1pFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.math_unary.SqrtFwdOp
+::: tileops.elementwise.SqrtFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.math_unary.RsqrtFwdOp
+::: tileops.elementwise.RsqrtFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.math_unary.ReciprocalFwdOp
+::: tileops.elementwise.ReciprocalFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.math_unary.AbsFwdOp
+::: tileops.elementwise.AbsFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.math_unary.NegFwdOp
+::: tileops.elementwise.NegFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.math_unary.SignFwdOp
+::: tileops.elementwise.SignFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.math_unary.SinFwdOp
+::: tileops.elementwise.SinFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.math_unary.CosFwdOp
+::: tileops.elementwise.CosFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.math_unary.ErfFwdOp
+::: tileops.elementwise.ErfFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.math_unary.FloorFwdOp
+::: tileops.elementwise.FloorFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.math_unary.CeilFwdOp
+::: tileops.elementwise.CeilFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.math_unary.RoundFwdOp
+::: tileops.elementwise.RoundFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.math_unary.TruncFwdOp
+::: tileops.elementwise.TruncFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -179,85 +179,85 @@ what runs when you call `op(...)`.
 
 ## Activations
 
-::: tileops.ops.elementwise.activations.ReluFwdOp
+::: tileops.elementwise.ReluFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.activations.LeakyReluFwdOp
+::: tileops.elementwise.LeakyReluFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.activations.EluFwdOp
+::: tileops.elementwise.EluFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.activations.SeluFwdOp
+::: tileops.elementwise.SeluFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.activations.GeluFwdOp
+::: tileops.elementwise.GeluFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.activations.SiluFwdOp
+::: tileops.elementwise.SiluFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.activations.MishFwdOp
+::: tileops.elementwise.MishFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.activations.SigmoidFwdOp
+::: tileops.elementwise.SigmoidFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.activations.TanhFwdOp
+::: tileops.elementwise.TanhFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.activations.HardsigmoidFwdOp
+::: tileops.elementwise.HardsigmoidFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.activations.HardswishFwdOp
+::: tileops.elementwise.HardswishFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.activations.HardtanhFwdOp
+::: tileops.elementwise.HardtanhFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.activations.SoftplusFwdOp
+::: tileops.elementwise.SoftplusFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.prelu.PreluFwdOp
+::: tileops.elementwise.PreluFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -265,19 +265,19 @@ what runs when you call `op(...)`.
 
 ## Gated activations
 
-::: tileops.ops.elementwise.activations.SiluAndMulFwdOp
+::: tileops.elementwise.SiluAndMulFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.activations.GeluAndMulFwdOp
+::: tileops.elementwise.GeluAndMulFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.activations.GeluTanhAndMulFwdOp
+::: tileops.elementwise.GeluTanhAndMulFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -285,55 +285,55 @@ what runs when you call `op(...)`.
 
 ## Comparison
 
-::: tileops.ops.elementwise.comparison.EqFwdOp
+::: tileops.elementwise.EqFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.comparison.NeFwdOp
+::: tileops.elementwise.NeFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.comparison.GtFwdOp
+::: tileops.elementwise.GtFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.comparison.GeFwdOp
+::: tileops.elementwise.GeFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.comparison.LtFwdOp
+::: tileops.elementwise.LtFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.comparison.LeFwdOp
+::: tileops.elementwise.LeFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.comparison.IsnanFwdOp
+::: tileops.elementwise.IsnanFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.comparison.IsinfFwdOp
+::: tileops.elementwise.IsinfFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.comparison.IsfiniteFwdOp
+::: tileops.elementwise.IsfiniteFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -341,43 +341,43 @@ what runs when you call `op(...)`.
 
 ## Logical and bitwise
 
-::: tileops.ops.elementwise.logical.LogicalAndFwdOp
+::: tileops.elementwise.LogicalAndFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.logical.LogicalOrFwdOp
+::: tileops.elementwise.LogicalOrFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.logical.LogicalNotFwdOp
+::: tileops.elementwise.LogicalNotFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.bitwise.BitwiseAndFwdOp
+::: tileops.elementwise.BitwiseAndFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.bitwise.BitwiseOrFwdOp
+::: tileops.elementwise.BitwiseOrFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.bitwise.BitwiseXorFwdOp
+::: tileops.elementwise.BitwiseXorFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.bitwise.BitwiseNotFwdOp
+::: tileops.elementwise.BitwiseNotFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -385,37 +385,37 @@ what runs when you call `op(...)`.
 
 ## Selection and clamping
 
-::: tileops.ops.elementwise.where.WhereFwdOp
+::: tileops.elementwise.WhereFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.clamp.ClampFwdOp
+::: tileops.elementwise.ClampFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.clamp.ClampScalarFwdOp
+::: tileops.elementwise.ClampScalarFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.masked_fill.MaskedFillFwdOp
+::: tileops.elementwise.MaskedFillFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.masked_fill.MaskedFillScalarFwdOp
+::: tileops.elementwise.MaskedFillScalarFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.nan_to_num.NanToNumFwdOp
+::: tileops.elementwise.NanToNumFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -423,13 +423,36 @@ what runs when you call `op(...)`.
 
 ## Positional encodings
 
-::: tileops.ops.elementwise.alibi.AlibiFwdOp
+::: tileops.elementwise.AlibiFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.elementwise.sinusoidal.SinusoidalFwdOp
+::: tileops.elementwise.SinusoidalFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
+## Template base classes
+
+Subclass one of these to add an elementwise op. Each supplies the shape and dtype
+handling its arity needs, and leaves the kernel to the subclass.
+
+::: tileops.elementwise.UnaryOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
+::: tileops.elementwise.BinaryOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
+::: tileops.elementwise.FusedGatedOp
     options:
       show_root_heading: true
       heading_level: 3

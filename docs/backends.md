@@ -253,7 +253,7 @@ messages — is what a backend for dedicated hardware writes.
 What installing it changes:
 
 ```console
-$ python -c "import torch; from tileops.ops.norm.rms_norm import RMSNormFwdOp; \
+$ python -c "import torch; from tileops.norm import RMSNormFwdOp; \
              RMSNormFwdOp(normalized_shape=(64,))(torch.randn(4,64,dtype=torch.float16), \
                                                   torch.randn(64,dtype=torch.float16))"
 ValueError: RMSNormKernel is a CUDA kernel; got x on cpu and weight on cpu.

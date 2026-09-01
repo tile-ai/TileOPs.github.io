@@ -15,7 +15,7 @@
 读类属性 `compile_op_names`：非空说明边界已经在算子层，`fullgraph=True` 可用；空 tuple 说明尚未迁移。
 
 ```python
->>> from tileops.ops import RMSNormFwdOp
+>>> from tileops.norm import RMSNormFwdOp
 >>> RMSNormFwdOp.compile_op_names
 ('tileops::norm_rms_norm_fwd',)
 ```
@@ -28,7 +28,7 @@
 
 ```python
 import torch
-from tileops.ops import RMSNormFwdOp
+from tileops.norm import RMSNormFwdOp
 
 op = RMSNormFwdOp(normalized_shape=(4096,))     # 构造一次，反复使用
 

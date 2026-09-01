@@ -7,16 +7,17 @@ dtypes — and the call takes the tensors. Both appear under each op as `__init_
 
 ```python
 import torch
-from tileops.ops import GemmFwdOp
+from tileops.gemm import GemmFwdOp
 
 op = GemmFwdOp()                        # construct once, reuse
 d = op(a, b)                         # the specialized kernel is built on first call
 ```
 
 The pages are ordered by how much an op composes: the pointwise transforms first, then
-the axis reductions and the normalizations built on them, then the matmul, then the
-windowed and spectral transforms, then the sequence-model kernels built on all of the
-above. This is the order `tileops.ops.__all__` uses.
+the axis reductions and the normalizations built on them, then the matmul and the
+expert routing over it, then the windowed and spectral transforms, then the
+sequence-model kernels built on all of the above. It is the order `tileops` declares
+its op families in.
 
 | Page | What it covers |
 | --- | --- |
@@ -30,11 +31,13 @@ above. This is the order `tileops.ops.__all__` uses.
 | [Pooling](pool.md) | average, max and adaptive pooling, with and without indices |
 | [Convolution](convolution.md) | forward convolution over 1D, 2D and 3D inputs |
 | [FFT](fft.md) | the discrete transform |
+| [MoE](moe.md) | the routed mixture-of-experts FFN and its separately callable stages |
 | [RoPE](rope.md) | rotary position embedding — NeoX and interleaved layouts, Llama 3.1, YaRN, LongRoPE |
 | [Attention](attention.md) | forward and backward attention, including the paged and decode kernels |
-| [Linear Attention](linear-attention.md) | the linear-attention family: DeltaNet, GLA, KDA, and their kin |
+| [Linear Attention](linear-attention.md) | DeltaNet, Gated DeltaNet and gated linear attention |
 | [Mamba](mamba.md) | the SSD scan, its decode step, and the chunked forms |
 | [mHC](mhc.md) | Manifold-Constrained Hyper-Connections — the pre/post pair around a layer |
+| [Engram](engram.md) | the Engram GateConv pair and its decode step |
 | [Trace](trace.md) | the in-kernel timeline tracer, a tool rather than an op |
 
 Two things this reference does not carry:

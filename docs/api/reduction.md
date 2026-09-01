@@ -7,31 +7,31 @@ what runs when you call `op(...)`.
 
 ## Sums, means and extrema
 
-::: tileops.ops.reduction.reduce.SumFwdOp
+::: tileops.reduction.SumFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.reduction.reduce.MeanFwdOp
+::: tileops.reduction.MeanFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.reduction.reduce.ProdFwdOp
+::: tileops.reduction.ProdFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.reduction.reduce.AmaxFwdOp
+::: tileops.reduction.AmaxFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.reduction.reduce.AminFwdOp
+::: tileops.reduction.AminFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -39,19 +39,19 @@ what runs when you call `op(...)`.
 
 ## Variance and deviation
 
-::: tileops.ops.reduction.reduce.VarFwdOp
+::: tileops.reduction.VarFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.reduction.reduce.VarMeanFwdOp
+::: tileops.reduction.VarMeanFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.reduction.reduce.StdFwdOp
+::: tileops.reduction.StdFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -59,13 +59,13 @@ what runs when you call `op(...)`.
 
 ## Arg reductions
 
-::: tileops.ops.reduction.argreduce.ArgmaxFwdOp
+::: tileops.reduction.ArgmaxFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.reduction.argreduce.ArgminFwdOp
+::: tileops.reduction.ArgminFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -73,19 +73,19 @@ what runs when you call `op(...)`.
 
 ## Softmax
 
-::: tileops.ops.reduction.softmax.SoftmaxFwdOp
+::: tileops.reduction.SoftmaxFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.reduction.softmax.LogSoftmaxFwdOp
+::: tileops.reduction.LogSoftmaxFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.reduction.softmax.LogSumExpFwdOp
+::: tileops.reduction.LogSumExpFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -93,19 +93,19 @@ what runs when you call `op(...)`.
 
 ## Vector norms
 
-::: tileops.ops.reduction.vector_norm.L1NormFwdOp
+::: tileops.reduction.L1NormFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.reduction.vector_norm.L2NormFwdOp
+::: tileops.reduction.L2NormFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.reduction.vector_norm.InfNormFwdOp
+::: tileops.reduction.InfNormFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -113,19 +113,19 @@ what runs when you call `op(...)`.
 
 ## Cumulative
 
-::: tileops.ops.reduction.cumulative.CumulativeOp
+::: tileops.reduction.CumulativeOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.reduction.cumulative.CumsumFwdOp
+::: tileops.reduction.CumsumFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.reduction.cumulative.CumprodFwdOp
+::: tileops.reduction.CumprodFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -133,19 +133,19 @@ what runs when you call `op(...)`.
 
 ## Logical reductions
 
-::: tileops.ops.reduction.logical_reduce.AllFwdOp
+::: tileops.reduction.AllFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.reduction.logical_reduce.AnyFwdOp
+::: tileops.reduction.AnyFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.ops.reduction.logical_reduce.CountNonzeroFwdOp
+::: tileops.reduction.CountNonzeroFwdOp
     options:
       show_root_heading: true
       heading_level: 3
