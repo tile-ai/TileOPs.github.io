@@ -95,7 +95,7 @@ FAMILY_TITLE = {
     "ssm": "SSM", "scan": "Scan", "normalization": "Normalization",
     "moe": "MoE", "linear_algebra": "GEMM", "reduction": "Reduction",
     "elementwise": "Elementwise", "convolution": "Convolution", "pool": "Pooling",
-    "quantization": "Quantization", "positional": "Positional Encoding",
+    "quantization": "Quantization", "positional": "RoPE",
     "fft": "FFT", "mhc": "MHC", "topk": "Top-k", "other": "Other",
 }
 # Ops a family lists in a fixed order rather than by verdict, named as the page
@@ -108,12 +108,14 @@ FAMILY_OP_ORDER = {
                        "BmmFp8NKFwd", "BmmFp8KNFwd"],
 }
 # (slug, page title, families in display order). One page per family, ordered
-# from the simplest op to the most composed: pointwise, then reductions over an
-# axis, then the normalizations built on them, then the sliding-window ops, then
-# the matrix-multiply pages, then the sequence-mixing ops. `Other` is last and
-# holds every family too small to carry a page.
+# from the simplest op to the most composed: pointwise, then the positional
+# rotation applied to one tensor, then reductions over an axis, then the
+# normalizations built on them, then the sliding-window ops, then the
+# matrix-multiply pages, then the sequence-mixing ops. `Other` is last and holds
+# every family too small to carry a page.
 DATA_PAGES = [
     ("elementwise", "Elementwise", ["elementwise"]),
+    ("rope", "RoPE", ["positional"]),
     ("reduction", "Reduction", ["reduction"]),
     ("normalization", "Normalization", ["normalization"]),
     ("conv-pool", "Conv & Pool", ["convolution", "pool"]),
@@ -123,8 +125,7 @@ DATA_PAGES = [
     ("moe", "MoE", ["moe"]),
     ("linear-attention", "Linear Attention", ["linear_attention"]),
     ("ssm", "SSM", ["ssm"]),
-    ("other", "Other",
-     ["positional", "fft", "mhc", "topk", "scan", "other"]),
+    ("other", "Other", ["fft", "mhc", "topk", "scan", "other"]),
 ]
 _KEYWORD_FAMILY = [
     (("mamba", "ssd", "ssm"), "ssm"),
