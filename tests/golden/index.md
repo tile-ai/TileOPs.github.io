@@ -31,5 +31,6 @@ Not published by this run: `image`, `driver`, `cuda`, `torch`, `tilelang`.
 
 | Page | Ops | Workloads |
 | --- | --- | --- |
-| [Linear Attention & SSM](linear-attention.md) | 2 | 4 |
-| [Elementwise & Reduction](elementwise-reduction.md) | 3 | 4 |
+| [Elementwise](elementwise.md) | 3 | 4 |
+| [Linear Attention](linear-attention.md) | 1 | 2 |
+| [SSM](ssm.md) | 1 | 2 |

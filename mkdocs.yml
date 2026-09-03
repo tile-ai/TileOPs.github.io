@@ -179,6 +179,9 @@ plugins:
             Engram: Engram
             Top-k: Top-k
             Trace: Trace
+            Conv & Pool: Conv & Pool
+            SSM: SSM
+            Other: 其他
             Benchmarks: 性能数据
             Performance Guides: 性能指南
             Memory-Bound Kernels: 访存受限 kernel

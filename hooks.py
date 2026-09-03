@@ -77,8 +77,10 @@ def on_page_markdown(markdown, page, config, files):
 # out; a page it produced that is not listed here is appended, so a new data
 # page reaches the nav without editing this list.
 _BENCH_ORDER = [
-    "index.md", "reading.md", "attention.md", "linear-attention.md",
-    "gemm-moe.md", "elementwise-reduction.md", "norm-conv-pool.md",
+    "index.md", "reading.md",
+    "elementwise.md", "reduction.md", "normalization.md", "conv-pool.md",
+    "gemm.md", "quantization.md", "attention.md", "moe.md",
+    "linear-attention.md", "ssm.md", "other.md",
 ]
 
 

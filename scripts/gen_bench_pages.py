@@ -91,28 +91,45 @@ def tier_of(tag: str) -> str:
 
 # --- Op families and the pages they group into -----------------------------
 FAMILY_TITLE = {
-    "attention": "Attention", "linear_attention": "Linear Attention / SSM",
-    "scan": "Scan", "normalization": "Normalization", "moe": "Mixture of Experts",
-    "linear_algebra": "Linear Algebra (GEMM)", "reduction": "Reduction",
+    "attention": "Attention", "linear_attention": "Linear Attention",
+    "ssm": "SSM", "scan": "Scan", "normalization": "Normalization",
+    "moe": "MoE", "linear_algebra": "GEMM", "reduction": "Reduction",
     "elementwise": "Elementwise", "convolution": "Convolution", "pool": "Pooling",
     "quantization": "Quantization", "positional": "Positional Encoding",
     "fft": "FFT", "mhc": "MHC", "topk": "Top-k", "other": "Other",
 }
-# (slug, page title, families in display order)
+# Ops a family lists in a fixed order rather than by verdict, named as the page
+# shows them (no `Op` suffix). Use it where the ops read as a progression a
+# reader follows down the page — the plain kernel, then its quantized variants,
+# then the batched forms. An op the list does not name follows the ones it does,
+# ranked by verdict.
+FAMILY_OP_ORDER = {
+    "linear_algebra": ["GemmFwd", "GemmFp8Fwd", "GemmW4A16Fwd", "BmmFwd",
+                       "BmmFp8NKFwd", "BmmFp8KNFwd"],
+}
+# (slug, page title, families in display order). One page per family, ordered
+# from the simplest op to the most composed: pointwise, then reductions over an
+# axis, then the normalizations built on them, then the sliding-window ops, then
+# the matrix-multiply pages, then the sequence-mixing ops. `Other` is last and
+# holds every family too small to carry a page.
 DATA_PAGES = [
+    ("elementwise", "Elementwise", ["elementwise"]),
+    ("reduction", "Reduction", ["reduction"]),
+    ("normalization", "Normalization", ["normalization"]),
+    ("conv-pool", "Conv & Pool", ["convolution", "pool"]),
+    ("gemm", "GEMM", ["linear_algebra"]),
+    ("quantization", "Quantization", ["quantization"]),
     ("attention", "Attention", ["attention"]),
-    ("linear-attention", "Linear Attention & SSM", ["linear_attention", "scan"]),
-    ("gemm-moe", "GEMM, MoE & Quantization",
-     ["linear_algebra", "moe", "quantization"]),
-    ("elementwise-reduction", "Elementwise & Reduction",
-     ["elementwise", "reduction"]),
-    ("norm-conv-pool", "Norm, Conv, Pool & Other",
-     ["normalization", "convolution", "pool", "positional", "fft", "mhc",
-      "topk", "other"]),
+    ("moe", "MoE", ["moe"]),
+    ("linear-attention", "Linear Attention", ["linear_attention"]),
+    ("ssm", "SSM", ["ssm"]),
+    ("other", "Other",
+     ["positional", "fft", "mhc", "topk", "scan", "other"]),
 ]
 _KEYWORD_FAMILY = [
-    (("mamba", "deltanet", "gla", "linear_attn", "recurrence", "ssd", "ssm",
-      "engram"), "linear_attention"),
+    (("mamba", "ssd", "ssm"), "ssm"),
+    (("deltanet", "gla", "linear_attn", "recurrence", "engram"),
+     "linear_attention"),
     (("cumsum", "cumulative", "scan", "cumprod"), "scan"),
     (("layer_norm", "rms_norm", "rmsnorm", "batch_norm", "group_norm",
       "ada_layer", "norm"), "normalization"),
@@ -135,7 +152,7 @@ _MODULE_FAMILY = {"attention": "attention", "elementwise": "elementwise",
                   "reduction": "reduction", "norm": "normalization",
                   "moe": "moe", "gemm": "linear_algebra",
                   "linear_attention": "linear_attention",
-                  "mamba": "linear_attention"}
+                  "mamba": "ssm"}
 
 
 def family_of(op: str, op_module: str | None) -> str:
@@ -1061,14 +1078,22 @@ def data_page(title: str, fams: list[str], rows_by_fam: dict,
              '<span class="perf-par">plain</span> is level with it, '
              '<span class="perf-behind">red</span> is slower. Times are in ms. '
              "[How these numbers are taken](reading.md).", ""]
+    op_h = "##" if len(present) == 1 else "###"
     for fam in fams:
         rows = rows_by_fam.get(fam)
         if not rows:
             continue
-        # Within a band, the widest margin first.
-        rows = sorted(rows, key=lambda r: (rank.get(r[2]["status"], 9),
-                                           -(r[2]["speedup"] or 0), r[0]))
-        lines += [f"## {FAMILY_TITLE.get(fam, fam)}", ""]
+        # The family's own order first where it declares one; then, within a
+        # verdict band, the widest margin first.
+        fixed = FAMILY_OP_ORDER.get(fam, [])
+        pos = {name: i for i, name in enumerate(fixed)}
+        rows = sorted(rows, key=lambda r: (
+            pos.get(r[0].removesuffix("Op"), len(fixed)),
+            rank.get(r[2]["status"], 9), -(r[2]["speedup"] or 0), r[0]))
+        # A page holding one family would repeat its own H1 as the only
+        # section heading, so the ops sit directly under the H1 instead.
+        if len(present) > 1:
+            lines += [f"## {FAMILY_TITLE.get(fam, fam)}", ""]
         # One table per op rather than one per family: the op name would
         # otherwise repeat down the widest column of every row. The `datatable`
         # wrapper is a styling hook — see extra.css.
@@ -1081,7 +1106,7 @@ def data_page(title: str, fams: list[str], rows_by_fam: dict,
                              key=lambda z: z[0]["config"])
             coded = [(f"{WORKLOAD_CODE}{i}", w)
                      for i, (w, _) in enumerate(ordered, 1)]
-            lines += [f"### {_op_cell(op, module, ref)}{warn}",
+            lines += [f"{op_h} {_op_cell(op, module, ref)}{warn}",
                       "", *workload_key(coded),
                       # No `markdown="1"`, and no blank line until `</div>`: a
                       # blank line would end the raw-HTML block mid-table.
