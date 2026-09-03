@@ -89,7 +89,7 @@ The one op on this page with no PyTorch counterpart. It averages the sequence ax
 a `[batch, seq, heads, dim]` tensor in fixed-size chunks, and can follow ragged
 sequence boundaries rather than a uniform split.
 
-::: tileops.pool.MeanPoolingForwardOp
+::: tileops.pool.MeanPoolingFwdOp
     options:
       show_root_heading: true
       heading_level: 3

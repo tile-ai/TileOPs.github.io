@@ -7,7 +7,7 @@ what runs when you call `op(...)`.
 
 ## DeltaNet
 
-::: tileops.linear_attention.DeltaNetOp
+::: tileops.linear_attention.DeltaNetAutogradOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -33,7 +33,7 @@ what runs when you call `op(...)`.
 
 ## Gated DeltaNet
 
-::: tileops.linear_attention.GatedDeltaNetOp
+::: tileops.linear_attention.GatedDeltaNetAutogradOp
     options:
       show_root_heading: true
       heading_level: 3

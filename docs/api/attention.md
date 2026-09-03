@@ -7,19 +7,7 @@ what runs when you call `op(...)`.
 
 ## Multi-head attention
 
-::: tileops.attention.MultiHeadAttentionFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
 ::: tileops.attention.MultiHeadAttentionBwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-::: tileops.attention.MultiHeadAttentionDecodeWithKVCacheFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -32,12 +20,6 @@ what runs when you call `op(...)`.
       members: ["__init__", "forward"]
 
 ## Grouped-query attention
-
-::: tileops.attention.GroupedQueryAttentionFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
 
 ::: tileops.attention.GroupedQueryAttentionBwdOp
     options:
@@ -69,19 +51,7 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.attention.GroupedQueryAttentionDecodeWithKVCacheFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
 ::: tileops.attention.GroupedQueryAttentionDecodePagedWithKVCacheFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-::: tileops.attention.GroupedQueryAttentionSlidingWindowFwdOp
     options:
       show_root_heading: true
       heading_level: 3
