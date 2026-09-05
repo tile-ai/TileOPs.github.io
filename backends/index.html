@@ -1,0 +1,3608 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="High-performance LLM operator library built on TileLang">
+      
+      
+      
+        <link rel="canonical" href="https://tile-ai.github.io/TileOPs.github.io/backends/">
+      
+      
+        <link rel="prev" href="../torch-compile/">
+      
+      
+        <link rel="next" href="../api/">
+      
+      
+        
+          <link rel="alternate" href="./" hreflang="en">
+        
+          <link rel="alternate" href="../zh/backends/" hreflang="zh">
+        
+      
+      
+      <link rel="icon" href="../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Adding a Backend - TileOPs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Hanken+Grotesk:300,300i,400,400i,700,700i%7CSpace+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Hanken Grotesk";--md-code-font:"Space Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../assets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adding-a-hardware-backend" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="TileOPs" class="md-header__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            TileOPs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Adding a Backend
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Select language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="../zh/backends/" hreflang="zh" class="md-select__link">
+              简体中文
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="TileOPs" class="md-nav__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    TileOPs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../user-guide/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing a Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../new-op/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding an Op
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../timing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timing Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../torch-compile/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using torch.compile
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a Backend
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#four-things-to-write" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Four things to write
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-protocol-four-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The protocol: four functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The protocol: four functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-detect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. detect
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-build_kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. build_kernel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-register_detector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. register_detector
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-register_kernel_builder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. register_kernel_builder
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tensorspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TensorSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#from-op-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How one call reaches build_kernel
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runnable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Writing a backend that runs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-template-project-layout-tests-and-retargeting-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The template project: layout, tests, and retargeting it
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The template project: layout, tests, and retargeting it">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#repository-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Repository layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-the-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running the tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#turning-it-into-a-backend-for-real-hardware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Turning it into a backend for real hardware
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#writing-a-kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Writing a kernel
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Writing a kernel">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-signature-comes-from-the-manifest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The signature comes from the manifest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-constructor-takes-compile-time-parameters-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The constructor takes compile-time parameters only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#shapes-are-the-manifests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shapes are the manifest's
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-a-kernels-error-has-to-say" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a kernel's error has to say
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What each phase may do
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#three-states" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        After install: two states
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="After install: two states">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#no-hardware-queried-before-the-target-is-settled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No hardware queried before the target is settled
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-messages-and-what-to-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error messages and what to do
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-selection-has-two-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why selection has two layers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-op-layers-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The op layer's contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#memo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a kernel is rebuilt
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-caller-can-reach-for" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a caller can reach for
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-the-protocol-does-not-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the protocol does not support
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../api/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/topk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Top-k
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/linear-algebra/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pooling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/convolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Convolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/fft/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/mamba/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mamba
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/mhc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    mHC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/engram/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Engram
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../benchmarks/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Benchmarks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/reading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How these numbers are taken
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/conv-pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conv &amp; Pool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/gemm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/ssm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/other/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Other
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../performance-guides/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Guides
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Performance Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../performance-guides/trace-timeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timeline Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../performance-guides/memory-bound/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory-Bound Kernels
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Memory-Bound Kernels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../performance-guides/memory-bound/global-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Global Memory Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../performance-guides/memory-bound/shared-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared Memory Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../design/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Manifest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/ops-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Op Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/ops-design-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slot Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/roofline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roofline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/trust-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trust Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#four-things-to-write" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Four things to write
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-protocol-four-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The protocol: four functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The protocol: four functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-detect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. detect
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-build_kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. build_kernel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-register_detector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. register_detector
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-register_kernel_builder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. register_kernel_builder
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tensorspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TensorSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#from-op-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How one call reaches build_kernel
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runnable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Writing a backend that runs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-template-project-layout-tests-and-retargeting-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The template project: layout, tests, and retargeting it
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The template project: layout, tests, and retargeting it">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#repository-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Repository layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-the-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running the tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#turning-it-into-a-backend-for-real-hardware" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Turning it into a backend for real hardware
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#writing-a-kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Writing a kernel
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Writing a kernel">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-signature-comes-from-the-manifest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The signature comes from the manifest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-constructor-takes-compile-time-parameters-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The constructor takes compile-time parameters only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#shapes-are-the-manifests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shapes are the manifest's
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-a-kernels-error-has-to-say" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a kernel's error has to say
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What each phase may do
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#three-states" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        After install: two states
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="After install: two states">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#no-hardware-queried-before-the-target-is-settled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No hardware queried before the target is settled
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-messages-and-what-to-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error messages and what to do
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-selection-has-two-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why selection has two layers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-op-layers-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The op layer's contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#memo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a kernel is rebuilt
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-caller-can-reach-for" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a caller can reach for
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-the-protocol-does-not-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the protocol does not support
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="adding-a-hardware-backend">Adding a hardware backend<a class="headerlink" href="#adding-a-hardware-backend" title="Permanent link">&para;</a></h1>
+<p>TileLang is a multi-backend DSL: each kind of hardware has its own set of kernels,
+shipped as its own Python package. TileOPs therefore defines a protocol under which a
+package outside the repository takes over an op's kernel, replacing the implementation
+TileOPs ships — with no change to TileOPs itself.</p>
+<p>This page is how a new class of hardware gets brought in, so that the ops on those
+devices run your kernels.</p>
+<p><strong>A backend supplies one thing: something callable that computes this call.</strong>
+Everything else is the op layer's.</p>
+<p>The first half is the work, in the order it is done: the four things to write, the
+protocol's four functions, how one call reaches them, a backend that installs and runs as
+it stands, how to turn the template into a backend for real hardware, the four rules for
+writing a kernel, what each phase may do, and — after install — which state each op is in
+and what each error means.</p>
+<p>The second half is why the protocol looks like this: the two layers of selection, the op
+layer's contract, when a kernel is rebuilt, what a caller can reach for, and what the
+protocol deliberately leaves out.</p>
+<h2 id="four-things-to-write">Four things to write<a class="headerlink" href="#four-things-to-write" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>An entry point in <code>pyproject.toml</code> pointing at the backend module</td>
+</tr>
+<tr>
+<td>2</td>
+<td>A target name and a <code>detect</code>, declaring which class of devices these kernels are for</td>
+</tr>
+<tr>
+<td>3</td>
+<td>A <code>build_kernel</code> for the first op you take over, written to its manifest signature</td>
+</tr>
+<tr>
+<td>4</td>
+<td>The <code>register_detector</code> and <code>register_kernel_builder</code> calls, at module top level</td>
+</tr>
+</tbody>
+</table>
+<p>With those four written, <code>pip install</code> is all it takes. What follows: their signatures,
+how one call reaches them, and a <a href="#runnable">complete backend</a> written to these four steps,
+installable as it stands.</p>
+<p>After the first op comes a <code>build_kernel</code> per op. <strong>Every op the target model uses has to
+be covered</strong> — a missing one is an error, with no fall back to the implementation TileOPs
+ships, because those kernels cannot launch on this target's devices.</p>
+<h2 id="the-protocol-four-functions">The protocol: four functions<a class="headerlink" href="#the-protocol-four-functions" title="Permanent link">&para;</a></h2>
+<p><code>tileops.backend</code> defines the outward-facing interface and contains no
+implementation. The interface is expressed with Python structural typing
+(<code>typing.Protocol</code>): a backend subclasses nothing and implements no abstract method, it
+writes plain functions with matching signatures and registers them. The op layer checks a
+backend's return value structurally too: <code>callable()</code>.</p>
+<p>A backend writes two functions (<code>detect</code>, <code>build_kernel</code>) and calls two to register
+them (<code>register_detector</code>, <code>register_kernel_builder</code>), alongside the protocol's
+<code>TensorSpec</code> and one entry point in <code>pyproject.toml</code>:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Name</th>
+<th>Written by</th>
+<th>Called by, and when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>detect</code></td>
+<td>implemented by the backend</td>
+<td>asked of every target while the op layer picks one for a call</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>build_kernel</code></td>
+<td>implemented by the backend</td>
+<td>called by the op layer on a memo miss</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>register_detector</code></td>
+<td>the backend calls it</td>
+<td>once, when the backend module is imported</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>register_kernel_builder</code></td>
+<td>the backend calls it</td>
+<td>likewise, once per op it takes over</td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>TensorSpec</code></td>
+<td>defined by the protocol</td>
+<td>built by the op layer and passed into <code>build_kernel</code></td>
+</tr>
+<tr>
+<td>—</td>
+<td>the entry point</td>
+<td>declared by the backend in <code>pyproject.toml</code></td>
+<td>enumerated by TileOPs when the first op is constructed</td>
+</tr>
+</tbody>
+</table>
+<p>Their signatures follow in that order, and the protocol's <code>TensorSpec</code> after them.</p>
+<h3 id="1-detect">1. <code>detect</code><a class="headerlink" href="#1-detect" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">detect</span><span class="p">(</span><span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span> <span class="o">...</span>
+</span></code></pre></div>
+<p>Implemented by the backend. Answers whether such a device is served by this set of
+kernels: devices only, not dtypes or shapes; return <code>False</code> for someone else's device, and
+do not raise.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># claiming a whole device type</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">detect</span><span class="p">(</span><span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="k">return</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">"acme"</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># reading an environment variable or asking a vendor runtime also belongs here</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="k">def</span><span class="w"> </span><span class="nf">detect</span><span class="p">(</span><span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">!=</span> <span class="s2">"privateuseone"</span><span class="p">:</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>        <span class="k">return</span> <span class="kc">False</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="k">return</span> <span class="n">acme_runtime</span><span class="o">.</span><span class="n">is_present</span><span class="p">(</span><span class="n">device</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="2-build_kernel">2. <code>build_kernel</code><a class="headerlink" href="#2-build_kernel" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">build_kernel</span><span class="p">(</span><span class="o">*</span><span class="n">inputs</span><span class="p">:</span> <span class="s2">"TensorSpec | None"</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">KernelResult</span><span class="p">]:</span> <span class="o">...</span>
+</span></code></pre></div>
+<p>Implemented by the backend, one per <code>(op, target)</code>. Its signature is the op's manifest
+signature: <code>inputs</code> correspond one-to-one to <code>signature.inputs</code> in declaration order, and
+<code>params</code> are named after <code>signature.params</code>. An input declared optional that was not
+passed on this call arrives as <code>None</code>.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># GroupNormFwdOp's spec: weight and bias are optional, and arrive as None when absent</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">build_group_norm</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">bias</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">num_groups</span><span class="p">,</span> <span class="n">eps</span><span class="p">):</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="k">if</span> <span class="n">weight</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>                                   <span class="c1"># presence read off the slot</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>        <span class="k">return</span> <span class="n">AcmeGroupNorm</span><span class="p">(</span><span class="n">num_groups</span><span class="p">,</span> <span class="n">eps</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="k">return</span> <span class="n">AcmeGroupNormAffine</span><span class="p">(</span><span class="n">num_groups</span><span class="p">,</span> <span class="n">eps</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="3-register_detector">3. <code>register_detector</code><a class="headerlink" href="#3-register_detector" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">register_detector</span><span class="p">(</span><span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">detect</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">],</span> <span class="nb">bool</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span></code></pre></div>
+<p>Called by the backend, once per target, at module import time. Registers that target's
+device detection.</p>
+<h3 id="4-register_kernel_builder">4. <code>register_kernel_builder</code><a class="headerlink" href="#4-register_kernel_builder" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">register_kernel_builder</span><span class="p">(</span><span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">build_kernel</span><span class="p">:</span> <span class="n">BuildKernel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span></code></pre></div>
+<p>Called by the backend, once per op it takes over. Registers the kernel builder for
+<code>(op, target)</code>; registering the same pair twice is an error.</p>
+<h3 id="tensorspec"><code>TensorSpec</code><a class="headerlink" href="#tensorspec" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">TensorSpec</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="n">dtype</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">dtype</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</span></code></pre></div>
+<p>Defined by the protocol, built by the op layer and passed into <code>build_kernel</code>. What a
+tensor is, without the tensor.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># what a build_kernel argument looks like</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">TensorSpec</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">"acme:0"</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float16</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">4096</span><span class="p">,</span> <span class="mi">4096</span><span class="p">))</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># and the three things it can be read for</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">build_gemm</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">TensorSpec</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">TensorSpec</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">trans_a</span><span class="p">,</span> <span class="n">trans_b</span><span class="p">):</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="n">m</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span>                    <span class="c1"># shapes: compile-time constants, picking tiles</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">dtype</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">float16</span><span class="p">:</span>  <span class="c1"># dtype: raise here when it is unsupported</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"acme gemm needs fp16, got </span><span class="si">{</span><span class="n">a</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="o">...</span>
+</span></code></pre></div>
+<p>The return value has one structural requirement: <strong>it must be callable</strong>, invocable
+as <code>(*tensors)</code>, returning a tensor, a tuple of tensors, or <code>None</code> for a pure
+in-place write. What the op layer checks is <code>callable()</code>.</p>
+<p><strong>The protocol passes descriptions, not tensors.</strong> That removes the need for a rule
+the op layer could not enforce — "a builder must not read tensor contents or keep a
+reference to a tensor". Two things are what such a rule would guard against:</p>
+<ul>
+<li><strong>Reading data</strong> would make the built kernel depend on data, while the memo table
+  keys only on device and shape.</li>
+<li><strong>Keeping a reference</strong> would have a tensor live as long as the cached kernel does.</li>
+</ul>
+<p>A <code>TensorSpec</code> carries neither data nor tensor, so neither is expressible.</p>
+<p>When each of the four gets called during a real call is the next section.</p>
+<h2 id="from-op-layer">How one call reaches <code>build_kernel</code><a class="headerlink" href="#from-op-layer" title="Permanent link">&para;</a></h2>
+<p>One call, from the user's line to a backend's <code>build_kernel</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># ── the caller ───────────────────────────────────────────────────────</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">op</span> <span class="o">=</span> <span class="n">GemmFwdOp</span><span class="p">()</span>                 <span class="c1"># no target= in the constructor, so the inputs' device decides</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>                                 <span class="c1">#   target="acme" skips detection and uses it directly;</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>                                 <span class="c1">#   target=BUILTIN forces the kernels TileOPs ships</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">a</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">4096</span><span class="p">,</span> <span class="mi">4096</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float16</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"acme:0"</span><span class="p">)</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="n">b</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">4096</span><span class="p">,</span> <span class="mi">4096</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float16</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"acme:0"</span><span class="p">)</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="n">d</span> <span class="o">=</span> <span class="n">op</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>                     <span class="c1"># every input on one device: a.device == b.device</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="c1"># ── op layer: settle the target ──────────────────────────────────────</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="c1"># Every installed backend put a detect in the registry when it was imported, and the op</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="c1"># layer hands a.device to each of them in turn — "is this device yours?":</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="c1">#   acme's detect(device) → True       every other backend's → False</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="c1">#   exactly one True   → target = "acme", and this instance keeps it from here on</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="c1">#   none True          → the kernels TileOPs ships run</span>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="c1">#   two or more True   → AmbiguousTargetError, asking for an explicit target=</span>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="c1"># ── op layer: the one place GemmFwdOp.forward fetches a kernel ───────</span>
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_or_build_kernel</span><span class="p">(</span>
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>    <span class="s2">"gemm_kernel"</span><span class="p">,</span>               <span class="c1"># a name from kernel_map</span>
+</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>    <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">),</span>                      <span class="c1"># the tensors the kernel is about to get, in signature.inputs order</span>
+</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>    <span class="n">key</span><span class="o">=</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">dtype</span><span class="p">),</span>      <span class="c1"># in-tree only; not used on this call</span>
+</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>    <span class="n">build</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">GemmKernel</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">dtype</span><span class="p">),</span>   <span class="c1"># in-tree only; not used on this call</span>
+</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a><span class="p">)</span>
+</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>
+</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a><span class="c1"># ── op layer: look up the external memo table — device, then input signature ──</span>
+</span><span id="__span-8-26"><a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a><span class="c1">#   ("acme:0", (float16, (4096, 4096)), (float16, (4096, 4096)))</span>
+</span><span id="__span-8-27"><a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a><span class="c1">#   the device first, then one (dtype, shape) per input</span>
+</span><span id="__span-8-28"><a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a><span class="c1">#   first call on this instance, so the table is empty → a miss, and it builds</span>
+</span><span id="__span-8-29"><a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a><span class="c1">#   a later call at the same device, dtypes and shapes hits and jumps to the last step</span>
+</span><span id="__span-8-30"><a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>
+</span><span id="__span-8-31"><a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a><span class="c1"># ── backend: the op layer calls build_gemm, with TensorSpecs, not tensors ──</span>
+</span><span id="__span-8-32"><a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a><span class="c1">#   build_gemm(TensorSpec("acme:0", float16, (4096, 4096)),</span>
+</span><span id="__span-8-33"><a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a><span class="c1">#              TensorSpec("acme:0", float16, (4096, 4096)),</span>
+</span><span id="__span-8-34"><a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a><span class="c1">#              trans_a=False, trans_b=True)      # params by their manifest names</span>
+</span><span id="__span-8-35"><a id="__codelineno-8-35" name="__codelineno-8-35" href="#__codelineno-8-35"></a><span class="c1">#   → returns something callable</span>
+</span><span id="__span-8-36"><a id="__codelineno-8-36" name="__codelineno-8-36" href="#__codelineno-8-36"></a>
+</span><span id="__span-8-37"><a id="__codelineno-8-37" name="__codelineno-8-37" href="#__codelineno-8-37"></a><span class="c1"># ── op layer: store it, then launch ─────────────────────────────────</span>
+</span><span id="__span-8-38"><a id="__codelineno-8-38" name="__codelineno-8-38" href="#__codelineno-8-38"></a><span class="k">return</span> <span class="n">kernel</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>              <span class="c1"># d = a @ b.T, computed by acme's kernel</span>
+</span></code></pre></div>
+<p>A backend writes one step of that — <code>build_gemm</code> — and registers it:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">build_gemm</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">TensorSpec</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">TensorSpec</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">trans_a</span><span class="p">,</span> <span class="n">trans_b</span><span class="p">):</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="n">m</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">trans_a</span> <span class="k">else</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="k">if</span> <span class="n">m</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>                                  <span class="c1"># the name is not passed in; decide from the specs</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>        <span class="k">return</span> <span class="n">AcmeGemv</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">trans_a</span><span class="p">,</span> <span class="n">trans_b</span><span class="p">)</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="k">return</span> <span class="n">AcmeGemm</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">trans_a</span><span class="p">,</span> <span class="n">trans_b</span><span class="p">)</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="n">register_kernel_builder</span><span class="p">(</span><span class="n">op</span><span class="o">=</span><span class="s2">"GemmFwdOp"</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="s2">"acme"</span><span class="p">,</span> <span class="n">build_kernel</span><span class="o">=</span><span class="n">build_gemm</span><span class="p">)</span>
+</span></code></pre></div>
+<p>The op layer calls <code>build_gemm</code>; the backend never calls it itself. Importing the backend
+module only records it in the registry, and the call comes when an op call reaches
+<code>get_or_build_kernel</code> and misses the external memo table — once per device and input
+signature. Whatever it returns, the op layer stores and launches.</p>
+<p>Four things follow from that:</p>
+<ul>
+<li><strong><code>key</code> and <code>build</code> are the op author's, not a backend's.</strong> They serve the in-tree path
+  only: <code>key</code> decides what the in-tree kernel is looked up on, <code>build</code> how it is built.
+  Neither is used once a target serves the call.</li>
+<li><strong>Tensors arrive positionally, params by name.</strong> <code>build_kernel(*inputs, **params)</code>: the
+  positional arguments are <code>TensorSpec</code>s (<code>None</code> for an optional input the call omitted),
+  the keywords the manifest's <code>params</code> names with the values this call settled on.</li>
+<li><strong>One builder per <code>(op, target)</code>.</strong> Which case the op split into internally — GEMM's
+  <code>gemm_kernel</code> versus <code>gemv_kernel</code> — is not passed in; <code>build_kernel</code> decides from the
+  <code>TensorSpec</code>s which kernel to return.</li>
+<li><strong>No memoisation of its own is needed.</strong> For the same device and input signature the op
+  layer does not call again; for a finer split, or fewer rebuilds, add a cache inside
+  <code>build_kernel</code>. An op with no in-tree implementation may omit <code>build</code>, and then a call
+  with no target claiming the device raises <code>OpNotAvailableError</code>.</li>
+</ul>
+<h2 id="runnable">Writing a backend that runs<a class="headerlink" href="#runnable" title="Permanent link">&para;</a></h2>
+<p>With the four functions and one call's path in hand, the quickest start is to copy a
+backend that already works.
+<a href="https://github.com/lcy-seso/tileops-backend-example"><code>tileops-backend-example</code></a> is one,
+written to those four steps. It implements its kernels in pure
+PyTorch and claims CPU, so it installs, runs and tests anywhere; apart from the
+kernels touching no dedicated hardware, every other part — entry point,
+registration, the <code>build_kernel</code> signature, the memoisation rule, the error
+messages — is what a backend for dedicated hardware writes.</p>
+<p>What installing it changes:</p>
+<div class="language-console highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="gp">$ </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import torch; from tileops.norm import RMSNormFwdOp; \</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="s2">             RMSNormFwdOp(normalized_shape=(64,))(torch.randn(4,64,dtype=torch.float16), \</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="s2">                                                  torch.randn(64,dtype=torch.float16))"</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="go">ValueError: RMSNormKernel is a CUDA kernel; got x on cpu and weight on cpu.</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="gp">$ </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"...the same code..."</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="gp"># </span>returns<span class="w"> </span>normally,<span class="w"> </span>bit-identical<span class="w"> </span>to<span class="w"> </span>torch.nn.functional.rms_norm
+</span></code></pre></div>
+<p>Here is what it writes, step by step.</p>
+<p><strong>Step 1, three lines of <code>pyproject.toml</code>.</strong> The entry-point group is always
+<code>tileops.backends</code>, and the value is the backend's module:</p>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">[project.entry-points.</span><span class="s2">"tileops.backends"</span><span class="k">]</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="n">torch_cpu</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"tileops_cpu"</span>
+</span></code></pre></div>
+<p>After <code>pip install</code> nothing initialises anything: TileOPs enumerates this group while
+constructing its first op, imports the module named there, and the registration calls at
+module top level fill the registry. There is no base class to inherit and no interface to
+implement.</p>
+<p><strong>Step 2, a target name and a <code>detect</code>.</strong> This <code>detect</code> is a single line — it claims every
+CPU device:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tileops.backend</span><span class="w"> </span><span class="kn">import</span> <span class="n">TensorSpec</span><span class="p">,</span> <span class="n">register_detector</span><span class="p">,</span> <span class="n">register_kernel_builder</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="n">register_detector</span><span class="p">(</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    <span class="n">target</span><span class="o">=</span><span class="s2">"torch_cpu"</span><span class="p">,</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    <span class="n">detect</span><span class="o">=</span><span class="k">lambda</span> <span class="n">device</span><span class="p">:</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">"cpu"</span><span class="p">,</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="p">)</span>
+</span></code></pre></div>
+<p>The two names mean different things: <code>target="torch_cpu"</code> names this set of kernels and is
+the backend author's to choose, while <code>device.type == "cpu"</code> is the device type it claims,
+defined by torch.</p>
+<p><strong>Step 3, a <code>build_kernel</code> written to the manifest signature.</strong> <code>RMSNormFwdOp</code>'s spec
+declares two inputs, <code>x</code> and <code>weight</code>, and two params, <code>normalized_shape</code> and <code>eps</code>; the
+function's parameters follow that declaration:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.kernels</span><span class="w"> </span><span class="kn">import</span> <span class="n">CpuRMSNorm</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">build_rms_norm</span><span class="p">(</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="n">x</span><span class="p">:</span> <span class="n">TensorSpec</span><span class="p">,</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    <span class="n">weight</span><span class="p">:</span> <span class="n">TensorSpec</span><span class="p">,</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>    <span class="n">normalized_shape</span><span class="p">,</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>    <span class="n">eps</span><span class="p">,</span>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="p">):</span>
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>    <span class="k">return</span> <span class="n">CpuRMSNorm</span><span class="p">(</span><span class="n">normalized_shape</span><span class="p">,</span> <span class="n">eps</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+</span></code></pre></div>
+<p><strong>Step 4, the registrations at module top level.</strong> One per op taken over:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">register_kernel_builder</span><span class="p">(</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>    <span class="n">op</span><span class="o">=</span><span class="s2">"RMSNormFwdOp"</span><span class="p">,</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    <span class="n">target</span><span class="o">=</span><span class="s2">"torch_cpu"</span><span class="p">,</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    <span class="n">build_kernel</span><span class="o">=</span><span class="n">build_rms_norm</span><span class="p">,</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="the-template-project-layout-tests-and-retargeting-it">The template project: layout, tests, and retargeting it<a class="headerlink" href="#the-template-project-layout-tests-and-retargeting-it" title="Permanent link">&para;</a></h2>
+<h3 id="repository-layout">Repository layout<a class="headerlink" href="#repository-layout" title="Permanent link">&para;</a></h3>
+<p>Each file in the example covers one part of the work:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pyproject.toml</code></td>
+<td>the entry point declaration, which is the whole install mechanism</td>
+</tr>
+<tr>
+<td><code>src/tileops_cpu/__init__.py</code></td>
+<td>all registration code</td>
+</tr>
+<tr>
+<td><code>src/tileops_cpu/kernels.py</code></td>
+<td>the kernel implementation; a real backend compiles here</td>
+</tr>
+<tr>
+<td><code>src/tileops_cpu/pending.py</code></td>
+<td>a builder registered under <code>op="GemmOp"</code> — the manifest key is <code>GemmFwdOp</code>, and a name that does not match is never called</td>
+</tr>
+<tr>
+<td><code>tests/test_takeover.py</code></td>
+<td>numerics, validation, normalisation, outputs</td>
+</tr>
+<tr>
+<td><code>tests/test_discovery.py</code></td>
+<td>entry point and registration</td>
+</tr>
+<tr>
+<td><code>tests/test_errors.py</code></td>
+<td>the four error paths</td>
+</tr>
+<tr>
+<td><code>tests/test_memoization.py</code></td>
+<td>when <code>build_kernel</code> is called again</td>
+</tr>
+</tbody>
+</table>
+<p><code>CpuRMSNorm</code> does not receive the row count when it is constructed, which is
+"compile-time parameters only" in practice.</p>
+<h3 id="running-the-tests">Running the tests<a class="headerlink" href="#running-the-tests" title="Permanent link">&para;</a></h3>
+<p>The tests need an environment with <code>tileops</code> installed:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.<span class="w">          </span><span class="c1"># add --no-deps when tileops is already installed</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>-q<span class="w">       </span><span class="c1"># with a GPU: 22 passed; without: 20 passed, 2 skipped</span>
+</span></code></pre></div>
+<p>The same holds inside the TileOPs dev image, again without modifying TileOPs:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--gpus<span class="w"> </span>all<span class="w"> </span>-v<span class="w"> </span><span class="s2">"</span><span class="nv">$PWD</span><span class="s2">/.."</span>:/work<span class="w"> </span>-w<span class="w"> </span>/work<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span>ghcr.io/tile-ai/tileops-runner:cu132-torch2.13-tl-afcebed1-dev<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span>bash<span class="w"> </span>-lc<span class="w"> </span><span class="s1">'pip install -e /work/TileOPs --no-deps -q &amp;&amp;</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="s1">            pip install -e /work/tileops-backend-example --no-deps -q &amp;&amp;</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="s1">            cd /work/tileops-backend-example &amp;&amp; python -m pytest -q'</span>
+</span></code></pre></div>
+<p><code>tileops</code> is deliberately absent from the example's dependencies. The package
+extends an installation that already exists, and a version floor here would resolve
+a release predating <code>tileops.backend</code>; the resulting <code>ImportError</code> is collected into
+<code>load_failures()</code> and presents as "this backend is unusable" when the real cause is
+that TileOPs is too old.</p>
+<h3 id="turning-it-into-a-backend-for-real-hardware">Turning it into a backend for real hardware<a class="headerlink" href="#turning-it-into-a-backend-for-real-hardware" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Copy the repository, rename <code>tileops_cpu</code> to <code>tileops_&lt;hardware&gt;</code>, and the target name with it.</li>
+<li>Change <code>_detect</code> to claim the corresponding device type.</li>
+<li>Replace <code>kernels.py</code> with real kernels — compile on construction, launch on <code>__call__</code>.</li>
+<li>Pick the first op to take over and write its <code>build_kernel</code> against the op's manifest signature.</li>
+<li>The four files under <a href="https://github.com/lcy-seso/tileops-backend-example/tree/main/tests"><code>tests/</code></a> carry over largely as they are; substitute the op and target names.</li>
+<li>Add a <code>build_kernel</code> per op from there, until every op the target model uses is covered.</li>
+</ol>
+<h2 id="writing-a-kernel">Writing a kernel<a class="headerlink" href="#writing-a-kernel" title="Permanent link">&para;</a></h2>
+<h3 id="the-signature-comes-from-the-manifest">The signature comes from the manifest<a class="headerlink" href="#the-signature-comes-from-the-manifest" title="Permanent link">&para;</a></h3>
+<p><strong>Writing a kernel needs the manifest, not the TileOPs source.</strong> A builder's signature
+is the op's manifest signature — <code>RMSNormFwdOp</code> in
+<a href="https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/normalization.yaml"><code>src/tileops/manifest/normalization.yaml</code></a>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nt">signature</span><span class="p">:</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">inputs</span><span class="p">:</span><span class="w">                       </span><span class="c1"># declaration order is call order</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nt">x</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float16</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">bfloat16"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="nt">weight</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">  </span><span class="nt">params</span><span class="p">:</span><span class="w">                       </span><span class="c1"># passed as keyword arguments under these names</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">    </span><span class="nt">normalized_shape</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="s">"list[int]</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">tuple[int,</span><span class="nv"> </span><span class="s">...]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">    </span><span class="nt">eps</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="s">"float</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">None"</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">null</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<p>The corresponding builder signature:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">build_rms_norm</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">TensorSpec</span><span class="p">,</span> <span class="n">weight</span><span class="p">:</span> <span class="n">TensorSpec</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">normalized_shape</span><span class="p">,</span> <span class="n">eps</span><span class="p">):</span>
+</span></code></pre></div>
+<p>Two things to note about it.</p>
+<ul>
+<li><strong><code>eps</code> arrives as <code>1e-6</code>, not <code>None</code>.</strong> The manifest default is null, and the op layer
+  has already normalised it to a definite value. Every optional parameter behaves this
+  way.</li>
+<li><strong>The return value follows <code>signature.outputs</code></strong> — a tensor for a single output,
+  a tuple in declaration order for several, <code>None</code> for a pure in-place write.</li>
+</ul>
+<h3 id="the-constructor-takes-compile-time-parameters-only">The constructor takes compile-time parameters only<a class="headerlink" href="#the-constructor-takes-compile-time-parameters-only" title="Permanent link">&para;</a></h3>
+<p>Values compiled into generated code — tile sizes, dimensions treated as constants,
+dtypes — go in the constructor; the rest belongs to <code>__call__</code>.</p>
+<p>Decode makes this a hard requirement: <code>seq_len</code> grows step by step and batch changes with
+the running set, so putting them in the constructor means recompiling every step.</p>
+<h3 id="shapes-are-the-manifests">Shapes are the manifest's<a class="headerlink" href="#shapes-are-the-manifests" title="Permanent link">&para;</a></h3>
+<p>The op layer changes no shapes: a kernel receives what the manifest declares, and
+arranges whatever layout it needs inside its own call wrapper.</p>
+<p>Where the code and the manifest disagree, the manifest governs: output dtype, shape
+rules and parameter types are its, and a kernel does not rewrite them.</p>
+<h3 id="what-a-kernels-error-has-to-say">What a kernel's error has to say<a class="headerlink" href="#what-a-kernels-error-has-to-say" title="Permanent link">&para;</a></h3>
+<p>A kernel that cannot serve a call raises rather than degrading, and its error says two
+things:</p>
+<ul>
+<li><strong>Which item is unmet</strong> — dtype, shape, arch, no implementation available,
+  compilation failed.</li>
+<li><strong>The value it actually received.</strong></li>
+</ul>
+<p>"Unsupported" on its own is not a diagnosis.</p>
+<h2 id="phase-limits">What each phase may do<a class="headerlink" href="#phase-limits" title="Permanent link">&para;</a></h2>
+<p>The decode path is captured by a CUDA graph, so each phase is bounded separately:</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>May</th>
+<th>May not</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Memo lookup (its key and rebuild rules are <a href="#memo">below</a>)</td>
+<td>one dict lookup</td>
+<td>anything else</td>
+</tr>
+<tr>
+<td><code>detect</code></td>
+<td>one predicate</td>
+<td>any import, any lock</td>
+</tr>
+<tr>
+<td>Building a kernel</td>
+<td>select an implementation, compile, allocate, re-import, build handles</td>
+<td>tuning that depends on real tensors</td>
+</tr>
+<tr>
+<td>Calling a kernel</td>
+<td>launch a compiled kernel, allocate outputs through the torch allocator</td>
+<td>compile, lazy init, build handles, host-side synchronisation</td>
+</tr>
+</tbody>
+</table>
+<p><strong>A module-level import must not trigger compilation.</strong> TileOPs imports the backend
+module while constructing the first op; compilation belongs in <code>build_kernel</code>.</p>
+<p>A kernel call has two further stream rules:</p>
+<ul>
+<li><strong>Launch on the current stream</strong>, under CUDA <code>torch.cuda.current_stream(device)</code>;
+  never fall through to the default stream. Backends with their own launcher break
+  this most easily.</li>
+<li><strong>Internal allocations must outlive asynchronous execution.</strong> Where only a raw
+  pointer is passed to a launch, the object has to stay alive until that stream has
+  finished. The protocol provides no workspace; this safety is the backend's.</li>
+</ul>
+<p>The caller warms up before capture — at least one non-captured call at the same
+shape — because building a kernel may compile. During capture only one path is
+allowed: memo hit, then call.</p>
+<h2 id="three-states">After install: two states<a class="headerlink" href="#three-states" title="Permanent link">&para;</a></h2>
+<p>Once <code>detect</code> claims a class of devices, <strong>every</strong> op on those devices is served by
+that target, a missing one is an error, and there is no fall back to the
+implementation TileOPs ships.</p>
+<p>The reason for not falling back: selecting a target means this device belongs to other
+hardware, where the shipped kernels cannot launch at all. Falling back would trade a
+clear "this target does not implement this op" for an incomprehensible launch
+failure.</p>
+<p>So after install, each op is in one of two states:</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The target registered a <code>build_kernel</code> for the op</td>
+<td>it runs</td>
+</tr>
+<tr>
+<td>It did not</td>
+<td>an error naming the target and the op, with no fall back to the shipped implementation</td>
+</tr>
+</tbody>
+</table>
+<p>Covering every op the target model uses is therefore work on the backend's side. The op
+side is settled by design: an op hands over the tensors its kernel is about to get, which
+is what lets the external path compute a memo key (see <a href="#from-op-layer">how one call reaches
+<code>build_kernel</code></a>).</p>
+<h3 id="no-hardware-queried-before-the-target-is-settled">No hardware queried before the target is settled<a class="headerlink" href="#no-hardware-queried-before-the-target-is-settled" title="Permanent link">&para;</a></h3>
+<p>Until a target is settled, the op layer queries nothing bound to specific hardware — a
+CUDA SM version, say. Querying it would mean that on a machine without that driver the
+call fails before it reaches <code>build_kernel</code>, for a reason that has nothing to do with the
+backend.</p>
+<p>If such a failure does show up on your hardware, the traceback stops inside TileOPs rather
+than in the backend's <code>build_kernel</code>. That is a regression on the TileOPs side: file an
+issue with the traceback.</p>
+<p>The example marks two tests <code>requires_cuda_runtime</code>, and they skip on a machine with no
+GPU — what they check is this premise, not the backend.</p>
+<h2 id="error-messages-and-what-to-do">Error messages and what to do<a class="headerlink" href="#error-messages-and-what-to-do" title="Permanent link">&para;</a></h2>
+<p>All four are measured output, each with one cause and one way to handle it.</p>
+<p><strong>An op's kernel-fetch site handed over no tensors:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>OpNotAvailableError: target 'torch_cpu' serves GemmOp, but its 'gemm_kernel' call site
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>does not hand over the tensors a builder is described with; that op is not wired to
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>external targets yet
+</span></code></pre></div>
+<p>Every op in TileOPs hands its tensors over, so this error means a regression on the op
+side rather than a backend problem: file an issue naming the op.</p>
+<p><strong>No builder registered for the op:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>OpNotAvailableError: target 'torch_cpu' registers no kernel builder for SoftmaxFwdOp;
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>targets that do: []. There is no fall back to the in-tree implementation: those kernels
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>do not run on this target's devices.
+</span></code></pre></div>
+<p>Write and register a builder for that op.</p>
+<p><strong>An unregistered target was named:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>UnknownTargetError: no backend registered target 'nope'; known targets: ['torch_cpu']
+</span></code></pre></div>
+<p>The package did not install, or the target name is misspelled. Use
+<code>tileops.backend.registered_targets()</code> to see what actually registered.</p>
+<p><strong><code>target=BUILTIN</code> forces the implementation TileOPs ships:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>ValueError: RMSNormKernel is a CUDA kernel; got x on cpu and weight on cpu.
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>Another target's backend serves other devices.
+</span></code></pre></div>
+<p><code>BUILTIN</code> bypasses backends explicitly. The shipped implementation cannot run on
+CPU tensors, which is precisely the outcome the no-fall-back rule avoids.</p>
+<p><strong>When a backend package fails to import</strong>, TileOPs skips it, warns, and collects
+the reason into <code>load_failures()</code>. One broken plugin does not make TileOPs
+unimportable. If registration raises part way through, everything that backend
+registered in that pass is <strong>rolled back</strong> — no half-implemented target is left in
+the registry.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tileops.backend</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_failures</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">load_failures</span><span class="p">())</span>
+</span></code></pre></div>
+<h2 id="why-selection-has-two-layers">Why selection has two layers<a class="headerlink" href="#why-selection-has-two-layers" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Definition</th>
+<th>Where it sits in dispatch</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>target</strong></td>
+<td>The name of one set of kernels. A backend release brings a set of kernels and gives it a name, e.g. <code>"acme"</code></td>
+<td>The first layer: pick a target, and this call's kernel comes from its set</td>
+</tr>
+<tr>
+<td><strong><code>detect</code></strong></td>
+<td>A function a backend writes, one per target</td>
+<td>How the first layer picks: it receives a <code>torch.device</code> and answers whether such a device is what its kernels are for; <code>False</code> if not</td>
+</tr>
+<tr>
+<td><strong><code>build_kernel</code></strong></td>
+<td>A function a backend writes per op, one per <code>(op, target)</code></td>
+<td>The second layer: it receives a description of this call — each input's device, dtype and shape, plus the op's parameters — and picks, builds and returns a kernel from its own set</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Selection has two layers: TileOPs picks the target, the target picks the
+kernel.</strong> The second happens inside <code>build_kernel</code>, with no protocol involvement;
+there is no kernel-level concept, no capability negotiation and no candidate
+filtering.</p>
+<p><code>detect</code> answers only which devices belong to the backend, and that is as fine as
+it gets. <strong>Whether this call is supported — dtype, shape, parameter combination —
+is answered by <code>build_kernel</code></strong>, the only place that sees the full input
+description and the parameters; it raises there when it cannot serve the call.
+Leaving those judgements to <code>detect</code> is not possible: all it receives is a
+<code>torch.device</code>.</p>
+<p>TileOPs does not parse <code>torch.device</code> — it passes it through to <code>detect</code>. Device
+types and targets are not in one-to-one correspondence: one device type can carry
+several sets of kernels from different vendors; some hardware arrives through
+<code>privateuseone</code>, whose string carries no vendor information at all; and some
+backends have to read an environment variable or call a vendor runtime to decide.</p>
+<h2 id="the-op-layers-contract">The op layer's contract<a class="headerlink" href="#the-op-layers-contract" title="Permanent link">&para;</a></h2>
+<p>The seven below are the op layer's contract to every target: it implements them and a
+backend reuses them rather than writing its own. They are listed in the order a backend
+author meets them:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>The op layer supplies</th>
+<th>What it means for a backend</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>The public torch-side API and the meaning of each parameter</td>
+<td>How the op is called, the parameter names and their semantics are settled; a backend neither defines nor changes them</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Manifest validation</td>
+<td>A call whose dtype or shape does not conform is rejected at the op layer and never reaches the backend</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Parameter normalisation</td>
+<td>Parameters arrive as definite values. Where the manifest declares <code>eps</code> as float or None, what arrives is the number the op layer computed, not <code>None</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Input contiguity</td>
+<td>A backend only ever receives contiguous tensors</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Memoisation and reuse of kernels</td>
+<td>The builder is called once per specialization: a later call with the same device and input signature reuses the previous return value. A builder may therefore compile, and the op layer guarantees it is not called again</td>
+</tr>
+<tr>
+<td>6</td>
+<td>The <code>torch.compile</code> and CUDA-graph boundary</td>
+<td>The op layer wraps a call as an opaque operator and registers a fake alongside, so the compiler can infer the output's shape and dtype without executing. <strong>A backend's kernels do nothing for compilation</strong>; see <a href="../torch-compile/">Bringing an op into torch.compile</a></td>
+</tr>
+<tr>
+<td>7</td>
+<td>Roofline, profiling and numerical tests</td>
+<td>The op layer's existing tests run once with the backend's kernel and compare against the manifest's <code>ref_api</code>; performance reports are produced as usual</td>
+</tr>
+</tbody>
+</table>
+<p>None of the seven depends on hardware and every target gets them identically; a
+third-party backend neither bypasses one nor substitutes its own.</p>
+<p>The kernels TileOPs ships (<a href="https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels"><code>src/tileops/kernels/</code></a>) are the <strong>default
+implementation</strong>: they have no target name and are not in the registry.</p>
+<p><strong>The default state is no substitution.</strong> With no backend claiming a device, calls on
+it run the shipped implementation; only once a backend is installed and has claimed
+that device does the op's kernel become the backend's. The protocol has no notion of a
+"default target".</p>
+<h2 id="memo">When a kernel is rebuilt<a class="headerlink" href="#memo" title="Permanent link">&para;</a></h2>
+<p>TileOPs remembers a builder's return value by <strong>device plus input signature</strong>:</p>
+<blockquote>
+<p>the device this call's tensors are on, plus <code>(dtype, shape)</code> taken per input in
+<code>signature.inputs</code> order; an optional input not passed on this call is recorded
+as <code>None</code>.</p>
+</blockquote>
+<p>That is: <strong>two calls agreeing on device and input signature get the same kernel
+back</strong>, with no further call to <code>build_kernel</code>; a second card under the same target
+builds again, because an artefact compiled for one device need not launch on
+another. Params are not part of the key — they are fixed for an op instance.</p>
+<p>How the op layer looks that table up, and what it does on a miss, is in <a href="#from-op-layer">how one call
+reaches <code>build_kernel</code></a>.</p>
+<p>Two consequences:</p>
+<ul>
+<li><strong>The memo table is bounded and an entry can be evicted at any time.</strong> A backend
+  must not assume the callable it returned stays alive; whatever resources it
+  depends on, it holds references to itself.</li>
+<li><strong>A finer or a coarser grain is resolved on the backend side.</strong> Finer
+  distinctions happen inside the backend; to rebuild less often, add a cache inside
+  <code>build_kernel</code>.</li>
+</ul>
+<h2 id="what-a-caller-can-reach-for">What a caller can reach for<a class="headerlink" href="#what-a-caller-can-reach-for" title="Permanent link">&para;</a></h2>
+<p>These are for callers. A backend author does not need them, but they help while
+debugging:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tileops.backend</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>    <span class="n">BUILTIN</span><span class="p">,</span> <span class="n">registered_targets</span><span class="p">,</span> <span class="n">set_default_target</span><span class="p">,</span> <span class="n">default_target</span><span class="p">,</span> <span class="n">load_failures</span><span class="p">,</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="p">)</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="n">registered_targets</span><span class="p">()</span>                 <span class="c1"># ['torch_cpu']</span>
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="n">registered_targets</span><span class="p">(</span><span class="s2">"RMSNormFwdOp"</span><span class="p">)</span>   <span class="c1"># ['torch_cpu']</span>
+</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="n">set_default_target</span><span class="p">(</span><span class="s2">"torch_cpu"</span><span class="p">)</span>      <span class="c1"># process default, ahead of device detection</span>
+</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="n">set_default_target</span><span class="p">(</span><span class="n">BUILTIN</span><span class="p">)</span>          <span class="c1"># turn substitution off globally</span>
+</span></code></pre></div>
+<p>Target selection order: the <code>target=</code> constructor argument, then the process
+default, then device detection. <code>BUILTIN</code> forces the implementation TileOPs ships.
+A named target that is not registered, or does not implement the op, is an error;
+another target is not used instead.</p>
+<h2 id="what-the-protocol-does-not-support">What the protocol does not support<a class="headerlink" href="#what-the-protocol-does-not-support" title="Permanent link">&para;</a></h2>
+<p>These are outside the protocol, each for a reason:</p>
+<table>
+<thead>
+<tr>
+<th>Not supported</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Two backends on one target</td>
+<td>A target is one set of kernels from one provider. Registering the same <code>(op, target)</code> twice is an error, because it means two packages both claim to serve it</td>
+</tr>
+<tr>
+<td>Falling back across targets</td>
+<td>A named target without an implementation is an error; another target is not used instead</td>
+</tr>
+<tr>
+<td>Replacing a composite op wholesale</td>
+<td>A composite op's computation lives in the sub-ops it constructs; substitution belongs at that level</td>
+</tr>
+<tr>
+<td>A backend changing input shapes, or restoring outputs on the caller's behalf</td>
+<td>That is what the op layer provides to every target; changing it means changing it for all of them</td>
+</tr>
+<tr>
+<td>One call spanning several devices</td>
+<td>CPU scalars travel as params, not tensor inputs, so all inputs are on one device</td>
+</tr>
+<tr>
+<td>A caller-provided workspace or explicit stream</td>
+<td>What a backend needs is the current stream, and torch's stream is an implicit current value</td>
+</tr>
+<tr>
+<td>autograd integration</td>
+<td>This path serves inference; forward and backward are separate ops</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 tile-ai
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/tile-ai/TileOPs" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

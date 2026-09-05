@@ -1,0 +1,3463 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="High-performance LLM operator library built on TileLang">
+      
+      
+      
+        <link rel="canonical" href="https://tile-ai.github.io/TileOPs.github.io/benchmarks/reduction/">
+      
+      
+        <link rel="prev" href="../rope/">
+      
+      
+        <link rel="next" href="../normalization/">
+      
+      
+        
+          <link rel="alternate" href="./" hreflang="en">
+        
+          <link rel="alternate" href="../../zh/benchmarks/reduction/" hreflang="zh">
+        
+      
+      
+      <link rel="icon" href="../../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Reduction - TileOPs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Hanken+Grotesk:300,300i,400,400i,700,700i%7CSpace+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Hanken Grotesk";--md-code-font:"Space Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../assets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#reduction" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="TileOPs" class="md-header__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            TileOPs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Reduction
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Select language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="../../zh/benchmarks/reduction/" hreflang="zh" class="md-select__link">
+              简体中文
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="TileOPs" class="md-nav__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    TileOPs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../user-guide/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing a Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../new-op/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding an Op
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../timing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timing Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../torch-compile/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using torch.compile
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../api/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/topk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Top-k
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/linear-algebra/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pooling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/convolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Convolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/fft/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/mamba/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mamba
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/mhc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    mHC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/engram/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Engram
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Benchmarks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How these numbers are taken
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#argminfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ArgminFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cumprodfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CumprodFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#argmaxfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ArgmaxFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#varfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VarFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#varmeanfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VarMeanFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logsoftmaxfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LogSoftmaxFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logsumexpfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LogSumExpFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stdfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StdFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#allfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AllFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#aminfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AminFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#anyfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AnyFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#l1normfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L1NormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#countnonzerofwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CountNonzeroFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sumfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SumFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#meanfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MeanFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cumsumfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CumsumFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#l2normfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L2NormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProdFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#infnormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        InfNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#amaxfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AmaxFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#softmaxfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SoftmaxFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../conv-pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conv &amp; Pool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gemm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../other/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Other
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../performance-guides/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Guides
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Performance Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/trace-timeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timeline Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../performance-guides/memory-bound/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory-Bound Kernels
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Memory-Bound Kernels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/memory-bound/global-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Global Memory Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/memory-bound/shared-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared Memory Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../design/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Manifest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/ops-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Op Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/ops-design-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slot Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/roofline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roofline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/trust-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trust Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#argminfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ArgminFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cumprodfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CumprodFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#argmaxfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ArgmaxFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#varfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VarFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#varmeanfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VarMeanFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logsoftmaxfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LogSoftmaxFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logsumexpfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LogSumExpFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stdfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StdFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#allfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AllFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#aminfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AminFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#anyfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AnyFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#l1normfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L1NormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#countnonzerofwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CountNonzeroFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sumfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SumFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#meanfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MeanFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cumsumfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CumsumFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#l2normfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L2NormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProdFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#infnormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        InfNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#amaxfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AmaxFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#softmaxfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SoftmaxFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="reduction">Reduction<a class="headerlink" href="#reduction" title="Permanent link">&para;</a></h1>
+<p><strong>21 ops, 90 workloads.</strong></p>
+<p>One table per op, one row per workload. <code>Ratio</code> is the fastest other implementation's device time divided by ours, so <span class="perf-ahead">green</span> is faster than it, <span class="perf-par">plain</span> is level with it, <span class="perf-behind">red</span> is slower. Times are in ms. <a href="../reading/">How these numbers are taken</a>.</p>
+<h2 id="argminfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/argreduce.py">ArgminFwd</a><a class="headerlink" href="#argminfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">-1</span></span></span></p><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">hidden-state-argmin</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">hidden-state-argmin</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 102400]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">lm-head-argmin</code></li><li><b>W4</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 102400]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">lm-head-argmin</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-par">1.00×</span></td><td>0.00986</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00986<br><span class="alt-slow">0.0194</span><br><span class="alt-slow">0.0249</span></td><td>0.851</td><td>38%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-par">1.03×</span></td><td>0.00963</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00989<br><span class="alt-slow">0.0190</span><br><span class="alt-slow">0.0246</span></td><td>0.871</td><td>39%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-ahead">4.39×</span></td><td>0.00662</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0291<br><span class="alt-slow">0.0359</span><br><span class="alt-slow">0.1027</span></td><td>0.0618</td><td><span class="perf-unrated">3%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W4</b></td><td><span class="perf-ahead">7.15×</span></td><td>0.004</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0286<br><span class="alt-slow">0.0353</span><br><span class="alt-slow">0.1157</span></td><td>0.102</td><td><span class="perf-unrated">5%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="cumprodfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/cumulative.py">CumprodFwd</a><a class="headerlink" href="#cumprodfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">hidden-state-scan</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">hidden-state-scan</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [64, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">long-seq-scan</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-ahead">2.37×</span></td><td>0.0103</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.0244<br><span class="alt-slow">0.1461</span></td><td>0.817</td><td>73%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">2.26×</span></td><td>0.0107</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.0242<br><span class="alt-slow">0.1458</span></td><td>0.784</td><td>70%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-ahead">1.87×</span></td><td>0.00653</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.0122<br><span class="alt-slow">0.0677</span></td><td>0.321</td><td><span class="perf-unrated">29%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="argmaxfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/argreduce.py">ArgmaxFwd</a><a class="headerlink" href="#argmaxfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">0</span></span></span></span><code class="wl-id">3d-non-last-axis-argmax</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">-1</span></span></span></span><code class="wl-id">hidden-state-argmax</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">-1</span></span></span></span><code class="wl-id">hidden-state-argmax</code></li><li><b>W4</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 102400]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">-1</span></span></span></span><code class="wl-id">lm-head-argmax</code></li><li><b>W5</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 102400]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">-1</span></span></span></span><code class="wl-id">lm-head-argmax</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-par">0.98×</span></td><td>0.0039</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00381<br><span class="alt-slow">0.00394</span><br><span class="alt-slow">0.0111</span></td><td>0.537</td><td><span class="perf-unrated">48%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.21×</span></td><td>0.00963</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0116<br><span class="alt-slow">0.0194</span><br><span class="alt-slow">0.0248</span></td><td>0.871</td><td>39%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-ahead">1.33×</span></td><td>0.00918</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0122<br><span class="alt-slow">0.0190</span><br><span class="alt-slow">0.0246</span></td><td>0.913</td><td>41%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W4</b></td><td><span class="perf-ahead">7.21×</span></td><td>0.00394</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0284<br><span class="alt-slow">0.0291</span><br><span class="alt-slow">0.0360</span></td><td>0.104</td><td><span class="perf-unrated">5%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W5</b></td><td><span class="perf-ahead">7.39×</span></td><td>0.00387</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0286<br><span class="alt-slow">0.0300</span><br><span class="alt-slow">0.0352</span></td><td>0.106</td><td><span class="perf-unrated">5%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="varfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/reduce.py">VarFwd</a><a class="headerlink" href="#varfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">[0,2]</span></span></span></span><code class="wl-id">3d-multidim-reduce</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">hidden-state-var</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">hidden-state-var</code></li><li><b>W4</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [64, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">long-seq-var</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-ahead">1.19×</span></td><td>0.00512</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00608<br><span class="alt-slow">0.0141</span><br><span class="alt-slow">0.0269</span></td><td>2.05</td><td><span class="perf-unrated">18%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.85×</span></td><td>0.00835</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0154<br><span class="alt-slow">0.0188</span><br><span class="alt-slow">0.0680</span></td><td>5.02</td><td>45%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-ahead">1.80×</span></td><td>0.00832</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0150<br><span class="alt-slow">0.0183</span><br><span class="alt-slow">0.0676</span></td><td>5.04</td><td>45%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W4</b></td><td><span class="perf-ahead">1.19×</span></td><td>0.00515</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00614<br><span class="alt-slow">0.0111</span><br><span class="alt-slow">0.0249</span></td><td>2.04</td><td><span class="perf-unrated">18%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="varmeanfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/reduce.py">VarMeanFwd</a><a class="headerlink" href="#varmeanfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">[0,2]</span></span></span></span><code class="wl-id">3d-multidim-reduce</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">hidden-state-var-mean</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">hidden-state-var-mean</code></li><li><b>W4</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [64, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">long-seq-var-mean</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-ahead">1.49×</span></td><td>0.00512</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00765<br><span class="alt-slow">0.0141</span><br><span class="alt-slow">0.0451</span></td><td>2.05</td><td><span class="perf-unrated">18%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.84×</span></td><td>0.00842</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0155<br><span class="alt-slow">0.0219</span><br><span class="alt-slow">0.1171</span></td><td>4.98</td><td>44%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-ahead">1.80×</span></td><td>0.00842</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0151<br><span class="alt-slow">0.0210</span><br><span class="alt-slow">0.1164</span></td><td>4.98</td><td>44%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W4</b></td><td><span class="perf-ahead">1.48×</span></td><td>0.00515</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0076<br><span class="alt-slow">0.0112</span><br><span class="alt-slow">0.0406</span></td><td>2.04</td><td><span class="perf-unrated">18%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="logsoftmaxfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/softmax.py">LogSoftmaxFwd</a><a class="headerlink" href="#logsoftmaxfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 32, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">attn-weights-32k</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 32, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">attn-weights-4k</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 32, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">attn-weights-4k</code></li><li><b>W4</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 32, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f32</span></span></span><code class="wl-id">attn-weights-4k</code></li><li><b>W5</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 102400]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">lm-head-logits</code></li><li><b>W6</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 102400]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">lm-head-logits</code></li><li><b>W7</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 102400]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f32</span></span></span><code class="wl-id">lm-head-logits</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-ahead">1.08×</span></td><td>0.0567</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0615<br><span class="alt-slow">0.0713</span><br><span class="alt-slow">0.2503</span></td><td>2.96</td><td>53%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.74×</span></td><td>0.00886</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0154<br><span class="alt-slow">0.0172</span><br><span class="alt-slow">0.0205</span></td><td>2.37</td><td>42%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-ahead">1.66×</span></td><td>0.00899</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0149<br><span class="alt-slow">0.0172</span><br><span class="alt-slow">0.0199</span></td><td>2.33</td><td>41%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W4</b></td><td><span class="perf-ahead">1.38×</span></td><td>0.0115</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0158<br><span class="alt-slow">0.0185</span><br><span class="alt-slow">0.0205</span></td><td>1.83</td><td>65%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W5</b></td><td><span class="perf-ahead">1.92×</span></td><td>0.0047</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00903<br><span class="alt-slow">0.0228</span><br><span class="alt-slow">0.4212</span></td><td>0.435</td><td><span class="perf-unrated">8%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W6</b></td><td><span class="perf-ahead">2.08×</span></td><td>0.00464</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00966<br><span class="alt-slow">0.0221</span><br><span class="alt-slow">0.4203</span></td><td>0.441</td><td><span class="perf-unrated">8%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W7</b></td><td><span class="perf-ahead">1.93×</span></td><td>0.00512</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00986<br><span class="alt-slow">0.0351</span><br><span class="alt-slow">0.4037</span></td><td>0.4</td><td><span class="perf-unrated">14%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="logsumexpfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/softmax.py">LogSumExpFwd</a><a class="headerlink" href="#logsumexpfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">[0,2]</span></span></span></span><code class="wl-id">3d-multidim-reduce</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 32, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">attn-weights-32k</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 32, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">attn-weights-4k</code></li><li><b>W4</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 32, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">attn-weights-4k</code></li><li><b>W5</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 102400]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">lm-head-logits</code></li><li><b>W6</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 102400]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">lm-head-logits</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-ahead">1.56×</span></td><td>0.00637</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.00995<br><span class="alt-slow">0.0414</span></td><td>1.32</td><td><span class="perf-unrated">15%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.53×</span></td><td>0.0271</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.0414<br><span class="alt-slow">0.1981</span></td><td>4.95</td><td>55%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-ahead">1.35×</span></td><td>0.00746</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.0100<br><span class="alt-slow">0.0496</span></td><td>2.25</td><td><span class="perf-unrated">25%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W4</b></td><td><span class="perf-ahead">1.32×</span></td><td>0.00742</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.00978<br><span class="alt-slow">0.0488</span></td><td>2.26</td><td><span class="perf-unrated">25%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W5</b></td><td><span class="perf-ahead">1.28×</span></td><td>0.00826</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.0105<br><span class="alt-slow">0.0467</span></td><td>0.198</td><td><span class="perf-unrated">2%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W6</b></td><td><span class="perf-ahead">1.32×</span></td><td>0.00819</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.0108<br><span class="alt-slow">0.0462</span></td><td>0.2</td><td><span class="perf-unrated">2%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="stdfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/reduce.py">StdFwd</a><a class="headerlink" href="#stdfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">[0,2]</span></span></span></span><code class="wl-id">3d-multidim-reduce</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">hidden-state-std</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">hidden-state-std</code></li><li><b>W4</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [64, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">long-seq-std</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-ahead">1.17×</span></td><td>0.00518</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00606<br><span class="alt-slow">0.0143</span><br><span class="alt-slow">0.0269</span></td><td>2.02</td><td><span class="perf-unrated">18%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.30×</span></td><td>0.00851</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0111<br><span class="alt-slow">0.0193</span><br><span class="alt-slow">0.0681</span></td><td>4.93</td><td>44%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-ahead">1.25×</span></td><td>0.00848</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0106<br><span class="alt-slow">0.0188</span><br><span class="alt-slow">0.0677</span></td><td>4.95</td><td>44%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W4</b></td><td><span class="perf-ahead">1.20×</span></td><td>0.00518</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00621<br><span class="alt-slow">0.0132</span><br><span class="alt-slow">0.0249</span></td><td>2.02</td><td><span class="perf-unrated">18%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="allfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/logical_reduce.py">AllFwd</a><a class="headerlink" href="#allfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bool</span></span></p><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">[0,2]</span></span></span></span><code class="wl-id">3d-multidim-reduce</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 32768]</span></span><code class="wl-id">mask-validation-32k</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 4096]</span></span><code class="wl-id">mask-validation-4k</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-ahead">1.22×</span></td><td>0.00352</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00429<br><span class="alt-slow">0.0104</span><br><span class="alt-slow">0.0118</span></td><td>0.596</td><td><span class="perf-unrated">13%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.53×</span></td><td>0.00224</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00342<br><span class="alt-slow">0.00646</span><br><span class="alt-slow">0.0102</span></td><td>0.468</td><td><span class="perf-unrated">10%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-ahead">1.10×</span></td><td>0.00166</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00182<br><span class="alt-slow">0.00189</span><br><span class="alt-slow">0.0173</span></td><td>0.0788</td><td><span class="perf-unrated">2%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="aminfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/reduce.py">AminFwd</a><a class="headerlink" href="#aminfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">[0,2]</span></span></span></span><code class="wl-id">3d-multidim-reduce</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">hidden-state-reduce</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">hidden-state-reduce</code></li><li><b>W4</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [64, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">long-seq-reduce</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-ahead">1.08×</span></td><td>0.00454</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.0049<br><span class="alt-slow">0.0129</span></td><td>0.462</td><td><span class="perf-unrated">21%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.36×</span></td><td>0.00742</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.0101<br><span class="alt-slow">0.0193</span></td><td>1.13</td><td>50%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-ahead">1.36×</span></td><td>0.00742</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.0101<br><span class="alt-slow">0.0193</span></td><td>1.13</td><td>50%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W4</b></td><td><span class="perf-ahead">1.16×</span></td><td>0.0041</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.00474<br><span class="alt-slow">0.0113</span></td><td>0.512</td><td><span class="perf-unrated">23%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="anyfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/logical_reduce.py">AnyFwd</a><a class="headerlink" href="#anyfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bool</span></span></p><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">[0,2]</span></span></span></span><code class="wl-id">3d-multidim-reduce</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 32768]</span></span><code class="wl-id">mask-validation-32k</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 4096]</span></span><code class="wl-id">mask-validation-4k</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-ahead">1.07×</span></td><td>0.00349</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00374<br><span class="alt-slow">0.0117</span><br><span class="alt-slow">0.0188</span></td><td>0.601</td><td><span class="perf-unrated">13%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.51×</span></td><td>0.00218</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0033<br><span class="alt-slow">0.00646</span><br><span class="alt-slow">0.0105</span></td><td>0.482</td><td><span class="perf-unrated">11%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-par">1.04×</span></td><td>0.00166</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00173<br><span class="alt-slow">0.00189</span><br><span class="alt-slow">0.0177</span></td><td>0.0788</td><td><span class="perf-unrated">2%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="l1normfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/vector_norm.py">L1NormFwd</a><a class="headerlink" href="#l1normfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">[0,2]</span></span></span></span><code class="wl-id">3d-multidim-reduce</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">hidden-state-l1</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">hidden-state-l1</code></li><li><b>W4</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [64, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">long-seq-l1</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-par">1.04×</span></td><td>0.00448</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00464<br><span class="alt-slow">0.0193</span><br><span class="alt-slow">0.0246</span></td><td>0.936</td><td><span class="perf-unrated">21%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.14×</span></td><td>0.00736</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00842<br><span class="alt-slow">0.0154</span><br><span class="alt-slow">0.0498</span></td><td>2.28</td><td>51%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-ahead">1.13×</span></td><td>0.00736</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00835<br><span class="alt-slow">0.0150</span><br><span class="alt-slow">0.0494</span></td><td>2.28</td><td>51%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W4</b></td><td><span class="perf-ahead">1.20×</span></td><td>0.0039</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.0047<br><span class="alt-slow">0.0169</span><br><span class="alt-slow">0.0369</span></td><td>1.07</td><td><span class="perf-unrated">24%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="countnonzerofwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/logical_reduce.py">CountNonzeroFwd</a><a class="headerlink" href="#countnonzerofwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">[0,2]</span></span></span></span><code class="wl-id">3d-multidim-reduce</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">sparsity-hidden</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">sparsity-hidden</code></li><li><b>W4</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">sparsity-seq</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-ahead">1.22×</span></td><td>0.00384</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.0047<br><span class="alt-slow">0.0218</span></td><td>1.09</td><td><span class="perf-unrated">24%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.14×</span></td><td>0.00806</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.00919<br><span class="alt-slow">0.0641</span></td><td>2.08</td><td>46%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-ahead">1.14×</span></td><td>0.0081</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.00922<br><span class="alt-slow">0.0640</span></td><td>2.07</td><td>46%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W4</b></td><td><span class="perf-par">1.02×</span></td><td>0.00374</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.00381<br><span class="alt-slow">0.0152</span></td><td>0.56</td><td><span class="perf-unrated">12%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="sumfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/reduce.py">SumFwd</a><a class="headerlink" href="#sumfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">[0,2]</span></span></span></span><code class="wl-id">3d-multidim-reduce</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">hidden-state-reduce</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">0</span></span></span></span><code class="wl-id">hidden-state-reduce-dim0</code></li><li><b>W4</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">hidden-state-reduce</code></li><li><b>W5</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">-1</span></span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">keepdim</span>=<span class="wl-v">true</span></span></span></span><code class="wl-id">hidden-state-reduce-keepdim</code></li><li><b>W6</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [64, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">long-seq-reduce</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-par">1.02×</span></td><td>0.00455</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00464<br><span class="alt-slow">0.0135</span><br><span class="alt-slow">0.0193</span></td><td>0.461</td><td><span class="perf-unrated">20%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.13×</span></td><td>0.00742</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00842<br><span class="alt-slow">0.0088</span><br><span class="alt-slow">0.0498</span></td><td>1.13</td><td>50%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-ahead">1.20×</span></td><td>0.00925</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0111<br><span class="alt-slow">0.0137</span><br><span class="alt-slow">0.0447</span></td><td>0.907</td><td>40%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W4</b></td><td><span class="perf-ahead">1.12×</span></td><td>0.00742</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00835<br><span class="alt-slow">0.00877</span><br><span class="alt-slow">0.0494</span></td><td>1.13</td><td>50%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W5</b></td><td><span class="perf-ahead">1.13×</span></td><td>0.00742</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00842<br><span class="alt-slow">0.0088</span><br><span class="alt-slow">0.0499</span></td><td>1.13</td><td>50%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W6</b></td><td><span class="perf-par">1.01×</span></td><td>0.00378</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00381<br><span class="alt-slow">0.00467</span><br><span class="alt-slow">0.0169</span></td><td>0.555</td><td><span class="perf-unrated">25%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="meanfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/reduce.py">MeanFwd</a><a class="headerlink" href="#meanfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">[0,2]</span></span></span></span><code class="wl-id">3d-multidim-reduce</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">hidden-state-reduce</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">hidden-state-reduce</code></li><li><b>W4</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [64, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">long-seq-reduce</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-ahead">1.06×</span></td><td>0.00454</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0048<br><span class="alt-slow">0.0135</span><br><span class="alt-slow">0.0192</span></td><td>0.462</td><td><span class="perf-unrated">21%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.13×</span></td><td>0.00742</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00842<br><span class="alt-slow">0.00893</span><br><span class="alt-slow">0.0498</span></td><td>1.13</td><td>50%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-ahead">1.12×</span></td><td>0.00742</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00835<br><span class="alt-slow">0.0089</span><br><span class="alt-slow">0.0494</span></td><td>1.13</td><td>50%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W4</b></td><td><span class="perf-par">1.01×</span></td><td>0.00378</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00381<br><span class="alt-slow">0.00448</span><br><span class="alt-slow">0.0169</span></td><td>0.555</td><td><span class="perf-unrated">25%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="cumsumfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/cumulative.py">CumsumFwd</a><a class="headerlink" href="#cumsumfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">hidden-state-scan</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">hidden-state-scan</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [64, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">long-seq-scan</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-par">1.02×</span></td><td>0.0103</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0105<br><span class="alt-slow">0.0244</span><br><span class="alt-slow">0.1461</span></td><td>0.814</td><td>72%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-par">0.99×</span></td><td>0.0107</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0106<br><span class="alt-slow">0.0242</span><br><span class="alt-slow">0.1458</span></td><td>0.783</td><td>70%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-ahead">1.23×</span></td><td>0.00653</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.008<br><span class="alt-slow">0.0122</span><br><span class="alt-slow">0.0677</span></td><td>0.321</td><td><span class="perf-unrated">29%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="l2normfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/vector_norm.py">L2NormFwd</a><a class="headerlink" href="#l2normfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">[0,2]</span></span></span></span><code class="wl-id">3d-multidim-reduce</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">hidden-state-l2</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">hidden-state-l2</code></li><li><b>W4</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [64, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">long-seq-l2</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-par">0.99×</span></td><td>0.00458</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00454<br><span class="alt-slow">0.0135</span><br><span class="alt-slow">0.0193</span></td><td>0.917</td><td><span class="perf-unrated">20%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.06×</span></td><td>0.00742</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00787<br><span class="alt-slow">0.00877</span><br><span class="alt-slow">0.0499</span></td><td>2.26</td><td>50%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-ahead">1.06×</span></td><td>0.00742</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00787<br><span class="alt-slow">0.00867</span><br><span class="alt-slow">0.0495</span></td><td>2.26</td><td>50%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W4</b></td><td><span class="perf-ahead">1.14×</span></td><td>0.00397</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00451<br><span class="alt-slow">0.0135</span><br><span class="alt-slow">0.0169</span></td><td>1.06</td><td><span class="perf-unrated">23%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="prodfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/reduce.py">ProdFwd</a><a class="headerlink" href="#prodfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">hidden-state-reduce</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">hidden-state-reduce</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [64, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">long-seq-reduce</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-ahead">1.06×</span></td><td>0.00739</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00781<br><span class="alt-slow">0.00835</span><br><span class="alt-slow">0.0497</span></td><td>1.13</td><td>50%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.06×</span></td><td>0.00739</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00784<br><span class="alt-slow">0.00829</span><br><span class="alt-slow">0.0493</span></td><td>1.13</td><td>50%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-par">1.02×</span></td><td>0.00435</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00445<br><span class="alt-slow">0.0136</span><br><span class="alt-slow">0.0167</span></td><td>0.482</td><td><span class="perf-unrated">21%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="infnormfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/vector_norm.py">InfNormFwd</a><a class="headerlink" href="#infnormfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">[0,2]</span></span></span></span><code class="wl-id">3d-multidim-reduce</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">hidden-state-inf</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">hidden-state-inf</code></li><li><b>W4</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [64, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">long-seq-inf</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-ahead">1.17×</span></td><td>0.00445</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00522<br><span class="alt-slow">0.0127</span><br><span class="alt-slow">0.0193</span></td><td>0.943</td><td><span class="perf-unrated">21%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.07×</span></td><td>0.00736</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00787<br><span class="alt-slow">0.0111</span><br><span class="alt-slow">0.0502</span></td><td>2.28</td><td>51%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-par">1.04×</span></td><td>0.00736</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00768<br><span class="alt-slow">0.0106</span><br><span class="alt-slow">0.0498</span></td><td>2.28</td><td>51%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W4</b></td><td><span class="perf-ahead">1.23×</span></td><td>0.004</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00493<br><span class="alt-slow">0.0138</span><br><span class="alt-slow">0.0173</span></td><td>1.05</td><td><span class="perf-unrated">23%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="amaxfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/reduce.py">AmaxFwd</a><a class="headerlink" href="#amaxfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">dim</span>=<span class="wl-v">[0,2]</span></span></span></span><code class="wl-id">3d-multidim-reduce</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">hidden-state-reduce</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">hidden-state-reduce</code></li><li><b>W4</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [64, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">long-seq-reduce</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-ahead">1.15×</span></td><td>0.00451</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00518<br><span class="alt-slow">0.0124</span><br><span class="alt-slow">0.0129</span></td><td>0.465</td><td><span class="perf-unrated">21%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-ahead">1.05×</span></td><td>0.00743</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00781<br><span class="alt-slow">0.0101</span><br><span class="alt-slow">0.0193</span></td><td>1.13</td><td>50%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-par">1.03×</span></td><td>0.00742</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00768<br><span class="alt-slow">0.0101</span><br><span class="alt-slow">0.0192</span></td><td>1.13</td><td>50%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W4</b></td><td><span class="perf-ahead">1.21×</span></td><td>0.0041</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00494<br><span class="alt-slow">0.0113</span><br><span class="alt-slow">0.0136</span></td><td>0.512</td><td><span class="perf-unrated">23%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="softmaxfwd"><a href="https://github.com/tile-ai/TileOPs/blob/7cf0e57e1e4e7a5130f652b3d0ac23790ce0d4a1/src/tileops/ops/reduction/softmax.py">SoftmaxFwd</a><a class="headerlink" href="#softmaxfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><ul class="wl-rows"><li><b>W1</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 32, 32768]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">attn-weights-32k</code></li><li><b>W2</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 32, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">attn-weights-4k</code></li><li><b>W3</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 32, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">attn-weights-4k</code></li><li><b>W4</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 32, 4096]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f32</span></span></span><code class="wl-id">attn-weights-4k</code></li><li><b>W5</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 102400]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span><code class="wl-id">lm-head-logits</code></li><li><b>W6</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 102400]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span><code class="wl-id">lm-head-logits</code></li><li><b>W7</b><span class="wl-delta"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 102400]</span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f32</span></span></span><code class="wl-id">lm-head-logits</code></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2" class="colsep">Workload</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="colsep"><b>W1</b></td><td><span class="perf-par">1.04×</span></td><td>0.0617</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.0643<br><span class="alt-slow">0.0835</span><br><span class="alt-slow">0.0942</span></td><td>2.72</td><td>48%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W2</b></td><td><span class="perf-par">1.03×</span></td><td>0.00838</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00867<br><span class="alt-slow">0.0167</span><br><span class="alt-slow">0.0196</span></td><td>2.5</td><td>44%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W3</b></td><td><span class="perf-par">1.02×</span></td><td>0.00845</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00861<br><span class="alt-slow">0.0161</span><br><span class="alt-slow">0.0198</span></td><td>2.48</td><td>44%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W4</b></td><td><span class="perf-par">1.01×</span></td><td>0.0110</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0111<br><span class="alt-slow">0.0185</span><br><span class="alt-slow">0.0202</span></td><td>1.91</td><td>68%</td><td>mem</td></tr>
+<tr><td class="colsep"><b>W5</b></td><td><span class="perf-ahead">1.94×</span></td><td>0.0047</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0091<br><span class="alt-slow">0.0297</span><br><span class="alt-slow">0.0338</span></td><td>0.435</td><td><span class="perf-unrated">8%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W6</b></td><td><span class="perf-ahead">2.08×</span></td><td>0.00464</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00963<br><span class="alt-slow">0.0281</span><br><span class="alt-slow">0.0330</span></td><td>0.441</td><td><span class="perf-unrated">8%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep"><b>W7</b></td><td><span class="perf-ahead">1.94×</span></td><td>0.00509</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00986<br><span class="alt-slow">0.0312</span><br><span class="alt-slow">0.0395</span></td><td>0.402</td><td><span class="perf-unrated">14%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 tile-ai
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/tile-ai/TileOPs" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

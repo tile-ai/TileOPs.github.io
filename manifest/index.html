@@ -1,0 +1,3451 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="High-performance LLM operator library built on TileLang">
+      
+      
+      
+        <link rel="canonical" href="https://tile-ai.github.io/TileOPs.github.io/manifest/">
+      
+      
+        <link rel="prev" href="../user-guide/">
+      
+      
+        <link rel="next" href="../new-op/">
+      
+      
+        
+          <link rel="alternate" href="./" hreflang="en">
+        
+          <link rel="alternate" href="../zh/manifest/" hreflang="zh">
+        
+      
+      
+      <link rel="icon" href="../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Writing a Spec - TileOPs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Hanken+Grotesk:300,300i,400,400i,700,700i%7CSpace+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Hanken Grotesk";--md-code-font:"Space Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../assets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#reading-and-writing-an-ops-spec" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="TileOPs" class="md-header__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            TileOPs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Writing a Spec
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Select language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="../zh/manifest/" hreflang="zh" class="md-select__link">
+              简体中文
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="TileOPs" class="md-nav__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../assets/logo.png" alt="logo">
+
+    </a>
+    TileOPs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../user-guide/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing a Spec
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing a Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#codegen-and-ci" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codegen and CI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-spec-contains" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a spec contains
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-a-spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading a spec
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#writing-a-spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Writing a spec
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#static_dims" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        static_dims
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional inputs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#case-studies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Case studies
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Case studies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-fixed-rank-and-shared-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Fixed rank and shared names
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-arbitrary-rank" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Arbitrary rank
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-a-param-decides-the-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. A param decides the shape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-optional-inputs-as-a-switch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Optional inputs as a switch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-an-input-the-op-writes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. An input the op writes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-a-promoted-output-dtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. A promoted output dtype
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rules-at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rules at a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#spec-validator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The spec validator
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The spec validator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#per-field" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How each field fails
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-five-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What each level checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#not-checked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the validator does not do
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../new-op/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding an Op
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../timing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timing Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../torch-compile/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using torch.compile
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../api/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/topk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Top-k
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/linear-algebra/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pooling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/convolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Convolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/fft/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/mamba/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mamba
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/mhc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    mHC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/engram/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Engram
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../benchmarks/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Benchmarks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/reading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How these numbers are taken
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/conv-pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conv &amp; Pool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/gemm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/ssm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/other/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Other
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../performance-guides/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Guides
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Performance Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../performance-guides/trace-timeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timeline Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../performance-guides/memory-bound/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory-Bound Kernels
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Memory-Bound Kernels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../performance-guides/memory-bound/global-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Global Memory Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../performance-guides/memory-bound/shared-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared Memory Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../design/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Manifest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/ops-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Op Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/ops-design-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slot Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/roofline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roofline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/trust-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trust Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#codegen-and-ci" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codegen and CI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-spec-contains" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a spec contains
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-a-spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading a spec
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#writing-a-spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Writing a spec
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#static_dims" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        static_dims
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional inputs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#case-studies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Case studies
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Case studies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-fixed-rank-and-shared-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Fixed rank and shared names
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-arbitrary-rank" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Arbitrary rank
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-a-param-decides-the-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. A param decides the shape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-optional-inputs-as-a-switch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Optional inputs as a switch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-an-input-the-op-writes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. An input the op writes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-a-promoted-output-dtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. A promoted output dtype
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rules-at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rules at a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#spec-validator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The spec validator
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The spec validator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#per-field" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How each field fails
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-five-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What each level checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#not-checked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the validator does not do
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="reading-and-writing-an-ops-spec">Reading and writing an op's spec<a class="headerlink" href="#reading-and-writing-an-ops-spec" title="Permanent link">&para;</a></h1>
+<p>A conventional operator library is organised around its implementations: kernels are
+written and tuned one at a time, and what shapes and dtypes each supports, and how fast it
+runs, gets described afterwards.</p>
+<p>TileOPs is organised the other way round: an op's specification is declared first, and
+the implementation is derived from it. That
+specification is the op's <strong>spec</strong>, a YAML declaration under
+<a href="https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest"><code>src/tileops/manifest/</code></a>; those files together are the manifest.</p>
+<p><strong>A spec makes the op an input to the whole system.</strong> Every stage reads the same
+declaration rather than reading the implementation:</p>
+<table>
+<thead>
+<tr>
+<th>Consumer</th>
+<th>Reads from the spec</th>
+<th>Produces</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Codegen — the agent writing the op and kernel</td>
+<td><code>signature</code>, <code>shape_rules</code></td>
+<td>the op layer's parameter validation, shape inference, and the kernel's call signature</td>
+</tr>
+<tr>
+<td><a href="https://github.com/tile-ai/TileOPs/tree/main/tests">pytest</a></td>
+<td><code>ref_api</code>, the dtypes in <code>workloads</code></td>
+<td>a numerical comparison against the reference on every workload</td>
+</tr>
+<tr>
+<td><a href="https://github.com/tile-ai/TileOPs/tree/main/benchmarks">The nightly benchmark</a></td>
+<td><code>workloads</code></td>
+<td>the device time on those shapes</td>
+</tr>
+<tr>
+<td><a href="https://github.com/tile-ai/TileOPs/tree/main/src/tileops/perf">Roofline</a></td>
+<td>the variables and formulas in <code>roofline</code></td>
+<td>the FLOPs and bytes one call moves — the denominator of efficiency</td>
+</tr>
+<tr>
+<td>CI's <code>compile-contract-gate</code></td>
+<td><code>torch_compile_fullgraph</code></td>
+<td>the test that requires <code>fullgraph=True</code> to compile</td>
+</tr>
+<tr>
+<td>This site</td>
+<td>every field</td>
+<td>the support matrix, the op list, the API reference</td>
+</tr>
+<tr>
+<td>CI's <a href="https://github.com/tile-ai/TileOPs/blob/main/scripts/validate_manifest.py">spec validator</a></td>
+<td>every field</td>
+<td>five levels of checking that declaration and implementation agree — see <a href="#writing-a-spec">Writing a spec</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Every row presupposes a spec</strong>: without one there is no generated validation, no
+numerical comparison, no performance data, and nothing in CI holding a regression back.
+<strong class="keystone">Writing a spec is not documenting the op; it is connecting the op to that flow.</strong></p>
+<p>The page runs: what a spec contains, how to read one, how to write one, <code>static_dims</code>
+(the dimensions committed at construction), and optional inputs (where writing a spec goes
+wrong most often). Then six real specs as case studies, the rules at a glance to check a
+spec against before submitting it, and what the validator does and does not check.</p>
+<h2 id="codegen-and-ci">Codegen and CI<a class="headerlink" href="#codegen-and-ci" title="Permanent link">&para;</a></h2>
+<p>A spec puts the op inside CI's reach. The ops, tests and benchmarks TileOPs ships are
+generated from their specs, three places each reading their own part:</p>
+<ul>
+<li><strong>The op layer's</strong> parameter validation and shape inference follow <code>signature</code>.</li>
+<li><strong>A test</strong> takes its comparison target and dtypes from <code>ref_api</code> and <code>workloads</code>.</li>
+<li><strong>A benchmark</strong> reads its shapes through <code>load_workloads</code>.</li>
+</ul>
+<p>The spec validator then checks that generated code against the spec, level by level, and
+a declaration the implementation does not match is an error; which field surfaces how is in
+<a href="#spec-validator">the spec validator</a>.</p>
+<p><strong>An op with no spec is bound by none of these checks</strong>, so a new op starts with its
+spec: once that lands, CI holds every later change against it.</p>
+<h2 id="what-a-spec-contains">What a spec contains<a class="headerlink" href="#what-a-spec-contains" title="Permanent link">&para;</a></h2>
+<p>One YAML file per family — a large family may shard — with <code>op name → spec</code> at the top
+level. The files merge at load time, and a duplicate op name is an error.</p>
+<p>The key is the op's Python class name: <code>{Name}{Direction}Op</code>, where the direction
+is <code>Fwd</code> or <code>Bwd</code> and is required once both directions exist in the manifest. The
+spec validator requires <code>cls.__name__</code> to equal the key character for character; it
+resolves nothing by heuristic.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>family</code></td>
+<td>yes</td>
+<td>the family, which decides the file the spec lives in</td>
+</tr>
+<tr>
+<td><code>ref_api</code></td>
+<td>yes</td>
+<td>the fully qualified reference API, e.g. <code>torch.nn.functional.rms_norm</code>, or <code>"none"</code></td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>yes</td>
+<td><code>spec-only</code> or <code>implemented</code>, which decides how far validation runs</td>
+</tr>
+<tr>
+<td><code>torch_compile_fullgraph</code></td>
+<td>no</td>
+<td>literal <code>true</code> only; omit for no promise — <code>false</code> is invalid</td>
+</tr>
+<tr>
+<td><code>signature</code></td>
+<td>yes</td>
+<td>the interface itself, below</td>
+</tr>
+<tr>
+<td><code>workloads</code></td>
+<td>yes</td>
+<td>the shapes and dtypes the benchmark uses</td>
+</tr>
+<tr>
+<td><code>roofline</code></td>
+<td>yes</td>
+<td>the performance model</td>
+</tr>
+<tr>
+<td><code>source</code></td>
+<td>yes</td>
+<td>paths to the kernel, op, test and benchmark, and the kernel-name map</td>
+</tr>
+</tbody>
+</table>
+<p><code>signature</code> has six sub-fields:</p>
+<table>
+<thead>
+<tr>
+<th>Sub-field</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>inputs</code></td>
+<td>tensor inputs, <code>name → {dtype, shape?, constraints?, optional?, mutated?, layout?}</code></td>
+</tr>
+<tr>
+<td><code>outputs</code></td>
+<td>tensor outputs, same fields, but an output's shape must be fully specified</td>
+</tr>
+<tr>
+<td><code>params</code></td>
+<td>non-tensor parameters, <code>name → {type, default?, kw_only?}</code></td>
+</tr>
+<tr>
+<td><code>shape_rules</code></td>
+<td>shape relationships, as strings holding Python expressions</td>
+</tr>
+<tr>
+<td><code>dtype_combos</code></td>
+<td>cross-tensor dtype combinations; declared only where the supported set is a strict subset of the product</td>
+</tr>
+<tr>
+<td><code>static_dims</code></td>
+<td>dimensions the user commits to when constructing the op; arbitrary-rank ops only</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key order in <code>inputs</code>, <code>outputs</code> and <code>params</code> is signature position</strong>, so
+reordering is a breaking change and readers need an order-preserving parser.</p>
+<h2 id="reading-a-spec">Reading a spec<a class="headerlink" href="#reading-a-spec" title="Permanent link">&para;</a></h2>
+<p>Four steps, each answering one question.</p>
+<ol>
+<li><strong><code>inputs</code> and <code>outputs</code></strong> — which tensors a call passes, what dtypes each
+   accepts, and what comes back.</li>
+<li><strong><code>params</code></strong> — the non-tensor parameters. Whether one belongs to construction
+   or to the call follows the reference API; the manifest does not encode the
+   distinction. A param with a <code>default</code> must carry the same default in the op.</li>
+<li><strong><code>shape_rules</code></strong> — everything <code>shape</code> cannot say: divisibility, the range a
+   <code>dim</code> may take, how the output shape is derived.</li>
+<li><strong><code>workloads</code></strong> — the shapes and dtypes this op is measured on. Every row on a
+   Benchmarks page comes from here.</li>
+</ol>
+<p>Four ways a dtype is written:</p>
+<ul>
+<li><code>float16 | bfloat16</code> — one of these.</li>
+<li><code>same_as(x)</code> — the same dtype as <code>x</code> at runtime. Dtype only, never shape, and it adds
+  no axis to the combination count.</li>
+<li><code>promote_int_to_float(x)</code> — <code>float32</code> when <code>x</code> is integral, otherwise <code>same_as(x)</code>.
+  Allowed in <code>outputs</code> only.</li>
+<li><code>dtype_combos</code> — the supported cross-tensor combinations, listed one by one. Absent
+  means every combination of the declared unions works.</li>
+</ul>
+<p>For shapes, look first for <code>shape</code>:</p>
+<ul>
+<li><strong>With <code>shape</code></strong> — fixed rank, dimensions named: <code>"[B, M, K]"</code>. <strong>A shared name means
+  equality</strong>: <code>K</code> in two tensors requires those axes to match.</li>
+<li><strong>Without <code>shape</code></strong> — arbitrary rank, with every constraint in <code>params</code> and
+  <code>shape_rules</code>.</li>
+</ul>
+<p>Reading specs programmatically:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tileops.manifest</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_manifest</span><span class="p">,</span> <span class="n">load_workloads</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">ops</span> <span class="o">=</span> <span class="n">load_manifest</span><span class="p">()</span>                      <span class="c1"># every spec, merged</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">spec</span> <span class="o">=</span> <span class="n">ops</span><span class="p">[</span><span class="s2">"RMSNormFwdOp"</span><span class="p">]</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">spec</span><span class="p">[</span><span class="s2">"signature"</span><span class="p">][</span><span class="s2">"inputs"</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>         <span class="c1"># dict_keys(['x', 'weight'])</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">load_workloads</span><span class="p">(</span><span class="s2">"RMSNormFwdOp"</span><span class="p">)</span>             <span class="c1"># that op's workload rows</span>
+</span></code></pre></div>
+<h2 id="writing-a-spec">Writing a spec<a class="headerlink" href="#writing-a-spec" title="Permanent link">&para;</a></h2>
+<p>Five steps, each one checkable immediately.</p>
+<ol>
+<li><strong>Name it and pick the family.</strong> The key is the class name, and the spec goes in the
+   file its <code>family</code> names.</li>
+<li><strong>Write <code>signature</code>.</strong> Tensors in <code>inputs</code> / <code>outputs</code>, everything else in <code>params</code>,
+   in call order, optional inputs after the required ones. Declare the dtypes the
+   reference API supports, not the ones the current kernel does.</li>
+<li><strong>Write <code>shape_rules</code>.</strong> <code>shape</code> and <code>shape_rules</code> together have to determine an
+   output's shape completely. For ops with a <code>dim</code>, use the helpers in
+   <a href="https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/shape_rules.py"><code>shape_rules.py</code></a> — <code>dim_range_validity</code>, <code>reduced_shape</code> and the rest — which the
+   op layer calls too, so the two cannot disagree.</li>
+<li><strong>Write <code>workloads</code>.</strong> For a single-tensor-input op the shape key must be
+   <code>{input}_shape</code>, and every other key must be a <code>params</code> name or the reserved
+   <code>dtypes</code> / <code>label</code>.</li>
+<li><strong>Write <code>roofline</code> and <code>source</code>.</strong></li>
+</ol>
+<p>To land an interface before its implementation, write <code>status: spec-only</code> and only L0
+runs; <code>implemented</code> turns on all five levels. What each level checks, and what the
+validator cannot see, are in the last section: <a href="#spec-validator">the spec validator</a>.</p>
+<h2 id="static_dims"><code>static_dims</code><a class="headerlink" href="#static_dims" title="Permanent link">&para;</a></h2>
+<p><code>static_dims</code> declares the dimension values a user commits to when constructing the op
+instance, and is for arbitrary-rank ops only — a fixed-rank op takes its dimensions from
+<code>shape</code>.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">static_dims</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">N</span><span class="p">:</span><span class="w"> </span><span class="s">"x.shape[dim]"</span>
+</span></code></pre></div>
+<p><strong>The expression is a validation rule for call time, not a derivation at
+construction.</strong> Two moments share one contract:</p>
+<table>
+<thead>
+<tr>
+<th>Moment</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__</code></td>
+<td>The commitment. The user's value is stored on <code>self</code>; the expression is not evaluated — there is no tensor yet</td>
+</tr>
+<tr>
+<td><code>forward</code></td>
+<td>The check. The expression is evaluated against the actual tensor and must equal the committed value</td>
+</tr>
+</tbody>
+</table>
+<p>Four rules:</p>
+<ul>
+<li>Every key is a <strong>required</strong> <code>__init__</code> keyword parameter, with no default: the
+  committed value comes from the user at construction.</li>
+<li>The expression must be a <strong>single-axis reference</strong>, <code>&lt;tensor&gt;.shape[&lt;const or
+  param&gt;]</code>. Multi-axis forms are forbidden: no <code>product(...)</code>, no comprehensions,
+  no arithmetic over a shape.</li>
+<li>The tensor named must appear in <code>signature.inputs</code>; an axis name that is not an
+  integer literal must be a <code>signature.params</code> name.</li>
+<li>Key order is the order those keywords appear in the generated <code>__init__</code>.</li>
+</ul>
+<p>Single-axis is the rule most often broken, and both rejected forms fail for the same
+reason: neither can be checked one axis at a time in <code>forward</code>.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">static_dims</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">in_features</span><span class="p">:</span><span class="w"> </span><span class="s">"input.shape[-1]"</span><span class="w">        </span><span class="c1"># accepted</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">out_features</span><span class="p">:</span><span class="w"> </span><span class="s">"weight.shape[0]"</span><span class="w">       </span><span class="c1"># accepted: any input tensor may be referenced</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># numel: "product(x.shape)"             # rejected: multi-axis</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># last: "x.shape[x.ndim - 1] * 2"       # rejected: arithmetic over a shape</span>
+</span></code></pre></div>
+<p>Which tensor is referenced is unrestricted. In <code>torch.nn.functional.linear</code>,
+<code>out_features</code> can only be bound to <code>weight</code>; no expression over <code>input.shape</code> is
+equivalent:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">LinearFwdOp</span><span class="p">:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">signature</span><span class="p">:</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">inputs</span><span class="p">:</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">      </span><span class="nt">input</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float16</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">bfloat16"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">      </span><span class="nt">weight</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(input)"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">      </span><span class="nt">bias</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(input)"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nt">outputs</span><span class="p">:</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">      </span><span class="nt">output</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(input)"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="nt">static_dims</span><span class="p">:</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">      </span><span class="nt">in_features</span><span class="p">:</span><span class="w"> </span><span class="s">"input.shape[-1]"</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">      </span><span class="nt">out_features</span><span class="p">:</span><span class="w"> </span><span class="s">"weight.shape[0]"</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="nt">shape_rules</span><span class="p">:</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"weight.shape</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">(out_features,</span><span class="nv"> </span><span class="s">in_features)"</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"bias.shape</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">(out_features,)"</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"output.shape</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">input.shape[:-1]</span><span class="nv"> </span><span class="s">+</span><span class="nv"> </span><span class="s">(out_features,)"</span>
+</span></code></pre></div>
+<p><strong>An empty <code>static_dims</code> is legal.</strong> The typical case is a reduction that accepts
+<code>dim=None</code>: the extent depends on the whole input shape rather than on a hyperparameter
+the user gives, so there is nothing to commit at construction.</p>
+<p>When it is empty, the op author <strong>must override <code>_cache_key</code></strong>. The default keys on the
+full input shape — correct, but under dynamic shapes every new shape recompiles; the base
+class warns once when it sees this.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">SumFwdOp</span><span class="p">(</span><span class="n">Op</span><span class="p">):</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_cache_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x_shape</span><span class="p">):</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        <span class="k">return</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">x_shape</span><span class="p">),)</span>   <span class="c1"># full reduce: equal numel shares a kernel</span>
+</span></code></pre></div>
+<h2 id="optional-inputs">Optional inputs<a class="headerlink" href="#optional-inputs" title="Permanent link">&para;</a></h2>
+<p>An input that may be absent pulls <code>shape_rules</code>, <code>workloads</code>, <code>roofline</code> and the dtype
+declarations along with it, which is why this is where writing a spec goes wrong most
+often. Each of the ten questions below answers one decision, every snippet comes from a
+real spec in the repository, and they run in this order:</p>
+<ul>
+<li><strong>1–2</strong>: what an optional input is, and when a call counts as having passed one.</li>
+<li><strong>3–4</strong>: the two decisions when writing the spec — whether to dispatch on presence,
+  and whether to add a <code>bool</code> beside it.</li>
+<li><strong>5–6</strong>: how <code>shape_rules</code> follows.</li>
+<li><strong>7–9</strong>: how <code>workloads</code>, <code>roofline</code> and the dtype declarations follow.</li>
+<li><strong>10</strong>: why output arity does not change with the switch.</li>
+</ul>
+<p><strong>1. How do optional inputs differ from optional params?</strong></p>
+<p>Different fields, because optional means different things for the two:</p>
+<ul>
+<li><strong>A tensor input</strong> uses <code>optional: true</code>. A tensor is either there or not, with
+  nothing in between.</li>
+<li><strong>A param</strong> uses <code>default</code>. A param always has a value and falls back to that
+  default when the caller gives none.</li>
+</ul>
+<p>Two boundaries go with it:</p>
+<ul>
+<li><code>optional</code> is allowed under <code>inputs</code> only. <strong>An output cannot be optional</strong> — the
+  caller has to know in advance how many values it will get back.</li>
+<li>An output buffer the caller prepares for the op to write into (<code>out=</code>) is a param,
+  not an optional input.</li>
+</ul>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># MoePermuteNopadFwdOp</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nt">inputs</span><span class="p">:</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">hidden_states</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float16</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">bfloat16"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">topk_ids</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"int32"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nt">expert_map</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"int32"</span><span class="p p-Indicator">,</span><span class="nt"> optional</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># a tensor: optional</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="nt">params</span><span class="p">:</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span><span class="nt">num_experts</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">int</span><span class="p p-Indicator">}</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">  </span><span class="nt">num_experts_local</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">int</span><span class="p p-Indicator">}</span><span class="w">                 </span><span class="c1"># a param would use default</span>
+</span></code></pre></div>
+<p><strong>2. When does a call count as having passed an optional input, and where does it sit
+in the parameter list?</strong></p>
+<p>Take <code>Mamba2FwdOp</code>. Its spec declares five required inputs and two optional ones:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">inputs</span><span class="p">:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">x</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float16</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">bfloat16"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">S,</span><span class="nv"> </span><span class="s">H,</span><span class="nv"> </span><span class="s">P]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">dt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float32"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">S,</span><span class="nv"> </span><span class="s">H]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">A</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float32"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[H]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nt">B</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">S,</span><span class="nv"> </span><span class="s">G,</span><span class="nv"> </span><span class="s">N]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="nt">C</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">S,</span><span class="nv"> </span><span class="s">G,</span><span class="nv"> </span><span class="s">N]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="nt">dt_bias</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float32"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[H]"</span><span class="p p-Indicator">,</span><span class="nt"> optional</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="nt">initial_states</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float32"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">H,</span><span class="nv"> </span><span class="s">P,</span><span class="nv"> </span><span class="s">N]"</span><span class="p p-Indicator">,</span><span class="nt"> optional</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<p><code>forward</code>'s parameters follow that declaration, and the two optional inputs default to
+<code>None</code>. So a call has four spellings:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">op</span> <span class="o">=</span> <span class="n">Mamba2FwdOp</span><span class="p">()</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">y</span><span class="p">,</span> <span class="n">final</span> <span class="o">=</span> <span class="n">op</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">)</span>                        <span class="c1"># neither dt_bias nor initial_states</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">y</span><span class="p">,</span> <span class="n">final</span> <span class="o">=</span> <span class="n">op</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">dt_bias</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>          <span class="c1"># identical to the line above</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">y</span><span class="p">,</span> <span class="n">final</span> <span class="o">=</span> <span class="n">op</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">dt_bias</span><span class="o">=</span><span class="n">bias</span><span class="p">)</span>          <span class="c1"># dt_bias passed</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="n">y</span><span class="p">,</span> <span class="n">final</span> <span class="o">=</span> <span class="n">op</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">initial_states</span><span class="o">=</span><span class="n">state</span><span class="p">)</span>  <span class="c1"># initial_states passed</span>
+</span></code></pre></div>
+<p>Four spellings, two states. Three things read straight off that snippet:</p>
+<ul>
+<li><strong>The test is the value after binding</strong> — <code>None</code> means not passed.</li>
+<li><strong>The first two lines land in the same place.</strong> Omitting the keyword and passing
+  <code>None</code> are not two states, because absence is not a value in the domain; <code>None</code> is
+  only how Python spells it.</li>
+<li><strong>What the op reads is that same value.</strong> Where <code>dt_bias is None</code> holds, the call has
+  no <code>dt_bias</code>.</li>
+</ul>
+<p>The default is also what fixes the position: <strong>optional inputs come after the required
+ones.</strong> <code>forward</code> receives its arguments in <code>inputs</code> order, and a parameter with a
+default cannot precede one without. Where the reference API puts an optional argument
+in the middle, the spec reorders rather than copying that position.</p>
+<p><strong>3. May an op dispatch on whether an optional input was passed?</strong></p>
+<p>Yes; that is one of the reasons optional inputs exist. <code>expert_map</code> on
+<code>MoePermuteNopadFwdOp</code> is such a switch. Its spec declares it as:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Expert parallelism: supplied when this rank owns num_experts_local of the</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># num_experts global experts, absent when it owns them all. Presence picks</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1"># the scan kernel; the ids inside are read only at launch.</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nt">expert_map</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"int32"</span><span class="p p-Indicator">,</span><span class="nt"> optional</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<p>In the op's <code>forward</code>, the dispatch reads nothing but whether the argument is there:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># tileops/ops/moe/routed_expert/permute_nopad.py</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="bp">self</span><span class="o">.</span><span class="n">used_expert_map</span> <span class="o">=</span> <span class="n">expert_map</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># A map-free kernel and a map-reading one are two different scans, so the</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1"># argument's presence — not the local expert count — picks between them.</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_kernel</span><span class="p">(</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    <span class="p">(</span><span class="n">hidden_states</span><span class="p">,</span> <span class="n">topk_ids</span><span class="p">)</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>    <span class="k">if</span> <span class="n">expert_map</span> <span class="ow">is</span> <span class="kc">None</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    <span class="k">else</span> <span class="p">(</span><span class="n">hidden_states</span><span class="p">,</span> <span class="n">topk_ids</span><span class="p">,</span> <span class="n">expert_map</span><span class="p">),</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>    <span class="o">...</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="p">)</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="k">if</span> <span class="n">expert_map</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>    <span class="k">return</span> <span class="n">kernel</span><span class="p">(</span><span class="n">hidden_states</span><span class="p">,</span> <span class="n">topk_ids</span><span class="p">)</span>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="k">return</span> <span class="n">kernel</span><span class="p">(</span><span class="n">hidden_states</span><span class="p">,</span> <span class="n">topk_ids</span><span class="p">,</span> <span class="n">expert_map</span><span class="p">)</span>
+</span></code></pre></div>
+<p>That code tests <code>expert_map is None</code> and never a value inside <code>expert_map</code>, and that
+is as far as an optional input goes: <strong>its presence may pick the kernel, its contents
+may not.</strong> The shape and the presence are declared in the spec, the contents are not,
+and the ids in <code>expert_map</code> are read only once the kernel has launched.</p>
+<p><strong>4. A feature that can be switched off — an optional <code>inputs</code> entry, or a <code>bool</code> param?</strong></p>
+<p>An optional <code>inputs</code> entry, with no <code>bool</code> alongside it.</p>
+<p>Take GroupNorm's affine. The reference API spells it as an <code>affine=True</code> switch plus a
+pair of weights, and copying that over gives this spec:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># not recommended: affine and the two optional tensors record the same fact</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nt">inputs</span><span class="p">:</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nt">x</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float32</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">float16</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">bfloat16"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span><span class="nt">weight</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">,</span><span class="nt"> optional</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span><span class="nt">bias</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">,</span><span class="nt"> optional</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="nt">params</span><span class="p">:</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">  </span><span class="nt">num_groups</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">int</span><span class="p p-Indicator">}</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">  </span><span class="nt">eps</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">1.0e-05</span><span class="p p-Indicator">}</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">  </span><span class="nt">affine</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">bool</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<p>Whether this call does affine is a single fact, yet this spec records it twice: once in
+the value of <code>affine</code>, and once in whether <code>weight</code> was passed. Kept in two places, the
+two can drift apart, and spec validation accepts either way they do:</p>
+<ul>
+<li><code>affine: true</code> with no <code>weight</code> — the op is asked for affine and has no weights.</li>
+<li><code>affine: false</code> with a <code>weight</code> — a tensor arrives that nothing will read.</li>
+</ul>
+<p>The recommended spec keeps a single source and never names <code>affine</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># GroupNormFwdOp's spec</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nt">inputs</span><span class="p">:</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">x</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float32</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">float16</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">bfloat16"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nt">weight</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">,</span><span class="nt"> optional</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span><span class="nt">bias</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">,</span><span class="nt"> optional</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="nt">params</span><span class="p">:</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">  </span><span class="nt">num_groups</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">int</span><span class="p p-Indicator">}</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">  </span><span class="nt">eps</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">1.0e-05</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<p>The op reads <code>weight is not None</code> where it would have read <code>affine</code>: same behaviour, and
+neither disagreement can be written down any more.</p>
+<p>The test generalises: <strong>if a <code>bool</code> param's value always follows from whether some
+optional input is there, do not declare it.</strong></p>
+<p><strong>5. Where do I state that two optional inputs go together?</strong></p>
+<p>In <code>shape_rules</code>, treated no differently from a shape constraint, with no new field:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">shape_rules</span><span class="p">:</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"(weight</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">None)</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">(bias</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">None)"</span><span class="w">          </span><span class="c1"># two halves of one switch</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"not</span><span class="nv"> </span><span class="s">(min</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">None</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">max</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">None)"</span><span class="w">           </span><span class="c1"># at least one of them</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"running_mean</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">None</span><span class="nv"> </span><span class="s">or</span><span class="nv"> </span><span class="s">not</span><span class="nv"> </span><span class="s">use_input_stats"</span><span class="w"> </span><span class="c1"># presence tied to a param's value</span>
+</span></code></pre></div>
+<p><strong>6. How is a rule that reads an optional input written?</strong></p>
+<p>With its own guard — <code>X is None or &lt;the test that uses X&gt;</code>. The guard has to precede
+the use, not lead the line.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># MoePermuteNopadFwdOp</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nt">shape_rules</span><span class="p">:</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"expert_map</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">None</span><span class="nv"> </span><span class="s">or</span><span class="nv"> </span><span class="s">expert_map.shape</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">(num_experts,)"</span><span class="w">       </span><span class="c1"># accepted</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># - "expert_map is not None and expert_map.shape == (num_experts,)"  # not accepted</span>
+</span></code></pre></div>
+<p>The <code>and</code> form is rejected: every <code>shape_rules</code> entry is a conjunct that must hold, and
+this one evaluates false on a legal call that omits the input, condemning a legal call.</p>
+<p><strong>7. How many workload rows does an optional input need?</strong></p>
+<p>One each for passed and not passed. <strong>Counted per input, not per combination</strong> — n
+optional inputs are 2n states, not 2ⁿ. The state is encoded by the key:
+<code>&lt;input&gt;_shape</code> present means passed, absent means not.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># MoePermuteNopadFwdOp: a row on each side of expert_map</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="nt">workloads</span><span class="p">:</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">hidden_states_shape</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">7168</span><span class="p p-Indicator">],</span><span class="nt"> topk_ids_shape</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">8</span><span class="p p-Indicator">],</span><span class="nt"> num_experts</span><span class="p">:</span><span class="w"> </span><span class="nv">384</span><span class="p p-Indicator">,</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="nt">     num_experts_local</span><span class="p">:</span><span class="w"> </span><span class="nv">384</span><span class="p p-Indicator">,</span><span class="nt"> dtypes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">bfloat16</span><span class="p p-Indicator">],</span><span class="nt"> label</span><span class="p">:</span><span class="w"> </span><span class="s">"kimi-k2-decode"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">hidden_states_shape</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">7168</span><span class="p p-Indicator">],</span><span class="nt"> topk_ids_shape</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">8</span><span class="p p-Indicator">],</span><span class="nt"> num_experts</span><span class="p">:</span><span class="w"> </span><span class="nv">256</span><span class="p p-Indicator">,</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="nt">     num_experts_local</span><span class="p">:</span><span class="w"> </span><span class="nv">128</span><span class="p p-Indicator">,</span><span class="nt"> expert_map_shape</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">256</span><span class="p p-Indicator">],</span><span class="nt"> dtypes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">bfloat16</span><span class="p p-Indicator">],</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="nt">     label</span><span class="p">:</span><span class="w"> </span><span class="s">"deepseek-v3-ep2-decode"</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<p>A family whose rows give shapes as scalar dims writes the key anyway: the
+<code>GemmFp8FwdOp</code> row that passes <code>bias</code> carries <code>bias_shape: [2112]</code> next to <code>n: 2112</code>.</p>
+<p><strong>8. How does roofline account for an optional input?</strong></p>
+<p>In the inline form, presence is a boolean in <code>vars</code>, and <code>flops</code> and <code>bytes</code> reference
+that <code>vars</code> name — a tensor name does not resolve in the arithmetic layer at all.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># GroupNormFwdOp</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="nt">roofline</span><span class="p">:</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="nt">vars</span><span class="p">:</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span><span class="nt">N</span><span class="p">:</span><span class="w"> </span><span class="s">"x.shape[0]"</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">    </span><span class="nt">C</span><span class="p">:</span><span class="w"> </span><span class="s">"x.shape[1]"</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">    </span><span class="nt">spatial_size</span><span class="p">:</span><span class="w"> </span><span class="s">"product(x.shape[2:])"</span>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">    </span><span class="nt">affine</span><span class="p">:</span><span class="w"> </span><span class="s">"weight</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">not</span><span class="nv"> </span><span class="s">None"</span><span class="w">                       </span><span class="c1"># presence lives in vars</span>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">  </span><span class="nt">flops</span><span class="p">:</span><span class="w"> </span><span class="s">"(5</span><span class="nv"> </span><span class="s">if</span><span class="nv"> </span><span class="s">affine</span><span class="nv"> </span><span class="s">else</span><span class="nv"> </span><span class="s">3)</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">N</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">C</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">spatial_size"</span><span class="w"> </span><span class="c1"># arithmetic reads the var</span>
+</span></code></pre></div>
+<p>Where the formula needs the optional input's own shape, switch to
+<code>roofline: {func: ...}</code>, which reads it from the call.</p>
+<p><strong>9. Can <code>dtype_combos</code> or <code>same_as()</code> reference an optional input?</strong></p>
+<p>No. Both must hold on every call, and on a call that omits the input the name points
+at nothing.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># not accepted: weight is optional, and both places below assume it is there</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nt">inputs</span><span class="p">:</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nt">x</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float32</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">float16"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">S,</span><span class="nv"> </span><span class="s">H]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span><span class="nt">weight</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[H]"</span><span class="p p-Indicator">,</span><span class="nt"> optional</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">  </span><span class="nt">bias</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(weight)"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[H]"</span><span class="p p-Indicator">,</span><span class="nt"> optional</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="nt">dtype_combos</span><span class="p">:</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">x</span><span class="p">:</span><span class="w"> </span><span class="nv">float16</span><span class="p p-Indicator">,</span><span class="nt"> weight</span><span class="p">:</span><span class="w"> </span><span class="nv">float16</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<p>Each place fails for its own reason:</p>
+<ul>
+<li>A key of <code>dtype_combos</code> must exist on every call, and a call without <code>weight</code> cannot
+  make up this combination.</li>
+<li>The ref in <code>same_as(weight)</code> is optional, so with <code>weight</code> absent there is nothing to
+  resolve <code>bias</code>'s dtype against.</li>
+</ul>
+<p>The fix anchors both to a required input:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nt">inputs</span><span class="p">:</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">x</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float32</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">float16"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">S,</span><span class="nv"> </span><span class="s">H]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span><span class="nt">weight</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[H]"</span><span class="p p-Indicator">,</span><span class="nt"> optional</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span><span class="nt">bias</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[H]"</span><span class="p p-Indicator">,</span><span class="nt"> optional</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="nt">dtype_combos</span><span class="p">:</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">x</span><span class="p">:</span><span class="w"> </span><span class="nv">float16</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<p><strong>10. What about an op whose number of return values changes with a switch?</strong></p>
+<p>Two specs — or fix the outputs. One spec's output names and count are the same on
+every call, otherwise the caller cannot unpack a return whose shape it does not know.
+<code>Mamba2FwdOp</code> takes the second route and records the deviation in a comment:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># ... one declared deviation: final_states is always returned (fixed output</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="c1"># arity; the Op protocol has no conditional-output mechanism), so the upstream</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="c1"># return_final_states switch does not exist here.</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="nt">outputs</span><span class="p">:</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">  </span><span class="nt">y</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float32"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">S,</span><span class="nv"> </span><span class="s">H,</span><span class="nv"> </span><span class="s">P]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">  </span><span class="nt">final_states</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float32"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">H,</span><span class="nv"> </span><span class="s">P,</span><span class="nv"> </span><span class="s">N]"</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<h2 id="case-studies">Case studies<a class="headerlink" href="#case-studies" title="Permanent link">&para;</a></h2>
+<p>Six real specs, each covering one form: fixed rank, arbitrary rank, a param deciding the
+output shape, optional inputs forming one switch, an input the op writes, and an output
+dtype promoted from the input.</p>
+<h3 id="1-fixed-rank-and-shared-names">1. Fixed rank and shared names<a class="headerlink" href="#1-fixed-rank-and-shared-names" title="Permanent link">&para;</a></h3>
+<p>All three tensors in <code>BmmFwdOp</code> declare a <code>shape</code>. <code>B</code> and <code>K</code> appear in both
+inputs, so those axes must match; <code>shape_rules</code> adds the divisibility the kernel
+needs.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nt">BmmFwdOp</span><span class="p">:</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">ref_api</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">torch.bmm</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span><span class="nt">family</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gemm</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">  </span><span class="nt">status</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">implemented</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">  </span><span class="nt">signature</span><span class="p">:</span>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">    </span><span class="nt">inputs</span><span class="p">:</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">      </span><span class="nt">a</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float16</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">bfloat16"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">M,</span><span class="nv"> </span><span class="s">K]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="w">      </span><span class="nt">b</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(a)"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">K,</span><span class="nv"> </span><span class="s">N]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="w">    </span><span class="nt">outputs</span><span class="p">:</span>
+</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a><span class="w">      </span><span class="nt">d</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(a)"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">M,</span><span class="nv"> </span><span class="s">N]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-19-11"><a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a><span class="w">    </span><span class="nt">shape_rules</span><span class="p">:</span>
+</span><span id="__span-19-12"><a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"a.shape[0]</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">b.shape[0]"</span>
+</span><span id="__span-19-13"><a id="__codelineno-19-13" name="__codelineno-19-13" href="#__codelineno-19-13"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"a.shape[2]</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">b.shape[1]"</span>
+</span><span id="__span-19-14"><a id="__codelineno-19-14" name="__codelineno-19-14" href="#__codelineno-19-14"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"a.shape[2]</span><span class="nv"> </span><span class="s">%</span><span class="nv"> </span><span class="s">16</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">0"</span>
+</span><span id="__span-19-15"><a id="__codelineno-19-15" name="__codelineno-19-15" href="#__codelineno-19-15"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"d.shape</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">(a.shape[0],</span><span class="nv"> </span><span class="s">a.shape[1],</span><span class="nv"> </span><span class="s">b.shape[2])"</span>
+</span></code></pre></div>
+<h3 id="2-arbitrary-rank">2. Arbitrary rank<a class="headerlink" href="#2-arbitrary-rank" title="Permanent link">&para;</a></h3>
+<p><code>RMSNormFwdOp</code> puts no limit on the input's rank — the parameter
+<code>normalized_shape</code> names the axes reduced over — so no tensor declares a <code>shape</code>
+and every relationship lands in <code>shape_rules</code>.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="w">  </span><span class="nt">signature</span><span class="p">:</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">    </span><span class="nt">inputs</span><span class="p">:</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">      </span><span class="nt">x</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float16</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">bfloat16"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">      </span><span class="nt">weight</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">    </span><span class="nt">outputs</span><span class="p">:</span>
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="w">      </span><span class="nt">output</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="w">    </span><span class="nt">params</span><span class="p">:</span>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="w">      </span><span class="nt">normalized_shape</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="s">"list[int]</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">tuple[int,</span><span class="nv"> </span><span class="s">...]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="w">      </span><span class="nt">eps</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="s">"float</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">None"</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">null</span><span class="p p-Indicator">}</span>
+</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="w">    </span><span class="nt">shape_rules</span><span class="p">:</span>
+</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"len(normalized_shape)</span><span class="nv"> </span><span class="s">&gt;</span><span class="nv"> </span><span class="s">0"</span>
+</span><span id="__span-20-12"><a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"tuple(x.shape[-len(normalized_shape):])</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">tuple(normalized_shape)"</span>
+</span><span id="__span-20-13"><a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"weight.shape</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">tuple(normalized_shape)"</span>
+</span><span id="__span-20-14"><a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"output.shape</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">x.shape"</span>
+</span></code></pre></div>
+<h3 id="3-a-param-decides-the-shape">3. A param decides the shape<a class="headerlink" href="#3-a-param-decides-the-shape" title="Permanent link">&para;</a></h3>
+<p>The two layout flags on <code>GemmFwdOp</code> decide which axis carries M and which carries
+N, so the output shape is a rule with a conditional in it rather than a <code>shape</code>
+declaration.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="w">  </span><span class="nt">signature</span><span class="p">:</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">    </span><span class="nt">inputs</span><span class="p">:</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">      </span><span class="nt">a</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float16</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">bfloat16"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">      </span><span class="nt">b</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(a)"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">    </span><span class="nt">outputs</span><span class="p">:</span>
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">      </span><span class="nt">d</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(a)"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="w">    </span><span class="nt">params</span><span class="p">:</span>
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="w">      </span><span class="nt">trans_a</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">bool</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">}</span>
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="w">      </span><span class="nt">trans_b</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">bool</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a><span class="w">    </span><span class="nt">shape_rules</span><span class="p">:</span>
+</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"d.shape</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">((a.shape[1]</span><span class="nv"> </span><span class="s">if</span><span class="nv"> </span><span class="s">trans_a</span><span class="nv"> </span><span class="s">else</span><span class="nv"> </span><span class="s">a.shape[0]),</span><span class="nv"> </span><span class="s">(b.shape[0]</span><span class="nv"> </span><span class="s">if</span><span class="nv"> </span><span class="s">trans_b</span><span class="nv"> </span><span class="s">else</span><span class="nv"> </span><span class="s">b.shape[1]))"</span>
+</span></code></pre></div>
+<h3 id="4-optional-inputs-as-a-switch">4. Optional inputs as a switch<a class="headerlink" href="#4-optional-inputs-as-a-switch" title="Permanent link">&para;</a></h3>
+<p>The affine transform on <code>GroupNormFwdOp</code> is expressed by two optional inputs. They
+are two halves of one switch, and that relationship goes into <code>shape_rules</code>, treated no
+differently from a shape constraint.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="w">  </span><span class="nt">signature</span><span class="p">:</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">    </span><span class="nt">inputs</span><span class="p">:</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">      </span><span class="nt">x</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float32</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">float16</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">bfloat16"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">      </span><span class="nt">weight</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">,</span><span class="nt"> optional</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">      </span><span class="nt">bias</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">,</span><span class="nt"> optional</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="w">    </span><span class="nt">outputs</span><span class="p">:</span>
+</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="w">      </span><span class="nt">output</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="w">    </span><span class="nt">params</span><span class="p">:</span>
+</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a><span class="w">      </span><span class="nt">num_groups</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">int</span><span class="p p-Indicator">}</span>
+</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a><span class="w">      </span><span class="nt">eps</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">1.0e-05</span><span class="p p-Indicator">}</span>
+</span><span id="__span-22-11"><a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a><span class="w">    </span><span class="nt">shape_rules</span><span class="p">:</span>
+</span><span id="__span-22-12"><a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"(weight</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">None)</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">(bias</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">None)"</span>
+</span><span id="__span-22-13"><a id="__codelineno-22-13" name="__codelineno-22-13" href="#__codelineno-22-13"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"weight</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">None</span><span class="nv"> </span><span class="s">or</span><span class="nv"> </span><span class="s">weight.shape</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">(x.shape[1],)"</span>
+</span><span id="__span-22-14"><a id="__codelineno-22-14" name="__codelineno-22-14" href="#__codelineno-22-14"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"bias</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">None</span><span class="nv"> </span><span class="s">or</span><span class="nv"> </span><span class="s">bias.shape</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">(x.shape[1],)"</span>
+</span><span id="__span-22-15"><a id="__codelineno-22-15" name="__codelineno-22-15" href="#__codelineno-22-15"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"x.shape[1]</span><span class="nv"> </span><span class="s">%</span><span class="nv"> </span><span class="s">num_groups</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">0"</span>
+</span><span id="__span-22-16"><a id="__codelineno-22-16" name="__codelineno-22-16" href="#__codelineno-22-16"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"output.shape</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">x.shape"</span>
+</span></code></pre></div>
+<p>This spec is three rules from <a href="#optional-inputs">Optional inputs</a> in practice: no
+<code>affine</code> among the params (question 4), each rule that reads an optional input writing
+its own guard (question 6), and a workload row on both sides of the switch (question 7).</p>
+<p>That last one is the two rows below — <code>weight_shape</code> and <code>bias_shape</code> present means
+passed, absent means not:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="w">  </span><span class="nt">workloads</span><span class="p">:</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">x_shape</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">8</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">128</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">32</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">32</span><span class="p p-Indicator">],</span><span class="nt"> num_groups</span><span class="p">:</span><span class="w"> </span><span class="nv">32</span><span class="p p-Indicator">,</span><span class="nt"> dtypes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">float16</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">bfloat16</span><span class="p p-Indicator">],</span><span class="nt"> label</span><span class="p">:</span><span class="w"> </span><span class="s">"image-g32"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">x_shape</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">8</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">128</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">32</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">32</span><span class="p p-Indicator">],</span><span class="nt"> num_groups</span><span class="p">:</span><span class="w"> </span><span class="nv">32</span><span class="p p-Indicator">,</span><span class="nt"> weight_shape</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">128</span><span class="p p-Indicator">],</span><span class="nt"> bias_shape</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">128</span><span class="p p-Indicator">],</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="nt">       dtypes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">float16</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">bfloat16</span><span class="p p-Indicator">],</span><span class="nt"> label</span><span class="p">:</span><span class="w"> </span><span class="s">"image-g32-affine"</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<h3 id="5-an-input-the-op-writes">5. An input the op writes<a class="headerlink" href="#5-an-input-the-op-writes" title="Permanent link">&para;</a></h3>
+<p>A tensor input the op may write declares <code>mutated: true</code>. <code>state</code> in
+<code>SSDDecodeFwdOp</code> is one: a decode step writes the new state back into that tensor,
+and the call returns only <code>y_out</code>.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="nt">SSDDecodeFwdOp</span><span class="p">:</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w">  </span><span class="nt">ref_api</span><span class="p">:</span><span class="w"> </span><span class="s">"none"</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">  </span><span class="nt">family</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mamba</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">  </span><span class="nt">status</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">implemented</span>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="w">  </span><span class="nt">signature</span><span class="p">:</span>
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="w">    </span><span class="nt">inputs</span><span class="p">:</span>
+</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="w">      </span><span class="nt">A</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float32"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[H,</span><span class="nv"> </span><span class="s">P,</span><span class="nv"> </span><span class="s">N]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="w">      </span><span class="nt">dt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float32"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">H,</span><span class="nv"> </span><span class="s">P]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-24-9"><a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a><span class="w">      </span><span class="nt">x</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float16</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">bfloat16"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">H,</span><span class="nv"> </span><span class="s">P]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-24-10"><a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a><span class="w">      </span><span class="nt">B_in</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">G,</span><span class="nv"> </span><span class="s">N]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-24-11"><a id="__codelineno-24-11" name="__codelineno-24-11" href="#__codelineno-24-11"></a><span class="w">      </span><span class="nt">C_in</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"same_as(x)"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">G,</span><span class="nv"> </span><span class="s">N]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-24-12"><a id="__codelineno-24-12" name="__codelineno-24-12" href="#__codelineno-24-12"></a><span class="w">      </span><span class="nt">state</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float32"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">H,</span><span class="nv"> </span><span class="s">P,</span><span class="nv"> </span><span class="s">N]"</span><span class="p p-Indicator">,</span><span class="nt"> mutated</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span><span id="__span-24-13"><a id="__codelineno-24-13" name="__codelineno-24-13" href="#__codelineno-24-13"></a><span class="w">    </span><span class="nt">outputs</span><span class="p">:</span>
+</span><span id="__span-24-14"><a id="__codelineno-24-14" name="__codelineno-24-14" href="#__codelineno-24-14"></a><span class="w">      </span><span class="nt">y_out</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float32"</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B,</span><span class="nv"> </span><span class="s">H,</span><span class="nv"> </span><span class="s">P]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-24-15"><a id="__codelineno-24-15" name="__codelineno-24-15" href="#__codelineno-24-15"></a><span class="w">    </span><span class="nt">params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
+</span><span id="__span-24-16"><a id="__codelineno-24-16" name="__codelineno-24-16" href="#__codelineno-24-16"></a><span class="w">    </span><span class="nt">shape_rules</span><span class="p">:</span>
+</span><span id="__span-24-17"><a id="__codelineno-24-17" name="__codelineno-24-17" href="#__codelineno-24-17"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"H</span><span class="nv"> </span><span class="s">%</span><span class="nv"> </span><span class="s">G</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">0"</span>
+</span></code></pre></div>
+<p>Three things follow:</p>
+<ul>
+<li><strong>A written input stays an input.</strong> Output arity does not change and the return
+  does not alias it — <code>state</code> is not in <code>outputs</code>.</li>
+<li>The declaration matches the operator boundary the op registers: the inputs its
+  <code>mutates_args</code> names are exactly the ones marked <code>mutated: true</code>.</li>
+<li>If contiguity normalisation had to copy that tensor, the op writes the result
+  back after the launch.</li>
+</ul>
+<h3 id="6-a-promoted-output-dtype">6. A promoted output dtype<a class="headerlink" href="#6-a-promoted-output-dtype" title="Permanent link">&para;</a></h3>
+<p><code>torch.reciprocal</code> accepts integral inputs and returns <code>float32</code>, while floating
+inputs round-trip. That promotion is written as <code>promote_int_to_float</code>; the op
+layer mirrors it, and the spec validator expands it to a concrete set before checking
+<code>_validate_dtypes</code>.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="nt">ReciprocalFwdOp</span><span class="p">:</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="w">  </span><span class="nt">ref_api</span><span class="p">:</span><span class="w"> </span><span class="s">"torch.reciprocal"</span>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="w">  </span><span class="nt">signature</span><span class="p">:</span>
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="w">    </span><span class="nt">inputs</span><span class="p">:</span>
+</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="w">      </span><span class="nt">input</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"float16</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">bfloat16</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">float32</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">int8</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">int16</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">int32</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">int64</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">uint8"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="w">    </span><span class="nt">outputs</span><span class="p">:</span>
+</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a><span class="w">      </span><span class="nt">output</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="s">"promote_int_to_float(input)"</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<h2 id="rules-at-a-glance">Rules at a glance<a class="headerlink" href="#rules-at-a-glance" title="Permanent link">&para;</a></h2>
+<p>All ten appeared above, grouped here by what each constrains, so a finished spec can be
+read against them one by one before the validator in the next section runs.</p>
+<p><strong>The signature</strong></p>
+<ul>
+<li><strong>Order is position.</strong> Key order in <code>inputs</code>, <code>outputs</code> and <code>params</code> is the parameter
+  position in <code>forward</code>, so reordering rewrites every caller's code — a breaking change.</li>
+<li><strong>Declare the whole interface.</strong> <code>params</code> covers every parameter of the reference API,
+  even where the kernel supports only the default: a spec describes the op's interface,
+  not this implementation's reach.</li>
+</ul>
+<p><strong>Shapes</strong></p>
+<ul>
+<li><strong>An output's shape is fully determined.</strong> <code>shape</code> and <code>shape_rules</code> together fix it
+  uniquely. An input may omit <code>shape</code>; an output may not.</li>
+<li><strong>No shape aliasing.</strong> Each tensor declares its own shape, and relationships between
+  tensors go in shared dimension names or in <code>shape_rules</code>.</li>
+<li><strong>A param never selects a shape.</strong> It may size a dimension, but it may not decide
+  which shape a tensor has — that would have one spec describe two interfaces.</li>
+</ul>
+<p><strong>Optionality and switches</strong></p>
+<ul>
+<li><strong><code>optional</code> is for inputs.</strong> A tensor input declares <code>optional: true</code>, a param
+  expresses optionality with <code>default</code>, and the two are not interchanged.</li>
+<li><strong>Presence is a switch, contents are not.</strong> An op may read whether an optional input
+  was passed and dispatch on it; it may not read what is inside the tensor.</li>
+<li><strong>Both sides of an optional input get measured.</strong> Passed and not passed each need at
+  least one workload row, counted per input rather than per combination.</li>
+</ul>
+<p><strong>Outputs and memory order</strong></p>
+<ul>
+<li><strong>Output arity is fixed.</strong> The names and number of outputs are the same on every call.
+  An op whose return changes with a switch is two specs, or the caller cannot unpack a
+  return of unknown length.</li>
+<li><strong>One spec, one memory order.</strong> A different memory order is a different spec — it
+  changes what an axis means.</li>
+</ul>
+<h2 id="spec-validator">The spec validator<a class="headerlink" href="#spec-validator" title="Permanent link">&para;</a></h2>
+<p>Validation is <a href="https://github.com/tile-ai/TileOPs/blob/main/scripts/validate_manifest.py"><code>scripts/validate_manifest.py</code></a>, and a spec can be run through it the
+moment it is written:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>python<span class="w"> </span>scripts/validate_manifest.py<span class="w">                            </span><span class="c1"># every spec</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>python<span class="w"> </span>scripts/validate_manifest.py<span class="w"> </span>--check-op<span class="w"> </span>SoftmaxFwdOp<span class="w">    </span><span class="c1"># one op, all five levels</span>
+</span></code></pre></div>
+<p>How far it gets is decided by <code>status</code>: <code>spec-only</code> runs L0, <code>implemented</code> runs all
+five.</p>
+<h3 id="per-field">How each field fails<a class="headerlink" href="#per-field" title="Permanent link">&para;</a></h3>
+<p>Every field has a definite consumer and a definite failure:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Read by</th>
+<th>On a mismatch</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>signature.inputs</code> / <code>outputs</code></td>
+<td>the op layer's validation, <code>_infer_output_shapes</code>, a backend's <code>build_kernel</code> signature</td>
+<td>The spec validator fails at L1: parameter names or order disagree with <code>forward</code></td>
+</tr>
+<tr>
+<td><code>signature.shape_rules</code></td>
+<td>the op layer's shape validation</td>
+<td>L2: not valid Python, or disagrees with <code>_infer_output_shapes</code></td>
+</tr>
+<tr>
+<td><code>signature.dtype</code>, <code>dtype_combos</code></td>
+<td>the op layer's dtype validation</td>
+<td>L3: unknown dtype, or disagrees with <code>_validate_dtypes</code></td>
+</tr>
+<tr>
+<td><code>workloads</code></td>
+<td>the benchmark's shapes and dtypes</td>
+<td>L4: the benchmark does not take its shapes from <code>load_workloads</code></td>
+</tr>
+<tr>
+<td><code>roofline</code></td>
+<td><code>op.eval_roofline()</code>, the efficiency column in a performance report</td>
+<td>a variable that cannot be bound fails the benchmark</td>
+</tr>
+<tr>
+<td><code>torch_compile_fullgraph</code></td>
+<td>CI's <code>compile-contract-gate</code></td>
+<td>declared without a registered compile test fails that check</td>
+</tr>
+<tr>
+<td><code>source</code></td>
+<td>the spec validator, locating the kernel, op, test and benchmark</td>
+<td>a path that does not exist is an error</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-five-levels">What each level checks<a class="headerlink" href="#the-five-levels" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L0</td>
+<td>the spec's structure: whether the required fields are there and typed correctly</td>
+</tr>
+<tr>
+<td>L1</td>
+<td>parameter names and order against <code>forward</code></td>
+</tr>
+<tr>
+<td>L2</td>
+<td><code>shape_rules</code> syntax, and its agreement with <code>_infer_output_shapes</code></td>
+</tr>
+<tr>
+<td>L3</td>
+<td>dtype names, and their agreement with <code>_validate_dtypes</code></td>
+</tr>
+<tr>
+<td>L4</td>
+<td>whether the benchmark takes its shapes from <code>load_workloads</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="not-checked">What the validator does not do<a class="headerlink" href="#not-checked" title="Permanent link">&para;</a></h3>
+<p>The five levels check syntax and consistency rather than evaluating anything, which
+leaves three things out of reach:</p>
+<ul>
+<li><strong><code>shape_rules</code> are not evaluated.</strong> The validator only checks that each rule is a
+  well-formed Python expression; it enumerates no call pattern, and does not
+  distinguish a rule about presence from a rule about shape.</li>
+<li><strong>A wrong call is caught by the op itself.</strong> Passing <code>weight</code> without <code>bias</code> clears
+  spec validation, and the error comes from the runtime checks in
+  <a href="https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops/norm/group_norm.py"><code>GroupNormFwdOp.forward</code></a>.</li>
+<li><strong>Kernel internals are not in the manifest.</strong> Multi-kernel ordering, accumulator
+  dtypes, persistent state, tile sizes and autotuning config are not what a spec
+  describes.</li>
+</ul>
+<p>The full field specification and every rule are in <a href="../design/manifest/">Op Manifest</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 tile-ai
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/tile-ai/TileOPs" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

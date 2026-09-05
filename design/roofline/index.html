@@ -1,0 +1,3223 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="High-performance LLM operator library built on TileLang">
+      
+      
+      
+        <link rel="canonical" href="https://tile-ai.github.io/TileOPs.github.io/design/roofline/">
+      
+      
+        <link rel="prev" href="../ops-design-reference/">
+      
+      
+        <link rel="next" href="../testing/">
+      
+      
+        
+          <link rel="alternate" href="./" hreflang="en">
+        
+          <link rel="alternate" href="../../zh/design/roofline/" hreflang="zh">
+        
+      
+      
+      <link rel="icon" href="../../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Roofline - TileOPs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Hanken+Grotesk:300,300i,400,400i,700,700i%7CSpace+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Hanken Grotesk";--md-code-font:"Space Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../assets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#roofline" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="TileOPs" class="md-header__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            TileOPs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Roofline
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Select language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="../../zh/design/roofline/" hreflang="zh" class="md-select__link">
+              简体中文
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="TileOPs" class="md-nav__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    TileOPs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../user-guide/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing a Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../new-op/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding an Op
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../timing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timing Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../torch-compile/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using torch.compile
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../api/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/topk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Top-k
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/linear-algebra/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pooling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/convolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Convolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/fft/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/mamba/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mamba
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/mhc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    mHC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/engram/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Engram
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../benchmarks/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Benchmarks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/reading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How these numbers are taken
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/conv-pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conv &amp; Pool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/gemm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/ssm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/other/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Other
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../performance-guides/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Guides
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Performance Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/trace-timeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timeline Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../performance-guides/memory-bound/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory-Bound Kernels
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Memory-Bound Kernels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/memory-bound/global-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Global Memory Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/memory-bound/shared-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared Memory Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Manifest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ops-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Op Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ops-design-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slot Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roofline
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roofline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-performance-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Performance Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Performance Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-baseline-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Baseline Selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-metric-definition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 Metric Definition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-convention" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 Convention
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-compute-roof" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.4 Compute Roof
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-field-specification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Field Specification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Field Specification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-output-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Output Contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-formula-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Formula Modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-consumers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Consumers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-consumer-specifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Consumer Specifications
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Consumer Specifications">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-schema-validator-ci" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Schema Validator / CI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-benchmark-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Benchmark Layer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-roofline-tool-m5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Roofline Tool (M5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-op-codegen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Op Codegen
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4.4 Op Codegen">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#441-method-template" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4.1 Method Template
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#442-manifest-inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4.2 Manifest Inputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#443-expression-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4.3 Expression Layers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#444-namespace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4.4 Namespace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#445-runtime-timing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4.5 Runtime Timing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#446-evaluator-surface-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4.6 Evaluator Surface Boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#45-bytes-audit-ncu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.5 Bytes Audit (NCU)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#46-structural-oracle-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.6 Structural Oracle (tests)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-gpu-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 GPU Profile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-benchmarkroofline-decoupling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Benchmark–Roofline Decoupling
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../trust-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trust Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-performance-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Performance Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Performance Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-baseline-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Baseline Selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-metric-definition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 Metric Definition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-convention" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 Convention
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-compute-roof" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.4 Compute Roof
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-field-specification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Field Specification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Field Specification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-output-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Output Contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-formula-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Formula Modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-consumers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Consumers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-consumer-specifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Consumer Specifications
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Consumer Specifications">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-schema-validator-ci" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Schema Validator / CI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-benchmark-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Benchmark Layer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-roofline-tool-m5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Roofline Tool (M5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-op-codegen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Op Codegen
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4.4 Op Codegen">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#441-method-template" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4.1 Method Template
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#442-manifest-inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4.2 Manifest Inputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#443-expression-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4.3 Expression Layers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#444-namespace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4.4 Namespace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#445-runtime-timing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4.5 Runtime Timing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#446-evaluator-surface-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4.6 Evaluator Surface Boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#45-bytes-audit-ncu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.5 Bytes Audit (NCU)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#46-structural-oracle-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.6 Structural Oracle (tests)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-gpu-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 GPU Profile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-benchmarkroofline-decoupling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Benchmark–Roofline Decoupling
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="roofline">Roofline<a class="headerlink" href="#roofline" title="Permanent link">&para;</a></h1>
+<p>This document describes the <code>roofline</code> field in <code>src/tileops/manifest/</code>: what it is, how to author one, and who consumes it.</p>
+<h2 id="1-performance-model">1. Performance Model<a class="headerlink" href="#1-performance-model" title="Permanent link">&para;</a></h2>
+<h3 id="11-baseline-selection">1.1 Baseline Selection<a class="headerlink" href="#11-baseline-selection" title="Permanent link">&para;</a></h3>
+<p>Kernel performance is measured against hardware Speed-of-Light (SOL), not against PyTorch or vendor baselines. The <code>roofline</code> field supplies the per-op inputs this model needs (§2).</p>
+<h3 id="12-metric-definition">1.2 Metric Definition<a class="headerlink" href="#12-metric-definition" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>memory_time  = bytes_moved / hbm_bandwidth
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>compute_time = total_flops / peak_flops
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>sol_time     = max(memory_time, compute_time)
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>efficiency   = sol_time / actual_time
+</span></code></pre></div>
+<p>Inputs:</p>
+<ul>
+<li><code>bytes_moved</code>, <code>total_flops</code> — manifest <code>roofline</code> (§2).</li>
+<li><code>hbm_bandwidth</code> — GPU profile (§5.1), <code>hbm</code> section, effective value.</li>
+<li><code>peak_flops</code> — GPU profile section named by <code>op.compute_roof()</code> (§1.4), effective value.</li>
+<li><code>actual_time</code> — benchmark output (§5.2): device-busy time plus any device copies excluded from it (<code>uncounted_copy_ms</code>).</li>
+</ul>
+<p>Bound type is whichever term dominates <code>sol_time</code> (memory-bound if <code>memory_time &gt; compute_time</code>, else compute-bound). It depends on shape, not on the op; the roofline tool computes it per-workload and the manifest does not declare it.</p>
+<p>The metric is <strong>algorithmic</strong> SOL efficiency. Three statements delimit what a reading means:</p>
+<ol>
+<li><code>bytes_moved</code> is the algorithm's minimum traffic (each input read once, each output written once), not measured DRAM traffic.</li>
+<li><code>total_flops</code> follows the §1.3 counting convention, not per-instruction hardware cost; the metric does not certify an SFU-bound kernel as at its limit.</li>
+<li>The compute roof is the unit an optimal implementation would use (§1.4), not the unit the current kernel runs on.</li>
+</ol>
+<p>Rows the model cannot price honestly are handled three ways:</p>
+<ul>
+<li><strong>Blank, never guessed</strong> — timed without CUPTI, <code>bytes</code> formula yields zero, or no GPU profile matches the device.</li>
+<li><strong>Labeled latency-bound</strong> — <code>sol_time</code> and measured time both below the latency floor: launch overhead dominates and the model has no traction; regression detection still covers the row.</li>
+<li><strong>Reported as a formula error, never as a fast kernel</strong> — the row implies a rate above a <em>theoretical</em> ceiling.</li>
+</ul>
+<h3 id="13-convention">1.3 Convention<a class="headerlink" href="#13-convention" title="Permanent link">&para;</a></h3>
+<p>Per-element FLOP rule for elementwise ops:</p>
+<ul>
+<li>One basic arithmetic op (add, sub, mul, div, neg, abs, recip) counts as 1 FLOP.</li>
+<li>One transcendental call (<code>exp</code>, <code>log</code>, <code>log1p</code>, <code>erf</code>, <code>tanh</code>, <code>sin</code>, <code>cos</code>, <code>sqrt</code>, <code>rsqrt</code>, etc.) counts as 1 FLOP at the convention level. Hardware-specific cost models do not feed back into the manifest.</li>
+<li>One compare-and-select (<code>max</code>, <code>min</code>, <code>maximum</code>, <code>minimum</code>, single- or two-bound clamp, <code>relu</code>-style branch, <code>where</code>) counts as 1 FLOP per output element.</li>
+<li>Predicate-only outputs (<code>eq</code>, <code>gt</code>, etc.) count as 1 FLOP per element.</li>
+</ul>
+<p>Composite ops sum their primitives — <code>sigmoid = neg + exp + add + recip = 4</code> FLOPs/elem; <code>silu = sigmoid + mul = 5</code> FLOPs/elem.</p>
+<h3 id="14-compute-roof">1.4 Compute Roof<a class="headerlink" href="#14-compute-roof" title="Permanent link">&para;</a></h3>
+<p><code>Op.compute_roof()</code> returns the GPU-profile key (§5.1) of the unit that prices the op's FLOPs — <code>"cuda_core.fp32"</code>, <code>"tensor_core.bf16"</code>, <code>"tensor_core.fp8"</code>, ….</p>
+<ul>
+<li>The key states the unit an <strong>optimal</strong> implementation would use, declared by the op author in code. It is never inferred from the running kernel — that would price a kernel on the wrong unit against the wrong ceiling and hide exactly the gap the metric exists to expose. Nor from the input dtype alone — an fp8-backend attention takes fp16/bf16 tensors.</li>
+<li>The <code>Op</code> base defaults to <code>"cuda_core.fp32"</code>, which covers every op whose arithmetic runs on CUDA cores in fp32 (elementwise, reductions, norms, scans). An op whose FLOPs are matmul contractions overrides it, normally with <code>tensor_core_roof(self.dtype)</code>; one whose unit depends on instance state (a backend switch, a quantized path) branches on that state.</li>
+<li>The declaration is valid whenever <code>eval_roofline()</code> is — after the op's dtype is bound.</li>
+<li>A wrong or missing override is caught by the nightly physics check (§4.3): a tensor-core kernel priced against the CUDA-core ceiling implies a FLOP rate above that ceiling's theoretical value, reported as a formula error on the next run.</li>
+</ul>
+<h2 id="2-field-specification">2. Field Specification<a class="headerlink" href="#2-field-specification" title="Permanent link">&para;</a></h2>
+<h3 id="21-output-contract">2.1 Output Contract<a class="headerlink" href="#21-output-contract" title="Permanent link">&para;</a></h3>
+<p>Per workload, the <code>roofline</code> field yields <code>(flops: int, bytes: int)</code>. Consumers read these integers via <code>op.eval_roofline()</code> on an instantiated Op (§4.4). The compute roof is not part of the manifest field; the op declares it in code (§1.4).</p>
+<h3 id="22-formula-modes">2.2 Formula Modes<a class="headerlink" href="#22-formula-modes" title="Permanent link">&para;</a></h3>
+<p>An entry uses one of two modes:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Form</th>
+<th>When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Inline</td>
+<td><code>vars?</code> + <code>flops</code>/<code>bytes</code></td>
+<td>Formula fits a Python expression.</td>
+</tr>
+<tr>
+<td>Func</td>
+<td><code>func: "module.path"</code></td>
+<td>Formula needs real Python logic.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Inline.</strong> Roofline variables come from <code>shape</code> dim names where possible. Anything <code>shape</code> cannot supply — arbitrary-rank dims, slice products, shape-derived quantities — is declared in <code>vars</code>. <code>flops</code> and <code>bytes</code> are Python expressions over all resolved variables + <code>elem_bytes</code> + approved helpers (§4.4.4). <code>elem_bytes</code> is the byte size of the first input's dtype. <strong>Ops whose <code>bytes</code> depend on multiple input dtypes (mixed-precision GEMM, Attention, etc.) cannot be expressed in inline mode</strong> and must use <code>func</code>.</p>
+<p><strong>Func.</strong> Point at <code>tileops.perf.formulas.&lt;name&gt;</code>. The callable is human-authored and returns <code>(flops, bytes)</code>. <strong>Recommended signature: <code>func(op)</code></strong> — matching the agent-generated <code>eval_roofline(self)</code> path, which is what codegen's emitted call assumes. A human author who prefers a different signature owns the resulting integration (e.g., a wrapper). Use <code>func</code> when inline arithmetic is insufficient (mixed-precision byte accounting, conditionals, shape traversal, data-dependent logic).</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Inline — shape dim names cover all variables</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">roofline</span><span class="p">:</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">flops</span><span class="p">:</span><span class="w"> </span><span class="s">"2</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">M</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">N</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">K"</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">bytes</span><span class="p">:</span><span class="w"> </span><span class="s">"(M</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">K</span><span class="nv"> </span><span class="s">+</span><span class="nv"> </span><span class="s">K</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">N</span><span class="nv"> </span><span class="s">+</span><span class="nv"> </span><span class="s">M</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">N)</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">elem_bytes"</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1"># Inline — shape cannot supply the variables; vars fills in</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nt">roofline</span><span class="p">:</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="nt">vars</span><span class="p">:</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nt">M</span><span class="p">:</span><span class="w"> </span><span class="s">"product(x.shape[:dim])"</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="nt">N</span><span class="p">:</span><span class="w"> </span><span class="s">"x.shape[dim]"</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="nt">flops</span><span class="p">:</span><span class="w"> </span><span class="s">"4</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">M</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">N"</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="nt">bytes</span><span class="p">:</span><span class="w"> </span><span class="s">"(2</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">M</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">N</span><span class="nv"> </span><span class="s">+</span><span class="nv"> </span><span class="s">N)</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">elem_bytes"</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="c1"># Func — complex formulas</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="nt">roofline</span><span class="p">:</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">  </span><span class="nt">func</span><span class="p">:</span><span class="w"> </span><span class="s">"tileops.perf.formulas.my_op_roofline"</span>
+</span></code></pre></div>
+<h2 id="3-consumers">3. Consumers<a class="headerlink" href="#3-consumers" title="Permanent link">&para;</a></h2>
+<p><code>src/tileops/manifest/</code> is the source of truth for the <code>roofline</code> field. Four modules read it:</p>
+<ul>
+<li><strong>Schema validator / CI</strong> — structural checks only (schema, mode exclusivity, <code>func</code> importability). Does <strong>not</strong> execute formulas or hold a helper whitelist. Spec: §4.1.</li>
+<li><strong>Benchmark layer</strong> — instantiates an Op per workload and reads <code>(flops, bytes)</code> from <code>op.eval_roofline()</code>. Hardcoded formulas in benchmark files are a CI failure. Spec: §4.2.</li>
+<li><strong>Roofline tool (M5)</strong> — reads per-workload <code>(flops, bytes)</code>, the roof key, and timing from benchmark output, prices them against the GPU profile (§5.1), and emits SOL efficiency and verdicts. Spec: §4.3.</li>
+<li><strong>Op codegen</strong> — generates each op's <code>eval_roofline()</code> method; is the authoritative gate for name and form correctness. Spec: §4.4.</li>
+</ul>
+<p>Two auditors check the field's values rather than consume them: the structural oracle (§4.6) and the NCU bytes audit (§4.5).</p>
+<p>Tests and workloads are not consumers: they may supply shapes and dtypes but must not define or reinterpret roofline formulas.</p>
+<h2 id="4-consumer-specifications">4. Consumer Specifications<a class="headerlink" href="#4-consumer-specifications" title="Permanent link">&para;</a></h2>
+<h3 id="41-schema-validator-ci">4.1 Schema Validator / CI<a class="headerlink" href="#41-schema-validator-ci" title="Permanent link">&para;</a></h3>
+<p>Runs on every PR touching <code>src/tileops/manifest/</code>. Scope is structural.</p>
+<p>Every roofline entry MUST satisfy:</p>
+<ul>
+<li>Required fields per mode: inline has <code>flops</code> and <code>bytes</code>; func has <code>func</code>.</li>
+<li>Mode exclusivity: <code>flops</code>/<code>bytes</code>/<code>vars</code> and <code>func</code> do not coexist.</li>
+<li>Field types: <code>flops</code>/<code>bytes</code>/<code>func</code> are non-empty strings; <code>vars</code> is a mapping of str → non-empty str.</li>
+<li><code>func</code> dotted path resolves at import time.</li>
+</ul>
+<p>Out of the validator's scope:</p>
+<ul>
+<li>Name whitelist — a formula's names are checked by codegen (§4.4), which owns the binding table. Validator does not mirror it.</li>
+<li>Form checks (layer violations, forbidden AST nodes) — codegen refuses to emit invalid forms.</li>
+<li>Numeric checks (finite / non-negative / numeric) — tests exercise generated <code>eval_roofline()</code> on each workload.</li>
+</ul>
+<p>Validator holds no callables, no sample bindings, no <code>__builtins__</code> sandbox. Adding a helper does not touch the validator.</p>
+<h3 id="42-benchmark-layer">4.2 Benchmark Layer<a class="headerlink" href="#42-benchmark-layer" title="Permanent link">&para;</a></h3>
+<p>Contract:</p>
+<ul>
+<li>Instantiate the Op for each workload and call <code>op.eval_roofline()</code> to obtain <code>(flops, bytes)</code>. No manifest-level helper exists — roofline evaluation lives only inside each Op's generated method.</li>
+<li><code>ManifestBenchmark(op, workload)</code> and <code>workloads_to_params(..., include_extra=True)</code> are the canonical consumers; non-reserved workload keys forward as op-call params passed to the Op's <code>__init__</code>.</li>
+<li>A benchmark file that computes FLOPs or bytes locally is a CI failure.</li>
+<li>Benchmark output must record the <code>(flops, bytes)</code> from <code>op.eval_roofline()</code> and the roof key from <code>op.compute_roof()</code> (§1.4), so M5 reads the numbers without re-instantiating ops.</li>
+</ul>
+<h3 id="43-roofline-tool-m5">4.3 Roofline Tool (M5)<a class="headerlink" href="#43-roofline-tool-m5" title="Permanent link">&para;</a></h3>
+<p>Inputs:</p>
+<ul>
+<li>Benchmark output produced by M4, carrying per-workload timing, the <code>(flops, bytes)</code> from <code>op.eval_roofline()</code>, and the roof key from <code>op.compute_roof()</code>.</li>
+<li>GPU profile (§5.1), selected by matching the profile's <code>gpu</code> field against the measured device name; no match leaves every SOL reading blank.</li>
+</ul>
+<p>Per-workload outputs: SOL efficiency, bound type, latency-bound labels, anomaly reports.</p>
+<p>Does not interpret formula strings at all. M5 reads pre-computed numbers from the benchmark output; it never instantiates Ops or runs roofline expressions.</p>
+<p>Verdict lines are rendering thresholds, not CI gates:</p>
+<table>
+<thead>
+<tr>
+<th>Verdict</th>
+<th>Condition</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>At ceiling</td>
+<td>≥ 80%</td>
+<td>Done. The HBM ceiling is an envelope over access mixes, and a kernel's own mix caps below it (a perfect 2R:1W kernel reaches ~90% of it, a perfect 1R:1W ~87%); the line sits below every mix's personal ceiling.</td>
+</tr>
+<tr>
+<td>Anomaly</td>
+<td>&gt; 105%</td>
+<td>Above the achievable ceiling: the formula or the calibration is wrong. Excluded from "at ceiling".</td>
+</tr>
+</tbody>
+</table>
+<p>Physics check: every row's implied rates (<code>bytes / time</code>, <code>flops / time</code>) are compared against the <em>theoretical</em> ceilings of its roofs. A breach is physically impossible, so it is reported as a formula error that fails the run's health — a formula edit that inflates work is caught on the next nightly. This check is the standing guard on formula overestimation; equality-level validation belongs to the structural oracle (§4.6), hardware-counter validation to the bytes audit (§4.5).</p>
+<h3 id="44-op-codegen">4.4 Op Codegen<a class="headerlink" href="#44-op-codegen" title="Permanent link">&para;</a></h3>
+<p>Codegen runs for <code>status: implemented</code> entries only. <code>spec-only</code> entries — where either the implementation does not exist or the Op interface does not yet match the manifest — are skipped; codegen re-evaluates them once the status flips.</p>
+<p>Codegen is the authoritative gate for name and form correctness. A formula referencing an unknown name or violating a layer's form constraints fails codegen; a manifest that fails codegen cannot land. Numeric correctness is exercised by tests, not codegen.</p>
+<h4 id="441-method-template">4.4.1 Method Template<a class="headerlink" href="#441-method-template" title="Permanent link">&para;</a></h4>
+<p>For each op, codegen emits an <code>eval_roofline()</code> method returning <code>(flops: int, bytes: int)</code>. The method signature is part of the shared Op interface defined in <a href="../ops-design-reference/">ops-design-reference.md</a>; this document specifies only how the body is generated from the manifest.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">eval_roofline</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">M</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">M</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">N</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">elem_bytes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">itemsize</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="k">return</span> <span class="p">(</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="mi">4</span> <span class="o">*</span> <span class="n">M</span> <span class="o">*</span> <span class="n">N</span><span class="p">,</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">M</span> <span class="o">*</span> <span class="n">N</span> <span class="o">+</span> <span class="n">N</span><span class="p">)</span> <span class="o">*</span> <span class="n">elem_bytes</span><span class="p">,</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="p">)</span>
+</span></code></pre></div>
+<h4 id="442-manifest-inputs">4.4.2 Manifest Inputs<a class="headerlink" href="#442-manifest-inputs" title="Permanent link">&para;</a></h4>
+<p>For each manifest entry, codegen reads one of:</p>
+<ul>
+<li><strong>Inline</strong> — <code>vars</code> (optional), <code>flops</code>, <code>bytes</code>. All are Python expression source strings. Codegen emits the method body per §4.4.3.</li>
+<li><strong>Func</strong> — <code>func</code> (dotted module path resolving to a human-authored callable). Codegen emits <code>return &lt;func&gt;(self)</code> as the method body. This presumes the <strong>recommended</strong> signature <code>func(op) -&gt; tuple[int, int]</code> (returning <code>(flops, bytes)</code>), aligned with the agent-generated <code>eval_roofline(self)</code> shape. The recommendation is not a gate: codegen does not introspect the callable, and an author choosing another signature owns making it work with the emitted call (e.g. a thin wrapper at the dotted path).</li>
+</ul>
+<h4 id="443-expression-layers">4.4.3 Expression Layers<a class="headerlink" href="#443-expression-layers" title="Permanent link">&para;</a></h4>
+<p>Inline mode has two layers. Codegen emits them as two sequential blocks in the method body.</p>
+<ul>
+<li><strong>vars layer</strong> — shape-derived resolution. Allowed operations: tensor shape access, slicing, <code>product()</code>, <code>range()</code>, small comprehensions.</li>
+<li><strong>arithmetic layer</strong> — <code>flops</code> and <code>bytes</code> over resolved variables + <code>elem_bytes</code> + approved helpers only. Forbidden: tensor access, shape slicing, comprehensions, attributes, arbitrary calls.</li>
+</ul>
+<p><strong>Block 1 — vars resolution.</strong></p>
+<ul>
+<li>Bind each <code>signature.inputs</code> tensor and <code>signature.params</code> name <em>referenced by the roofline expressions</em> to a local. Names declared in the manifest but unused by the roofline are not bound; ops are not required to expose them. Op-author conventions for exposing referenced names on the op instance are specified in <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/domain-rules/ops-design.md"><code>.claude/domain-rules/ops-design.md</code></a>.</li>
+<li>Bind <code>elem_bytes</code> from whichever dtype source exists at the call site (§4.4.5): use <code>self.dtype.itemsize</code> when <code>eval_roofline()</code> runs at <code>__init__</code> (fixed-rank — no tensor yet), and <code>self.&lt;first_input&gt;.dtype.itemsize</code> when it runs in <code>forward()</code> (arbitrary-rank — the tensor is bound).</li>
+<li>If <code>vars:</code> is present, emit one assignment per entry in YAML declaration order: <code>&lt;name&gt; = &lt;vars[name]&gt;</code>, copying the expression string verbatim. Later entries may reference earlier locals.</li>
+<li>If <code>vars:</code> is absent and <code>shape</code> is fixed-rank, emit assignments from the <code>shape</code> declaration (tuple-unpack <code>self.x.shape</code>, or read <code>self.&lt;dim&gt;</code> if the Op stored dims at <code>__init__</code>).</li>
+</ul>
+<p><strong>Block 2 — arithmetic.</strong> Return <code>(&lt;flops&gt;, &lt;bytes&gt;)</code> with both expression strings copied verbatim. They reference only Block 1 locals + <code>elem_bytes</code> + arithmetic-layer helpers (§4.4.4).</p>
+<p>Do <strong>not</strong> inline a vars expression into the arithmetic expression (e.g. <code>return (4 * product(x.shape[:dim]) * x.shape[dim], ...)</code>). That collapses the two layers and violates arithmetic-layer restrictions.</p>
+<p>Reduction dim handling in the vars layer follows the manifest <code>shape_rules</code> contract: validate range → normalize <code>% x.ndim</code> → reject duplicate axes for sequence dims. A roofline expression must not silently normalize an invalid axis.</p>
+<p>Example — arbitrary-rank (explicit <code>vars</code>):</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">eval_roofline</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="c1"># Block 1: vars layer</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">elem_bytes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">itemsize</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">M</span> <span class="o">=</span> <span class="n">product</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="n">dim</span><span class="p">])</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">N</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">dim</span><span class="p">]</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="c1"># Block 2: arithmetic layer</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="k">return</span> <span class="p">(</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>        <span class="mi">4</span> <span class="o">*</span> <span class="n">M</span> <span class="o">*</span> <span class="n">N</span><span class="p">,</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>        <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">M</span> <span class="o">*</span> <span class="n">N</span> <span class="o">+</span> <span class="n">N</span><span class="p">)</span> <span class="o">*</span> <span class="n">elem_bytes</span><span class="p">,</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="p">)</span>
+</span></code></pre></div>
+<p>Fixed-rank form: see the template in §4.4.1.</p>
+<p>Any <code>Name</code> node not resolvable to a Block 1 local, <code>elem_bytes</code>, or an arithmetic-layer helper causes codegen to raise. Any forbidden AST node (<code>Attribute</code>, <code>Subscript</code>, <code>Comprehension</code>, <code>Lambda</code>, …) in the arithmetic layer also causes codegen to raise. These are the enforcement of the "authoritative gate" responsibility.</p>
+<h4 id="444-namespace">4.4.4 Namespace<a class="headerlink" href="#444-namespace" title="Permanent link">&para;</a></h4>
+<p>Codegen knows how to bind the following names when generating the method body. This is the single source of truth for what an inline formula may reference.</p>
+<p><strong>vars layer</strong></p>
+<table>
+<thead>
+<tr>
+<th>Bucket</th>
+<th>Names</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tensors</td>
+<td>All <code>signature.inputs</code> names, exposed with a <code>.shape</code> accessor</td>
+</tr>
+<tr>
+<td>Params</td>
+<td>All <code>signature.params</code> names</td>
+</tr>
+<tr>
+<td>Constants</td>
+<td><code>elem_bytes</code></td>
+</tr>
+<tr>
+<td>Helpers</td>
+<td><code>product</code>, <code>isinstance</code>, <code>len</code>, <code>set</code>, <code>tuple</code>, <code>list</code>, <code>range</code>, <code>int</code>, <code>float</code>, <code>bool</code>, <code>min</code>, <code>max</code>, <code>sum</code>, <code>abs</code>, <code>log2</code>, <code>ceil</code>, <code>floor</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>arithmetic layer</strong></p>
+<table>
+<thead>
+<tr>
+<th>Bucket</th>
+<th>Names</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Variables</td>
+<td>Resolved vars from the vars layer</td>
+</tr>
+<tr>
+<td>Constants</td>
+<td><code>elem_bytes</code></td>
+</tr>
+<tr>
+<td>Helpers</td>
+<td><code>ceil</code>, <code>floor</code>, <code>log2</code></td>
+</tr>
+</tbody>
+</table>
+<p>Adding or removing a helper = edit codegen's binding table. No parallel update in validator or anywhere else is required. If a formula references a name not in this table, codegen fails; the manifest does not land.</p>
+<h4 id="445-runtime-timing">4.4.5 Runtime Timing<a class="headerlink" href="#445-runtime-timing" title="Permanent link">&para;</a></h4>
+<p>Generated <code>eval_roofline()</code> follows shape-inference timing: resolve variables at the first moment they are known, cache the result, do not recompute for identical inputs.</p>
+<table>
+<thead>
+<tr>
+<th>Op category</th>
+<th>Variables known at</th>
+<th><code>eval_roofline()</code> behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fixed-rank</td>
+<td><code>__init__</code> (all dimensions provided)</td>
+<td>Called once during init; result may be stored on the Op.</td>
+</tr>
+<tr>
+<td>Arbitrary-rank</td>
+<td><code>__init__</code> for <code>static_dims</code>; <code>forward</code> for remaining dynamic dims</td>
+<td>Called in <code>forward()</code> when dynamic vars are resolved; cache by input.</td>
+</tr>
+</tbody>
+</table>
+<p>Non-runtime consumers must instantiate the Op (or read pre-computed <code>(flops, bytes)</code> from benchmark output). No manifest-level roofline evaluator exists; every value flows through <code>op.eval_roofline()</code>.</p>
+<h4 id="446-evaluator-surface-boundary">4.4.6 Evaluator Surface Boundary<a class="headerlink" href="#446-evaluator-surface-boundary" title="Permanent link">&para;</a></h4>
+<p>Roofline expressions live in exactly one place at runtime: the plain Python body that codegen emits into each op's <code>eval_roofline()</code>. No standalone roofline evaluator exists.</p>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Scope</th>
+<th>Interprets roofline expressions?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Op-local AST evaluator</td>
+<td>—</td>
+<td><strong>REJECTED</strong> — must not be built</td>
+</tr>
+<tr>
+<td>Manifest-level roofline evaluator</td>
+<td>—</td>
+<td><strong>REJECTED</strong> — must not be built</td>
+</tr>
+</tbody>
+</table>
+<p>Rules:</p>
+<ul>
+<li>No <code>tileops.manifest.eval_roofline()</code> / <code>resolve_roofline_vars()</code> helper that evaluates roofline expressions exists. Any consumer wanting <code>(flops, bytes)</code> either calls <code>op.eval_roofline()</code> on an Op instance or reads pre-computed values from benchmark output.</li>
+<li>Generated <code>eval_roofline()</code> must not parse, AST-analyze, or safe-eval its own formula strings. Codegen does the name/form check at generation time (§4.4.3 / §4.4.4) and then copies validated expressions into plain Python.</li>
+<li>If a formula is too complex for inline arithmetic (conditionals, shape traversal, data-dependent logic), switch the entry to <code>func</code> mode (§2.2). Do not extend inline formulas into a mini-language.</li>
+</ul>
+<h3 id="45-bytes-audit-ncu">4.5 Bytes Audit (NCU)<a class="headerlink" href="#45-bytes-audit-ncu" title="Permanent link">&para;</a></h3>
+<p><code>scripts/validate_roofline_bytes.py</code> compares each op's <code>bytes</code> formula against hardware counters. It exists because the metric's objectivity rests on <code>bytes</code> being the true minimum traffic, and an overestimating formula inflates every efficiency reading in a way neither review nor the physics check is guaranteed to catch.</p>
+<p>Method, per audited op:</p>
+<ol>
+<li>Pick workloads covering the formula's branch signatures (dtype combos, optional-input presence, backend labels), from the manifest's real workloads — never scaled-up shapes, which can cross kernel-selection thresholds and audit an implementation the benchmark does not run.</li>
+<li>Run <code>forward()</code> once (input-inferred ops bind their roofline variables there), then read <code>op.eval_roofline()</code>.</li>
+<li>Measure a second <code>forward()</code> under Nsight Compute with cache control on, summing <code>dram__bytes_read.sum + dram__bytes_write.sum</code> over the call's kernels.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Verdict</th>
+<th>Condition</th>
+<th>Reading</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FAIL</td>
+<td><code>measured &lt; formula × (1 − ε)</code></td>
+<td>Only a formula overestimate produces it: sector granularity, write-allocate, ECC, and replay cache-flushing all push <code>measured</code> up.</td>
+</tr>
+<tr>
+<td>WARN</td>
+<td><code>measured &gt; formula × 1.5</code></td>
+<td>Multi-pass implementation or replay inflation; informational.</td>
+</tr>
+<tr>
+<td>ERROR</td>
+<td>missing metric or empty kernel range</td>
+<td>A broken audit, never a verdict.</td>
+</tr>
+</tbody>
+</table>
+<p>Runs on demand (profiling permissions, replay cost) — after a manifest <code>roofline</code> edit, and as the mandatory check for ops exempt from the structural oracle (data-dependent traffic the oracle cannot count).</p>
+<h3 id="46-structural-oracle-tests">4.6 Structural Oracle (tests)<a class="headerlink" href="#46-structural-oracle-tests" title="Permanent link">&para;</a></h3>
+<p>A CI test recomputes each audited <code>bytes</code> value from an independent path — the sizes of the tensors the workload actually binds (each distinct input storage once, each output once) — and requires equality with <code>eval_roofline()</code>. The formula and the oracle share only the minimum-traffic definition, so a coefficient slip, a missed output, a wrong <code>elem_bytes</code>, or a broadcast counted at the wrong shape breaks the equality.</p>
+<p>Ops whose traffic depends on tensor <em>content</em> (gather-style indexing) are exempt by explicit list and covered by §4.5 instead. Coverage is golden workloads per op, not randomized sweeps.</p>
+<p>A completeness test keeps the classification total: every implemented op is audited, exempt with a reason, or on an explicit pending list to burn down. An op added to the manifest fails the test until it is classified.</p>
+<h2 id="5-reference">5. Reference<a class="headerlink" href="#5-reference" title="Permanent link">&para;</a></h2>
+<h3 id="51-gpu-profile">5.1 GPU Profile<a class="headerlink" href="#51-gpu-profile" title="Permanent link">&para;</a></h3>
+<p>Hardware parameters use theoretical values with calibration factors from one-time microbenchmark measurements. A bandwidth calibration is the <strong>envelope</strong> over the measured access mixes (copy, Triad, pure read, pure write): a ceiling some legitimate mix can exceed is not a ceiling, and readings above 100% must stay reserved for formula errors; each mix's own measured fraction is kept as data (<code>calibration_mixes</code>), so a future per-mix ceiling reads it instead of re-measuring. YAML files store only measured values; <code>effective = theoretical × calibration</code> is computed by <code>load_profile()</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># src/tileops/perf/profiles/&lt;gpu&gt;.yaml</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nt">hbm</span><span class="p">:</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">theoretical</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4800e9</span><span class="w">       </span><span class="c1"># bytes/s, from spec sheet</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">calibration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.938</span><span class="w">        </span><span class="c1"># microbench envelope over access mixes</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nt">tensor_core</span><span class="p">:</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nt">fp16</span><span class="p">:</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nt">theoretical</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">989.5e12</span><span class="w">   </span><span class="c1"># FLOPS, from spec sheet</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nt">calibration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.75</span><span class="w">       </span><span class="c1"># from microbench (cuBLAS peak)</span>
+</span></code></pre></div>
+<p>Profiles are stored in <code>src/tileops/perf/profiles/</code>. Microbenchmarks for calibration live in <code>benchmarks/hardware/</code>.</p>
+<h3 id="52-benchmarkroofline-decoupling">5.2 Benchmark–Roofline Decoupling<a class="headerlink" href="#52-benchmarkroofline-decoupling" title="Permanent link">&para;</a></h3>
+<p>Benchmark (M4) produces per-workload records containing raw time and the <code>(flops, bytes)</code> from <code>op.eval_roofline()</code>. Roofline (M5) is a separate tool that reads those records + GPU profile to compute efficiency. This separation enables:</p>
+<ul>
+<li>Re-analyzing historical data when GPU profiles are updated</li>
+<li>Multiple consumers of raw benchmark data (roofline, regression detection, dashboards)</li>
+<li>Benchmark module has no third-party dependencies beyond the project itself</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 tile-ai
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/tile-ai/TileOPs" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

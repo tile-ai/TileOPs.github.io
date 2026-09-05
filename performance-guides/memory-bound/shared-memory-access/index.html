@@ -1,0 +1,3026 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="High-performance LLM operator library built on TileLang">
+      
+      
+      
+        <link rel="canonical" href="https://tile-ai.github.io/TileOPs.github.io/performance-guides/memory-bound/shared-memory-access/">
+      
+      
+        <link rel="prev" href="../global-memory-access/">
+      
+      
+        <link rel="next" href="../../../design/">
+      
+      
+        
+          <link rel="alternate" href="./" hreflang="en">
+        
+          <link rel="alternate" href="../../../zh/performance-guides/memory-bound/shared-memory-access/" hreflang="zh">
+        
+      
+      
+      <link rel="icon" href="../../../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Shared Memory Access - TileOPs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Hanken+Grotesk:300,300i,400,400i,700,700i%7CSpace+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Hanken Grotesk";--md-code-font:"Space Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../../assets/extra.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#optimizing-shared-memory-access" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="TileOPs" class="md-header__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../../../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            TileOPs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Shared Memory Access
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Select language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="../../../zh/performance-guides/memory-bound/shared-memory-access/" hreflang="zh" class="md-select__link">
+              简体中文
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="TileOPs" class="md-nav__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../../../assets/logo.png" alt="logo">
+
+    </a>
+    TileOPs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../user-guide/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing a Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../new-op/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding an Op
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../timing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timing Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../torch-compile/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using torch.compile
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../api/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/topk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Top-k
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/linear-algebra/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pooling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/convolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Convolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/fft/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/mamba/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mamba
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/mhc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    mHC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/engram/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Engram
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../benchmarks/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Benchmarks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/reading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How these numbers are taken
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/conv-pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conv &amp; Pool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/gemm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/ssm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/other/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Other
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Guides
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Performance Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../trace-timeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timeline Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory-Bound Kernels
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Memory-Bound Kernels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../global-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Global Memory Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared Memory Access
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared Memory Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#bank-conflict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The bank structure of shared memory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-determines-the-conflict-degree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What determines the conflict degree
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changing-the-stride-with-padding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changing the stride with padding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-much-padding-to-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How much padding to use
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pad-per-chunk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Padding has to be computed from the chunk
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-measured-sweep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A measured sweep
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#things-to-watch-when-applying-this" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Things to watch when applying this
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../design/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../design/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../design/manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Manifest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../design/ops-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Op Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../design/ops-design-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slot Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../design/roofline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roofline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../design/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../design/trust-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trust Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#bank-conflict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The bank structure of shared memory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-determines-the-conflict-degree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What determines the conflict degree
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changing-the-stride-with-padding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changing the stride with padding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-much-padding-to-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How much padding to use
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pad-per-chunk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Padding has to be computed from the chunk
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-measured-sweep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A measured sweep
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#things-to-watch-when-applying-this" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Things to watch when applying this
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="optimizing-shared-memory-access">Optimizing Shared Memory Access<a class="headerlink" href="#optimizing-shared-memory-access" title="Permanent link">&para;</a></h1>
+<p>Routing data through shared memory adds another access pattern to consider.
+Writing data from global memory into shared memory and reading it from shared
+memory into registers both access shared memory. This page covers bank conflicts
+in those two steps: what determines them, how padding removes them, and what the
+padding should be computed from.</p>
+<p>Every measurement on this page was taken on an H200 with the SM clock locked at
+1830 MHz, an input larger than the 60 MiB L2, and enough blocks to fill the
+whole card. Outside those conditions, the conclusions can reverse; the tests are
+in <a href="../global-memory-access/#regime">Optimizing Global Memory Access</a>.</p>
+<h2 id="bank-conflict">The bank structure of shared memory<a class="headerlink" href="#bank-conflict" title="Permanent link">&para;</a></h2>
+<p>Shared memory is built from 32 banks, each 4 bytes wide. If its address space is
+divided into 4-byte <strong>words</strong> (all counts below are in words), the bank for an
+address is <code>(byte address / 4) mod 32</code>. A bank serves one word per cycle. When
+several threads access shared memory concurrently and land on different banks,
+all of those accesses complete in the same cycle. When several threads land on
+the same bank, there are three cases:</p>
+<ol>
+<li><strong>Different words</strong> — the hardware splits the request into several
+   conflict-free requests and serves them one after another. The number of
+   splits is the <strong>conflict degree</strong>.</li>
+<li><strong>Reading the same word</strong> — any two threads landing inside one word, even on
+   different bytes of it, receive that word by broadcast, with no conflict.
+   Several broadcasts on different banks are further merged into one multicast.</li>
+<li><strong>Writing the same address</strong> — one write takes effect, but which write is
+   undefined.</li>
+</ol>
+<p>A shared-memory access pattern should be conflict-free whenever possible.</p>
+<h2 id="what-determines-the-conflict-degree">What determines the conflict degree<a class="headerlink" href="#what-determines-the-conflict-degree" title="Permanent link">&para;</a></h2>
+<p>Consider a case that is general enough to reason from. The one-dimensional array
+<code>sh</code> below lives in shared memory, and each thread reads <code>chunk</code> contiguous
+elements from it:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">sh</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">alloc_shared</span><span class="p">((</span><span class="n">threads</span> <span class="o">*</span> <span class="n">chunk</span><span class="p">,),</span> <span class="n">dtype</span><span class="p">)</span>   <span class="c1"># one dimension, threads * chunk elements</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">T</span><span class="o">.</span><span class="n">serial</span><span class="p">(</span><span class="n">chunk</span><span class="p">):</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">acc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">acc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">sh</span><span class="p">[</span><span class="n">tx</span> <span class="o">*</span> <span class="n">chunk</span> <span class="o">+</span> <span class="n">c</span><span class="p">]</span>         <span class="c1"># thread tx reads its own run</span>
+</span></code></pre></div>
+<p>The 32 threads of a warp execute this loop in lockstep. Within one iteration,
+<code>c</code> has the same value for all of them, while <code>tx</code> runs from 0 to 31. The 32
+threads therefore access shared memory at a fixed spacing. At <code>chunk = 64</code>, one
+iteration reads elements <code>c</code>, <code>64 + c</code>, <code>128 + c</code>, …, <code>1984 + c</code>. Adjacent
+threads are <code>chunk</code> elements apart. That difference is the <strong>stride</strong> of the
+access, written <span class="arithmatex">\(S\)</span>; in words, <span class="arithmatex">\(S = \text{chunk} \times E / 4\)</span>, where <span class="arithmatex">\(E\)</span> is the
+element size in bytes. The stride is independent of how many dimensions the
+array declaration uses and how the index is written.</p>
+<p>The other variable is the width of the memory instruction. A vectorized access
+reads <span class="arithmatex">\(w\)</span> contiguous words at a time, where <span class="arithmatex">\(w\)</span> is 1, 2, or 4: 32 bit, the
+8 bytes of a <code>float2</code>, or the 16 bytes of a <code>float4</code>. Thread <span class="arithmatex">\(t\)</span> then reads
+words <span class="arithmatex">\(St\)</span> through <span class="arithmatex">\(St + w - 1\)</span>.</p>
+<p>Under two premises, the conflict degree can be counted directly from the
+hardware facts above:</p>
+<ol>
+<li><strong><span class="arithmatex">\(S\)</span> is a whole number of words.</strong> An odd <code>chunk</code> in fp16 makes it a half
+   word, so a common divisor is not defined. The remaining method is to compute
+   each thread's bank from its byte address and count.</li>
+<li><strong>The <span class="arithmatex">\(32w\)</span> words the 32 threads request are distinct</strong>, that is <span class="arithmatex">\(S \ge w\)</span>.
+   Threads landing on one word are broadcast and cost no extra cycle, so
+   counting <span class="arithmatex">\(32w\)</span> words no longer holds; and at <span class="arithmatex">\(S &lt; w\)</span> the vector ranges of
+   adjacent threads overlap, which breaks it the same way.</li>
+</ol>
+<p>The warp fetches <span class="arithmatex">\(32w\)</span> words in total, and shared memory serves at most 32 words
+per cycle. The instruction therefore takes at least <span class="arithmatex">\(w\)</span> cycles. That lower bound
+comes from width alone and is independent of the addresses; a conflict is any
+cost above it. <span class="arithmatex">\(St \bmod 32\)</span> takes only multiples of <span class="arithmatex">\(g = \gcd(S, 32)\)</span>, so the
+access reaches <span class="arithmatex">\(32/g\)</span> banks, each hit <span class="arithmatex">\(g\)</span> times. The shifts
+<span class="arithmatex">\(j = 0, \dots, w-1\)</span> are then added on top. Both <span class="arithmatex">\(g\)</span> and <span class="arithmatex">\(w\)</span> are powers of two,
+so one divides the other, giving two cases:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Where the banks fall</th>
+<th>Cycles</th>
+<th>Conflict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(g \le w\)</span></td>
+<td>All 32 banks requested <span class="arithmatex">\(w\)</span> times each</td>
+<td><span class="arithmatex">\(w\)</span>, exactly the lower bound</td>
+<td>None</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(g &gt; w\)</span></td>
+<td>Only <span class="arithmatex">\((32/g) \cdot w\)</span> banks hit, <span class="arithmatex">\(g\)</span> times each</td>
+<td><span class="arithmatex">\(g\)</span></td>
+<td><span class="arithmatex">\(g / w\)</span>-way</td>
+</tr>
+</tbody>
+</table>
+<div class="arithmatex">\[\text{conflict degree} \ \ge\ \max\left(1,\ \frac{\gcd(S,\ 32)}{w}\right)\]</div>
+<p>For a scalar read (<span class="arithmatex">\(w = 1\)</span>), this is just <span class="arithmatex">\(\gcd(S, 32)\)</span>. When <span class="arithmatex">\(S\)</span> is coprime
+with 32, the 32 threads cover all 32 banks with no conflict. When <span class="arithmatex">\(S\)</span> is a
+multiple of 32, they all land on one bank and serialize 32 ways. fp16 with
+<code>chunk = 64</code> is the latter case: <span class="arithmatex">\(S\)</span> is 128 bytes, or 32 words.</p>
+<p>The result is an inequality because the last step assumes the hardware can fit
+any conflict-free set of words into one cycle. NVIDIA has not published how
+lanes are actually grouped for 64-bit and 128-bit accesses.</p>
+<h2 id="changing-the-stride-with-padding">Changing the stride with padding<a class="headerlink" href="#changing-the-stride-with-padding" title="Permanent link">&para;</a></h2>
+<p>The stride follows from <code>chunk</code>, and <code>chunk</code> is usually fixed by the algorithm
+rather than free to change. One way to remove an <span class="arithmatex">\(N\)</span>-way conflict is to add
+<code>pad</code> elements to the end of each run, making the stride <code>chunk + pad</code>. That
+changes the <code>gcd</code>, and therefore the conflict degree. For fp16 with
+<code>chunk = 64</code>, adding just 2 elements changes the stride from 32 words to 33,
+which is coprime with 32, and the conflict disappears entirely.</p>
+<figure class="bank-conflict">
+<p><svg class="tf-bank" viewBox="0 0 520 354" role="img" aria-label="Where the 32 threads of a warp land across the 32 shared memory banks, for fp16 with 64 elements to a chunk. Unpadded they all land on bank 0, a 32-way conflict; at pad = 2 they cover all 32 banks with no conflict; at pad = 4 two threads share a bank, a 2-way conflict; at pad = 8 four share one, a 4-way conflict.">
+<text class="bk-title" x="0" y="43.0">pad = 0</text>
+<text class="bk-sub" x="0" y="58.0">stride = 32 words</text>
+<text class="bk-sub" x="0" y="72.0">gcd(32, 32) = 32</text>
+<rect class="bk-cell bk-cell--many" x="150.0" y="30.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="155.5" y="43.5" text-anchor="middle">32</text>
+<rect class="bk-cell" x="161.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="172.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="183.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="194.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="205.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="216.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="227.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="238.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="249.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="260.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="271.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="282.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="293.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="304.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="315.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="326.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="337.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="348.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="359.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="370.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="381.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="392.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="403.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="414.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="425.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="436.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="447.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="458.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="469.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="480.0" y="30.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="491.0" y="30.0" width="11.0" height="20.0"/>
+<text class="bk-note" x="150.0" y="66.0">1 of 32 banks used, 32 threads on the busiest — 32-way</text>
+<text class="bk-title" x="0" y="117.0">pad = 2</text>
+<text class="bk-sub" x="0" y="132.0">stride = 33 words</text>
+<text class="bk-sub" x="0" y="146.0">gcd(33, 32) = 1</text>
+<rect class="bk-cell bk-cell--one" x="150.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="161.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="172.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="183.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="194.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="205.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="216.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="227.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="238.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="249.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="260.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="271.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="282.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="293.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="304.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="315.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="326.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="337.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="348.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="359.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="370.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="381.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="392.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="403.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="414.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="425.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="436.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="447.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="458.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="469.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="480.0" y="104.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--one" x="491.0" y="104.0" width="11.0" height="20.0"/>
+<text class="bk-note" x="150.0" y="140.0">32 of 32 banks used, 1 thread on the busiest — no conflict</text>
+<text class="bk-title" x="0" y="191.0">pad = 4</text>
+<text class="bk-sub" x="0" y="206.0">stride = 34 words</text>
+<text class="bk-sub" x="0" y="220.0">gcd(34, 32) = 2</text>
+<rect class="bk-cell bk-cell--many" x="150.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="155.5" y="191.5" text-anchor="middle">2</text>
+<rect class="bk-cell" x="161.0" y="178.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="172.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="177.5" y="191.5" text-anchor="middle">2</text>
+<rect class="bk-cell" x="183.0" y="178.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="194.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="199.5" y="191.5" text-anchor="middle">2</text>
+<rect class="bk-cell" x="205.0" y="178.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="216.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="221.5" y="191.5" text-anchor="middle">2</text>
+<rect class="bk-cell" x="227.0" y="178.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="238.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="243.5" y="191.5" text-anchor="middle">2</text>
+<rect class="bk-cell" x="249.0" y="178.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="260.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="265.5" y="191.5" text-anchor="middle">2</text>
+<rect class="bk-cell" x="271.0" y="178.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="282.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="287.5" y="191.5" text-anchor="middle">2</text>
+<rect class="bk-cell" x="293.0" y="178.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="304.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="309.5" y="191.5" text-anchor="middle">2</text>
+<rect class="bk-cell" x="315.0" y="178.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="326.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="331.5" y="191.5" text-anchor="middle">2</text>
+<rect class="bk-cell" x="337.0" y="178.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="348.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="353.5" y="191.5" text-anchor="middle">2</text>
+<rect class="bk-cell" x="359.0" y="178.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="370.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="375.5" y="191.5" text-anchor="middle">2</text>
+<rect class="bk-cell" x="381.0" y="178.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="392.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="397.5" y="191.5" text-anchor="middle">2</text>
+<rect class="bk-cell" x="403.0" y="178.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="414.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="419.5" y="191.5" text-anchor="middle">2</text>
+<rect class="bk-cell" x="425.0" y="178.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="436.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="441.5" y="191.5" text-anchor="middle">2</text>
+<rect class="bk-cell" x="447.0" y="178.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="458.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="463.5" y="191.5" text-anchor="middle">2</text>
+<rect class="bk-cell" x="469.0" y="178.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="480.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="485.5" y="191.5" text-anchor="middle">2</text>
+<rect class="bk-cell" x="491.0" y="178.0" width="11.0" height="20.0"/>
+<text class="bk-note" x="150.0" y="214.0">16 of 32 banks used, 2 threads on the busiest — 2-way</text>
+<text class="bk-title" x="0" y="265.0">pad = 8</text>
+<text class="bk-sub" x="0" y="280.0">stride = 36 words</text>
+<text class="bk-sub" x="0" y="294.0">gcd(36, 32) = 4</text>
+<rect class="bk-cell bk-cell--many" x="150.0" y="252.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="155.5" y="265.5" text-anchor="middle">4</text>
+<rect class="bk-cell" x="161.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="172.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="183.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="194.0" y="252.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="199.5" y="265.5" text-anchor="middle">4</text>
+<rect class="bk-cell" x="205.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="216.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="227.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="238.0" y="252.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="243.5" y="265.5" text-anchor="middle">4</text>
+<rect class="bk-cell" x="249.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="260.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="271.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="282.0" y="252.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="287.5" y="265.5" text-anchor="middle">4</text>
+<rect class="bk-cell" x="293.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="304.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="315.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="326.0" y="252.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="331.5" y="265.5" text-anchor="middle">4</text>
+<rect class="bk-cell" x="337.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="348.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="359.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="370.0" y="252.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="375.5" y="265.5" text-anchor="middle">4</text>
+<rect class="bk-cell" x="381.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="392.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="403.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="414.0" y="252.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="419.5" y="265.5" text-anchor="middle">4</text>
+<rect class="bk-cell" x="425.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="436.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="447.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell bk-cell--many" x="458.0" y="252.0" width="11.0" height="20.0"/>
+<text class="bk-count" x="463.5" y="265.5" text-anchor="middle">4</text>
+<rect class="bk-cell" x="469.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="480.0" y="252.0" width="11.0" height="20.0"/>
+<rect class="bk-cell" x="491.0" y="252.0" width="11.0" height="20.0"/>
+<text class="bk-note" x="150.0" y="288.0">8 of 32 banks used, 4 threads on the busiest — 4-way</text>
+<text class="bk-axis" x="155.5" y="22.0" text-anchor="middle">bank 0</text>
+<text class="bk-axis" x="496.5" y="22.0" text-anchor="end">31</text>
+<text class="bk-scale" x="0" y="337.0">fp16, 64 elements to a chunk, one warp of 32 threads. A number in a cell is</text>
+<text class="bk-scale" x="0" y="351.0">how many threads land on that bank; an empty cell means none do.</text>
+</svg></p>
+<figcaption>Four views of one kernel at four padding values, showing where the 32 threads of a warp land across the 32 banks. The number in a cell is how many threads land on that bank, and the largest number is the conflict degree. At <code>pad = 0</code>, all 32 threads land on bank 0. Adding 2 elements changes the stride to 33 words, which is coprime with 32, so the 32 threads cover all 32 banks exactly.</figcaption>
+</figure>
+<h2 id="how-much-padding-to-use">How much padding to use<a class="headerlink" href="#how-much-padding-to-use" title="Permanent link">&para;</a></h2>
+<p>The formula above gives the test, and <strong>both conditions must hold</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Access width</th>
+<th><span class="arithmatex">\(w\)</span></th>
+<th>Conflict requirement</th>
+<th>Alignment of a run's start</th>
+<th>Fastest pad at fp32, <code>chunk = 64</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>32 bit, scalar read</td>
+<td>1</td>
+<td><span class="arithmatex">\(\gcd(S, 32) = 1\)</span></td>
+<td>4 bytes</td>
+<td><code>pad = 1</code> (<span class="arithmatex">\(S = 65\)</span> words)</td>
+</tr>
+<tr>
+<td>64 bit, <code>float2</code></td>
+<td>2</td>
+<td><span class="arithmatex">\(\gcd(S, 32) \le 2\)</span></td>
+<td>8 bytes</td>
+<td><code>pad = 2</code> (<span class="arithmatex">\(S = 66\)</span> words)</td>
+</tr>
+<tr>
+<td>128 bit, <code>float4</code></td>
+<td>4</td>
+<td><span class="arithmatex">\(\gcd(S, 32) \le 4\)</span></td>
+<td>16 bytes</td>
+<td><code>pad = 4</code> (<span class="arithmatex">\(S = 68\)</span> words)</td>
+</tr>
+</tbody>
+</table>
+<p>The two conditions pull in opposite directions, so neither is sufficient by
+itself: <strong>the wider the access, the looser the conflict requirement and the
+tighter the alignment.</strong> An odd pad is optimal for a scalar read and the worst
+case for a vectorized read, because it shifts the start of each run by 4 bytes.
+A 128-bit shared read requires natural 16-byte alignment, and its behavior is
+undefined when the alignment is insufficient. If the compiler can see the
+insufficient alignment at compile time, it falls back to a narrower instruction;
+the <span class="arithmatex">\(\gcd = 1\)</span> row below shows that case.</p>
+<p>The measurements below were taken on an H200 with fp32 and <code>chunk = 64</code>. The
+consumption loop is repeated 32 times so the shared-memory side becomes the
+bottleneck, and time scales proportionally with the repeat count. Each entry is
+how many times slower that combination is than the fastest row at the same
+width:</p>
+<table>
+<thead>
+<tr>
+<th><span class="arithmatex">\(\gcd(S, 32)\)</span></th>
+<th>32 bit</th>
+<th>64 bit</th>
+<th>128 bit</th>
+<th>Predicted bound (32 / 64 / 128)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>1.00</strong></td>
+<td>1.10</td>
+<td>2.27</td>
+<td>1 / 1 / 1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1.72</td>
+<td><strong>1.00</strong></td>
+<td>1.01</td>
+<td>2 / 1 / 1</td>
+</tr>
+<tr>
+<td>4</td>
+<td>3.29</td>
+<td>1.81</td>
+<td><strong>1.00</strong></td>
+<td>4 / 2 / 1</td>
+</tr>
+<tr>
+<td>8</td>
+<td>6.52</td>
+<td>3.55</td>
+<td>4.04</td>
+<td>8 / 4 / 2</td>
+</tr>
+<tr>
+<td>16</td>
+<td>12.97</td>
+<td>7.62</td>
+<td>7.99</td>
+<td>16 / 8 / 4</td>
+</tr>
+<tr>
+<td>32</td>
+<td>25.82</td>
+<td>13.97</td>
+<td>15.71</td>
+<td>32 / 16 / 8</td>
+</tr>
+</tbody>
+</table>
+<p>The three 1.00 entries on the diagonal are the three recommendations in the
+previous table. The bound is tight on the <span class="arithmatex">\(g \le w\)</span> side. On the <span class="arithmatex">\(g &gt; w\)</span> side,
+it is not tight, and the 128-bit column lands at exactly twice the bound (4.04
+versus 2, 7.99 versus 4, 15.71 versus 8). Explaining the cause requires
+lower-level evidence, because NVIDIA has not published how lanes are grouped at
+those two widths. The 2.27 in the <span class="arithmatex">\(\gcd = 1\)</span> row comes from alignment:
+<span class="arithmatex">\(S = 65\)</span> words is 260 bytes, not a multiple of 16.</p>
+<h2 id="pad-per-chunk">Padding has to be computed from the chunk<a class="headerlink" href="#pad-per-chunk" title="Permanent link">&para;</a></h2>
+<p>Padding by a fixed number of bytes falls back into the worst case for some
+values of <code>chunk</code>. The alignment requirement restricts the candidates to whole
+multiples of 16 bytes. Write the pad as <span class="arithmatex">\(k\)</span> multiples of 16 bytes
+(<span class="arithmatex">\(k = 1, 2, \dots\)</span>):</p>
+<div class="arithmatex">\[S = \frac{\text{chunk} \times E}{4} + 4k \ \text{words}\]</div>
+<p>With <span class="arithmatex">\(k\)</span> fixed, <span class="arithmatex">\(\gcd(S, 32)\)</span> varies with <code>chunk</code>. For fp16 and bf16
+(<span class="arithmatex">\(E = 2\)</span>), several values of <code>chunk</code> give:</p>
+<table>
+<thead>
+<tr>
+<th>chunk</th>
+<th><span class="arithmatex">\(S\)</span> (<span class="arithmatex">\(k = 1\)</span>)</th>
+<th><span class="arithmatex">\(\gcd(S, 32)\)</span></th>
+<th><span class="arithmatex">\(S\)</span> (<span class="arithmatex">\(k = 2\)</span>)</th>
+<th><span class="arithmatex">\(\gcd(S, 32)\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>32</td>
+<td>20</td>
+<td><strong>4</strong></td>
+<td>24</td>
+<td>8</td>
+</tr>
+<tr>
+<td>56</td>
+<td>32</td>
+<td>32</td>
+<td>36</td>
+<td><strong>4</strong></td>
+</tr>
+<tr>
+<td>64</td>
+<td>36</td>
+<td><strong>4</strong></td>
+<td>40</td>
+<td>8</td>
+</tr>
+<tr>
+<td>72</td>
+<td>40</td>
+<td>8</td>
+<td>44</td>
+<td><strong>4</strong></td>
+</tr>
+<tr>
+<td>128</td>
+<td>68</td>
+<td><strong>4</strong></td>
+<td>72</td>
+<td>8</td>
+</tr>
+</tbody>
+</table>
+<p>In the <code>chunk = 56</code> row, <span class="arithmatex">\(S\)</span> is exactly 32 words, so the accesses land on the
+same bank as with <code>pad = 0</code>: padding was added, but the conflict remains. The
+fix is to choose whichever of <span class="arithmatex">\(k = 1\)</span> and <span class="arithmatex">\(k = 2\)</span> gives the smaller
+<span class="arithmatex">\(\gcd(S, 32)\)</span>. Whenever <span class="arithmatex">\(\text{chunk} \times E\)</span> is a multiple of 16, one of the
+two choices is guaranteed to reduce the <span class="arithmatex">\(\gcd\)</span> to 4. Writing
+<span class="arithmatex">\(q = \text{chunk} \times E / 16\)</span> gives <span class="arithmatex">\(S = 4(q + k)\)</span> and
+<span class="arithmatex">\(\gcd(S, 32) = 4 \gcd(q + k, 8)\)</span>; one of <span class="arithmatex">\(q + 1\)</span> and <span class="arithmatex">\(q + 2\)</span> is odd.</p>
+<p>The measurements below were taken on an H200 with the SM clock locked at
+1830 MHz, bf16, CUPTI device time, L2 flushed before each iteration, median of
+200 runs, and image
+<code>ghcr.io/tile-ai/tileops-runner:cu132-torch2.13-tl-afcebed1-dev</code>. All four rows
+use the thread count that makes <code>chunk</code> equal 56. Within a row, the two columns
+differ only in the pad:</p>
+<table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Threads × chunk</th>
+<th><span class="arithmatex">\(k = 1\)</span> (pad 8 elements)<br>TB/s</th>
+<th><span class="arithmatex">\(k = 2\)</span> (pad 16 elements)<br>TB/s</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(2048 \times 3584\)</span></td>
+<td>64 × 56</td>
+<td>1.38</td>
+<td><strong class="win">3.07</strong></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(2048 \times 7168\)</span></td>
+<td>128 × 56</td>
+<td>1.58</td>
+<td><strong class="win">3.29</strong></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(1024 \times 14336\)</span></td>
+<td>256 × 56</td>
+<td>1.51</td>
+<td><strong class="win">3.05</strong></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(512 \times 28672\)</span></td>
+<td>512 × 56</td>
+<td>1.32</td>
+<td><strong class="win">2.33</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Those four widths are the hidden size of Qwen2-7B, the hidden size of
+Llama-3-70B, and the FFN intermediate dimensions of Llama-3-8B and
+Llama-3-70B. They are not constructed counterexamples.</p>
+<p>The shared-memory side of these measurements is not a scalar read. <code>cuobjdump</code>
+shows 16 <code>LDS.64</code> instructions per thread at <span class="arithmatex">\(S = 36\)</span> words, so <span class="arithmatex">\(w = 2\)</span> and the
+degree is <span class="arithmatex">\(\gcd(S, 32) / 2\)</span>: 16-way and 2-way for the two columns. The degrees
+differ by a factor of 8, while bandwidth differs by only 2.2, because the
+2-way column is limited by DRAM again. When the start of a run is misaligned by
+less than 8 bytes, the compiler falls back to <code>LDS</code> (<span class="arithmatex">\(w = 1\)</span>). Width is decided
+by the compiler, not by the code that declares the pad, so both columns above
+must be measured rather than derived from the <span class="arithmatex">\(\gcd\)</span> alone.</p>
+<h2 id="a-measured-sweep">A measured sweep<a class="headerlink" href="#a-measured-sweep" title="Permanent link">&para;</a></h2>
+<p>The measurements below read one element per thread at a time (<span class="arithmatex">\(w = 1\)</span>), use
+powers of two for <code>chunk</code>, and give each thread its own run. Both premises above
+therefore hold.</p>
+<p>H200, SM clock locked at 1830 MHz. fp16, input <span class="arithmatex">\(65536 \times 4096\)</span> (512 MB,
+larger than the 60 MiB L2). The kernel stages a whole row into shared memory,
+with <code>chunk + pad</code> elements per thread, computes a serial prefix product over
+each run, and writes it back, for 1 GB read and written in total. Parentheses
+show the conflict degree predicted by the formula:</p>
+<table>
+<thead>
+<tr>
+<th>chunk</th>
+<th>Threads</th>
+<th>pad = 0<br>TB/s</th>
+<th>pad = 2<br>TB/s</th>
+<th>pad = 4<br>TB/s</th>
+<th>pad = 8<br>TB/s</th>
+<th>pad = 16<br>TB/s</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>16</td>
+<td>256</td>
+<td>1.63 (8-way)</td>
+<td>2.99 (1-way)</td>
+<td><strong class="win">3.29</strong> (2-way)</td>
+<td>2.58 (4-way)</td>
+<td>0.86 (16-way)</td>
+</tr>
+<tr>
+<td>32</td>
+<td>128</td>
+<td>0.89 (16-way)</td>
+<td>3.32 (1-way)</td>
+<td><strong class="win">3.35</strong> (2-way)</td>
+<td>2.57 (4-way)</td>
+<td>1.54 (8-way)</td>
+</tr>
+<tr>
+<td>64</td>
+<td>64</td>
+<td>0.46 (32-way)</td>
+<td>3.63 (1-way)</td>
+<td><strong class="win">3.70</strong> (2-way)</td>
+<td>2.74 (4-way)</td>
+<td>1.62 (8-way)</td>
+</tr>
+<tr>
+<td>128</td>
+<td>32</td>
+<td>0.46 (32-way)</td>
+<td>3.25 (1-way)</td>
+<td><strong class="win">3.31</strong> (2-way)</td>
+<td>2.76 (4-way)</td>
+<td>1.61 (8-way)</td>
+</tr>
+</tbody>
+</table>
+<p>Across the 20 configurations, 1-way and 2-way stay above 3.0, 4-way drops to
+around 2.6, and 8-way and worse fall below 1.6. Bandwidth decreases
+monotonically with the predicted degree, so under these conditions the formula
+can be used directly to narrow the padding candidates.</p>
+<h2 id="things-to-watch-when-applying-this">Things to watch when applying this<a class="headerlink" href="#things-to-watch-when-applying-this" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong>The formula gives candidates; the final value comes from measurement.</strong> In
+   the table above, 1-way and 2-way both stay above 3.0, 4-way drops to around
+   2.6, and 8-way and worse fall below 1.6. The formula is useful for narrowing
+   the candidates to those that compute to no more than <span class="arithmatex">\(w\)</span> ways. Among those
+   candidates, measure: 2-way edges out 1-way on all four values of <code>chunk</code>, but
+   only by 0.9% to 10%, which is not a rule worth carrying over.</p>
+</li>
+<li>
+<p><strong>After changing the pad, sweep <code>chunk</code> again.</strong> The best entry in the
+   <code>pad = 0</code> column is <code>chunk = 16</code> (1.63); in the <code>pad = 4</code> column, it is
+   <code>chunk = 64</code> (3.70). The ordering of the first column is set mostly by
+   conflict degree: <code>chunk = 16</code> hits 8-way, while <code>chunk = 64</code> hits 32-way.
+   Once the conflicts are removed, all four cases are 2-way, and the optimum
+   moves. Thread count and <code>chunk</code> move together in this table (their product is
+   the row width, 4096), so <code>chunk</code> is not the only cause of the move; occupancy
+   and loop length change with it. The conclusion is only that the ordering of
+   <code>chunk</code> changes after the pad changes.</p>
+</li>
+<li>
+<p><strong>After changing <code>chunk</code>, recompute the pad.</strong> Writing the pad as a fixed
+   number of bytes assumes <span class="arithmatex">\(\gcd(S, 32)\)</span> is independent of <code>chunk</code>, and
+   <a href="#pad-per-chunk">the table above</a> shows that it is not: at <code>chunk = 56</code> and
+   <span class="arithmatex">\(k = 1\)</span>, <span class="arithmatex">\(S\)</span> returns to 32 words. Writing the pad as a function of <code>chunk</code>,
+   by taking whichever of <span class="arithmatex">\(k = 1\)</span> and <span class="arithmatex">\(k = 2\)</span> gives the smaller <span class="arithmatex">\(\gcd(S, 32)\)</span>,
+   keeps it consistent with the test on this page.</p>
+</li>
+<li>
+<p><strong>This page applies only where data passes through shared memory.</strong> By the
+   trade-offs in
+   <a href="../global-memory-access/#coalescing">Optimizing Global Memory Access</a>, small
+   <span class="arithmatex">\(V\)</span> calls for vectorized blocked. In that pattern, data goes straight into
+   registers, never touches shared memory, and has no bank conflicts. This page
+   applies once <span class="arithmatex">\(V\)</span> grows enough that register pressure cuts occupancy and
+   staged takes over, and when a whole row has to be shared by every thread in
+   the block.</p>
+</li>
+</ol>
+<p>The two listings below declare the shared buffer and differ only in the stride.
+The wrong form has a stride that is an exact multiple of 32 words:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">sh</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">alloc_shared</span><span class="p">((</span><span class="n">threads</span> <span class="o">*</span> <span class="n">chunk</span><span class="p">,),</span> <span class="n">dtype</span><span class="p">)</span>          <span class="c1"># stride = chunk elements</span>
+</span></code></pre></div>
+<p>The right form computes the pad from <code>chunk</code>, choosing the whole multiple of
+16 bytes with the smallest <span class="arithmatex">\(\gcd(S, 32)\)</span>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">def</span><span class="w"> </span><span class="nf">pick_pad</span><span class="p">(</span><span class="n">chunk</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">elem_bytes</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="sd">"""The pad, in elements, with the smallest gcd(S, 32) among whole multiples of 16 bytes."""</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="k">return</span> <span class="nb">min</span><span class="p">(</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="p">(</span><span class="mi">16</span> <span class="o">//</span> <span class="n">elem_bytes</span><span class="p">,</span> <span class="mi">32</span> <span class="o">//</span> <span class="n">elem_bytes</span><span class="p">),</span>                    <span class="c1"># k = 1, k = 2</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">pad</span><span class="p">:</span> <span class="n">math</span><span class="o">.</span><span class="n">gcd</span><span class="p">((</span><span class="n">chunk</span> <span class="o">+</span> <span class="n">pad</span><span class="p">)</span> <span class="o">*</span> <span class="n">elem_bytes</span> <span class="o">//</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">32</span><span class="p">),</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="p">)</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">pad</span> <span class="o">=</span> <span class="n">pick_pad</span><span class="p">(</span><span class="n">chunk</span><span class="p">,</span> <span class="n">elem_bytes</span><span class="p">)</span>                                <span class="c1"># still measure between candidates</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">sh</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">alloc_shared</span><span class="p">((</span><span class="n">threads</span> <span class="o">*</span> <span class="p">(</span><span class="n">chunk</span> <span class="o">+</span> <span class="n">pad</span><span class="p">),),</span> <span class="n">dtype</span><span class="p">)</span>           <span class="c1"># stride = chunk + pad</span>
+</span></code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 tile-ai
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/tile-ai/TileOPs" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

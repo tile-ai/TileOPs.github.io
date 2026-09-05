@@ -1,0 +1,3006 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="High-performance LLM operator library built on TileLang">
+      
+      
+      
+        <link rel="canonical" href="https://tile-ai.github.io/TileOPs.github.io/design/ops-design/">
+      
+      
+        <link rel="prev" href="../manifest/">
+      
+      
+        <link rel="next" href="../ops-design-reference/">
+      
+      
+        
+          <link rel="alternate" href="./" hreflang="en">
+        
+          <link rel="alternate" href="../../zh/design/ops-design/" hreflang="zh">
+        
+      
+      
+      <link rel="icon" href="../../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Op Interfaces - TileOPs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Hanken+Grotesk:300,300i,400,400i,700,700i%7CSpace+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Hanken Grotesk";--md-code-font:"Space Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../assets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#op-interface-design" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="TileOPs" class="md-header__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            TileOPs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Op Interfaces
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Select language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="../../zh/design/ops-design/" hreflang="zh" class="md-select__link">
+              简体中文
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="TileOPs" class="md-nav__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    TileOPs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../user-guide/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing a Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../new-op/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding an Op
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../timing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timing Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../torch-compile/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using torch.compile
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../api/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/topk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Top-k
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/linear-algebra/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pooling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/convolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Convolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/fft/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/mamba/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mamba
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/mhc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    mHC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/engram/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Engram
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../benchmarks/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Benchmarks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/reading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How these numbers are taken
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/conv-pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conv &amp; Pool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/gemm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/ssm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/other/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Other
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../performance-guides/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Guides
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Performance Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/trace-timeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timeline Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../performance-guides/memory-bound/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory-Bound Kernels
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Memory-Bound Kernels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/memory-bound/global-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Global Memory Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/memory-bound/shared-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared Memory Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Manifest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Op Interfaces
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Op Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Concepts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Concepts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#execution-timing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execution timing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kernel-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kernel selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kernel-caching-and-enumeration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kernel caching and enumeration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scaffolding-an-op-from-a-manifest-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scaffolding an Op from a Manifest Entry
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scaffolding an Op from a Manifest Entry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-file-header-imports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: File header + imports
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-class-declaration-docstring-__all__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Class declaration + docstring + __all__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-_static_axes-__init__-signature-and-body" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: _static_axes + __init__ signature and body
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-default_kernel_map-forward" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: default_kernel_map + forward
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-_infer_output_shapes-_validate_dtypes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: _infer_output_shapes + _validate_dtypes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-eval_roofline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: eval_roofline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-7-package-registration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7: Package registration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slot-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slot coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#out-of-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Out of Scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementing-a-kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementing a Kernel
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compile-dispatch-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compile Dispatch Boundary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#family-base-refactoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Family-Base Refactoring
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#further-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Further Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ops-design-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slot Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roofline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roofline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../trust-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trust Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Concepts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Concepts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#execution-timing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execution timing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kernel-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kernel selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kernel-caching-and-enumeration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kernel caching and enumeration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scaffolding-an-op-from-a-manifest-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scaffolding an Op from a Manifest Entry
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scaffolding an Op from a Manifest Entry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-file-header-imports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: File header + imports
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-class-declaration-docstring-__all__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Class declaration + docstring + __all__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-_static_axes-__init__-signature-and-body" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: _static_axes + __init__ signature and body
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-default_kernel_map-forward" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: default_kernel_map + forward
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-_infer_output_shapes-_validate_dtypes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: _infer_output_shapes + _validate_dtypes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-eval_roofline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: eval_roofline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-7-package-registration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7: Package registration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slot-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slot coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#out-of-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Out of Scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementing-a-kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementing a Kernel
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compile-dispatch-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compile Dispatch Boundary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#family-base-refactoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Family-Base Refactoring
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#further-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Further Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="op-interface-design">Op Interface Design<a class="headerlink" href="#op-interface-design" title="Permanent link">&para;</a></h1>
+<p>What an Op's interface rests on, then the step-by-step playbook for scaffolding one from a manifest entry, then the contract an op takes on when it declares itself compilable. Per-slot rules are authoritative in <a href="../ops-design-reference/"><code>ops-design-reference.md</code></a>; this file states the decisions those rules follow from.</p>
+<h2 id="concepts">Concepts<a class="headerlink" href="#concepts" title="Permanent link">&para;</a></h2>
+<p>Every operator is split into two classes — <strong>Op</strong> (host-side: validates inputs, dispatches to Kernel, assembles output) and <strong>Kernel</strong> (device-side: owns the TileLang program, tile configuration, JIT compilation). The two layers are independently modifiable — changing a Kernel's tile strategy does not require changing the Op.</p>
+<h3 id="class-hierarchy">Class hierarchy<a class="headerlink" href="#class-hierarchy" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Op                          ← L1: thin base, shared by all ops
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  └── FamilyBase            ← L2: family-specific forward() flow (optional)
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>        └── ConcreteOp      ← L3: leaf class emitted by the scaffold
+</span></code></pre></div>
+<ul>
+<li><strong>L1 (<code>Op</code>):</strong> shared host-side plumbing (dispatch, get-or-build kernel caching, kernel enumeration, autotune) plus the contracts for the three codegen methods (<code>_infer_output_shapes</code>, <code>_validate_dtypes</code>, <code>eval_roofline</code>).</li>
+<li><strong>L2 (<code>FamilyBase</code>):</strong> per-family shared <code>forward()</code> pipeline (one per family). <strong>Not produced by this playbook</strong> — see <a href="#family-base-refactoring">Family-Base Refactoring</a>.</li>
+<li><strong>L3 (<code>ConcreteOp</code>):</strong> this playbook's target. New ops start by inheriting L1 directly (T2 shape); see <a href="#family-base-refactoring">Family-Base Refactoring</a> for when a family graduates to L2.</li>
+</ul>
+<h3 id="execution-timing">Execution timing<a class="headerlink" href="#execution-timing" title="Permanent link">&para;</a></h3>
+<p><strong>Do it at the first moment all required information is known, do it once, cache the result.</strong> What an op knows at construction is what the manifest declares there:</p>
+<table>
+<thead>
+<tr>
+<th>Op category</th>
+<th><code>__init__</code> takes</th>
+<th>The call carries</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fixed-rank</td>
+<td>the dims <code>shape</code> names</td>
+<td>nothing about shape</td>
+</tr>
+<tr>
+<td>Arbitrary-rank</td>
+<td>the <code>static_dims</code> keys</td>
+<td>every other dim</td>
+</tr>
+</tbody>
+</table>
+<p><code>_infer_output_shapes</code> runs per call either way, over the shapes it is handed.</p>
+<p><strong>Shape is not a constructor parameter when the tensors carry it.</strong> Only what the manifest declares belongs in <code>__init__</code> — <code>shape</code> dim names, <code>static_dims</code> keys, <code>params</code> keys — plus the arguments every op takes (<code>target</code>, <code>kernel_map</code>, <code>tune</code>). A dimension declared nowhere is not construction information: it arrives with the call, and taking it twice lets an instance disagree with the tensors it is handed. What the kernel is compiled for goes in the memory key instead, so a second shape builds a second kernel.</p>
+<p><strong>Dtype is not a constructor parameter when the inputs determine it.</strong> An op reads it from the input tensors in <code>forward()</code>: a caller who passes fp16 tensors gets the fp16 kernel without having said so twice, and an op can no longer be constructed in a state that disagrees with the tensors it is about to be handed.</p>
+<p>An output dtype is determined by the inputs when it is <code>same_as(...)</code>, <code>promote_int_to_float(...)</code>, one concrete dtype, or a union equal to some input's. When some output dtype is an independent choice — an op that generates a tensor from parameters alone, or an fp8 path whose output may be fp16 or bf16 — the tensors are not a second source and <code>dtype</code> stays a <code>signature.params</code> entry.</p>
+<p>The kernel is dtype-specialized, so this makes kernel construction uniformly deferred to the first <code>forward()</code> — for fixed-rank and arbitrary-rank ops alike — keyed by every input that selects a specialization, dtype among them. <code>dispatch_kernel()</code> stays in <code>__init__</code>: resolving the kernel <em>class</em> needs no tensor. It also needs no device, and must not ask for one — see <a href="#kernel-selection">Kernel selection</a>.</p>
+<p><code>_validate_dtypes</code> is the only dtype gate, and it runs on every <code>forward()</code> call: validity depends on the tensors passed, and an op has no constructed dtype to compare them against. <code>self.dtype</code> exists for <code>eval_roofline</code> / <code>total_memory</code> only: it records an earlier call, and the next dtype invalidates it, so no execution path may read it. A family that writes it after the launch returns — the elementwise bases do — narrows that to the last call that completed. Roofline timing and formula semantics are in <a href="../roofline/">roofline.md</a>; see <a href="../ops-design-reference/#parameter-design">Parameter Design</a> for fixed-rank vs arbitrary-rank details and <a href="../ops-design-reference/#codegen">Codegen Details</a> for calling conventions.</p>
+<h3 id="kernel-selection">Kernel selection<a class="headerlink" href="#kernel-selection" title="Permanent link">&para;</a></h3>
+<p><strong>Construction reads no device property.</strong> An op constructs where it is imported. The tensors arrive later, perhaps on a device the process has not touched, perhaps on hardware where the probe does not exist at all. Installing the kernel map resolves classes and nothing more; a target that cannot run the op is refused when a kernel is first selected, built or called — by the implementation, which owns the architectures it was written for.</p>
+<p><strong>Choosing a slot is the op's; choosing among a slot's implementations is not.</strong> Which slot serves a call follows from the call's user-visible semantics. Which implementation of that slot runs belongs with the implementations.</p>
+<p><strong>An implementation states the region it serves, positively.</strong> Never by excluding a sibling, never by architecture — its declared support already answers that.</p>
+<p><strong>Order decides nothing.</strong> Selection takes the implementation that applies; the one declared general runs where no specialised one does. Nothing applicable is an error, and two specialised implementations claiming one call is an ambiguity error rather than a silent preference. A replacement the caller supplies answers the same question as the class it replaces.</p>
+<p>The rule is implementation choice within one slot. Choosing the slot sits above it, dtype specialization beside it; neither goes through it. See <a href="../ops-design-reference/#slot-s13">S13</a>.</p>
+<h3 id="kernel-caching-and-enumeration">Kernel caching and enumeration<a class="headerlink" href="#kernel-caching-and-enumeration" title="Permanent link">&para;</a></h3>
+<p>L1 owns get-or-build. An op names the <strong>role</strong> a kernel plays, the <strong>key</strong> identifying the specialization, and the factory that builds it. The factory runs on the first miss for that key and never again. An op MUST NOT carry a get-or-build of its own — no cache dict, no build guarded on a kernel attribute being unset. Holding what L1 returned in <code>self.kernel</code> is not one.</p>
+<p>The key is opaque to L1 and must carry every input that can change what gets built. Naming the axes is the op's job, because only the op knows what its factory closes over.</p>
+<p>The entry, not the kernel, is the unit built once. A specialization that must build several kernels together returns them as one immutable entry from one factory; kernels keyed independently of each other are separate roles.</p>
+<p><code>iter_kernels()</code> enumerates entries and delegates explicitly, never by reflecting over attributes. An op that runs a kernel another op built declares that op in <code>kernel_delegates()</code>, so a composite reaches its delegates' kernels without overriding <code>autotune()</code>. Reflection could only guess: a kernel nested deeper than the traversal descended, or held in an attribute whose type it did not recognise, was silently invisible. Declaring turns that silent omission into a missing declaration.</p>
+<h2 id="scaffolding-an-op-from-a-manifest-entry">Scaffolding an Op from a Manifest Entry<a class="headerlink" href="#scaffolding-an-op-from-a-manifest-entry" title="Permanent link">&para;</a></h2>
+<p>The scaffold emits a T2 (L1-direct) op file from one manifest entry. Each step has typed <strong>Input</strong> (manifest fields consumed), <strong>Output</strong> (the code fragment produced), <strong>Validation</strong> (concrete check), and a <strong>Reference</strong> link to the authoritative slot rule in <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md"><code>slot-rules.md</code></a>. Examples scaffold the fictional <code>ExampleCumsumFwdOp</code> (cumulative-sum semantics) in T2 (L1-direct) form from an equally fictional manifest entry; nothing in them mirrors a shipped file.</p>
+<h3 id="step-1-file-header-imports">Step 1: File header + imports<a class="headerlink" href="#step-1-file-header-imports" title="Permanent link">&para;</a></h3>
+<p><strong>Input.</strong> <code>source.kernel_map</code> values (Kernel classes to import).</p>
+<p><strong>Output.</strong></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="sd">"""Cumulative sum operator (host-side Op layer).</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="sd">Provides:</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="sd">  - ExampleCumsumFwdOp: y = cumsum(x, dim=-1)</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="sd">"""</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tileops.kernels.kernel_base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Kernel</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tileops.kernels.reduction.example_cumsum</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExampleCumsumKernel</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="kn">from</span><span class="w"> </span><span class="nn">..op_base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Op</span>
+</span></code></pre></div>
+<p><strong>Validation.</strong> Every concrete-Kernel import matches one <code>source.kernel_map</code> value verbatim. The <code>Kernel</code> base import and <code>..op_base</code> relative import are fixed.</p>
+<p><strong>Reference.</strong> <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s1">Slot S1</a>, <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s2">S2</a>, <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s3">S3</a>, <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s4">S4</a>.</p>
+<h3 id="step-2-class-declaration-docstring-__all__">Step 2: Class declaration + docstring + <code>__all__</code><a class="headerlink" href="#step-2-class-declaration-docstring-__all__" title="Permanent link">&para;</a></h3>
+<p><strong>Input.</strong> Manifest entry key (= class name); <code>signature.inputs</code>, <code>signature.params</code>, <code>static_dims</code> (Args block content).</p>
+<p><strong>Output.</strong></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"ExampleCumsumFwdOp"</span><span class="p">]</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">ExampleCumsumFwdOp</span><span class="p">(</span><span class="n">Op</span><span class="p">):</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="sd">"""Cumulative sum operator: y = cumsum(x, dim=-1).</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="sd">    Output has the same shape and dtype as input.</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="sd">    Args:</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="sd">        N: Hidden dimension (size along the reduction axis), committed</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="sd">            at ctor via ``static_dims: N: "x.shape[dim]"``.</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="sd">        dim: Reduction dimension (default -1).</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="sd">        kernel_map: Optional override for kernel dispatch.</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="sd">        tune: Whether to autotune (default False).</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="sd">    """</span>
+</span></code></pre></div>
+<p><strong>Validation.</strong> Class name ≡ manifest entry key, byte-exact (<code>ExampleCumsumFwdOp</code>). Every <code>Args:</code> entry appears as an <code>__init__</code> kwarg in Step 3; no extras.</p>
+<p><strong>Reference.</strong> <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s5">Slot S5</a>, <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s6">S6</a>, <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s7">S7</a>.</p>
+<h3 id="step-3-_static_axes-__init__-signature-and-body">Step 3: <code>_static_axes</code> + <code>__init__</code> signature and body<a class="headerlink" href="#step-3-_static_axes-__init__-signature-and-body" title="Permanent link">&para;</a></h3>
+<p><strong>Input.</strong> <code>static_dims</code> (literal-axis → class-level <code>_static_axes</code> frozenset; param-axis → empty class-level default, bind at <code>forward()</code> after <code>dim % x.ndim</code> normalization); <code>signature.params</code>.</p>
+<p><strong>Output.</strong></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>    <span class="c1"># static_dims: N: "x.shape[dim]" — the axis is param-dependent</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="c1"># (may be negative like dim=-1), so the concrete (input_index,</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="c1"># axis) pair cannot be resolved until x.ndim is known. Leave the</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="c1"># class-level default empty; bind in forward() after normalizing</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="c1"># dim against x.ndim (Op base requires a non-negative axis).</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">_static_axes</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">()</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>        <span class="bp">self</span><span class="p">,</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>        <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>        <span class="n">N</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>        <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>        <span class="n">kernel_map</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Kernel</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>        <span class="n">tune</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    <span class="p">):</span>
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">N</span> <span class="o">=</span> <span class="n">N</span>
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="n">dim</span>
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">tune</span> <span class="o">=</span> <span class="n">tune</span>
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>        <span class="c1"># M is not a static_dim — deferred to forward() where x.ndim</span>
+</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>        <span class="c1"># is known and M is derived from the non-reduction axes.</span>
+</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">dispatch_kernel</span><span class="p">(</span><span class="n">kernel_map</span><span class="p">)</span>
+</span></code></pre></div>
+<p><strong>Validation.</strong> Every <code>__init__</code> parameter has a manifest source (<code>static_dims</code> or <code>signature.params</code>); no extras except <code>target</code> / <code>kernel_map</code> / <code>tune</code>. <code>dtype</code> is not a kwarg — it is read from the input in <code>forward()</code>. In particular, <code>M</code> is NOT a ctor kwarg — <code>ExampleCumsumFwdOp.static_dims</code> declares only <code>N</code>, so <code>M</code> is derived at forward time. Manifest parameters keep manifest order; a param declaring <code>kw_only: true</code> goes after <code>*</code>, and <code>static_dims</code> entries take no defaults. <code>_static_axes</code> matches the manifest axis form (literal-int axis → populated class-level frozenset; param-dependent axis → empty class-level default, bound at forward after <code>dim % x.ndim</code> normalization).</p>
+<p><strong>Reference.</strong> <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s21">Slot S21</a>, <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s12">S12</a>, <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s13">S13</a>.</p>
+<h3 id="step-4-default_kernel_map-forward">Step 4: <code>default_kernel_map</code> + <code>forward</code><a class="headerlink" href="#step-4-default_kernel_map-forward" title="Permanent link">&para;</a></h3>
+<p><strong>Input.</strong> Manifest <code>source.kernel_map</code>; <code>signature.inputs</code>; <code>static_dims</code> (for the forward-time commitment check); <code>shape_rules</code> (for <code>dim</code> range validation).</p>
+<p><strong>Optional inputs.</strong> An <code>optional: true</code> input takes a <code>None</code> default in <code>forward</code>, and presence is read from the call rather than settled at construction, so one instance serves both ways of calling the op. A <code>shape_rules</code> entry naming it applies to the calls that supply it, and <code>forward</code> is what enforces that. Where the presence changes what gets built, it belongs in the kernel cache key alongside the shapes.</p>
+<p><strong>Output.</strong></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>    <span class="nd">@property</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">default_kernel_map</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Kernel</span><span class="p">]:</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        <span class="k">return</span> <span class="p">{</span><span class="s2">"example_cumsum_fwd"</span><span class="p">:</span> <span class="n">ExampleCumsumKernel</span><span class="p">}</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_dtypes</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>        <span class="c1"># Validate `dim` against shape_rule `-x.ndim &lt;= dim &lt; x.ndim`</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="c1"># and normalize to a non-negative axis (Op._static_axes contract).</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="o">-</span><span class="n">x</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">&lt;</span> <span class="n">x</span><span class="o">.</span><span class="n">ndim</span><span class="p">:</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>                <span class="sa">f</span><span class="s2">"dim </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="si">}</span><span class="s2"> out of range for x.ndim=</span><span class="si">{</span><span class="n">x</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>        <span class="n">dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">%</span> <span class="n">x</span><span class="o">.</span><span class="n">ndim</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>        <span class="c1"># Validate the static_dims commitment: x.shape[dim] == N</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">dim</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span><span class="p">:</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>                <span class="sa">f</span><span class="s2">"static_dim mismatch: expected x.shape[</span><span class="si">{</span><span class="n">dim</span><span class="si">}</span><span class="s2">] == </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">N</span><span class="si">}</span><span class="s2">, "</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>                <span class="sa">f</span><span class="s2">"got </span><span class="si">{</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">dim</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>        <span class="c1"># Bind _static_axes now that the concrete axis is known.</span>
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_static_axes</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dim</span><span class="p">)})</span>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>        <span class="c1"># Derive M (product of non-reduction dims); cache by shape and dtype.</span>
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>        <span class="n">M</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">s</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">dim</span><span class="p">)</span>
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">M</span> <span class="o">=</span> <span class="n">M</span>  <span class="c1"># stored for eval_roofline</span>
+</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span>  <span class="c1"># ditto; the op commits to no dtype before this</span>
+</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">contiguous</span><span class="p">()</span>          <span class="c1"># handed over as the manifest declares it</span>
+</span><span id="__span-4-25"><a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>        <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_or_build_kernel</span><span class="p">(</span>
+</span><span id="__span-4-26"><a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a>            <span class="s2">"example_cumsum_fwd"</span><span class="p">,</span>
+</span><span id="__span-4-27"><a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>            <span class="p">(</span><span class="n">x</span><span class="p">,),</span>                        <span class="c1"># the tensors the kernel will be handed</span>
+</span><span id="__span-4-28"><a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>            <span class="n">key</span><span class="o">=</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span> <span class="n">dim</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">index</span><span class="p">),</span>
+</span><span id="__span-4-29"><a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a>            <span class="n">build</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_map</span><span class="p">[</span><span class="s2">"example_cumsum_fwd"</span><span class="p">](</span>
+</span><span id="__span-4-30"><a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a>                <span class="n">M</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span><span class="p">,</span> <span class="s2">"sum"</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">scan_axis</span><span class="o">=</span><span class="n">dim</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tune</span><span class="p">),</span>
+</span><span id="__span-4-31"><a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a>        <span class="p">)</span>
+</span><span id="__span-4-32"><a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a>        <span class="k">return</span> <span class="n">kernel</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</span></code></pre></div>
+<p><strong>Validation.</strong></p>
+<ul>
+<li><code>default_kernel_map</code> keys / values match manifest <code>source.kernel_map</code> verbatim.</li>
+<li><code>forward</code> calls <code>self._validate_dtypes(...)</code> first — not inline dtype comparisons, which are Step 5's job. It checks no device kind: a kernel states which devices it runs on.</li>
+<li>Every <code>static_dims</code> commitment is checked against the tensor shape at the normalized axis, and <code>_static_axes</code> is bound from that (non-negative) axis. Both before the get-or-build call.</li>
+<li>The kernel comes from <code>self.get_or_build_kernel</code>, never a cache dict the op owns:</li>
+<li><code>key=</code> and <code>build=</code> are the in-tree recipe. The kernel is built from <code>x.dtype</code> and the key carries it, so a call with another dtype builds a second kernel rather than reusing the first.</li>
+<li><code>inputs=</code> is the tensors the kernel is handed, which is what an external target's builder is described with. A new op passes it; an op not yet migrated omits it and stays in-tree only.</li>
+<li>The op never trims kernel output, and never reshapes its input for the kernel: a kernel that pads or permutes internally takes and returns the shapes the manifest declares.</li>
+</ul>
+<p><strong>Reference.</strong> <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s14">Slot S14</a>, <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s15">S15</a>, <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s16">S16</a>.</p>
+<h3 id="step-5-_infer_output_shapes-_validate_dtypes">Step 5: <code>_infer_output_shapes</code> + <code>_validate_dtypes</code><a class="headerlink" href="#step-5-_infer_output_shapes-_validate_dtypes" title="Permanent link">&para;</a></h3>
+<p><strong>Input.</strong> Manifest <code>shape_rules</code> (for S17); per-tensor <code>dtype</code> and <code>dtype_combos</code> (for S18).</p>
+<p><strong>Output.</strong></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ExampleCumsumFwdOp</span><span class="p">(</span><span class="n">Op</span><span class="p">):</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="o">...</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_infer_output_shapes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">]:</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        <span class="k">return</span> <span class="p">{</span><span class="s2">"y"</span><span class="p">:</span> <span class="n">x_shape</span><span class="p">}</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_dtypes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">float16</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">}:</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"x.dtype must be float32/float16/bfloat16, got </span><span class="si">{</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span></code></pre></div>
+<p><strong>Validation.</strong> <code>python scripts/validate_manifest.py</code> exercises both methods at CI on every op with <code>status: implemented</code>; <code>spec-only</code> entries skip L2/L3. <strong>L2 parity:</strong> <code>_infer_output_shapes(mock_inputs)</code> must agree with <code>shape_rules</code>. <strong>L3 parity:</strong> <code>_validate_dtypes</code> must accept exactly the declared <code>dtype</code> union / <code>dtype_combos</code> and reject everything else. Parity disagreements route to <code>strict_errors</code>; advisory mode (default) reports them as warnings, <code>--strict</code> / <code>MANIFEST_STRICT_BLOCKING=1</code> makes them blocking.</p>
+<p><strong>Reference.</strong> <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s17">Slot S17</a>, <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s18">S18</a>.</p>
+<h3 id="step-6-eval_roofline">Step 6: <code>eval_roofline</code><a class="headerlink" href="#step-6-eval_roofline" title="Permanent link">&para;</a></h3>
+<p><strong>Input.</strong> Manifest <code>roofline.vars</code>, <code>roofline.flops</code>, <code>roofline.bytes</code>.</p>
+<p><strong>Output.</strong></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ExampleCumsumFwdOp</span><span class="p">(</span><span class="n">Op</span><span class="p">):</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="o">...</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">eval_roofline</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>        <span class="n">flops</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">M</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>        <span class="n">bytes_</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">M</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">itemsize</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>        <span class="k">return</span> <span class="n">flops</span><span class="p">,</span> <span class="n">bytes_</span>
+</span></code></pre></div>
+<p><strong>Validation.</strong> The body is <strong>plain Python</strong> reading <code>self.*</code> attributes. Those attributes — <code>self.M</code> and <code>self.dtype</code> here — are bound by <code>forward()</code>, so <code>eval_roofline</code> is callable only after at least one forward; there is no ctor-time dtype to read. No class-level roofline expression strings, no <code>ast.parse</code>, no shared L1 evaluator — prohibited by <a href="../roofline/#446-evaluator-surface-boundary"><code>roofline.md §4.4.6</code> Evaluator Surface Boundary</a>. Return type is <code>tuple[int, int]</code>, not <code>float</code> or <code>numpy</code>. Expressions derive directly from <code>roofline.vars</code> bindings + <code>roofline.flops</code> + <code>roofline.bytes</code>; see <a href="../roofline/#44-op-codegen"><code>roofline.md §4.4</code> Op Codegen</a>.</p>
+<p><strong>Reference.</strong> <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s19">Slot S19</a>.</p>
+<p><strong>Compute roof.</strong> <code>Op.compute_roof()</code> names the GPU-profile unit that prices the FLOPs <code>eval_roofline()</code> counts; the base default <code>"cuda_core.fp32"</code> covers CUDA-core fp32 arithmetic. An op whose FLOPs are matmul contractions overrides it — normally <code>return tensor_core_roof(self.dtype)</code>, branching on instance state (a backend switch) where the contraction dtype differs from the input dtype. Contract and rationale: <a href="../roofline/#14-compute-roof"><code>roofline.md §1.4</code></a>.</p>
+<h3 id="step-7-package-registration">Step 7: Package registration<a class="headerlink" href="#step-7-package-registration" title="Permanent link">&para;</a></h3>
+<p><strong>Input.</strong> The class name (Step 2) and the op's source filename.</p>
+<p><strong>Output.</strong> Two files, both with a matching <code>__all__</code> entry.</p>
+<p>Implementation package, <code>src/tileops/ops/reduction/__init__.py</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># --- ExampleCumsumKernel ops ---</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.example_cumsum</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExampleCumsumFwdOp</span>
+</span></code></pre></div>
+<p>Public path, <code>src/tileops/reduction.py</code> — this is the one callers import from:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.ops.reduction</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExampleCumsumFwdOp</span>
+</span></code></pre></div>
+<p><strong>Validation.</strong> The implementation import sits under its family's grouping comment block, and both files carry a matching <code>__all__</code> entry — miss the second and the op is unreachable from <code>tileops.reduction</code>.</p>
+<p><strong>Reference.</strong> <a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md#slot-s20">Slot S20</a>.</p>
+<h3 id="slot-coverage">Slot coverage<a class="headerlink" href="#slot-coverage" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Slots produced</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>S1, S2, S3, S4</td>
+</tr>
+<tr>
+<td>2</td>
+<td>S5, S6, S7</td>
+</tr>
+<tr>
+<td>3</td>
+<td>S21, S12, S13</td>
+</tr>
+<tr>
+<td>4</td>
+<td>S14, S15, S16</td>
+</tr>
+<tr>
+<td>5</td>
+<td>S17, S18</td>
+</tr>
+<tr>
+<td>6</td>
+<td>S19</td>
+</tr>
+<tr>
+<td>7</td>
+<td>S20</td>
+</tr>
+</tbody>
+</table>
+<h2 id="out-of-scope">Out of Scope<a class="headerlink" href="#out-of-scope" title="Permanent link">&para;</a></h2>
+<p>This playbook emits exactly the 17 slots above. The following are <strong>not</strong> produced by the scaffold — each needs separate treatment:</p>
+<ul>
+<li><strong>Family-specific protocol variables.</strong> <code>_op_kind</code> (reduction), <code>_kernel_key</code>, <code>_kernel_cls</code> (norm + reduction T1 wrappers), <code>_op_name</code>, <code>kernel_cls</code>. Kernel-dispatch-convention-dependent; cannot be mechanically derived from the manifest. See <a href="../ops-design-reference/#base-class-protocol">Family-Base Protocol (Appendix)</a>.</li>
+<li><strong>Optional hooks.</strong> <code>_validate_dim</code>. Op-specific business logic (e.g., <code>ArgmaxFwdOp._validate_dim</code> narrows the accepted <code>dim</code>). See <a href="../ops-design-reference/#optional-hooks-appendix">Optional Hooks (Appendix)</a>.</li>
+<li><strong><code>_cache_key</code> override.</strong> The default projection via <code>_static_axes</code> is correct but sometimes over-fragmenting. Override logic depends on what subset of the input shape the kernel actually depends on — kernel-math-specific.</li>
+<li><strong>Family-base (T1) subclassing.</strong> See <a href="#family-base-refactoring">Family-Base Refactoring</a>.</li>
+<li><strong>Kernel implementations themselves.</strong> The playbook's scope is the Op (host) layer. See <a href="#implementing-a-kernel">Implementing a Kernel</a> for the kernel-side interface surface.</li>
+<li><strong><code>torch_compile_fullgraph</code> declaration.</strong> Requires registered compile-test evidence. Semantics: <a href="../manifest/#torch_compile_fullgraph">manifest.md</a>.</li>
+<li><strong>Compile dispatch boundary.</strong> See <a href="#compile-dispatch-boundary">Compile Dispatch Boundary</a>.</li>
+</ul>
+<h2 id="implementing-a-kernel">Implementing a Kernel<a class="headerlink" href="#implementing-a-kernel" title="Permanent link">&para;</a></h2>
+<p>Kernel implementation is not covered by the scaffold-op skill. The device-side interface a scaffolded Op depends on — required <code>__init__</code> / <code>forward</code> / <code>kernel</code>, optional <code>default_config</code> / <code>autotune_configs</code> / <code>supported_archs</code> — is specified in <a href="../ops-design-reference/#base-class-protocol">Kernel base class attributes</a>.</p>
+<h2 id="compile-dispatch-boundary">Compile Dispatch Boundary<a class="headerlink" href="#compile-dispatch-boundary" title="Permanent link">&para;</a></h2>
+<p>Contract for every op declaring <code>torch_compile_fullgraph</code> while resolving
+kernels at call time.</p>
+<p><strong>Invariant.</strong> A dynamo-traced <code>forward</code> MUST NOT construct a <code>Kernel</code> or
+enter a TileLang builder. Kernel-cache misses run TileLang JIT machinery
+(<code>inspect</code>-based signature handling) that dynamo cannot trace; an eager
+warm-up before <code>torch.compile</code> only hides the miss path and does not
+satisfy the cold-call contract.</p>
+<p><strong>Mechanism</strong> (<code>src/tileops/ops/compile_boundary.py</code>; one op one operator:
+<code>norm/rms_norm.py</code>, <code>ops/elementwise/_base.py</code>):</p>
+<ol>
+<li><code>Op.dispatch_kernel</code> registers every op in a weak instance registry at
+   <code>__init__</code> time and stores <code>self._instance_key</code>.</li>
+<li>One <code>torch.library.custom_op</code> per op — that is what makes the node in the
+   graph this op's, and keeps it the same node when another target serves it.
+   Its eager body resolves the instance from the registry and calls
+   <code>self._eager_forward</code> — cache lookup, Kernel construction, and launch
+   all run untraced. Its fake derives output shapes from
+   <code>_infer_output_shapes</code> and dtypes from the manifest contract.</li>
+<li><code>forward</code> becomes a single dispatch call:
+   <code>return _family_fwd(input, self._instance_key)</code>; the previous body is
+   renamed <code>_eager_forward</code> unchanged.</li>
+<li>The op publishes what it registered through <code>compile_op_names</code> — a tuple,
+   since a conditional in-place write registers two — so a test can assert the
+   traced graph holds nothing else.</li>
+</ol>
+<p><strong>Constraints.</strong></p>
+<ul>
+<li>The instance key is a <strong>string</strong>: dynamo bakes string custom-op
+  arguments as static constants, while an <code>int</code> key is generalized to an
+  unhashable <code>SymInt</code> once a second instance compiles through the same
+  frame. Stale-graph safety comes from dynamo's ID_MATCH guard holding a
+  weak reference to the compiled callable: a dead instance forces
+  recompilation, so a reused <code>id()</code> cannot resolve against a stale graph.</li>
+<li>The boundary covers forward-only compilation. Declaring
+  <code>torch_compile_fullgraph</code> on an op whose compiled graph must
+  backpropagate additionally requires registering an autograd formula for
+  the dispatch custom op.</li>
+<li>An op that builds no kernel in <code>forward</code> — every kernel already in its
+  cache — does not need the boundary; the invariant still applies to its
+  <code>forward</code>.</li>
+<li>Validation and normalization belong in <code>_eager_forward</code>, not in <code>forward</code>:
+  they run for every target either way, and keeping them untraced leaves <code>forward</code>
+  a single call.</li>
+<li><code>_infer_output_shapes</code> reads only its shape arguments. A shape recorded by an
+  earlier call is a state write the fake reads before the write happens.</li>
+<li>An op with no tensor input has no device to detect and no node to own, so it
+  registers no boundary.</li>
+</ul>
+<h2 id="family-base-refactoring">Family-Base Refactoring<a class="headerlink" href="#family-base-refactoring" title="Permanent link">&para;</a></h2>
+<p>The scaffold emits T2 (L1-direct) ops only; once a family accumulates 2-3 ops sharing an identical <code>forward()</code> flow, a separate family-specific refactoring (not scaffold-op) extracts an L2 base and rewrites the concrete ops as T1 thin wrappers — see <a href="../ops-design-reference/#development-path">Development Path</a> for when to extract and <a href="../ops-design-reference/#adding-a-new-family-base">Adding a New Family Base</a> for the process. Family bases MUST NOT normalize genuine per-op behavior differences.</p>
+<h2 id="further-reference">Further Reference<a class="headerlink" href="#further-reference" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://github.com/tile-ai/TileOPs/blob/main/.claude/skills/scaffold-op/slot-rules.md">Slot Rules</a> — full Rule / Derivation / Example / Common mistakes per slot</li>
+<li><a href="../ops-design-reference/#codegen">Codegen Details</a> — calling conventions, inheritance rules, consistency enforcement</li>
+<li><a href="../ops-design-reference/#base-class-protocol">Base Class Protocol</a> — <code>Op</code> and <code>Kernel</code> base class attributes</li>
+<li><a href="../ops-design-reference/#naming-conventions">Naming Conventions</a> — class / <code>kernel_map</code> / builder function rules</li>
+<li><a href="../ops-design-reference/#parameter-design">Parameter Design</a> — static vs dynamic op comparison</li>
+<li><a href="../manifest/">manifest.md</a> — manifest entry structure, <code>static_dims</code>, <code>shape_rules</code>, <code>roofline</code></li>
+<li><a href="../roofline/">roofline.md</a> — roofline formula syntax, codegen, evaluator surface boundary</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 tile-ai
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/tile-ai/TileOPs" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
