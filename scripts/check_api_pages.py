@@ -32,7 +32,7 @@ def _names(path: Path, variable: str) -> list[str]:
     """The strings assigned to `variable` at the top level of the module at `path`."""
     if not path.is_file():
         raise SystemExit(f"no such file: {path} — is there a TileOPs checkout?")
-    for node in ast.parse(path.read_text(encoding="utf-8")).body:
+    for node in ast.parse(path.read_text(encoding="utf-8"), filename=str(path)).body:
         if not isinstance(node, ast.Assign):
             continue
         if not any(isinstance(t, ast.Name) and t.id == variable for t in node.targets):
@@ -41,7 +41,11 @@ def _names(path: Path, variable: str) -> list[str]:
         # name silently dropped here is an op this check would stop looking at.
         if not isinstance(node.value, ast.Tuple | ast.List):
             raise SystemExit(f"{path}: {variable} is not a list or tuple literal")
-        names = [e.value for e in node.value.elts if isinstance(e, ast.Constant)]
+        names = [
+            e.value
+            for e in node.value.elts
+            if isinstance(e, ast.Constant) and isinstance(e.value, str)
+        ]
         if len(names) != len(node.value.elts):
             raise SystemExit(f"{path}: {variable} holds something other than plain strings")
         return names
@@ -71,7 +75,9 @@ def main() -> int:
 
     families = exported(args.tileops)
     pages = documented(args.docs)
-    if not any(pages.get(family) for family in families):
+    # Empty means the pages carry no identifier at all — a regex that stopped
+    # matching, not a page naming an op wrongly, which is reported below.
+    if not pages:
         raise SystemExit(f"no `::: tileops.<family>.<Op>` identifier under {args.docs}")
 
     uncollectable, undocumented = [], []
