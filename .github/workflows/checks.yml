@@ -56,6 +56,11 @@ jobs:
           python-version: '3.12'
           cache: pip
       - run: pip install -r requirements-docs.txt
+      # An op the pages name and the checkout no longer exports is reported
+      # here, rather than aborting mkdocs mid-build on `Could not collect`.
+      - name: Check the API pages against the checkout
+        run: python scripts/check_api_pages.py
+
       # Every warning fails the job except one class: mkdocstrings reports one
       # per parameter in TileOPs whose docstring carries no type, and the
       # docstrings of another repository are not this repository's gate.

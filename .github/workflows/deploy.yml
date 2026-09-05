@@ -33,6 +33,11 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements-docs.txt
+      # An op the pages name and the checkout no longer exports is reported
+      # here, rather than aborting mkdocs mid-build on `Could not collect`.
+      - name: Check the API pages against the checkout
+        run: python scripts/check_api_pages.py
+
       # Regenerate the Benchmarks page from the latest nightly snapshot so a
       # push deploy never serves a stale page. Falls back to the placeholder if
       # the snapshot is unavailable.

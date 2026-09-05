@@ -31,6 +31,7 @@ and `design/` mirrors its `docs/design/`. Without it, mkdocstrings cannot import
 | `ruff check scripts hooks.py tests` | `pyproject.toml`; `E501` off, the prose here is wrapped by hand |
 | `npx stylelint "docs/assets/**/*.css"` | No duplicate selector, no `color-mix()` — an engine that cannot parse a function drops the whole declaration, so a border vanishes and an SVG `fill` paints black |
 | `mkdocs build` | Fails on any warning of ours; griffe's are TileOPs' docstrings, not this repo's gate |
+| `python scripts/check_api_pages.py` | Every `::: tileops.<family>.<Op>` under `docs/api/` is in that family's `__all__` in the checkout; an exported op no page names is printed, not failed |
 
 Seven tests, and that is the intended size. `tests/fixtures/` is a trimmed
 snapshot — one testcase per path the renderer takes — and `tests/golden/` the
@@ -51,6 +52,11 @@ Never edit these by hand — change what produces them.
 
 `hooks.py` rewrites the repo-relative paths mirrored content arrives with, and
 expands the single `Benchmarks` nav entry to whichever pages the renderer produced.
+
+Which ops a `docs/api/` page names is written by hand, so it drifts as TileOPs
+adds and removes ops. The deploy and the daily refresh run
+`scripts/check_api_pages.py` against the checkout they just made, before mkdocs
+reads it.
 
 ## Benchmarks pages
 
