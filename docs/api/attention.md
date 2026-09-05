@@ -33,12 +33,6 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.attention.GroupedQueryAttentionPrefillFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
 ::: tileops.attention.GroupedQueryAttentionPrefillVarlenFwdOp
     options:
       show_root_heading: true
