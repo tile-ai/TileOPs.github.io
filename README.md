@@ -21,19 +21,9 @@ it was cloned at. CI checks out upstream fresh every run, so `--update` before
 trusting a local build is the difference. `--no-venv` uses the interpreter
 already on `PATH`, `--port` moves the server.
 
-By hand, the same thing:
-
-```bash
-pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugin \
-  mkdocs-static-i18n jieba pyyaml black
-
-# The API and design pages read from a TileOPs checkout at ./TileOPs. The
-# workflows clone it there; locally, clone it too — or point a symlink at a
-# clone you already have. Either way the path is gitignored.
-git clone --depth 1 https://github.com/tile-ai/TileOPs.git TileOPs
-
-mkdocs serve
-```
+By hand: `pip install -r requirements-docs.txt`, clone TileOPs to `./TileOPs`
+(a symlink to a clone you already have works, and the path is gitignored), then
+`mkdocs serve`.
 
 Two things to know before the first run.
 
@@ -42,9 +32,8 @@ Two things to know before the first run.
 - **The checkout is not optional.** Without it, mkdocstrings cannot import
   `tileops`, and the build aborts rather than warns.
 
-To see real numbers on the Benchmarks pages, run `bash scripts/render_bench.sh`:
-it fetches the nightly snapshot and renders them. They are generated output —
-change the renderer, never the pages.
+`bash scripts/dev.sh bench` puts real numbers on the Benchmarks pages. They are
+generated output — change the renderer, never the pages.
 
 ## Layout
 
@@ -63,11 +52,10 @@ Benchmarks nav entry, since those pages do not exist until the renderer has run.
 
 ## Bilingual pages
 
-English lives at the site root, Chinese under `/zh/`.
-
-A Chinese page is a `<name>.zh.md` beside the English `<name>.md`, written as
-prose rather than as an include shell. Some pages are drafted in Chinese and
-translated into English, so a page's two versions are kept in step by hand.
+English lives at the site root, Chinese under `/zh/`. A Chinese page is a
+`<name>.zh.md` beside the English `<name>.md`, written as prose rather than as an
+include shell. Some pages are drafted in Chinese and translated into English, so
+a page's two versions are kept in step by hand.
 
 A page with no translation falls back to English at the same URL, with a notice
 prepended by `hooks.py` — so the Chinese nav is never sparse.
