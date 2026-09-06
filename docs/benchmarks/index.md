@@ -5,7 +5,7 @@
     **GPU** NVIDIA H200 · **commit** [`b4fc786377c7`](https://github.com/tile-ai/TileOPs/commit/b4fc786377c75ae0871688b8f18d0274de2dccde) · **run date** 2026-09-05 · **181 ops**, 1047 workloads
     · [nightly run](https://github.com/tile-ai/TileOPs/actions/runs/33982693170)
 
-    Page rendered 2026-09-06 02:39 UTC from the [latest snapshot](https://github.com/tile-ai/TileOPs-nightly/tree/snapshots).
+    Page rendered 2026-09-06 02:50 UTC from the [latest snapshot](https://github.com/tile-ai/TileOPs-nightly/tree/snapshots).
 
 ## Environment
 
@@ -43,14 +43,14 @@
 | Page | Ops | Workloads |
 | --- | --- | --- |
 | [Elementwise](elementwise.md) | 70 | 404 |
-| [RoPE](rope.md) | 6 | 13 |
 | [Reduction](reduction.md) | 21 | 90 |
 | [Normalization](normalization.md) | 10 | 69 |
-| [Conv & Pool](conv-pool.md) | 16 | 108 |
-| [GEMM](gemm.md) | 7 | 67 |
 | [Quantization](quantization.md) | 2 | 4 |
-| [Attention](attention.md) | 12 | 63 |
+| [GEMM](gemm.md) | 7 | 67 |
+| [Conv & Pool](conv-pool.md) | 16 | 108 |
 | [MoE](moe.md) | 9 | 52 |
+| [RoPE](rope.md) | 6 | 13 |
+| [Attention](attention.md) | 12 | 63 |
 | [Linear Attention](linear-attention.md) | 17 | 131 |
 | [SSM](ssm.md) | 7 | 35 |
 | [Other](other.md) | 4 | 11 |

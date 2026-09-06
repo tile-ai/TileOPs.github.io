@@ -73,14 +73,16 @@ def on_page_markdown(markdown, page, config, files):
     return markdown
 
 
-# Benchmarks pages in nav order. A page the renderer did not produce is left
-# out; a page it produced that is not listed here is appended, so a new data
-# page reaches the nav without editing this list.
+# Benchmarks pages in nav order, which is `DATA_PAGES` in the renderer — the
+# API Reference nav's order over the same families. Change one, change the
+# other. A page the renderer did not produce is left out; a page it produced
+# that is not listed here is appended, so a new data page reaches the nav
+# without editing this list.
 _BENCH_ORDER = [
     "index.md", "reading.md",
-    "elementwise.md", "rope.md", "reduction.md", "normalization.md",
-    "conv-pool.md", "gemm.md", "quantization.md", "attention.md",
-    "moe.md", "linear-attention.md", "ssm.md", "other.md",
+    "elementwise.md", "reduction.md", "normalization.md", "quantization.md",
+    "gemm.md", "conv-pool.md", "moe.md", "rope.md", "attention.md",
+    "linear-attention.md", "ssm.md", "other.md",
 ]
 
 

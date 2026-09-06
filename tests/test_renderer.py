@@ -99,6 +99,21 @@ def test_a_template_is_not_executed():
     assert ws._eval_template("[n * 2, k]", {"n": 4, "k": 3}) == [8, 3]
 
 
+def test_the_api_reference_decides_the_op_order(tmp_path):
+    # Pages in the order `nav` lists them, ops in the order a page names them,
+    # and the `Op` suffix off — the Benchmarks pages key on the name they show.
+    api = tmp_path / "api"
+    api.mkdir()
+    (api / "gemm.md").write_text("::: tileops.gemm.GemmFwdOp\n"
+                                 "::: tileops.gemm.BmmFwdOp\n")
+    (api / "elementwise.md").write_text("::: tileops.elementwise.AddFwdOp\n")
+    yml = tmp_path / "mkdocs.yml"
+    yml.write_text("nav:\n  - Elementwise: api/elementwise.md\n"
+                   "  - GEMM: api/gemm.md\n")
+    order = g.api_op_order(str(api), str(yml))
+    assert list(order) == ["AddFwd", "GemmFwd", "BmmFwd"]
+
+
 def test_the_package_decides_the_family_not_a_word_in_the_name():
     # `linear` matches `linear_attention` as a substring, so the package has to
     # win: otherwise a linear-attention op is published on the GEMM page.

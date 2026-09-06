@@ -43,7 +43,7 @@ and `design/` mirrors its `docs/design/`. Without it, mkdocstrings cannot import
 | `mkdocs build` | Fails on any warning of ours; griffe's are TileOPs' docstrings, not this repo's gate |
 | `python scripts/check_api_pages.py` | Every `::: tileops.<family>.<Op>` under `docs/api/` is in that family's `__all__` in the checkout; an exported op no page names is printed, not failed |
 
-Seven tests, and that is the intended size. `tests/fixtures/` is a trimmed
+Eight tests, and that is the intended size. `tests/fixtures/` is a trimmed
 snapshot — one testcase per path the renderer takes — and `tests/golden/` the
 three data pages it must produce. A change to what those pages say fails by
 design: read the diff, then `python tests/refresh_golden.py`. A unit test is
@@ -79,6 +79,7 @@ implementation of the same op on that workload.
 | The colour is the verdict | `Ratio` sits right after the workload name: red behind, plain ink level, green ahead, grey where the only rival is an eager `-ref`. |
 | Device time | The compared quantity is `device_busy_ms`, never wall-clock span. |
 | Two questions | `Ratio` says whether someone else's kernel is faster; `SOL` says how much faster the hardware allows anyone to go, with the binding resource (`mem`/`comp`/`lat`) in its own `Bound` column. The SOL arithmetic and thresholds are imported from the TileOPs checkout's roofline tool (M5) — never re-derived in this repo. |
+| Order follows the API Reference | Both levels: the pages sit in `DATA_PAGES` in the API nav's order over the same families — with the two lists it does not have as pages in `Other` — and within a page the ops sit in the order `docs/api/` names them, read by `api_op_order()`. An op no API page names comes after the ones they do, ranked by verdict. `_BENCH_ORDER` in `hooks.py` repeats the page order for the nav: change one, change the other. |
 | Workload shapes | The snapshot names a workload but does not carry its shapes. `scripts/workload_shape.py` reads them from the TileOPs spec manifest, joined by the `<label>-<dtype>` the benchmark id is built from, at the commit the benchmark ran on. A workload the manifest does not declare keeps its id and gets no shapes — never a guessed one. |
 
 ## Bilingual pages (en / zh)

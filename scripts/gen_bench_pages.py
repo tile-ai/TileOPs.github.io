@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Render the Benchmarks section from a nightly benchmark XML snapshot.
 
-Output is one overview page, one page explaining the numbers, and five data
-pages grouped by op domain. `hooks.py` puts them into the site nav in that
-order.
+Output is one overview page, one page explaining the numbers, and one data page
+per op family, in the order the API Reference nav lists those families.
+`hooks.py` puts them into the site nav in that order.
 
 These pages answer one question per workload: **how does TileOPs compare to the
 fastest other implementation of the same op on that workload?**
@@ -44,6 +44,7 @@ import argparse
 import html
 import json
 import os
+import re
 import statistics
 import sys
 import xml.etree.ElementTree as ET
@@ -98,34 +99,53 @@ FAMILY_TITLE = {
     "quantization": "Quantization", "positional": "RoPE",
     "fft": "FFT", "mhc": "MHC", "topk": "Top-k", "other": "Other",
 }
-# Ops a family lists in a fixed order rather than by verdict, named as the page
-# shows them (no `Op` suffix). Use it where the ops read as a progression a
-# reader follows down the page — the plain kernel, then its quantized variants,
-# then the batched forms. An op the list does not name follows the ones it does,
-# ranked by verdict.
-FAMILY_OP_ORDER = {
-    "linear_algebra": ["GemmFwd", "GemmFp8Fwd", "GemmW4A16Fwd", "BmmFwd",
-                       "BmmFp8NKFwd", "BmmFp8KNFwd"],
-}
-# (slug, page title, families in display order). One page per family, ordered
-# from the simplest op to the most composed: pointwise, then the positional
-# rotation applied to one tensor, then reductions over an axis, then the
-# normalizations built on them, then the sliding-window ops, then the
-# matrix-multiply pages, then the sequence-mixing ops. `Other` is last and holds
-# every family too small to carry a page.
+API_DIR = os.path.join(REPO, "docs", "api")
+MKDOCS_YML = os.path.join(REPO, "mkdocs.yml")
+_API_PAGE = re.compile(r"\bapi/([\w-]+\.md)\b")
+_API_OP = re.compile(r"^\s*::: +tileops\.\w+\.(\w+)\s*$", re.MULTILINE)
+
+
+def api_op_order(api_dir: str = API_DIR,
+                 mkdocs_yml: str = MKDOCS_YML) -> dict[str, int]:
+    """Op name without its `Op` suffix -> where the API reference names it.
+
+    The API pages are written by hand and ordered for a reader — the plain
+    kernel, then its quantized variants, then the batched forms — so the
+    Benchmarks pages take their op order from there rather than inventing a
+    second one. Pages are read in `nav` order, ops in the order each names them.
+    An op no page names is not in the result; `data_page` puts those last.
+    """
+    order: dict[str, int] = {}
+    with open(mkdocs_yml, encoding="utf-8") as f:
+        pages = list(OrderedDict.fromkeys(_API_PAGE.findall(f.read())))
+    for page in pages:
+        path = os.path.join(api_dir, page)
+        if not os.path.isfile(path):
+            continue
+        with open(path, encoding="utf-8") as f:
+            for op in _API_OP.findall(f.read()):
+                order.setdefault(op.removesuffix("Op"), len(order))
+    return order
+# (slug, page title, families in display order). One page per family, in the
+# order the API Reference nav lists the same families — pointwise, then the
+# reductions and the normalizations built on them, then quantization, then the
+# matrix multiply and the expert routing over it, then the positional rotation,
+# then the sequence-mixing kernels built on all of the above. `Other` is last
+# and holds every family too small to carry a page: Top-k and FFT have an API
+# page each, MHC and Scan none.
 DATA_PAGES = [
     ("elementwise", "Elementwise", ["elementwise"]),
-    ("rope", "RoPE", ["positional"]),
     ("reduction", "Reduction", ["reduction"]),
     ("normalization", "Normalization", ["normalization"]),
-    ("conv-pool", "Conv & Pool", ["convolution", "pool"]),
-    ("gemm", "GEMM", ["linear_algebra"]),
     ("quantization", "Quantization", ["quantization"]),
-    ("attention", "Attention", ["attention"]),
+    ("gemm", "GEMM", ["linear_algebra"]),
+    ("conv-pool", "Conv & Pool", ["pool", "convolution"]),
     ("moe", "MoE", ["moe"]),
+    ("rope", "RoPE", ["positional"]),
+    ("attention", "Attention", ["attention"]),
     ("linear-attention", "Linear Attention", ["linear_attention"]),
     ("ssm", "SSM", ["ssm"]),
-    ("other", "Other", ["fft", "mhc", "topk", "scan", "other"]),
+    ("other", "Other", ["topk", "fft", "mhc", "scan", "other"]),
 ]
 _KEYWORD_FAMILY = [
     (("mamba", "ssd", "ssm"), "ssm"),
@@ -1059,10 +1079,12 @@ def reading_page(sol_engine=(None, None)) -> str:
 
 
 def data_page(title: str, fams: list[str], rows_by_fam: dict,
-              metrics_by_op: dict, workloads_of: dict, ref: str) -> str:
-    # Widest lead first, then level, then behind, then the unrated. Every op is
-    # listed either way; this only decides what a reader meets first.
+              metrics_by_op: dict, workloads_of: dict, ref: str,
+              api_order: dict[str, int] | None = None) -> str:
+    # The fallback for an op the API reference does not name: widest lead first,
+    # then level, then behind, then the unrated.
     rank = {AHEAD: 0, PAR: 1, BEHIND: 2, UNRATED: 3}
+    api_order = api_op_order() if api_order is None else api_order
     present = [f for f in fams if rows_by_fam.get(f)]
     n_ops = sum(len(rows_by_fam[f]) for f in present)
     n_workloads = sum(s["workloads"] for f in present
@@ -1084,12 +1106,11 @@ def data_page(title: str, fams: list[str], rows_by_fam: dict,
         rows = rows_by_fam.get(fam)
         if not rows:
             continue
-        # The family's own order first where it declares one; then, within a
-        # verdict band, the widest margin first.
-        fixed = FAMILY_OP_ORDER.get(fam, [])
-        pos = {name: i for i, name in enumerate(fixed)}
+        # The order the API reference names the ops in, so a reader who knows
+        # one section finds the other laid out the same way. An op it does not
+        # name follows the ones it does, widest lead first within a verdict band.
         rows = sorted(rows, key=lambda r: (
-            pos.get(r[0].removesuffix("Op"), len(fixed)),
+            api_order.get(r[0].removesuffix("Op"), len(api_order)),
             rank.get(r[2]["status"], 9), -(r[2]["speedup"] or 0), r[0]))
         # A page holding one family would repeat its own H1 as the only
         # section heading, so the ops sit directly under the H1 instead.
@@ -1220,10 +1241,12 @@ def main():
                                len(skips)),
         "reading.md": reading_page(sol_engine),
     }
+    api_order = api_op_order()  # read once, not once per page
     for slug, title, fams in DATA_PAGES:
         if any(rows_by_fam.get(f) for f in fams):
             pages[f"{slug}.md"] = data_page(title, fams, rows_by_fam,
-                                            metrics_by_op, workloads_of, ref)
+                                            metrics_by_op, workloads_of, ref,
+                                            api_order)
     for name, text in pages.items():
         with open(os.path.join(out_dir, name), "w", encoding="utf-8") as f:
             f.write(text)
