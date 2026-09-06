@@ -1,4 +1,6 @@
 site/
+.venv/
+build.log
 __pycache__/
 .cache/
 .pytest_cache/

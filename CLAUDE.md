@@ -9,6 +9,14 @@ LLM operators across backends, built on TileLang. MkDocs + Material, deployed to
 ## Development
 
 ```bash
+bash scripts/dev.sh serve     # or: build, bench
+```
+
+`scripts/dev.sh` sets up what a first run needs — a `.venv` holding
+`requirements-docs.txt`, and the `./TileOPs` checkout — then serves. `build`
+applies the deploy's warning rule, `bench` calls `render_bench.sh`. By hand:
+
+```bash
 pip install -r requirements-docs.txt -r requirements-dev.txt
 git clone --depth 1 https://github.com/tile-ai/TileOPs.git TileOPs   # or symlink one
 mkdocs serve

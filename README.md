@@ -11,6 +11,17 @@ and re-renders the Benchmarks pages nightly.
 ## Local development
 
 ```bash
+bash scripts/dev.sh serve     # or: build, bench
+```
+
+It creates `.venv`, installs `requirements-docs.txt` into it, clones the TileOPs
+checkout the pages read, and serves. Later runs reinstall only when
+`requirements-docs.txt` changed. `--no-venv` uses the interpreter already on
+`PATH`, `--update` pulls the checkout first, `--port` moves the server.
+
+By hand, the same thing:
+
+```bash
 pip install mkdocs-material "mkdocstrings[python]" mkdocs-include-markdown-plugin \
   mkdocs-static-i18n jieba pyyaml black
 
