@@ -7,7 +7,8 @@ repository — the source of truth — pulled in at site build time.
 - [Architecture](architecture.md) — top-level module layout and the spec-driven pipeline.
 - [Op Manifest](manifest.md) — the `src/tileops/manifest/` package as the source of truth for op interfaces.
 - [Op Interface Design](ops-design.md) — playbook for scaffolding a new op from a manifest entry.
-- [Op Interface Reference](ops-design-reference.md) — slot-keyed authoritative rules.
+- [Op Interface Reference](ops-design-reference.md) — interface tables, codegen, naming, and the family-base protocol.
+- [Slot Rules](op-slot-rules.md) — the authoritative rule, example, and common mistakes per op-file slot.
 - [Roofline](roofline.md) — performance model and the `roofline` manifest field.
 - [Testing & Benchmarking](testing.md) — separation of correctness tests and profiling benchmarks.
 - [Trust Model](trust-model.md) — stage boundaries and the guarantees each stage owns.

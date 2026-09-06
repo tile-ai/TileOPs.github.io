@@ -76,7 +76,8 @@ nav:
     - Architecture: design/architecture.md
     - Manifest: design/manifest.md
     - Op Interfaces: design/ops-design.md
-    - Slot Rules: design/ops-design-reference.md
+    - Op Interface Reference: design/ops-design-reference.md
+    - Slot Rules: design/op-slot-rules.md
     - Roofline: design/roofline.md
     - Testing: design/testing.md
     - Trust Model: design/trust-model.md
