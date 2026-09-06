@@ -101,17 +101,35 @@ def test_a_template_is_not_executed():
 
 def test_the_api_reference_decides_the_op_order(tmp_path):
     # Pages in the order `nav` lists them, ops in the order a page names them,
-    # and the `Op` suffix off — the Benchmarks pages key on the name they show.
+    # and a path in a comment is not a nav entry.
     api = tmp_path / "api"
     api.mkdir()
     (api / "gemm.md").write_text("::: tileops.gemm.GemmFwdOp\n"
                                  "::: tileops.gemm.BmmFwdOp\n")
     (api / "elementwise.md").write_text("::: tileops.elementwise.AddFwdOp\n")
     yml = tmp_path / "mkdocs.yml"
-    yml.write_text("nav:\n  - Elementwise: api/elementwise.md\n"
+    yml.write_text("# api/gemm.md is named here and is not a nav entry\n"
+                   "nav:\n  - Elementwise: api/elementwise.md\n"
                    "  - GEMM: api/gemm.md\n")
     order = g.api_op_order(str(api), str(yml))
     assert list(order) == ["AddFwd", "GemmFwd", "BmmFwd"]
+
+    # And the page follows it: the ops it names in that order, then the op it
+    # names nowhere, whatever the verdicts say — `UnnamedFwd` leads by 9x and
+    # still comes last, `GemmFwd` is behind and still comes first.
+    def row(op, status, speedup):
+        return (op, "tileops.ops.gemm.gemm", {"status": status,
+                                              "speedup": speedup,
+                                              "workloads": 0}, "", None)
+    ops = ["BmmFwdOp", "GemmFwdOp", "UnnamedFwdOp"]
+    page = g.data_page("GEMM", ["linear_algebra"],
+                       {"linear_algebra": [row("BmmFwdOp", g.AHEAD, 4.0),
+                                           row("GemmFwdOp", g.BEHIND, 0.5),
+                                           row("UnnamedFwdOp", g.AHEAD, 9.0)]},
+                       {op: [] for op in ops}, {op: [] for op in ops},
+                       "main", order)
+    assert [ln.split("[")[1].split("]")[0] for ln in page.splitlines()
+            if ln.startswith("## [")] == ["GemmFwd", "BmmFwd", "UnnamedFwd"]
 
 
 def test_the_package_decides_the_family_not_a_word_in_the_name():

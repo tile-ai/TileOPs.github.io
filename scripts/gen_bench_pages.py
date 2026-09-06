@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Render the Benchmarks section from a nightly benchmark XML snapshot.
 
-Output is one overview page, one page explaining the numbers, and one data page
-per op family, in the order the API Reference nav lists those families.
-`hooks.py` puts them into the site nav in that order.
+Output is one overview page, one page explaining the numbers, and the data
+pages of `DATA_PAGES`, in the order the API Reference nav lists the same
+families. `hooks.py` puts them into the site nav in that order.
 
 These pages answer one question per workload: **how does TileOPs compare to the
 fastest other implementation of the same op on that workload?**
@@ -97,11 +97,15 @@ FAMILY_TITLE = {
     "moe": "MoE", "linear_algebra": "GEMM", "reduction": "Reduction",
     "elementwise": "Elementwise", "convolution": "Convolution", "pool": "Pooling",
     "quantization": "Quantization", "positional": "RoPE",
-    "fft": "FFT", "mhc": "MHC", "topk": "Top-k", "other": "Other",
+    "fft": "FFT", "mhc": "mHC", "engram": "Engram", "topk": "Top-k",
+    "other": "Other",
 }
 API_DIR = os.path.join(REPO, "docs", "api")
 MKDOCS_YML = os.path.join(REPO, "mkdocs.yml")
-_API_PAGE = re.compile(r"\bapi/([\w-]+\.md)\b")
+# A nav item naming an API page, `- Elementwise: api/elementwise.md` or the bare
+# `- api/index.md`, and not a path mentioned in a comment or in prose.
+_API_PAGE = re.compile(r"^\s*-\s+(?:[^:\n]+:\s+)?api/([\w-]+\.md)\s*$",
+                       re.MULTILINE)
 _API_OP = re.compile(r"^\s*::: +tileops\.\w+\.(\w+)\s*$", re.MULTILINE)
 
 
@@ -114,25 +118,36 @@ def api_op_order(api_dir: str = API_DIR,
     Benchmarks pages take their op order from there rather than inventing a
     second one. Pages are read in `nav` order, ops in the order each names them.
     An op no page names is not in the result; `data_page` puts those last.
+
+    Reading nothing is reported, not accepted: the pages would still render, in
+    an order that looks deliberate and is not.
     """
     order: dict[str, int] = {}
     with open(mkdocs_yml, encoding="utf-8") as f:
         pages = list(OrderedDict.fromkeys(_API_PAGE.findall(f.read())))
+    missing = []
     for page in pages:
         path = os.path.join(api_dir, page)
         if not os.path.isfile(path):
+            missing.append(page)
             continue
         with open(path, encoding="utf-8") as f:
             for op in _API_OP.findall(f.read()):
                 order.setdefault(op.removesuffix("Op"), len(order))
+    if missing:
+        print(f"warning: {len(missing)} API page(s) the nav lists are not in "
+              f"{api_dir}, so their ops fall to the end of a Benchmarks page: "
+              f"{', '.join(missing)}", file=sys.stderr)
+    if not order:
+        print(f"warning: no op order read from {api_dir}; every Benchmarks page "
+              f"ranks its ops by verdict instead", file=sys.stderr)
     return order
-# (slug, page title, families in display order). One page per family, in the
-# order the API Reference nav lists the same families — pointwise, then the
-# reductions and the normalizations built on them, then quantization, then the
-# matrix multiply and the expert routing over it, then the positional rotation,
-# then the sequence-mixing kernels built on all of the above. `Other` is last
-# and holds every family too small to carry a page: Top-k and FFT have an API
-# page each, MHC and Scan none.
+# (slug, page title, families in display order), in the order the API Reference
+# nav lists the same families — pointwise, then the reductions and the
+# normalizations built on them, then quantization, then the matrix multiply and
+# the expert routing over it, then the positional rotation, then the
+# sequence-mixing kernels built on all of the above. A page is one family except
+# where too few ops carry one: `Conv & Pool` is two, `Other` the rest.
 DATA_PAGES = [
     ("elementwise", "Elementwise", ["elementwise"]),
     ("reduction", "Reduction", ["reduction"]),
@@ -145,12 +160,14 @@ DATA_PAGES = [
     ("attention", "Attention", ["attention"]),
     ("linear-attention", "Linear Attention", ["linear_attention"]),
     ("ssm", "SSM", ["ssm"]),
-    ("other", "Other", ["topk", "fft", "mhc", "scan", "other"]),
+    ("other", "Other", ["topk", "fft", "mhc", "engram", "scan", "other"]),
 ]
 _KEYWORD_FAMILY = [
     (("mamba", "ssd", "ssm"), "ssm"),
-    (("deltanet", "gla", "linear_attn", "recurrence", "engram"),
-     "linear_attention"),
+    # Ahead of `conv`, which `EngramGateConv` would otherwise match. Engram is
+    # its own algorithm, published on its own API page, not a linear attention.
+    (("engram",), "engram"),
+    (("deltanet", "gla", "linear_attn", "recurrence"), "linear_attention"),
     (("cumsum", "cumulative", "scan", "cumprod"), "scan"),
     (("layer_norm", "rms_norm", "rmsnorm", "batch_norm", "group_norm",
       "ada_layer", "norm"), "normalization"),
