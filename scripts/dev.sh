@@ -41,7 +41,13 @@ done
 # workflows check out. An existing ./TileOPs — a symlink to a clone elsewhere,
 # say — is left alone. It stays at the revision it was cloned at while CI reads
 # current upstream, so an op renamed there fails CI a local build had passed.
-if [ ! -e TileOPs ]; then
+if [ -L TileOPs ] && [ ! -e TileOPs ]; then
+  # `-e` follows the link, so a symlink whose target is gone reads as missing,
+  # and the clone below would fail on a path that already exists.
+  echo "./TileOPs is a symlink to $(readlink TileOPs), which is not there;" \
+       "repoint it or remove it" >&2
+  exit 1
+elif [ ! -e TileOPs ]; then
   echo "==> cloning tile-ai/TileOPs into ./TileOPs"
   git clone --depth 1 --filter=blob:none --sparse \
     https://github.com/tile-ai/TileOPs.git TileOPs
