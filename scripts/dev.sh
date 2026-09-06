@@ -86,6 +86,10 @@ fi
 case "$cmd" in
   bench)
     bash scripts/render_bench.sh
+    # Every page under docs/benchmarks/ is gitignored except index.md, whose
+    # committed copy is the placeholder the render has just overwritten.
+    echo "==> restore the placeholder before committing:"
+    echo "    git checkout docs/benchmarks/index.md"
     ;;
   build)
     # checks.yml's rule: every warning fails except griffe's, which are TileOPs'
