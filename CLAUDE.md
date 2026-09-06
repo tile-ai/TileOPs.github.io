@@ -13,8 +13,10 @@ bash scripts/dev.sh serve     # or: build, bench
 ```
 
 `scripts/dev.sh` sets up what a first run needs — a `.venv` holding
-`requirements-docs.txt`, and the `./TileOPs` checkout — then serves. `build`
-applies the deploy's warning rule, `bench` calls `render_bench.sh`. By hand:
+`requirements-docs.txt`, and the `./TileOPs` checkout — then serves. Both are
+reused, and the checkout stays at the revision it was cloned at: `--update`
+before trusting a local build against upstream. `build` applies `checks.yml`'s
+warning rule, `bench` calls `render_bench.sh`. By hand:
 
 ```bash
 pip install -r requirements-docs.txt -r requirements-dev.txt

@@ -15,9 +15,11 @@ bash scripts/dev.sh serve     # or: build, bench
 ```
 
 It creates `.venv`, installs `requirements-docs.txt` into it, clones the TileOPs
-checkout the pages read, and serves. Later runs reinstall only when
-`requirements-docs.txt` changed. `--no-venv` uses the interpreter already on
-`PATH`, `--update` pulls the checkout first, `--port` moves the server.
+checkout the pages read, and serves. Later runs reuse both: reinstalling only
+when `requirements-docs.txt` changed, and keeping the checkout at the revision
+it was cloned at. CI checks out upstream fresh every run, so `--update` before
+trusting a local build is the difference. `--no-venv` uses the interpreter
+already on `PATH`, `--port` moves the server.
 
 By hand, the same thing:
 
