@@ -8,8 +8,10 @@ what runs when you call `op(...)`.
 A routed mixture-of-experts layer is available two ways here. `FusedMoeFwdOp` runs
 the whole FFN. The rest are its stages, callable on their own: the op that picks
 each token's experts, the ops that move tokens into an expert-contiguous layout and
-back, and the expert GEMMs that run on it. The GEMMs come in a padded form and a
-tight one, and the routing has to produce the layout the GEMM expects.
+back, and the expert GEMMs that run on it. `MoeGroupedGemmFwdOp` is one grouped
+GEMM; `MoeExpertMLPFwdOp` is the pair of them with the gated activation fused into
+the first; `FusedMoEExpertsFwdOp` is that MLP with the permutes around it, on the
+tight (no-pad) layout. The routing has to produce the layout the GEMM expects.
 
 ## Fused forward
 
@@ -53,25 +55,13 @@ tight one, and the routing has to produce the layout the GEMM expects.
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.moe.MoeGroupedGemmNopadFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-::: tileops.moe.MoeGateUpFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
 ::: tileops.moe.MoeExpertMLPFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.moe.FusedMoEExpertsNopadPersistent3WGFwdOp
+::: tileops.moe.FusedMoEExpertsFwdOp
     options:
       show_root_heading: true
       heading_level: 3
