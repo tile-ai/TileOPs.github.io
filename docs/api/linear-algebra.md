@@ -41,15 +41,7 @@ what runs when you call `op(...)`.
       merge_init_into_class: false
       show_signature_annotations: false
 
-::: tileops.gemm.BmmFp8KNFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-      merge_init_into_class: false
-      show_signature_annotations: false
-
-::: tileops.gemm.BmmFp8NKFwdOp
+::: tileops.gemm.BmmFp8FwdOp
     options:
       show_root_heading: true
       heading_level: 3

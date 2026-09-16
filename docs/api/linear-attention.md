@@ -33,43 +33,7 @@ what runs when you call `op(...)`.
 
 ## Gated DeltaNet
 
-::: tileops.linear_attention.GatedDeltaNetAutogradOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-::: tileops.linear_attention.GatedDeltaNetBTHDFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-::: tileops.linear_attention.GatedDeltaNetBHTDFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-::: tileops.linear_attention.GatedDeltaNetPrefillBTHDFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-::: tileops.linear_attention.GatedDeltaNetPrefillBHTDFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-::: tileops.linear_attention.GatedDeltaNetDecodeFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-::: tileops.linear_attention.GatedDeltaNetBwdOp
+::: tileops.linear_attention.GatedDeltaNetFwdOp
     options:
       show_root_heading: true
       heading_level: 3
