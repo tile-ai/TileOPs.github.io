@@ -182,11 +182,10 @@ d = op(a, b)                     # every input on one device: a.device == b.devi
 #   two or more True   → AmbiguousTargetError, asking for an explicit target=
 
 # ── op layer: the one place GemmFwdOp.forward fetches a kernel ───────
-kernel = self.get_or_build_kernel(
+kernel = self.kernel_for(
     "gemm_kernel",               # a name from kernel_map
     (a, b),                      # the tensors the kernel is about to get, in signature.inputs order
-    key=(m, n, k, a.dtype),      # in-tree only; not used on this call
-    build=lambda: GemmKernel(m, n, k, a.dtype),   # in-tree only; not used on this call
+    (m, n, k, a.dtype),          # what this call is; entry_for reads it, in-tree only
 )
 
 # ── op layer: look up the external memo table — device, then input signature ──
@@ -220,14 +219,14 @@ register_kernel_builder(op="GemmFwdOp", target="acme", build_kernel=build_gemm)
 
 The op layer calls `build_gemm`; the backend never calls it itself. Importing the backend
 module only records it in the registry, and the call comes when an op call reaches
-`get_or_build_kernel` and misses the external memo table — once per device and input
+`kernel_for` and misses the external memo table — once per device and input
 signature. Whatever it returns, the op layer stores and launches.
 
 Four things follow from that:
 
-- **`key` and `build` are the op author's, not a backend's.** They serve the in-tree path
-  only: `key` decides what the in-tree kernel is looked up on, `build` how it is built.
-  Neither is used once a target serves the call.
+- **`entry_for` is the op author's, not a backend's.** It serves the in-tree path only,
+  answering with what the in-tree kernel is looked up on and how it is built. Neither
+  answer is asked for once a target serves the call.
 - **Tensors arrive positionally, params by name.** `build_kernel(*inputs, **params)`: the
   positional arguments are `TensorSpec`s (`None` for an optional input the call omitted),
   the keywords the manifest's `params` names with the values this call settled on.
@@ -236,8 +235,8 @@ Four things follow from that:
   `TensorSpec`s which kernel to return.
 - **No memoisation of its own is needed.** For the same device and input signature the op
   layer does not call again; for a finer split, or fewer rebuilds, add a cache inside
-  `build_kernel`. An op with no in-tree implementation may omit `build`, and then a call
-  with no target claiming the device raises `OpNotAvailableError`.
+  `build_kernel`. An op with no in-tree implementation may leave `entry_for` out, and then
+  a call with no target claiming the device raises `OpNotAvailableError`.
 
 ## Writing a backend that runs {#runnable}
 

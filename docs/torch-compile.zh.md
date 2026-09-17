@@ -17,7 +17,7 @@
 ```python
 >>> from tileops.norm import RMSNormFwdOp
 >>> RMSNormFwdOp.compile_op_names
-('tileops::norm_rms_norm_fwd',)
+('tileops::normalization_rms_norm_fwd',)
 ```
 
 尚未迁移的算子在 `fullgraph=True` 下报错，默认设置下切图。
@@ -41,7 +41,7 @@ w = torch.randn(4096, device="cuda", dtype=torch.float16)
 block(x, w)
 ```
 
-用 `TORCH_LOGS=graph_code` 运行会打印捕获到的图：里面是 `tileops::norm_rms_norm_fwd` 一个节点，不是 kernel 内部的多次调用。
+用 `TORCH_LOGS=graph_code` 运行会打印捕获到的图：里面是 `tileops::normalization_rms_norm_fwd` 一个节点，不是 kernel 内部的多次调用。
 
 ### 调用时要遵守的五条约定
 
@@ -69,35 +69,24 @@ block(x, w)
 
 ```python
 class RMSNormFwdOp(Op):
-    # 图中属于这个算子的算子名
-    compile_op_names = ("tileops::norm_rms_norm_fwd",)
+    # 这个算子注册几个 operator 就写几个 OperatorSpec；注册本身与
+    # compile_op_names 都由 manifest 条目生成
+    compile_boundary: ClassVar[tuple[OperatorSpec, ...]] = (OperatorSpec(),)
 
     def _infer_output_shapes(self, x_shape, weight_shape):
         return {"output": tuple(x_shape)}          # manifest 的 shape_rules
 
     def forward(self, x, weight):
-        # 唯一一行：调用那个不透明算子
-        return _rms_norm_fwd(x, weight, self._instance_key)
+        # 唯一一行：调用生成出来的那个算子
+        return self._wrapped(x, weight, self._instance_key)
 
     def _eager_forward(self, x, weight):
         ...                                        # 校验、连续化
-        kernel = self.get_or_build_kernel(
-            "rms_norm", (x, weight), key=x.dtype, build=...,
-        )
+        kernel = self.kernel_for("rms_norm", (x, weight), x.dtype)
         return kernel(x, weight)
-
-
-@torch.library.custom_op("tileops::norm_rms_norm_fwd", mutates_args=())
-def _rms_norm_fwd(x, weight, instance_key: str) -> torch.Tensor:
-    return get_instance(instance_key)._eager_forward(x, weight)
-
-
-@_rms_norm_fwd.register_fake
-def _rms_norm_fwd_fake(x, weight, instance_key):
-    op = get_instance(instance_key)
-    shapes = op._infer_output_shapes(tuple(x.shape), tuple(weight.shape))
-    return x.new_empty(shapes["output"])
 ```
+
+声明就这么多。operator 与它的 fake 都从条目生成：张量参数是 `signature.inputs` 的顺序，返回什么看 `signature.outputs`，写哪些参数看标了 `mutated: true` 的输入，每个输出的 dtype 取自条目，或者在条目标了 `caller_stated` 时取自调用方。名字是 `tileops::<family>_<snake(class)>`，这里就是 `tileops::normalization_rms_norm_fwd` —— 没有算子自己起名字，`compile_op_names` 也就不可能和注册的名字对不上。有第二个 operator（in-place 或 `out=` 形态）的算子再加一个 spec，说明那一个写哪个参数。
 
 一次调用经过的各层，以及边界落在哪里：
 
@@ -105,7 +94,7 @@ def _rms_norm_fwd_fake(x, weight, instance_key):
   <div class="cp-step cp-traced"><code>Op.__call__</code><span>判定 target，失败则撤销</span></div>
   <div class="cp-step cp-traced"><code>forward</code><span>一行，调用不透明算子</span></div>
   <div class="cp-boundary"><span>编译边界</span></div>
-  <div class="cp-step cp-opaque"><code>_rms_norm_fwd</code><span>算子体，取回算子实例</span></div>
+  <div class="cp-step cp-opaque"><code>生成出来的算子</code><span>算子体，取回算子实例</span></div>
   <div class="cp-step cp-opaque"><code>_eager_forward</code><span>校验、连续化、取 kernel、launch kernel</span></div>
   <figcaption>紫色两层在 dynamo 的追踪范围内，<code>forward</code> 那一行是它追到的最后一处；界下由不透明算子接手，编译器看不见。</figcaption>
 </figure>
@@ -119,7 +108,7 @@ def _rms_norm_fwd_fake(x, weight, instance_key):
 
 **第二处，fake 用 `x.new_empty(shape)` 构造，而不是 `torch.empty_like(x)`。** fake 返回的张量，形状、dtype 与 stride 三项都必须与真实执行返回的一致；不一致或在追踪期报错，或在运行期按错误布局访问而静默出错。算子体先连续化再写入新分配的输出，真实输出恒为连续，而 `empty_like` 会把入参的 stride 一起复制 —— 非连续输入就让 fake 宣称了一种真实执行不会产出的布局。
 
-**第三处，target 判定在 `Op.__call__` 与 `get_or_build_kernel` 中各做一次。** 追踪期执行 `self.x = ...`，dynamo 把这次写入记成待办的副作用，等整张图跑完才补上；而不透明节点的执行早于补写，所以节点之外刚写下的判定结果，节点之内读不到。两件事因此都落在节点内部：
+**第三处，target 判定在 `Op.__call__` 与 `kernel_for` 中各做一次。** 追踪期执行 `self.x = ...`，dynamo 把这次写入记成待办的副作用，等整张图跑完才补上；而不透明节点的执行早于补写，所以节点之外刚写下的判定结果，节点之内读不到。两件事因此都落在节点内部：
 
 - 少了节点内部这一次判定，第一次编译调用会静默用错实现。
 - 判定失败时的撤销由做出判定的那一处负责，因为编译产物不保留调用点的 `try/except`。

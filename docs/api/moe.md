@@ -11,7 +11,8 @@ each token's experts, the ops that move tokens into an expert-contiguous layout 
 back, and the expert GEMMs that run on it. `MoeGroupedGemmFwdOp` is one grouped
 GEMM; `MoeExpertMLPFwdOp` is the pair of them with the gated activation fused into
 the first; `FusedMoEExpertsFwdOp` is that MLP with the permutes around it, on the
-tight (no-pad) layout. The routing has to produce the layout the GEMM expects.
+tight (no-pad) layout, and `IndexedExpertMLPFwdOp` is the backend it picks instead when
+the routes are few enough to read the weights once per route rather than once per expert. The routing has to produce the layout the GEMM expects.
 
 ## Fused forward
 
@@ -62,6 +63,12 @@ tight (no-pad) layout. The routing has to produce the layout the GEMM expects.
       members: ["__init__", "forward"]
 
 ::: tileops.moe.FusedMoEExpertsFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
+::: tileops.moe.IndexedExpertMLPFwdOp
     options:
       show_root_heading: true
       heading_level: 3

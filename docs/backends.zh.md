@@ -148,11 +148,10 @@ d = op(a, b)                     # 所有输入必须在同一设备上：a.devi
 #   两个以上返回 True    → 抛 AmbiguousTargetError，要求显式写 target=
 
 # ── 算子层：GemmFwdOp.forward 里唯一取 kernel 的那一处 ───────────────
-kernel = self.get_or_build_kernel(
+kernel = self.kernel_for(
     "gemm_kernel",               # kernel_map 里的名字
     (a, b),                      # 即将传给 kernel 的张量，顺序照 signature.inputs
-    key=(m, n, k, a.dtype),      # 自带实现用，这次不走
-    build=lambda: GemmKernel(m, n, k, a.dtype),   # 自带实现用，这次不走
+    (m, n, k, a.dtype),          # 本次调用是什么；由 entry_for 读，自带实现用，这次不走
 )
 
 # ── 算子层：按设备与输入签名查外部记忆表 ─────────────────────────────
@@ -184,14 +183,14 @@ def build_gemm(a: TensorSpec, b: TensorSpec, *, trans_a, trans_b):
 register_kernel_builder(op="GemmFwdOp", target="acme", build_kernel=build_gemm)
 ```
 
-`build_gemm` 由算子层调用，后端自己从不调它：import 后端模块时只是把它登记进注册表，真正被调是在一次调用走到 `get_or_build_kernel`、且外部记忆表未命中的时候，每个「设备 + 输入签名」一次。它返回的可调用对象随后由算子层 launch，也由算子层存进记忆表。
+`build_gemm` 由算子层调用，后端自己从不调它：import 后端模块时只是把它登记进注册表，真正被调是在一次调用走到 `kernel_for`、且外部记忆表未命中的时候，每个「设备 + 输入签名」一次。它返回的可调用对象随后由算子层 launch，也由算子层存进记忆表。
 
 四点对应关系值得记住：
 
-- **`key` 与 `build` 由算子作者写，与后端无关。** 它们只服务自带实现：`key` 决定自带 kernel 按什么查表，`build` 决定它怎么构造。target 选中后端时这两个参数整条不走。
+- **`entry_for` 由算子作者写，与后端无关。** 它只服务自带实现：给出自带 kernel 按什么查表、又怎么构造。target 选中后端时这两个答案都不会被问。
 - **张量按位置传，参数按名字传。** `build_kernel(*inputs, **params)`：位置实参是 `TensorSpec`（没传的可选输入是 `None`），关键字实参是 manifest 里 `params` 的名字与本次调用的确定值。
 - **一个 `(算子, target)` 只注册一个 builder。** 算子内部分几种情形（GEMM 的 `gemm_kernel` 与 `gemv_kernel`）不会传进来，`build_kernel` 从 `TensorSpec` 自行判断该返回哪个 kernel。
-- **不必自己做记忆。** 同一个设备与输入签名，算子层不会再调第二次；要更细的区分或更少的重建，在 `build_kernel` 内部另加一层缓存。算子完全没有自带实现时 `build` 可以不传，那时没有 target 认领设备，调用直接抛 `OpNotAvailableError`。
+- **不必自己做记忆。** 同一个设备与输入签名，算子层不会再调第二次；要更细的区分或更少的重建，在 `build_kernel` 内部另加一层缓存。算子完全没有自带实现时 `entry_for` 可以不写，那时没有 target 认领设备，调用直接抛 `OpNotAvailableError`。
 
 ## 实现一个可运行的后端 {#runnable}
 

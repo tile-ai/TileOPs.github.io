@@ -21,7 +21,7 @@ layer and `fullgraph=True` works, an empty tuple means the op has not migrated y
 ```python
 >>> from tileops.norm import RMSNormFwdOp
 >>> RMSNormFwdOp.compile_op_names
-('tileops::norm_rms_norm_fwd',)
+('tileops::normalization_rms_norm_fwd',)
 ```
 
 An op that has not migrated raises under `fullgraph=True`, and breaks the graph under
@@ -48,7 +48,7 @@ block(x, w)
 ```
 
 `TORCH_LOGS=graph_code` prints the captured graph: one node,
-`tileops::norm_rms_norm_fwd`, not the calls inside the kernel.
+`tileops::normalization_rms_norm_fwd`, not the calls inside the kernel.
 
 ### The five calling conventions
 
@@ -96,35 +96,31 @@ file is
 
 ```python
 class RMSNormFwdOp(Op):
-    # the operators in the graph that belong to this op
-    compile_op_names = ("tileops::norm_rms_norm_fwd",)
+    # one OperatorSpec per operator this op registers; the registration and
+    # compile_op_names are generated from the manifest entry
+    compile_boundary: ClassVar[tuple[OperatorSpec, ...]] = (OperatorSpec(),)
 
     def _infer_output_shapes(self, x_shape, weight_shape):
         return {"output": tuple(x_shape)}          # the manifest's shape_rules
 
     def forward(self, x, weight):
-        # the only line: call the opaque operator
-        return _rms_norm_fwd(x, weight, self._instance_key)
+        # the only line: call the generated operator
+        return self._wrapped(x, weight, self._instance_key)
 
     def _eager_forward(self, x, weight):
         ...                                        # validate, make contiguous
-        kernel = self.get_or_build_kernel(
-            "rms_norm", (x, weight), key=x.dtype, build=...,
-        )
+        kernel = self.kernel_for("rms_norm", (x, weight), x.dtype)
         return kernel(x, weight)
-
-
-@torch.library.custom_op("tileops::norm_rms_norm_fwd", mutates_args=())
-def _rms_norm_fwd(x, weight, instance_key: str) -> torch.Tensor:
-    return get_instance(instance_key)._eager_forward(x, weight)
-
-
-@_rms_norm_fwd.register_fake
-def _rms_norm_fwd_fake(x, weight, instance_key):
-    op = get_instance(instance_key)
-    shapes = op._infer_output_shapes(tuple(x.shape), tuple(weight.shape))
-    return x.new_empty(shapes["output"])
 ```
+
+That is the whole declaration. The operator and its fake are generated from the entry:
+its tensor arguments are `signature.inputs` in order, what it returns is
+`signature.outputs`, which arguments it writes is the inputs marked `mutated: true`, and
+each output's dtype is the entry's, or the caller's where the entry marks the output
+`caller_stated`. Its name is `tileops::<family>_<snake(class)>` — here
+`tileops::normalization_rms_norm_fwd` — so no op chooses its own, and `compile_op_names`
+cannot disagree with what was registered. An op with a second operator, an in-place or an
+`out=` form, adds a second spec saying which argument that one writes.
 
 The layers one call passes through, and where the boundary falls:
 
@@ -132,7 +128,7 @@ The layers one call passes through, and where the boundary falls:
   <div class="cp-step cp-traced"><code>Op.__call__</code><span>resolve the target, unsettle on failure</span></div>
   <div class="cp-step cp-traced"><code>forward</code><span>one line, calls the opaque operator</span></div>
   <div class="cp-boundary"><span>compile boundary</span></div>
-  <div class="cp-step cp-opaque"><code>_rms_norm_fwd</code><span>the operator body, recovers the instance</span></div>
+  <div class="cp-step cp-opaque"><code>the generated operator</code><span>recovers the instance</span></div>
   <div class="cp-step cp-opaque"><code>_eager_forward</code><span>validate, contiguous, kernel, launch</span></div>
   <figcaption>The two violet layers are inside dynamo's trace, and that one line of <code>forward</code> is the last thing it reaches; below the boundary the opaque operator takes over, invisible to the compiler.</figcaption>
 </figure>
@@ -160,7 +156,7 @@ contiguous, while `empty_like` copies the input's strides: a non-contiguous inpu
 have the fake declare a layout real execution never produces.
 
 **Third, the target is resolved twice — once in `Op.__call__`, once in
-`get_or_build_kernel`.** When traced code runs `self.x = ...`, dynamo records a pending
+`kernel_for`.** When traced code runs `self.x = ...`, dynamo records a pending
 side effect and applies it only after the whole graph has run, while the opaque node runs
 before that: a resolution written just outside the node is unreadable inside it. Two
 things follow, both inside the node:

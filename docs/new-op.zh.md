@@ -51,7 +51,7 @@ GemmFwdOp:
     bench: benchmarks/ops/bench_gemm.py
 ```
 
-算子在运行时按这些名字取 kernel：`_eager_forward` 里挑出用哪一个，把名字传给 `get_or_build_kernel`，算子层再从 `kernel_map` 找到对应的类去构造（见[第二步](#op-class)）。外部后端也是照这份名单注册的 —— 它为哪个名字注册 `build_kernel`，就接管了算子的哪一个 kernel。
+算子在运行时按这些名字取 kernel：`_eager_forward` 里挑出用哪一个，把名字传给 `kernel_for`，算子层再从 `kernel_map` 找到对应的类去构造（见[第二步](#op-class)）。外部后端也是照这份名单注册的 —— 它为哪个名字注册 `build_kernel`，就接管了算子的哪一个 kernel。
 
 名字自己起，但要和 kernel 的用途对得上，而且写进算子代码之后就不该再改：它同时是 spec、算子实现与外部后端三方约定的那个词。这也是它推导不出来的原因 —— 只有写 kernel 的人知道这个算子要分几种情形。
 
@@ -82,17 +82,20 @@ class GemmFwdOp(Op):
         self._validate_dtypes(a, b)                  # 基类按 spec 生成，直接调用
         m, n, k = self._infer_mnk(a, b)
         a, b = a.contiguous(), b.contiguous()        # 按 spec 声明的形状交给 kernel
-        slot = "gemv_kernel" if m == 1 else "gemm_kernel"
-        kernel = self.get_or_build_kernel(
-            slot,                                    # kernel_map 里的名字
-            (a, b),                                  # 外部路径按这些张量查表，后端也收到它们
-            key=(m, n, k, a.dtype),                  # 自带 kernel 按什么查表
-            build=lambda: self.kernel_map[slot](m, n, k, a.dtype, tune=self.tune),
+        role = "gemv_kernel" if m == 1 else "gemm_kernel"
+        kernel = self.kernel_for(
+            role,                                    # kernel_map 里的名字
+            (a, b),                                  # 后端按这些张量被描述
+            (m, n, k, a.dtype),                      # 本次调用是什么
         )
         return kernel(a, b)
+
+    def entry_for(self, role, call):                 # 自带实现的构造方法
+        m, n, k, dtype = call
+        return call, lambda: self.kernel_map[role](m, n, k, dtype, tune=self.tune)
 ```
 
-要自己写的是这四个成员，内容都从 spec 来：
+要自己写的是这五个成员，前四个内容都从 spec 来：
 
 | # | 成员 | 照 spec 的哪一部分写 |
 | --- | --- | --- |
@@ -100,28 +103,29 @@ class GemmFwdOp(Op):
 | 2 | `default_kernel_map` | `source.kernel_map`：名字照抄，取值换成 Kernel 类本身 |
 | 3 | `_infer_output_shapes` | `signature.shape_rules` 里推导输出形状那几条 |
 | 4 | `forward` | `signature.inputs` 的顺序与默认值（可选输入排在必填之后），加上校验、连续化、取 kernel、launch kernel |
+| 5 | `entry_for` | 两次调用要共享哪些值才算同一个 kernel，以及这个 kernel 怎么构造 |
 
 另有两个成员不用写：`_validate_dtypes` 与 `eval_roofline` 由基类在子类定义时照 spec 的 dtype 声明与 `roofline` 生成并装上，直接调用即可，只有需要特殊行为时才自己覆写。
 
-### `get_or_build_kernel`
+### `kernel_for` 与 `entry_for`
 
-kernel 是编译产物，构造一次要几百毫秒到几秒，而一个算子实例会被反复调用，形状与 dtype 各不相同。算子层因此维护一张记忆表：本次调用要的 kernel 已经构造过就取回来，没有才构造并存进去。`get_or_build_kernel` 是这张表唯一的入口，也是自带实现与外部后端的分岔点（[后端协议](backends.md)里的第二层选择）。
+kernel 是编译产物，构造一次要几百毫秒到几秒，而一个算子实例会被反复调用，形状与 dtype 各不相同。算子层因此维护一张记忆表：本次调用要的 kernel 已经构造过就取回来，没有才构造并存进去。`kernel_for` 是这张表唯一的入口，也是自带实现与外部后端的分岔点（[后端协议](backends.md)里的第二层选择）。
 
-四个参数：
+三个参数：
 
-**`name`** —— 本次要哪一个 kernel，取值是 `kernel_map` 里的名字。
+**`role`** —— 本次要这个算子的哪一个 kernel，取值是 `kernel_map` 里的名字。
 
 ```python
-slot = "gemv_kernel" if m == 1 else "gemm_kernel"
+role = "gemv_kernel" if m == 1 else "gemm_kernel"
 ```
 
-自带实现按这个名字找到 Kernel 类，外部后端按它找到注册在同名下的 `build_kernel`。算子分几种情形，`kernel_map` 就有几个名字。
+自带实现按这个名字找到 Kernel 类，外部后端按它找到注册在同名下的 `build_kernel`。role 是记忆表的一个桶，算子跑几个 kernel 就有几个 —— 它不是选择挑中的那个实现的名字。
 
 **`inputs`** —— 即将传给 kernel 的那些张量，顺序照 `signature.inputs`，一个输入占一个位置。
 
 ```python
-self.get_or_build_kernel(slot, (a, b), ...)                # GEMM：两个必填输入
-self.get_or_build_kernel("group_norm", (x, weight, bias), ...)  # 没传的可选输入位置上是 None
+self.kernel_for(role, (a, b), ...)                # GEMM：两个必填输入
+self.kernel_for("group_norm", (x, weight, bias), ...)  # 没传的可选输入位置上是 None
 ```
 
 外部路径按它查表：设备加上每个位置的 `(dtype, shape)`。设备也算在内，因为为一块卡编译的产物可能持有那块卡上的资源。后端的 `build_kernel` 收到的也是它，每个张量转成只有 device、dtype、shape 的 `TensorSpec`，不含数据。
@@ -130,22 +134,21 @@ self.get_or_build_kernel("group_norm", (x, weight, bias), ...)  # 没传的可�
 
 `inputs` 漏掉当场不报错，装上后端才抛 `OpNotAvailableError` —— 这个算子于是只能用自带 kernel，外部 target 接管不了（见[安装之后：两种状态](backends.md#three-states)）。
 
-**`key`** —— 自带 kernel 特化在什么上，只有自带这条路用（换成外部后端服务这个算子时这两个参数怎么走，见[算子层这一侧的调用](backends.md#from-op-layer)）。
+**`call`** —— 本次调用是什么，形式由这个算子自己的 `entry_for` 决定。有多个实现可选的算子传家族定义的那条记录；只有一个实现的算子传它构造 kernel 用到的那几个值。
+
+`entry_for(role, call)` 返回记忆表要的那一对。换成外部后端服务这个算子时这两者怎么走，见[算子层这一侧的调用](backends.md#from-op-layer)。
 
 ```python
-key=(m, n, k, a.dtype)                             # GEMM：三个维度加 dtype
-key=(self._cache_key(*input_shapes), x.dtype)      # 通用写法
+def entry_for(self, role, call):
+    m, n, k, dtype = call
+    return call, lambda: self.kernel_map[role](m, n, k, dtype, tune=self.tune)
 ```
 
-`_cache_key` 的默认实现取所有输入形状中非静态轴的尺寸，正确但可能过细 —— 一个形状编译一次。kernel 实际只依赖其中几个量时覆写它，把形状投影过去，例如 kernel 把输入当二维处理，就把前面几维乘成一个数。
+先返回的**身份**是两次调用要共享什么才算同一条记录：构造参数，再加上设备 —— 只要换一块卡构造出来的对象可能不同就要带上。带少了，第二种 dtype 会复用第一种 dtype 的 kernel；kernel 其实只依赖其中几个量却把整个形状带上，就变成一个形状编译一次。
 
-**`build`** —— 怎么构造这个自带 kernel，同样只有自带这条路用。
+后返回的**构造方法**每个身份只跑一次，所以编译放在里面是安全的。返回值可以是一个 Kernel、一组一起构造出来的 Kernel，或一个带着它们的 dataclass —— 后两种适合一次调用要 launch 多个 kernel 的算子。
 
-```python
-build=lambda: self.kernel_map[slot](m, n, k, a.dtype, tune=self.tune)
-```
-
-每个 `key` 只调用一次，所以编译放在这里是安全的。算子完全没有自带实现、只指望外部后端服务时，`build` 可以不传 —— 那样在没有 target 认领设备时，调用会抛 `OpNotAvailableError`。返回值可以是一个 Kernel、一组一起构造出来的 Kernel，或一个带着它们的 dataclass —— 后两种适合一次调用要 launch 多个 kernel 的算子。
+有多个候选 Kernel 类可选的算子根本不写 `entry_for`：默认实现会去问选择挑中的那个类，由它给出自己的身份与构造方法。完全没有自带实现、只指望外部后端的算子两者都不写 —— 那样在没有 target 认领设备时，调用会抛 `OpNotAvailableError`。
 
 ### 收尾：编译边界与注册
 
@@ -185,7 +188,7 @@ kernel = AttnKernel(num_heads, head_dim, dtype)
 out = kernel(q, k, v)                       # seq_len 从张量形状里读
 ```
 
-上一种写法下，`get_or_build_kernel` 的 `key` 里带着 `seq_len`，每步都未命中、每步都编译一次，decode 直接跑不动。
+上一种写法下，`entry_for` 返回的身份里带着 `seq_len`，每步都未命中、每步都编译一次，decode 直接跑不动。
 
 ## 第四步：写测试
 
