@@ -11,4 +11,4 @@ repository — the source of truth — pulled in at site build time.
 - [Slot Rules](op-slot-rules.md) — the authoritative rule, example, and common mistakes per op-file slot.
 - [Roofline](roofline.md) — performance model and the `roofline` manifest field.
 - [Testing & Benchmarking](testing.md) — separation of correctness tests and profiling benchmarks.
-- [Trust Model](trust-model.md) — stage boundaries and the guarantees each stage owns.
+- [Layer Boundaries](layer-boundaries.md) — what each layer owns and depends on, and the interfaces layers compose through.
