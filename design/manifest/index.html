@@ -1,0 +1,3960 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="High-performance LLM operator library built on TileLang">
+      
+      
+      
+        <link rel="canonical" href="https://tile-ai.github.io/TileOPs.github.io/design/manifest/">
+      
+      
+        <link rel="prev" href="../architecture/">
+      
+      
+        <link rel="next" href="../ops-design/">
+      
+      
+        
+          <link rel="alternate" href="./" hreflang="en">
+        
+          <link rel="alternate" href="../../zh/design/manifest/" hreflang="zh">
+        
+      
+      
+      <link rel="icon" href="../../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Manifest - TileOPs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Hanken+Grotesk:300,300i,400,400i,700,700i%7CSpace+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Hanken Grotesk";--md-code-font:"Space Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../assets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#op-manifest-specification" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="TileOPs" class="md-header__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            TileOPs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Manifest
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Select language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="../../zh/design/manifest/" hreflang="zh" class="md-select__link">
+              简体中文
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="TileOPs" class="md-nav__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    TileOPs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../user-guide/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing a Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../new-op/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding an Op
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../timing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timing Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../torch-compile/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using torch.compile
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../api/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/topk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Top-k
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/linear-algebra/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pooling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/convolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Convolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/fft/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/mamba/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mamba
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/mhc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    mHC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/engram/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Engram
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../benchmarks/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Benchmarks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/reading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How these numbers are taken
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/gemm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/conv-pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conv &amp; Pool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/ssm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/other/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Other
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../performance-guides/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Guides
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Performance Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/trace-timeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timeline Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../performance-guides/memory-bound/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory-Bound Kernels
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Memory-Bound Kernels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/memory-bound/global-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Global Memory Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/memory-bound/shared-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared Memory Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Manifest
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Manifest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trust-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trust Model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#field-admission" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field Admission
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entry-duties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry Duties
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#top-level-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-Level Fields
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#signature" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signature
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Signature">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#indices-and-kinds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Indices and Kinds
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inputs-and-outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs and Outputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#refinements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refinements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dtypes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dtypes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#presence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Presence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#type-families" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Type Families
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#algebraic-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Algebraic Data Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#derived-indices-and-primitives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Derived Indices and Primitives
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#construction-time-tensors-layout-and-device" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Construction-Time Tensors, Layout and Device
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#effects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Effects
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workloads
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Workloads">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rows
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generators
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#composition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Composition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#call-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Call Semantics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reference-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference Tables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exclusions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exclusions
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ops-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Op Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ops-design-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Op Interface Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../op-slot-rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slot Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roofline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roofline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../layer-boundaries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Layer Boundaries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trust-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trust Model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#field-admission" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field Admission
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entry-duties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry Duties
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#top-level-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-Level Fields
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#signature" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signature
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Signature">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#indices-and-kinds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Indices and Kinds
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inputs-and-outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs and Outputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#refinements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refinements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dtypes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dtypes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#presence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Presence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#type-families" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Type Families
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#algebraic-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Algebraic Data Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#derived-indices-and-primitives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Derived Indices and Primitives
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#construction-time-tensors-layout-and-device" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Construction-Time Tensors, Layout and Device
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#effects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Effects
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workloads
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Workloads">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rows
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generators
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#composition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Composition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#call-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Call Semantics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reference-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference Tables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exclusions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exclusions
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="op-manifest-specification">Op Manifest Specification<a class="headerlink" href="#op-manifest-specification" title="Permanent link">&para;</a></h1>
+<p>The <a href="https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/"><code>src/tileops/manifest/</code></a> package is the <strong>source of truth</strong> for the external contract of every public op. An entry's core is its signature: a polymorphic function type over explicitly quantified type indices. Code conforms to the manifest, and the validator checks that it does.</p>
+<h2 id="layout">Layout<a class="headerlink" href="#layout" title="Permanent link">&para;</a></h2>
+<p>One or more YAML files per family (single file by default; large families may shard). Each file is a flat mapping <code>op_name → entry</code>. The <code>tileops.manifest</code> package merges all files at load; a duplicate op name across files is an error. Algebraic data types shared by several entries live in <code>types.yaml</code>.</p>
+<ul>
+<li><strong>Add or edit an op</strong>: edit the family file that owns it, with a round-trip parser (<code>ruamel.yaml</code>).</li>
+<li><strong>Read programmatically</strong>: <code>from tileops.manifest import load_manifest, load_workloads</code>.</li>
+</ul>
+<h2 id="trust-model">Trust Model<a class="headerlink" href="#trust-model" title="Permanent link">&para;</a></h2>
+<pre class="mermaid"><code>flowchart LR
+    R["Authoritative reference"] --&gt;|specified from| M["src/tileops/manifest/"]
+    M --&gt;|reads spec from| A["Agent (codegen)"]
+    A --&gt;|produces| C["Op code, tests, benchmarks"]
+    M --&gt;|validates against| V["Validator (CI)"]
+    C --&gt;|checked by| V</code></pre>
+<ul>
+<li>The manifest is written against an authoritative reference, never derived from current TileOPs code. Code, tests and benchmarks follow it: a disagreement is fixed in the code, with the entry <code>spec-only</code> until it conforms, never by editing the manifest to match.</li>
+<li>Runtime checks, fake/meta functions and operator schemas are generated from the signature. The agent that produces an op does not write or adjust the generated checks or the validator.</li>
+<li>The manifest contract cases and the benchmarks take their calls from the entry's workload rows. Rows are not unit-test coverage: shapes that target kernel branches are chosen by the test (<a href="../testing/#test-case-policy">testing.md § Test case policy</a>).</li>
+<li>Code-dependent checks are skipped for <code>spec-only</code> entries only; no check has a per-op opt-out. An entry is demoted to <code>spec-only</code> only when its implementation does not conform.</li>
+</ul>
+<p>What each layer depends on, and the boundaries between layers, are in <a href="../layer-boundaries/">layer-boundaries.md</a>.</p>
+<h2 id="field-admission">Field Admission<a class="headerlink" href="#field-admission" title="Permanent link">&para;</a></h2>
+<p>A field enters the manifest only when all three hold:</p>
+<ol>
+<li>It is part of a public op's external contract, or a fact a YAML-only reader needs (the validator checking a <code>spec-only</code> entry, the docs site built without torch), such as <code>workloads</code> and <code>roofline</code>.</li>
+<li>At least one reader depends on it.</li>
+<li>It describes the op's external behaviour. Implementation facts — source paths, kernel selection — are owned by the code and exported from it when needed.</li>
+</ol>
+<h2 id="entry-duties">Entry Duties<a class="headerlink" href="#entry-duties" title="Permanent link">&para;</a></h2>
+<p>An entry serves four duties, plus a record of a composite op's internal structure. Every duty reads the one signature: effects annotate its tensors, workload rows instantiate it, and cost formulas are written over its indices.</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Duty</th>
+<th>Fields</th>
+<th>Section</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Type signature</td>
+<td><code>signature</code>: <code>forall</code>, <code>params</code>, <code>inputs</code>, <code>outputs</code>, <code>types</code>, <code>let</code>, <code>shape_rules</code>, <code>dtype_combos</code></td>
+<td><a href="#signature">Signature</a></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Side effects</td>
+<td><code>mutated</code>, <code>write_only</code>, <code>buffer</code>, <code>alias</code> on tensors</td>
+<td><a href="#effects">Effects</a></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Test-case generation</td>
+<td><code>workloads</code>; <code>values</code>, <code>requires</code> on tensors</td>
+<td><a href="#workloads">Workloads</a></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Cost model</td>
+<td><code>roofline</code></td>
+<td><a href="../roofline/">roofline.md</a></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Internal structure</td>
+<td><code>composition</code></td>
+<td><a href="#composition">Composition</a></td>
+</tr>
+</tbody>
+</table>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">&lt;Op&gt;</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">family</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;module&gt;</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">status</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">implemented | spec-only</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">ref_api</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;qualified name&gt;</span><span class="w">          </span><span class="c1"># optional</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">signature</span><span class="p">:</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">forall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">&lt;index&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">&lt;kind&gt;</span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">&lt;p&gt;</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nv">type</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">default</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">kw_only</span><span class="p p-Indicator">}}</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nt">inputs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">&lt;t&gt;</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nv">dtype</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">shape</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">optional</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">mutated</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">requires</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">values</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">...</span><span class="p p-Indicator">}}</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nt">outputs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">&lt;t&gt;</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nv">dtype</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">shape</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">nullable</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">buffer</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">alias</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">...</span><span class="p p-Indicator">}}</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nt">types</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">&lt;Family&gt;</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nv">params</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">match</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">cases</span><span class="p p-Indicator">}}</span><span class="w">   </span><span class="c1"># optional</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nt">let</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">&lt;name&gt;</span><span class="p">:</span><span class="w"> </span><span class="s">"&lt;expr&gt;"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="nt">shape_rules</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"&lt;refinement&gt;"</span><span class="p p-Indicator">]</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="nt">dtype_combos</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[{</span><span class="nt">&lt;DType index&gt;</span><span class="p">:</span><span class="w"> </span><span class="nv">&lt;dtype&gt;</span><span class="p p-Indicator">}]</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">  </span><span class="nt">workloads</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[{</span><span class="nv">&lt;params and indices&gt;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">some</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">dtype_cases</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">label</span><span class="p p-Indicator">}]</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">  </span><span class="nt">roofline</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nv">flops</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">bytes</span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="err"> {func}</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">  </span><span class="nt">composition</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="nv">composite</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">stages</span><span class="p p-Indicator">}</span><span class="w">      </span><span class="c1"># optional</span>
+</span></code></pre></div>
+<p>Most entries use only <code>forall</code>, tensor <code>shape</code> and <code>dtype</code>, construction parameters and simple refinements:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">SiluAndMulFwdOp</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">family</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">elementwise</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">status</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">implemented</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">signature</span><span class="p">:</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">forall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">M</span><span class="p">:</span><span class="w"> </span><span class="nv">Dim</span><span class="p p-Indicator">,</span><span class="nt"> N</span><span class="p">:</span><span class="w"> </span><span class="nv">Dim</span><span class="p p-Indicator">,</span><span class="nt"> T</span><span class="p">:</span><span class="w"> </span><span class="s">"DType[float16</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">bfloat16</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">float32]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">inputs</span><span class="p">:</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">      </span><span class="nt">x</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="nv">T</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[M,</span><span class="nv"> </span><span class="s">2</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">N]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nt">outputs</span><span class="p">:</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">      </span><span class="nt">output</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="nv">T</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[M,</span><span class="nv"> </span><span class="s">N]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="nt">workloads</span><span class="p">:</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">M</span><span class="p">:</span><span class="w"> </span><span class="nv">2048</span><span class="p p-Indicator">,</span><span class="nt"> N</span><span class="p">:</span><span class="w"> </span><span class="nv">14336</span><span class="p p-Indicator">,</span><span class="nt"> dtype_cases</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[{</span><span class="nt">T</span><span class="p">:</span><span class="w"> </span><span class="nv">float16</span><span class="p p-Indicator">},</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">T</span><span class="p">:</span><span class="w"> </span><span class="nv">bfloat16</span><span class="p p-Indicator">}],</span><span class="nt"> label</span><span class="p">:</span><span class="w"> </span><span class="nv">llama-8b-swiglu-prefill</span><span class="p p-Indicator">}</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="nt">roofline</span><span class="p">:</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="nt">flops</span><span class="p">:</span><span class="w"> </span><span class="s">"6</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">M</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">N"</span>
+</span></code></pre></div>
+<h2 id="top-level-fields">Top-Level Fields<a class="headerlink" href="#top-level-fields" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Key.</strong> The Python class name of the op, <code>{PascalCaseName}[{Fwd|Bwd}]Op</code>. The validator requires <code>cls.__name__ == key</code>.</li>
+<li><strong><code>family</code>.</strong> The op's public module and a segment of its operator namespace: the op is importable as <code>tileops.&lt;family&gt;.&lt;Op&gt;</code>, and the family's <code>__all__</code> agrees with the manifest.</li>
+<li><strong><code>status</code>.</strong> Required. <code>implemented</code>: an implementation conforms to the manifest. <code>spec-only</code>: no conforming implementation exists yet; code may be absent or partial.</li>
+<li><strong><code>ref_api</code>.</strong> Optional qualified name of the API the op follows semantically. The validator checks its form, and that it resolves when its module imports.</li>
+</ul>
+<h2 id="signature">Signature<a class="headerlink" href="#signature" title="Permanent link">&para;</a></h2>
+<h3 id="indices-and-kinds">Indices and Kinds<a class="headerlink" href="#indices-and-kinds" title="Permanent link">&para;</a></h3>
+<p><code>forall</code> declares every free type index with its kind, e.g. <code>forall: {M: Dim, K: Dim, T: "DType[float16 | bfloat16]"}</code>. Indices come from three sources: <code>forall</code>; construction parameters that appear in an index position (<a href="#t-names">table 1</a>); and <code>let</code>, a derived index.</p>
+<ul>
+<li><code>forall</code> kinds are <code>Dim</code> (axis length), <code>Shape</code> (tuple of <code>Dim</code>), <code>DType[...]</code> and the value list <code>Seq[Int]</code> (<a href="#t-forall">table 2</a>). A parameter's kind follows from its <code>type</code> (<a href="#t-types">table 3</a>); expression kinds follow <a href="#t-expr">table 4</a>.</li>
+<li>A <code>Dim</code> may be passed where an <code>Int</code> is expected, a <code>Shape</code> where a <code>Seq[Int]</code> is.</li>
+<li>Every axis is an integer expression. An axis whose kind is not <code>Dim</code>, and every element of a sequence spliced with <code>*p</code>, is checked non-negative at run time; under SymInt the check is a generated <code>torch._check</code>.</li>
+<li>The validator, workload instantiation and tests convert YAML values by declared kind or <code>type</code>: <code>Shape</code> indices and <code>tuple[...]</code> parameters become tuples, <code>Seq[Int]</code> indices and <code>list[...]</code> parameters stay lists, dtype names become <code>torch.dtype</code>, ADT values become objects (<a href="#t-adt">table 5</a>).</li>
+<li>Within an entry, index, <code>let</code> and tensor names are distinct.</li>
+</ul>
+<h3 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h3>
+<p><code>signature.params</code> is the <code>__init__</code> parameter list: <code>type</code>, optional <code>default</code> and <code>kw_only</code>. The manifest is authoritative; for an implemented entry the validator compares it with <code>__init__</code> item by item (<a href="#t-ctor">table 6</a>), and the code may add only the execution-policy parameters of <a href="#t-policy">table 7</a>. It also requires the signature's call-time inputs and output buffers to be the ordered prefix of <code>forward</code>'s parameters; <code>forward</code> may append code-defined execution parameters, which are not part of the signature.</p>
+<p>Parameters enter types directly:</p>
+<ul>
+<li>An <code>int</code> parameter written into a shape is checked non-negative at construction.</li>
+<li>A <code>list[int]</code> / <code>tuple[int, ...]</code> parameter is spliced as <code>*p</code>; each element is checked non-negative.</li>
+<li>A dtype parameter (a <code>type</code> over dtype names) is written directly as a tensor <code>dtype</code>.</li>
+<li>An <code>int | None</code> parameter has kind <code>Maybe[Int]</code> with tag <code>present(v)</code>; its payload <code>v.value</code> is legal only on branches where <code>present(v)</code> holds. A <code>Maybe</code> value may be passed as is to a primitive that accepts it.</li>
+</ul>
+<h3 id="inputs-and-outputs">Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permanent link">&para;</a></h3>
+<p>A tensor is <code>{dtype: ..., shape: "..."}</code>, i.e. <code>Tensor[T, s]</code>. Every role — construction parameter, construction-time tensor, input, output, output buffer — with its phase and type is in <a href="#t-roles">table 8</a>.</p>
+<ul>
+<li>A shape is <code>"[" axis, ... "]"</code> or a type-family application; an axis is an expression, <code>*S</code> or <code>*primitive(...)</code>; <code>"[]"</code> is rank zero. Two tensors of equal shape write the same shape term.</li>
+<li>An entry has one signature: output names and count are fixed per call. An op whose output count follows a switch, or that takes one argument as a scalar in one form and a tensor in another, is two entries.</li>
+<li>An op selects its implementation from parameters and tensor presence; tensor contents are computation input only. One fact is stated in one place.</li>
+</ul>
+<h3 id="refinements">Refinements<a class="headerlink" href="#refinements" title="Permanent link">&para;</a></h3>
+<p>Each <code>shape_rules</code> item is a refinement: a predicate on index values, checked after unification.</p>
+<ul>
+<li>Shapes, <code>let</code>, type families, refinements and inline roofline share one closed expression language (<a href="#t-lang">table 10</a>) with Python precedence.</li>
+<li>A refinement depends only on quantities available at run time and is checked on every call. A constraint on a metadata tensor's contents is that tensor's <code>requires</code> (<a href="#generators">Generators</a>); <a href="#t-constraints">table 11</a> contrasts the two.</li>
+<li>A refinement that reads only discriminants — every name and ADT field it reads is fixed by the discriminant values, judged over the whole expression regardless of operand order — is a <strong>domain restriction</strong>. It is checked before a type-family branch is chosen, and values it rejects need no type-family case.</li>
+<li>Lists among construction parameters are available at run time and may appear anywhere. <code>forall</code> value lists appear only as generator arguments.</li>
+<li>Satisfiability of a refinement is the author's responsibility.</li>
+<li>The validator rejects rules that declare, define or test presence: <code>x.shape == (...)</code>, <code>x is None</code>, <code>isinstance</code> (<a href="#t-rejected">table 12</a>).</li>
+</ul>
+<h3 id="dtypes">Dtypes<a class="headerlink" href="#dtypes" title="Permanent link">&para;</a></h3>
+<p>A tensor <code>dtype</code> is a dtype expression (<a href="#t-dtype">table 13</a>): a <code>forall</code> <code>DType</code> index, a dtype parameter, a constant, or a dtype primitive. Without <code>dtype_combos</code>, each <code>DType</code> index ranges over its set independently.</p>
+<ul>
+<li><strong><code>dtype_combos</code>.</strong> When only some combinations of several <code>DType</code> indices are supported, the entry lists them. Each row maps <code>{index: dtype}</code>; all rows have the same keys, which may include dtype parameters; rows are distinct; every column is relevant on every branch. A call's dtype assignment must equal one row.</li>
+<li><strong>Packed dtypes.</strong> fp4 and int4 live in carrier dtypes such as <code>uint8</code> and are written by carrier: <code>dtype</code> is the carrier, <code>shape</code> is the carrier shape PyTorch sees (e.g. <code>[N, K // 2]</code>), the logical dtype comes from a dtype parameter or the entry, and roofline counts carrier bytes. The dtype registry records each dtype's bits per element and PyTorch representation.</li>
+</ul>
+<h3 id="presence">Presence<a class="headerlink" href="#presence" title="Permanent link">&para;</a></h3>
+<ul>
+<li>An optional input is <code>optional: true</code>; inputs that must be present together share one discriminant, <code>optional: "&lt;p&gt;"</code>. An output that may be <code>None</code> is <code>nullable: "&lt;p&gt;"</code>.</li>
+<li><code>optional</code> and <code>nullable</code> expressions are built from finite boolean atoms: <code>Bool</code> and enum parameters, ADT tags and finite fields, <code>present</code>.</li>
+<li>Optional inputs follow required ones; <code>forward</code> takes them in declaration order with default <code>None</code>. Omitting one equals passing <code>None</code>.</li>
+<li>An index is relevant only on the branches where it appears.</li>
+</ul>
+<h3 id="type-families">Type Families<a class="headerlink" href="#type-families" title="Permanent link">&para;</a></h3>
+<p>A type family gives a shape by the value of a finite discriminant. It lives in the entry's <code>signature.types</code>, so each entry is self-contained.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">signature</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">types</span><span class="p">:</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">Mat</span><span class="p">:</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">      </span><span class="nt">params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">t</span><span class="p">:</span><span class="w"> </span><span class="nv">Bool</span><span class="p p-Indicator">,</span><span class="nt"> R</span><span class="p">:</span><span class="w"> </span><span class="nv">Dim</span><span class="p p-Indicator">,</span><span class="nt"> C</span><span class="p">:</span><span class="w"> </span><span class="nv">Dim</span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">      </span><span class="nt">match</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">t</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">      </span><span class="nt">cases</span><span class="p">:</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">when</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> is</span><span class="p">:</span><span class="w"> </span><span class="s">"[R,</span><span class="nv"> </span><span class="s">C]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">when</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">,</span><span class="nt"> is</span><span class="p">:</span><span class="w"> </span><span class="s">"[C,</span><span class="nv"> </span><span class="s">R]"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span><span class="nt">inputs</span><span class="p">:</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="nt">a</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="nv">T</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"Mat[trans_a,</span><span class="nv"> </span><span class="s">M,</span><span class="nv"> </span><span class="s">K]"</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<ul>
+<li><code>match</code> takes a finite discriminant — <code>Bool</code>, enum, ADT, <code>present</code> — or a tuple of them; a tuple's <code>when</code> is a list.</li>
+<li><code>cases</code> are exhaustive and disjoint over the discriminant values the entry accepts; values a domain restriction rejects need no case.</li>
+<li>An ADT is matched by constructor: <code>{masked: _}</code> matches any <code>masked</code> value, <code>{contiguous: {metadata_kind: per_row}}</code> also constrains a finite field, and a constructor's own fields are readable only on its branches.</li>
+<li>References between type families are acyclic. Tensors applying one family take one branch together. An application's arguments bind to the family's <code>params</code> in declared order.</li>
+</ul>
+<h3 id="algebraic-data-types">Algebraic Data Types<a class="headerlink" href="#algebraic-data-types" title="Permanent link">&para;</a></h3>
+<p>A finite-valued parameter with fields is an ADT, defined once in <code>types.yaml</code> and shared by entries. Each constructor maps to a Python class (<a href="#t-adt">table 5</a>).</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">adts</span><span class="p">:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">MGroupedLayout</span><span class="p">:</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">sum</span><span class="p">:</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">      </span><span class="nt">contiguous</span><span class="p">:</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">        </span><span class="nt">python</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tileops.ops.moe.contracts.ContiguousLayoutSpec</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">        </span><span class="nt">fields</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">packing</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="s">"'tight'</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">'aligned'"</span><span class="p p-Indicator">,</span><span class="nt"> python</span><span class="p">:</span><span class="w"> </span><span class="nv">...</span><span class="p p-Indicator">},</span><span class="nt"> alignment</span><span class="p">:</span><span class="w"> </span><span class="nv">Dim</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">...</span><span class="p p-Indicator">}</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">        </span><span class="nt">invariant</span><span class="p">:</span><span class="w"> </span><span class="s">"(packing</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">'tight')</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">(alignment</span><span class="nv"> </span><span class="s">==</span><span class="nv"> </span><span class="s">1)"</span><span class="w">   </span><span class="c1"># optional</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">      </span><span class="nt">masked</span><span class="p">:</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">        </span><span class="nt">python</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tileops.ops.moe.contracts.MaskedLayoutSpec</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">        </span><span class="nt">fields</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">max_m</span><span class="p">:</span><span class="w"> </span><span class="nv">Dim</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<ul>
+<li>An ADT value is written as a literal <code>{constructor: {field: value}}</code>, workload rows included.</li>
+<li><code>invariant</code> is an optional refinement on a constructor, checked at instantiation and at run time.</li>
+<li>An ADT is sealed: constructors and fields are fixed where it is declared. Adding one edits the definition; an entry that does not accept the new constructor rejects it with a domain restriction and needs no type-family change.</li>
+<li>Instantiation builds enum fields from their <code>python</code> class, then calls the constructor's class with keyword arguments; a test round-trips a real object per ADT.</li>
+</ul>
+<h3 id="derived-indices-and-primitives">Derived Indices and Primitives<a class="headerlink" href="#derived-indices-and-primitives" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>let</code> names a quantity computed from indices; its kind is <code>Dim</code> or a value. It is computed at call time from the signature and is never written in a workload row. <code>let</code> dependencies are acyclic.</li>
+<li>A primitive is a built-in function of the expression language. The set is fixed: general primitives in <a href="#t-dtype">table 13</a> and <a href="#t-prims">table 15</a>, domain primitives such as <code>pool.out</code> in <a href="#t-domain">table 14</a>. Each gives a signature, a domain and a symbolic implementation; outside its domain it raises, naming the declaration that called it. Adding a primitive changes this specification and its one implementation, which the validator, the roofline analysis and the generated code share.</li>
+<li>Axis-taking primitives normalize axes alike: at rank 0, <code>0</code> and <code>-1</code> name the one scalar axis and anything else raises; at rank above 0, an axis lies in <code>[-rank, rank)</code> and is taken modulo rank.</li>
+</ul>
+<h3 id="construction-time-tensors-layout-and-device">Construction-Time Tensors, Layout and Device<a class="headerlink" href="#construction-time-tensors-layout-and-device" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A construction-time tensor is a <code>params</code> entry with <code>dtype</code> and <code>shape</code>, optionally <code>optional: true</code>.</li>
+<li>A <code>device</code> parameter is declared only by an op without call-time tensor inputs (<a href="#call-semantics">Call Semantics</a>).</li>
+<li>A tensor that must be contiguous declares <code>contiguous: true</code>; others accept any stride. A tensor that must live on the CPU declares <code>device: cpu</code>.</li>
+</ul>
+<h2 id="effects">Effects<a class="headerlink" href="#effects" title="Permanent link">&para;</a></h2>
+<p>An op without effect declarations reads its inputs and allocates its outputs. Effects annotate the signature's tensors and decide the operator schema and the roofline read/write count (<a href="#t-effects">table 9</a>):</p>
+<ul>
+<li><code>buffer: out</code> on an output: the caller may pass <code>out</code>, which the op writes and returns.</li>
+<li><code>mutated: true</code> on an input: the op may write it; with <code>write_only: true</code> it is a required result buffer whose old contents are not read.</li>
+<li><code>mutated: "&lt;discriminant expr&gt;"</code>: written only when the expression holds; <code>alias: &lt;input&gt;</code> on an output: that output is the input object.</li>
+</ul>
+<p>The validator checks the generated operator schema against the declarations for every effect branch.</p>
+<h2 id="workloads">Workloads<a class="headerlink" href="#workloads" title="Permanent link">&para;</a></h2>
+<h3 id="rows">Rows<a class="headerlink" href="#rows" title="Permanent link">&para;</a></h3>
+<p>A workload row determines one call. Its keys are construction parameter names, relevant index names, <code>some</code>, <code>dtype_cases</code> and <code>label</code> (<a href="#t-rows">table 16</a>).</p>
+<ul>
+<li>A row gives exactly the relevant indices that no generator determines.</li>
+<li>An index is relevant on a branch when that branch's shapes, dtypes or refinements use it. Discriminants selecting a type-family branch, presence or <code>nullable</code> are always relevant.</li>
+<li><strong>case id</strong> is <code>label</code> followed by the row's <code>dtype_cases</code> values in <code>forall</code> order, joined by <code>-</code>. It keys nightly history, so changing a <code>label</code> is breaking. <code>label</code> is non-empty <code>[A-Za-z0-9._-]</code>, and an entry's case ids are distinct.</li>
+<li><strong>Coverage.</strong> Every optional tensor of an implemented entry is passed in at least one row and omitted in at least one, counted per input.</li>
+<li><strong>Instantiation.</strong> A row fixes shapes, dtypes, parameters, presence and metadata values. Devices follow <a href="#call-semantics">Call Semantics</a>, strides are contiguous, tensors do not alias, other data is random. The validator infers the call back from the instantiated inputs and requires agreement.</li>
+</ul>
+<h3 id="generators">Generators<a class="headerlink" href="#generators" title="Permanent link">&para;</a></h3>
+<p>A metadata tensor's type is in the signature; its values come from a generator in its <code>values</code> field at instantiation.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">cu_seqlens_q</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="nv">int32</span><span class="p p-Indicator">,</span><span class="nt"> shape</span><span class="p">:</span><span class="w"> </span><span class="s">"[B</span><span class="nv"> </span><span class="s">+</span><span class="nv"> </span><span class="s">1]"</span><span class="p p-Indicator">,</span><span class="nt"> values</span><span class="p">:</span><span class="w"> </span><span class="s">"prefix_sum(q_lens)"</span><span class="p p-Indicator">,</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nt">               requires</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"prefix_offsets(total_q)"</span><span class="p p-Indicator">]}</span>
+</span></code></pre></div>
+<ul>
+<li>The generator result is unified with the declaration; shape indices other than the generator's arguments are solved by that unification (here <code>B</code>) and are not written in the row.</li>
+<li>The generator set is fixed (<a href="#t-generators">table 17</a>); adding one changes this specification, with its domain, seed and tests. Results are int32; a domain violation or int32 overflow raises. Arguments may be value-primitive calls. Each pseudo-random generator draws from a private RNG seeded as <code>WorkloadBase.rng</code> is, so a row always yields the same values.</li>
+<li><code>requires</code> lists named predicates on a metadata tensor's contents. The set is closed: <a href="#t-predicates">table 18</a> and <code>attn.paged_fits</code> of <a href="#t-domain">table 14</a>, each with one checking function in the validator. The first argument is the constrained tensor's contents, implicit; written arguments are expressions over indices, parameters, <code>let</code> and the generated values of the call's metadata tensors. The validator checks them after all generators run; at run time they are the caller's obligation.</li>
+<li>A tensor with <code>requires</code> has <code>values</code>.</li>
+</ul>
+<h2 id="composition">Composition<a class="headerlink" href="#composition" title="Permanent link">&para;</a></h2>
+<p>A composite op records the sub-ops it holds on its default built-in construction path (no injected implementation object), i.e. what <code>kernel_delegates()</code> returns then. Scheduling and forward stay in code.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">composition</span><span class="p">:</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">composite</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">stages</span><span class="p">:</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="nv">pre_permute</span><span class="p p-Indicator">,</span><span class="nt"> op</span><span class="p">:</span><span class="w"> </span><span class="nv">MoePrePermuteFwdOp</span><span class="p p-Indicator">}</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="nv">expert_mlp</span><span class="p p-Indicator">,</span><span class="nt"> op</span><span class="p">:</span><span class="w"> </span><span class="nv">MoeExpertMLPFwdOp</span><span class="p p-Indicator">}</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="nv">post_permute</span><span class="p p-Indicator">,</span><span class="nt"> op</span><span class="p">:</span><span class="w"> </span><span class="nv">MoePostPermuteFwdOp</span><span class="p p-Indicator">}</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="nv">indexed_small_route</span><span class="p p-Indicator">,</span><span class="nt"> op</span><span class="p">:</span><span class="w"> </span><span class="nv">IndexedExpertMLPFwdOp</span><span class="p p-Indicator">,</span><span class="nt"> optional</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<ul>
+<li>A stage references a manifest entry. A sub-op held only under some construction parameters is an <code>optional: true</code> stage; the condition stays in code.</li>
+<li>Whether a parent's roofline equals its stages' is not specified by this design.</li>
+<li>Every op with a <code>composition</code> overrides <code>kernel_delegates()</code>. A test builds the op with <code>target=BUILTIN</code>, runs representative rows covering every optional stage, and requires the ordered class names of <code>kernel_delegates()</code> to equal the stages in order, optional ones possibly absent; every optional stage appears in some row.</li>
+<li>The validator checks unique stage names, entry references, boolean <code>optional</code> and a non-empty list.</li>
+</ul>
+<h2 id="call-semantics">Call Semantics<a class="headerlink" href="#call-semantics" title="Permanent link">&para;</a></h2>
+<p>A call has two phases.</p>
+<ul>
+<li><strong>Construction</strong> checks parameter values against their <code>type</code> — non-negative ints and sequence elements written into shapes, dtype parameters within range, construction-time tensors present unless optional — and the ADT invariants that depend on parameters only. <code>Bool</code>, enum and ADT parameters, <code>Maybe</code> presence and construction-time tensor presence are fixed here.</li>
+<li><strong>Call.</strong> The checks generated from the signature wrap <code>forward</code>: presence of call-time tensors, domain restrictions, type-family branches, then inference and the remaining refinements, output-buffer preconditions, the implementation, and the output checks. Any failure raises and names the declaration. <code>forward</code> may take code-defined execution parameters after the signature's prefix; the code allocates and checks them.</li>
+</ul>
+<p><strong>Inference.</strong> Indices are solved from the inputs by unification (<a href="#t-unify">table 19</a>). Construction parameters and presence are known at the start, and construction-time tensors are unified together with call-time inputs; branch selection, <code>let</code> and unification form one dependency graph from which the validator derives the inference plan, independent of declaration order. An index that cannot be solved, or has several solutions, rejects the entry. On a branch where it is relevant, every <code>Dim</code>, <code>Shape</code> or <code>DType</code> index is solved from an input, given by a parameter, or determined by a generator; an index appearing only in outputs is a parameter or a <code>let</code>. An output buffer fixes only its presence and is checked against the output type once known. A non-affine relation binds the physical axis to one name, derives the logical dimension with <code>let</code>, and equates the two in a refinement.</p>
+<p><strong>Device.</strong> Tensors marked <code>device: cpu</code> stay on the CPU and take no part in choosing the call device. The call device is that of the other call-time inputs, which must agree; without such inputs it is the <code>device</code> parameter when not <code>None</code> (a string normalized by <code>torch.device</code>), else that of the construction-time tensors, else the choice of the explicit or process-default target among the device classes (CUDA, CPU) it declares, else the current CUDA device. When construction-time tensors decide it, they share one device. <code>out</code> and outputs are checked or allocated on the call device; construction-time tensors not marked <code>device: cpu</code> are copied there and cast to their signature dtype. Workload instantiation places tensors by the same rule.</p>
+<p><strong>Symbolic shapes.</strong> Under SymInt, discriminants are already Python values; arithmetic and comparisons lower to SymInt / SymBool; <code>and</code> / <code>or</code> / <code>not</code> short-circuit on Python bools and lower to <code>sym_and</code> / <code>sym_or</code> / <code>sym_not</code> otherwise; <code>Seq</code> equality compares lengths as Python ints, then elements with <code>sym_and</code>; <code>in</code> requires a Python-valued right side; a conditional on a SymBool lowers to <code>sym_ite</code> with both arms evaluable; a refinement yielding a SymBool becomes <code>torch._check</code>. Primitives use their symbolic implementation. An expression that needs the truth value of a SymBool is evaluated at construction only; an op compiled with <code>fullgraph=True</code> contains none. Expression strings are parsed and checked before code generation; generated code never parses them.</p>
+<h2 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h2>
+<p><a href="https://github.com/tile-ai/TileOPs/blob/main/scripts/validate_manifest.py"><code>scripts/validate_manifest.py</code></a> checks every entry on every combination of its discriminant values: type-family <code>match</code>, <code>optional</code>, <code>nullable</code>, <code>mutated</code>, output-buffer presence, and the quantities relevance reads. Discriminants are grouped by dependency. Combinations a domain restriction rejects skip only type-family coverage and inference-plan checks. Above a configured number of combinations (default 256) it reports an advisory diagnostic and keeps the entry whole.</p>
+<ol>
+<li>Each name's category matches its kind, and each parameter's <code>type</code> fits the kind every use site needs.</li>
+<li>Type-family cases are exhaustive and disjoint over accepted values; family references are acyclic.</li>
+<li>An inference plan exists.</li>
+<li><code>let</code> dependencies are acyclic.</li>
+<li>Every expression is in the language and every primitive is built in.</li>
+<li>Every generator result unifies with its declaration.</li>
+<li>Every expression of an op compiled with <code>fullgraph=True</code> is evaluable on SymInt.</li>
+<li>Every workload row instantiates.</li>
+<li>For every effect branch, the operator schema, aliases and roofline read/write counts agree.</li>
+</ol>
+<p>All checks are decidable; every evaluation either succeeds or names the failing declaration. Code-dependent checks are skipped for <code>spec-only</code> entries. CI runs the validator with <code>--strict</code> over the whole manifest.</p>
+<ul>
+<li>Facts several checks need are derived once, in one layer private to the validator; judgement and diagnostics stay with each check. The facts are <code>call_tensor_args</code> (the tensor parameters of <code>forward</code>), <code>value_inputs</code> (the inputs a caller passes) and <code>spec_only</code> (<code>status</code> is missing, not a string, or <code>spec-only</code>; a malformed <code>status</code> is also diagnosed).</li>
+<li>Parsing is per field: an unreadable field empties only the facts it feeds, and checks reading an empty fact skip.</li>
+<li>Diagnostics are a contract: the CLI, the diagnostic text and order, and the strict/advisory classification change only through a deliberate, recorded change. Every set entering a diagnostic is sorted, unknown keys by <code>repr</code>, so output does not depend on <code>PYTHONHASHSEED</code>.</li>
+<li>Each fixed section's legal keys are defined in one place.</li>
+<li>Importing an op loads the manifest leniently and succeeds on an incomplete manifest; strict checking belongs to the validator alone.</li>
+<li>The package exports <code>forward_signature(entry)</code>: the ordered call-time inputs and output buffers. Code-defined execution parameters are not in it.</li>
+<li>A new entry also passes the public-surface test and the roofline classification test.</li>
+</ul>
+<h2 id="reference-tables">Reference Tables<a class="headerlink" href="#reference-tables" title="Permanent link">&para;</a></h2>
+<p><strong><a id="t-names"></a>Table 1</strong> Name categories</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Category</th>
+<th>Definition</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>index</td>
+<td>A name in a shape, <code>dtype</code>, type-family argument, <code>optional</code>, <code>nullable</code>, <code>mutated</code>, <code>let</code>, refinement or <code>values</code>, whose <code>type</code> is not in table 3 row 8</td>
+<td>kind, inference, exhaustiveness, refinements</td>
+</tr>
+<tr>
+<td>2</td>
+<td>other param</td>
+<td>Any other construction parameter, including those whose <code>type</code> is in table 3 row 8 (<code>eps</code>, <code>ord</code>, <code>device</code>)</td>
+<td><code>type</code> and <code>default</code>; usable in refinements and roofline</td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-forall"></a>Table 2</strong> <code>forall</code> kinds</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Kind</th>
+<th>Values</th>
+<th>Solved from</th>
+<th>Written in a row</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>Dim</code></td>
+<td>non-negative integer</td>
+<td>unification of inputs or generator results</td>
+<td>integer</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>Shape</code></td>
+<td>tuple of <code>Dim</code></td>
+<td>unification of inputs</td>
+<td>integer list</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>DType[a \| b]</code></td>
+<td>one of the declared dtypes</td>
+<td>unification of inputs</td>
+<td><code>dtype_cases</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>Seq[Int]</code></td>
+<td>integer list (<code>q_lens</code>)</td>
+<td>instantiation only, as a generator argument</td>
+<td>integer list</td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-types"></a>Table 3</strong> Parameter <code>type</code> to kind</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th><code>type</code></th>
+<th>Kind</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>int</code> / <code>bool</code></td>
+<td><code>Int</code> (signed) / <code>Bool</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>union of string literals</td>
+<td>enum</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>list[int]</code>, <code>tuple[int, ...]</code>, <code>tuple[int, int]</code></td>
+<td><code>Seq[Int]</code>; a fixed-length tuple carries its length</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>X \| None</code></td>
+<td><code>Maybe[X]</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>X \| Y</code></td>
+<td>finite union, each member mapped by this table</td>
+</tr>
+<tr>
+<td>6</td>
+<td>ADT name</td>
+<td>that ADT</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>torch.dtype</code>, union of dtype names</td>
+<td><code>DType[...]</code> (a dtype parameter)</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>float</code>, <code>Number</code>, open <code>str</code>, <code>dict</code>, <code>torch.Tensor</code>, other objects</td>
+<td>takes no part in types; <code>type</code> and <code>default</code> only</td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-expr"></a>Table 4</strong> Expression kinds</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Expression</th>
+<th>Kind</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>Dim</code> <code>+</code> / <code>*</code> <code>Dim</code>; <code>Dim // k</code>, <code>Dim % k</code> for positive <code>k</code></td>
+<td><code>Dim</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>primitive call</td>
+<td>the primitive's declared result</td>
+</tr>
+<tr>
+<td>3</td>
+<td>arithmetic with <code>-</code>, a negative, or an <code>Int</code>; an indexed integer</td>
+<td><code>Int</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>comparison, <code>and</code> / <code>or</code> / <code>not</code>, <code>in</code>, predicate primitive</td>
+<td><code>Bool</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>a if c else b</code></td>
+<td>the common kind; <code>Int</code> when one arm is <code>Dim</code> and the other <code>Int</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-adt"></a>Table 5</strong> ADT and Python objects</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>ADT side</th>
+<th>Python side</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>constructor</td>
+<td>the class named by <code>python</code>; an instance of it</td>
+</tr>
+<tr>
+<td>2</td>
+<td>constructor name</td>
+<td>the object's <code>kind</code> attribute</td>
+</tr>
+<tr>
+<td>3</td>
+<td>field</td>
+<td>the attribute of the same name</td>
+</tr>
+<tr>
+<td>4</td>
+<td>enum field value</td>
+<td>that attribute's <code>.value</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-ctor"></a>Table 6</strong> Manifest versus <code>__init__</code></p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Item</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>parameter set</td>
+<td>equal; the code may add only table 7's execution-policy parameters</td>
+</tr>
+<tr>
+<td>2</td>
+<td>order, <code>default</code>, <code>kw_only</code></td>
+<td>equal</td>
+</tr>
+<tr>
+<td>3</td>
+<td>type</td>
+<td>the manifest <code>type</code> governs; runtime type checks are generated from it</td>
+</tr>
+<tr>
+<td>4</td>
+<td>parameter kind</td>
+<td>positional-or-keyword, or keyword-only by <code>kw_only</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-policy"></a>Table 7</strong> Execution-policy parameters (owned by code)</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Class</th>
+<th>Parameters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>every op</td>
+<td><code>kernel_map</code>, <code>tune</code>, <code>target</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>injected implementation objects</td>
+<td>e.g. FusedMoe <code>prepare_finalize</code>, <code>experts</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>configuration passed only to kernels</td>
+<td>reserved name <code>config</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-roles"></a>Table 8</strong> Roles</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Role</th>
+<th>Phase</th>
+<th>Declared as</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>construction parameter</td>
+<td>construction</td>
+<td><code>params.&lt;p&gt;</code></td>
+<td>the kind of its <code>type</code> (table 3)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>device</code> parameter</td>
+<td>construction</td>
+<td><code>params.device</code></td>
+<td>decides the call device</td>
+</tr>
+<tr>
+<td>3</td>
+<td>construction-time tensor</td>
+<td>construction</td>
+<td><code>params.&lt;p&gt;</code> with <code>dtype</code>, <code>shape</code></td>
+<td><code>Tensor[T, s]</code>; if optional, <code>Maybe[Tensor[T, s]]</code> with tag <code>present(p)</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>required input</td>
+<td>call</td>
+<td><code>inputs.&lt;t&gt;</code></td>
+<td><code>Tensor[T, s]</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>optional input</td>
+<td>call</td>
+<td><code>optional: true</code>, or <code>optional: "&lt;p&gt;"</code> when shared</td>
+<td><code>Maybe[Tensor[T, s]]</code> with tag <code>present(t)</code> or <code>p</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>output</td>
+<td>result</td>
+<td><code>outputs.&lt;t&gt;</code></td>
+<td><code>Tensor[T, s]</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>nullable output</td>
+<td>result</td>
+<td><code>nullable: "&lt;p&gt;"</code></td>
+<td><code>Maybe[Tensor[T, s]]</code> with tag <code>p</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td>output buffer</td>
+<td>call</td>
+<td>table 9's <code>buffer</code> and <code>write_only</code></td>
+<td>optional: <code>Maybe</code> of the output type, tag <code>present(out)</code>; required: <code>Tensor[T, s]</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-effects"></a>Table 9</strong> Effect declarations</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Declaration</th>
+<th>Meaning</th>
+<th>Operator schema</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>output <code>buffer: out</code></td>
+<td><code>forward</code> gains <code>out</code> after all inputs, in output order. Passed: the op writes and returns it; omitted: the op allocates. Same shape and dtype as the output</td>
+<td>two: one returning a new tensor, one writing <code>out</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>input <code>mutated: true</code></td>
+<td>the op may write it; its prior contents are read</td>
+<td>one; <code>mutates_args</code> names it</td>
+</tr>
+<tr>
+<td>3</td>
+<td>input <code>mutated: true</code>, <code>write_only: true</code></td>
+<td>a required result buffer: overwritten, the result depends on other inputs only; if the op returns <code>None</code>, <code>outputs</code> is empty</td>
+<td>one; <code>mutates_args</code> names it</td>
+</tr>
+<tr>
+<td>4</td>
+<td>input <code>mutated: "&lt;discriminant expr&gt;"</code></td>
+<td>written only when the expression holds</td>
+<td>one per expression value</td>
+</tr>
+<tr>
+<td>5</td>
+<td>output <code>alias: &lt;input&gt;</code></td>
+<td>when that input is written, the output is that input object</td>
+<td>two; the writing one returns the input object</td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-lang"></a>Table 10</strong> Expression language</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Element</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>literals</td>
+<td>int, finite float, bool, None, str, tuple; reserved float <code>inf</code> (<code>-inf</code> by negation)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>names</td>
+<td>indices, <code>signature.params</code> parameters, <code>let</code>, comprehension variables; each use site checks kind and type</td>
+</tr>
+<tr>
+<td>3</td>
+<td>presence</td>
+<td><code>present(x)</code> for a tensor or <code>Maybe</code> value; <code>x.value</code> only where <code>present(x)</code> holds</td>
+</tr>
+<tr>
+<td>4</td>
+<td>operators</td>
+<td><code>+ - * // %</code>, comparisons, <code>and or not</code>, <code>in</code>, conditional; Python precedence</td>
+</tr>
+<tr>
+<td>5</td>
+<td>access</td>
+<td>subscript, slice; an ADT field only on its constructor's branch, plus <code>kind</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>calls</td>
+<td>comprehension; built-in primitives</td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-constraints"></a>Table 11</strong> Constraints</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Kind</th>
+<th>Depends on</th>
+<th>Checked</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>refinement in <code>shape_rules</code></td>
+<td>run-time quantities only</td>
+<td>every call; fake/meta emit <code>torch._check</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>tensor <code>requires</code></td>
+<td>a metadata tensor's contents</td>
+<td>at instantiation, on generated values; at run time, the caller's obligation, listed in API docs</td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-rejected"></a>Table 12</strong> Rejected rule forms</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Rejected</th>
+<th>Example</th>
+<th>Write instead</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>reading a tensor's <code>shape</code></td>
+<td><code>x.shape == (B, S, H, D)</code></td>
+<td><code>x: {shape: "[B, S, H, D]"}</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>an equality forming a type</td>
+<td><code>output.shape == input.shape</code></td>
+<td>one shape term for both, e.g. <code>[*S]</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>an equality defining a name</td>
+<td><code>C_in_g == C_in // groups</code></td>
+<td><code>let: {C_in_g: "C_in // groups"}</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>tensor <code>x is None</code></td>
+<td><code>bias is None or ...</code></td>
+<td><code>not present(bias) or ...</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>value <code>v is None</code></td>
+<td><code>max_seqlen is None</code></td>
+<td><code>not present(max_seqlen)</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>isinstance</code></td>
+<td><code>s[0] if isinstance(s, tuple) else s</code></td>
+<td><code>per_axis(s, 0, 2)</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>set comprehension</td>
+<td><code>len({d % n for d in dim}) == len(dim)</code></td>
+<td><code>unique_axes(dim, n)</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-dtype"></a>Table 13</strong> Dtype expressions</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Form</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>forall</code> <code>DType</code> index</td>
+<td>ranges over its declared set; solved from the inputs</td>
+</tr>
+<tr>
+<td>2</td>
+<td>dtype parameter</td>
+<td>the construction parameter's value (<code>dtype: out_dtype</code>)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>constant</td>
+<td>a fixed dtype</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>promote_int_to_float(T)</code></td>
+<td>float32 when <code>T</code> is integral, else <code>T</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>coalesce_dtype(v, T)</code></td>
+<td><code>Maybe[DType[A]] × DType[B] → DType[A ∪ B]</code>: <code>v.value</code> when <code>present(v)</code>, else <code>T</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-domain"></a>Table 14</strong> Domain primitives</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Primitive</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>conv.out(L, k, s, p, d)</code></td>
+<td>convolution output length</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>pool.out(L, k, s, p, d, ceil_mode)</code></td>
+<td>pooling output length</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>moe.capacity(layout, R, E)</code></td>
+<td>masked: <code>E * max_m</code>; contiguous aligned per-row: <code>R + E * (alignment - 1)</code> rounded up to <code>alignment</code>; else <code>R</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>mhc.expansion(Q)</code></td>
+<td>the positive <code>n</code> with <code>n * n + 2 * n == Q</code>; raises when none exists</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>attn.paged_fits(cu, cap)</code></td>
+<td><code>requires</code> predicate: element <code>i</code> plus segment <code>i</code> of <code>cu</code> is at most <code>cap</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-prims"></a>Table 15</strong> General primitives (<code>Axes = Int | Seq[Int] | None</code>)</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Primitive</th>
+<th>Signature</th>
+<th>Domain and result</th>
+<th>Symbolic implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>broadcast</code></td>
+<td><code>Shape... → Shape</code></td>
+<td>PyTorch broadcasting; raises when not broadcastable</td>
+<td>guard <code>a == b or a == 1 or b == 1</code> per axis pair</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>reduced</code></td>
+<td><code>Shape × Axes × Bool × ('full' \| 'noop' \| 'reject') → Shape</code></td>
+<td><code>None</code> reduces all axes; an empty sequence per <code>mode</code> (all / none / raise); rank 0 yields <code>[]</code></td>
+<td>axes are parameters, evaluated at construction</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>valid_axes</code></td>
+<td><code>Axes × Int → Bool</code></td>
+<td>every axis normalizes; <code>None</code> is true</td>
+<td>construction</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>unique_axes</code></td>
+<td><code>Axes × Int → Bool</code></td>
+<td>normalized axes are distinct</td>
+<td>construction</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>per_axis</code></td>
+<td><code>(Int \| Seq[Maybe[Int]] \| None) × Int × Int × fallback: Maybe[Int] = None → Int</code></td>
+<td>a scalar returns itself; a length-<code>n</code> sequence yields item <code>i</code>; <code>None</code> takes <code>fallback</code>, raising if that is <code>None</code>; other lengths raise</td>
+<td>construction</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>ceil_div</code></td>
+<td><code>Int × Int → Int</code></td>
+<td>positive divisor</td>
+<td>SymInt division</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>len</code></td>
+<td><code>Seq[A] → Dim</code></td>
+<td>any sequence</td>
+<td>length must be a Python int</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>prod</code> / <code>sum</code></td>
+<td><code>Seq[Int] → Int</code></td>
+<td><code>prod([])</code> is 1, <code>sum([])</code> is 0</td>
+<td>length must be a Python int</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>max</code> / <code>min</code></td>
+<td><code>Seq[Int] × default: Maybe[Int] = None → Int</code></td>
+<td>empty takes <code>default</code>, raising without one</td>
+<td><code>sym_max</code> / <code>sym_min</code></td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>all</code></td>
+<td><code>Seq[Bool] → Bool</code></td>
+<td>empty is true</td>
+<td>length must be a Python int; unrolled</td>
+</tr>
+<tr>
+<td>11</td>
+<td>comprehension <code>f(x) for x in s</code></td>
+<td><code>Seq[A] → Seq[B]</code></td>
+<td>only as an argument of <code>all</code>, <code>sum</code>, <code>max</code>, <code>min</code></td>
+<td>length must be a Python int; unrolled</td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-rows"></a>Table 16</strong> Workload row keys</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Key</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>construction parameter name</td>
+<td>its value; required when it has no default</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>some</code></td>
+<td>the <code>optional: true</code> tensors passed</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>forall</code> <code>Dim</code>, <code>Shape</code>, <code>Seq[Int]</code> index</td>
+<td>exactly the branch's relevant indices no generator solves</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>dtype_cases</code></td>
+<td>list of assignments to the relevant <code>forall</code> <code>DType</code> indices, e.g. <code>[{T: float16}, {T: bfloat16}]</code>; only when there are such indices; a dtype parameter is written as a parameter</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>label</code></td>
+<td>the row's name</td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-generators"></a>Table 17</strong> Metadata generators</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Generator</th>
+<th>Domain</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>as_tensor(L)</code></td>
+<td>non-negative list</td>
+<td><code>[len(L)]</code> holding <code>L</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>prefix_sum(L)</code></td>
+<td>non-negative list, may be empty</td>
+<td><code>[len(L) + 1]</code>, item 0 is 0, item <code>i</code> is <code>sum(L[:i])</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>exclusive_prefix_sum(L)</code></td>
+<td>non-empty non-negative list</td>
+<td><code>[len(L)]</code>, item <code>i</code> is <code>sum(L[:i])</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>padded_exclusive_prefix_sum(L, pad)</code></td>
+<td>as above; <code>pad &gt; 0</code></td>
+<td><code>[len(L)]</code>, item <code>i</code> is <code>sum(ceil_div(n + 1, pad) * pad for n in L[:i])</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>paged_block_table(B, width, pool)</code></td>
+<td><code>0 &lt; width &lt;= pool</code></td>
+<td><code>[B, width]</code>; disjoint random pages per request when <code>pool &gt;= B * width</code>, else each request takes the first <code>width</code> of a random permutation</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>chunk_indices(L, c)</code></td>
+<td>non-negative list; <code>c &gt; 0</code></td>
+<td><code>[sum(ceil_div(n, c) for n in L), 2]</code>, rows of (request, chunk)</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>token_indices(L)</code></td>
+<td>non-empty positive list</td>
+<td><code>[sum(L), 2]</code>; token <code>j</code> of sequence <code>i</code> is <code>(i, j)</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>chunk_offsets(L, c)</code></td>
+<td>non-negative list; <code>c &gt; 0</code></td>
+<td><code>prefix_sum([ceil_div(n, c) for n in L])</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>nsa_block_indices(L, block_size, selected, H_kv)</code></td>
+<td>non-empty positive list; others positive</td>
+<td><code>[sum(L), H_kv, selected]</code>; position <code>j</code> sees <code>max(ceil_div(j, block_size), 1)</code> blocks, draws <code>min(selected, visible)</code> distinct ones, pads with sentinel <code>sum(L)</code>, rows ascending</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>nsa_block_counts(T, H_kv, selected)</code></td>
+<td>positive arguments</td>
+<td><code>[T, H_kv]</code>, each uniform in <code>[1, selected]</code></td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>topk_ids(N, K, E)</code></td>
+<td><code>0 &lt; K &lt;= E</code></td>
+<td><code>[N, K]</code>, each row <code>K</code> distinct random values in <code>[0, E)</code></td>
+</tr>
+</tbody>
+</table>
+<p>Value primitive: <code>balanced_sizes(total, count)</code> requires <code>count &gt; 0</code> and <code>total &gt;= 0</code>; each item is <code>total // count</code>, the first <code>total % count</code> items plus one.</p>
+<p><strong><a id="t-predicates"></a>Table 18</strong> <code>requires</code> predicates (the constrained tensor is <code>x</code>)</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Predicate</th>
+<th>Condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>prefix_offsets(total)</code></td>
+<td><code>x</code> is 1-D, starts at 0, is non-decreasing and ends at <code>total</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>max_segment(bound)</code></td>
+<td>adjacent differences of <code>x</code> are at most <code>bound</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>in_range(lo, hi)</code></td>
+<td>every element of <code>x</code> lies in <code>[lo, hi)</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong><a id="t-unify"></a>Table 19</strong> Unification of an input axis</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Axis form</th>
+<th>Unification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>M</code>, unknown</td>
+<td><code>M := size</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>a * M + e</code>: <code>a</code> a known positive constant, <code>e</code> known, <code>M</code> the only unknown</td>
+<td><code>M := (size - e) / a</code>, checking divisibility and sign</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>*S</code>, the only unknown segment, other axis counts known</td>
+<td><code>S :=</code> the matching axes</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>dtype</code> an unknown <code>DType</code> index <code>T</code></td>
+<td><code>T :=</code> the dtype</td>
+</tr>
+<tr>
+<td>5</td>
+<td>anything else</td>
+<td>checked only</td>
+</tr>
+</tbody>
+</table>
+<h2 id="exclusions">Exclusions<a class="headerlink" href="#exclusions" title="Permanent link">&para;</a></h2>
+<p>The manifest does not describe kernel selection, multi-kernel ordering, accumulator dtypes, workspaces, tile sizes or autotuning configuration.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 tile-ai
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/tile-ai/TileOPs" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,1676 @@
+/* Palette and typography shared with tile-ai/TileFoundry.github.io, plus the
+ * rules the benchmark data tables need.
+ *
+ * One light scheme: violet for structure, teal for asides, both dark and
+ * low-chroma. Nothing on the sheet is warm — the ground takes its cast from
+ * the accent, so the page does not argue with itself.
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap");
+
+:root {
+  --tf-paper: #f5f3f8;
+  --tf-paper-2: #e9e5f1;
+  --tf-ink: #1a1720;
+  --tf-muted: #6a6478;
+  --tf-violet: #5a3e85;
+  --tf-violet-dark: #432c66;
+  --tf-violet-light: #7c5cae;
+  --tf-teal: #16706b;
+  --tf-green: #23724a;
+  --tf-rose: #a43f46;
+  /* Rules and the dot texture carry a trace of the accent rather than plain
+   * ink, so the paper reads as one ground with the headings instead of two.
+   */
+  /* The rule that marks a group: methods, examples, asides. Lighter than the
+   * teal itself, which at full strength reads as a second heading colour. */
+  --tf-rule: rgba(22, 112, 107, 0.6);
+  --tf-line: rgba(51, 35, 79, 0.18);
+  --tf-line-soft: rgba(51, 35, 79, 0.08);
+  /* Written out, not mixed: an engine that cannot parse `color-mix()` drops the
+   * whole declaration — a border vanishes, an SVG `fill` paints black. Every
+   * mixed colour in this file is literal for that reason.
+   */
+  --tf-teal-wash: rgba(22, 112, 107, 0.06);
+  --tf-teal-soft: rgba(22, 112, 107, 0.08);
+  --tf-teal-tint: rgba(22, 112, 107, 0.12);
+  --tf-teal-fill: rgba(22, 112, 107, 0.18);
+  --tf-violet-wash: rgba(90, 62, 133, 0.08);
+  --tf-violet-soft: rgba(90, 62, 133, 0.12);
+  --tf-violet-tint: rgba(90, 62, 133, 0.3);
+  --tf-violet-mid: rgba(90, 62, 133, 0.4);
+  --tf-rose-fill: rgba(164, 63, 70, 0.26);
+  --tf-ink-tint: rgba(26, 23, 32, 0.22);
+  /* Latin first, Han falling through to the platform UI face. No CJK webfont: a
+   * Simplified Chinese subset costs megabytes on every page load.
+   */
+  --tf-cjk: "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei",
+    "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
+  --tf-display: "Bricolage Grotesque", var(--tf-cjk);
+  --tf-body: "Hanken Grotesk", var(--tf-cjk);
+  --tf-mono: "Space Mono", ui-monospace, monospace;
+
+  /* The symbol chips mkdocstrings draws in the API reference: it ships its own
+   * palette, which lands two more hues on a page that already has two. A class
+   * takes the structural violet, a method the teal, the rest the muted weight.
+   */
+  --doc-symbol-class-fg-color: var(--tf-violet);
+  --doc-symbol-class-bg-color: rgba(90, 62, 133, 0.08);
+  --doc-symbol-method-fg-color: var(--tf-teal);
+  --doc-symbol-method-bg-color: rgba(22, 112, 107, 0.1);
+  --doc-symbol-function-fg-color: var(--tf-teal);
+  --doc-symbol-function-bg-color: rgba(22, 112, 107, 0.1);
+  --doc-symbol-attribute-fg-color: var(--tf-muted);
+  --doc-symbol-attribute-bg-color: rgba(106, 100, 120, 0.08);
+  --doc-symbol-module-fg-color: var(--tf-muted);
+  --doc-symbol-module-bg-color: rgba(106, 100, 120, 0.08);
+  --doc-symbol-parameter-fg-color: var(--tf-muted);
+  --doc-symbol-parameter-bg-color: rgba(106, 100, 120, 0.08);
+}
+
+[data-md-color-scheme="default"] {
+  --md-default-bg-color: var(--tf-paper);
+  --md-default-fg-color: var(--tf-ink);
+  --md-default-fg-color--light: var(--tf-muted);
+  --md-default-fg-color--lighter: var(--tf-line);
+  --md-default-fg-color--lightest: var(--tf-line-soft);
+  --md-primary-fg-color: var(--tf-violet);
+  --md-primary-fg-color--light: var(--tf-violet-light);
+  --md-primary-fg-color--dark: var(--tf-violet-dark);
+  --md-accent-fg-color: var(--tf-teal);
+  --md-typeset-a-color: var(--tf-teal);
+  /* Translucent, so a code block is an inset in the sheet the wash carries on
+   * through rather than a slab dropped on top of it. The old flat fill was the
+   * one opaque mass on the page and read as dead weight.
+   */
+  --md-code-bg-color: rgba(233, 229, 241, 0.55);
+  --md-code-fg-color: var(--tf-ink);
+  --md-footer-bg-color: #241a33;
+  --md-footer-bg-color--dark: #1b1327;
+  /* Syntax highlighting drawn from the same two hues rather than Material's
+   * default blue and red, which are the only warm-cool pair left on the page
+   * once the accent is violet. Identifiers stay plain ink: in these snippets
+   * they are the content, and colouring them too leaves nothing standing out.
+   */
+  --md-code-hl-keyword-color: var(--tf-violet);
+  --md-code-hl-function-color: var(--tf-violet-light);
+  --md-code-hl-constant-color: var(--tf-violet-light);
+  --md-code-hl-string-color: var(--tf-teal);
+  --md-code-hl-special-color: var(--tf-teal);
+  --md-code-hl-variable-color: var(--tf-teal);
+  --md-code-hl-number-color: var(--tf-rose);
+  --md-code-hl-comment-color: var(--tf-muted);
+  --md-code-hl-operator-color: var(--tf-muted);
+  --md-code-hl-punctuation-color: var(--tf-muted);
+  --md-code-hl-name-color: var(--md-code-fg-color);
+}
+
+/* Paper, a dot texture, and a wash of each accent from opposite corners: under
+ * 10% and pushed to the edges, so the text still sits on clean paper. On html
+ * alone — repeated on the containers, the dot alpha multiplied four times over.
+ */
+html {
+  background-color: var(--md-default-bg-color);
+  background-image: radial-gradient(var(--tf-line-soft) 1px, transparent 1.5px),
+    radial-gradient(
+      130% 95% at 4% -8%,
+      rgba(90, 62, 133, 0.06),
+      transparent 58%
+    ),
+    radial-gradient(
+      110% 85% at 100% 104%,
+      rgba(22, 112, 107, 0.07),
+      transparent 55%
+    );
+  background-size: 26px 26px, auto, auto;
+  background-attachment: scroll, fixed, fixed;
+}
+
+body,
+.md-container,
+.md-main {
+  background: transparent;
+}
+
+body,
+.md-typeset,
+.md-nav,
+.md-search__input {
+  font-family: var(--tf-body);
+}
+
+/* Material's 61rem sheet assumes one nav column; this site has two, which left
+ * the prose at 34rem and wrapped every table. Widened to hold 46rem of prose.
+ */
+.md-grid {
+  max-width: 76rem;
+}
+
+/* An op reference page has no left nav of its own to balance against, and its
+ * signatures are the widest lines on the site.
+ */
+@media screen and (min-width: 100em) {
+  .md-grid {
+    max-width: 82rem;
+  }
+}
+
+/* Header sits on the paper rather than in the accent colour, and lets the wash
+ * behind it through: an opaque band across the top would cut the ground in two
+ * at exactly the place the violet is strongest.
+ */
+.md-header,
+.md-tabs {
+  color: var(--tf-ink);
+  background: rgba(245, 243, 248, 0.78);
+  backdrop-filter: blur(10px);
+  box-shadow: none;
+}
+
+/* The rule under the header is the one place the two accents meet across the
+ * full width — a hairline, so it registers as a tint rather than a stripe.
+ */
+.md-header {
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(
+      90deg,
+      var(--tf-violet) 0%,
+      var(--tf-violet-light) 32%,
+      var(--tf-teal) 72%,
+      var(--tf-line-soft) 100%
+    )
+    1;
+}
+
+.md-header__topic,
+.md-header__button,
+.md-header__button:hover,
+.md-source,
+.md-source:hover {
+  color: var(--tf-ink);
+}
+
+.md-header__title,
+.md-header__topic {
+  font-family: var(--tf-display);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+/* The logo is a wordmark, so the site name beside it says the same thing
+ * twice. Hidden, not removed: the second topic in that slot is the page title,
+ * which takes over once the h1 scrolls away. The logo link keeps the label.
+ */
+.md-header__topic:first-child {
+  visibility: hidden;
+}
+
+.md-source__repository {
+  font-family: var(--tf-mono);
+  font-size: 0.68rem;
+}
+
+/* Search: a pill drawn on the header's own paper. Material's default is a
+ * filled grey field, which is the darkest thing in the header and pulls the
+ * eye there before the page title.
+ */
+.md-search__form {
+  border-radius: 999px;
+  background: rgba(233, 229, 241, 0.65);
+  box-shadow: inset 0 0 0 1px var(--tf-line-soft);
+}
+
+.md-search__form:hover,
+[data-md-toggle="search"]:checked ~ .md-header .md-search__form {
+  background: rgba(233, 229, 241, 0.85);
+  box-shadow: inset 0 0 0 1px
+    rgba(90, 62, 133, 0.3);
+}
+
+.md-search__input,
+.md-search__icon {
+  color: var(--tf-ink);
+}
+
+.md-search__input::placeholder {
+  color: var(--tf-muted);
+}
+
+.md-nav__title {
+  color: var(--tf-ink);
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--tf-display);
+  font-weight: 800;
+}
+
+/* On wide screens the sidebar is part of the sheet: an opaque panel over the
+ * wash reads as a patch of different white. The narrow-width drawer keeps its
+ * background, which it needs to sit over the content.
+ */
+@media screen and (min-width: 76.25em) {
+  .md-sidebar,
+  .md-sidebar__scrollwrap,
+  .md-nav,
+  .md-nav--primary .md-nav__title,
+  .md-nav__title {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  /* Material pins this title and hides what scrolls under it behind its own
+   * paper; with the paper gone the items ran through it. It repeats the site
+   * name anyway, so it scrolls with the list it heads.
+   */
+  .md-nav--primary .md-nav__title {
+    position: static;
+  }
+}
+
+.md-nav__item .md-nav__link--active,
+.md-nav__item .md-nav__link--active code,
+.md-nav__link:focus,
+.md-nav__link:hover {
+  color: var(--tf-violet);
+}
+
+.md-typeset {
+  color: var(--md-default-fg-color);
+  font-size: 0.78rem;
+  line-height: 1.65;
+}
+
+/* Selection in the accent, weak enough that the ink stays the darkest thing on
+ * the page.
+ */
+::selection {
+  background: rgba(124, 92, 174, 0.22);
+}
+
+/* Headings carry a violet rule whose weight tracks the level. Only h1 takes the
+ * violet-to-teal gradient: it is the page's one title, so the flourish stays
+ * singular instead of repeating down the page as decoration.
+ */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4 {
+  color: var(--md-default-fg-color);
+  font-family: var(--tf-display);
+  letter-spacing: 0;
+}
+
+.md-typeset h1 {
+  margin: 0 0 1.25rem;
+  /* Drawn as a background bar, not a border: a single-side border-image would
+   * sample one sliver of the gradient and lose the run from violet to teal.
+   */
+  padding-left: calc(0.3em + 11px);
+  background: linear-gradient(
+      180deg,
+      var(--tf-violet-light) 0%,
+      var(--tf-violet) 45%,
+      var(--tf-teal) 100%
+    )
+    left top / 11px 100% no-repeat;
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.md-typeset h2 {
+  margin: 2em 0 0.7em;
+  padding-left: 0.46em;
+  border-left: 8px solid var(--tf-violet);
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.13;
+}
+
+.md-typeset h3 {
+  margin: 1.6em 0 0.5em;
+  padding-left: 0.5em;
+  border-left: 5px solid var(--tf-violet);
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.md-typeset h4 {
+  margin: 1.45em 0 0.4em;
+  padding-left: 0.55em;
+  border-left: 3px solid var(--tf-violet-light);
+  font-size: 0.79rem;
+  font-weight: 700;
+}
+
+/* An inline identifier is a chip in the accent rather than a grey box: at this
+ * size a neutral fill just looks like a smudge in the line.
+ */
+.md-typeset code {
+  padding: 0.05em 0.28em;
+  border-radius: 4px;
+  background: rgba(90, 62, 133, 0.07);
+  color: var(--md-code-fg-color);
+  font-family: var(--tf-mono);
+  font-size: 0.82em;
+}
+
+/* Teal, the second accent: violet is structural — headings, rules, the inline
+ * chip — so a code block reads as its own material. Faint enough that the
+ * syntax colours still carry the contrast.
+ */
+.md-typeset pre > code {
+  border: 1px solid rgba(22, 112, 107, 0.3);
+  border-radius: 8px;
+  background: rgba(22, 112, 107, 0.14);
+}
+
+/* Inside an admonition the block would otherwise sit on the same ground twice. */
+.md-typeset .admonition pre > code,
+.md-typeset details pre > code {
+  background: rgba(22, 112, 107, 0.12);
+  font-size: 0.74rem;
+}
+
+/* The line numbers are scenery: no fill of their own, a hairline to sit behind,
+ * and digits light enough that the eye reads the code and not the count.
+ */
+.md-typeset .highlighttable .linenos {
+  padding-right: 0.5rem;
+  border: 0;
+  border-right: 1px solid rgba(22, 112, 107, 0.22);
+  background: transparent;
+  color: rgba(106, 100, 120, 0.55);
+  font-size: 0.88em;
+  user-select: none;
+}
+
+.md-typeset .highlighttable .linenodiv pre {
+  border: 0;
+  background: transparent;
+}
+
+/* The table is the code block; only its outer edge is drawn. */
+.md-typeset .highlighttable {
+  border: 1px solid rgba(22, 112, 107, 0.3);
+  border-radius: 8px;
+  background: rgba(22, 112, 107, 0.14);
+}
+
+.md-typeset .highlighttable .code pre > code,
+.md-typeset .highlighttable td > div > pre > code {
+  border: 0;
+  background: transparent;
+}
+
+.md-typeset .md-clipboard {
+  color: var(--tf-muted);
+}
+
+.md-typeset .md-clipboard:hover {
+  color: var(--tf-violet);
+}
+
+/* Links: violet, but underlined at less than full strength so a paragraph with
+ * several of them does not turn into a ladder. Hover moves the underline to
+ * teal, which is the one place the second accent answers the first.
+ */
+.md-typeset a {
+  color: var(--tf-teal);
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.16em;
+  text-decoration-color: rgba(22, 112, 107, 0.55);
+}
+
+.md-typeset a:hover,
+.md-typeset a:focus {
+  color: var(--tf-teal);
+  text-decoration-thickness: 0.14em;
+  text-decoration-color: var(--tf-teal);
+}
+
+/* A link that is an identifier keeps the code chip and takes the same colour, so
+ * a linked path reads as a link and not as one more inline identifier.
+ */
+.md-typeset a code {
+  color: var(--tf-teal);
+}
+
+/* A rule between sections, drawn as light rather than as a line. */
+.md-typeset hr {
+  height: 1px;
+  margin: 2rem 0;
+  border: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(90, 62, 133, 0.3) 18%,
+    rgba(22, 112, 107, 0.24) 82%,
+    transparent
+  );
+}
+
+.md-typeset blockquote {
+  margin: 1.3em 0;
+  padding: 0.08em 0 0.08em 1.05em;
+  border-left: 3px solid var(--tf-teal);
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  border: 0;
+  border-left: 3px solid var(--tf-rule);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+/* Material sets an admonition two steps below body size, which is fine for a
+ * one-line aside and wrong for the API pages, where every Example is one of
+ * these blocks and its content is code.
+ */
+  font-size: 0.78rem;
+}
+
+/* Material gives each admonition type its own hue, which puts four more on the
+ * page. One teal rule for all of them; only a warning differs, being a verdict
+ * rather than an aside.
+ */
+.md-typeset .admonition.example,
+.md-typeset details.example,
+.md-typeset .admonition.note,
+.md-typeset details.note,
+.md-typeset .admonition.info,
+.md-typeset details.info,
+.md-typeset .admonition.tip,
+.md-typeset details.tip,
+.md-typeset .admonition.abstract,
+.md-typeset details.abstract,
+.md-typeset .admonition.quote,
+.md-typeset details.quote {
+  border-left-color: var(--tf-rule);
+}
+
+.md-typeset .admonition.warning,
+.md-typeset details.warning,
+.md-typeset .admonition.danger,
+.md-typeset details.danger,
+.md-typeset .admonition.failure,
+.md-typeset details.failure {
+  border-left-color: var(--tf-rose);
+}
+
+/* Bold carries weight, not colour: a page has dozens of bold spans, and
+ * colouring them all left none standing out. The violet is spent on one
+ * sentence per page instead — `.keystone` below.
+ */
+
+/* The claim a page rests on: bold and italic in the structural violet, in
+ * place in the paragraph. No panel — that stops the paragraph rather than
+ * pointing at it. One per page; with two, neither is the point.
+ */
+.md-typeset .keystone {
+  padding: 0.05em 0.15em;
+  /* A marker line under the text rather than a filled box: the sentence stays in
+   * its paragraph, and the ground stops below the x-height so the letters keep
+   * the page's own white behind them. */
+  background: linear-gradient(
+    to top,
+    rgba(90, 62, 133, 0.18) 0.62em,
+    transparent 0.62em
+  );
+  color: var(--tf-violet);
+  font-style: italic;
+  font-weight: 700;
+}
+
+/* Italic Han glyphs are a synthetic slant, so the Chinese pages carry the
+ * emphasis in weight and colour alone.
+ */
+html[lang="zh"] .md-typeset .keystone {
+  font-style: normal;
+}
+
+.md-typeset .admonition-title,
+.md-typeset summary {
+  background: transparent;
+  font-family: var(--tf-mono);
+  font-size: 0.8rem;
+}
+
+/* An `Example:` section in a docstring becomes an `example` admonition, whose
+ * default icon is a lab flask — a picture of something the section is not. The
+ * word and the teal rule already say what the block is.
+ */
+.md-typeset .admonition.example > .admonition-title,
+.md-typeset details.example > summary {
+  padding-left: 0.6rem;
+}
+
+.md-typeset .admonition.example > .admonition-title::before,
+.md-typeset details.example > summary::before {
+  display: none;
+}
+
+/* Three rules and nothing else: above the head, under it, under the last row.
+ * Every mark beyond them is one the reader looks past to reach the numbers.
+ */
+/* Material sizes a table to its content, leaving every table a different width
+ * from the prose above it. A table is a block of the page, so it takes the
+ * column; Material's scroll wrapper still handles one too wide to fit.
+ */
+.md-typeset__table {
+  width: 100%;
+}
+
+.md-typeset table:not([class]) {
+  display: table;
+  width: 100%;
+  margin: 1em 0;
+  /* Material fills a table with the page colour, which over the wash reads as
+   * a lighter panel laid on the sheet.
+   */
+  background: none;
+  border: 0;
+  border-top: 2px solid rgba(26, 23, 32, 0.45);
+  border-bottom: 2px solid rgba(26, 23, 32, 0.45);
+  font-size: 0.75rem;
+}
+
+/* The middle rule is the table's one accented mark, and on a Benchmarks page
+ * the only place the palette can sit at all — those pages are columns of
+ * figures with nowhere for a heading rule to go.
+ */
+/* An identifier broken across two lines stops reading as one name, and it is
+ * the name column that gets squeezed. A code span never wraps; the scroll
+ * wrapper handles a table that then exceeds the page.
+ */
+.md-typeset table:not([class]) code {
+  white-space: nowrap;
+}
+
+.md-typeset table:not([class]) th {
+  border: 0;
+  border-bottom: 2px solid var(--tf-violet);
+  color: var(--tf-violet-dark);
+  font-family: var(--tf-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: none;
+}
+
+.md-typeset table:not([class]) td {
+  border: 0;
+  background: none;
+}
+
+/* Benchmark data tables: many short numeric cells. One line per cell and let
+ * the table scroll — wrapping every column turns one row into four. The
+ * wrapper comes from scripts/gen_bench_pages.py.
+ */
+.md-typeset .datatable {
+  overflow-x: auto;
+}
+
+/* Width follows the content: stretched to the full column, eight short numeric
+ * cells sit an inch apart and a row stops reading as one measurement.
+ */
+.md-typeset .datatable table:not([class]) {
+  width: auto;
+  max-width: 100%;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.md-typeset .datatable table:not([class]) th,
+.md-typeset .datatable table:not([class]) td {
+  padding-left: 0.75em;
+  padding-right: 0.75em;
+  white-space: nowrap;
+/* Everything centred in its column, except the workload name: it is the row's
+ * label, of varying length, and reads as a list only when flush left.
+ */
+  text-align: center;
+}
+
+.md-typeset .datatable table:not([class]) td.colsep {
+  text-align: left;
+}
+
+/* A hairline between the label and the numbers it belongs to — the table's one
+ * vertical, thin and grey so it divides without ruling: what a row *is* on the
+ * left, what it measured on the right.
+ */
+.md-typeset .datatable table:not([class]) .colsep {
+  border-right: 1px solid rgba(26, 23, 32, 0.22);
+  padding-right: 1em;
+}
+
+/* A cell holding four stacked alternatives is four lines tall beside
+ * one-line neighbours. Tighter leading gives back most of a line; the row
+ * padding is what separates one workload from the next.
+ */
+.md-typeset .datatable table:not([class]) td {
+  padding-top: 0.55em;
+  padding-bottom: 0.55em;
+  line-height: 1.35;
+  border-bottom: 0;
+/* The Alternatives sub-columns stack one line per alternative. Top alignment is
+ * what makes them read across, and keeps Ratio level with the fastest one.
+ */
+  vertical-align: top;
+}
+
+/* Everything but the fastest alternative is context. */
+.md-typeset .datatable table:not([class]) .alt-slow,
+.md-typeset .datatable table:not([class]) .alt-slow code {
+  color: var(--tf-muted);
+}
+
+/* Two header rows, still one middle rule: it belongs under the whole header
+ * block, not between its halves. The `Workload` cell spans both rows, so its
+ * own bottom edge already sits on that line.
+ */
+/* Each header word underlined thin and grey — under `Alternatives` that also
+ * says how far a header spanning two columns reaches. The heavy rule stays
+ * below the units, so these read as brackets rather than as more divisions.
+ */
+.md-typeset .datatable table:not([class]) thead tr:first-child th:not([rowspan]) {
+  border-bottom: 1px solid rgba(26, 23, 32, 0.26);
+}
+
+/* Units and the ratio's direction: subordinate to the header word above, so it
+ * reads as a qualifier. Teal marks exactly that everywhere else on the site.
+ */
+.md-typeset .datatable table:not([class]) th.subhead {
+  color: #2b6d6e;
+  font-family: var(--tf-mono);
+  font-size: 0.66rem;
+  font-weight: 400;
+}
+
+.md-typeset .datatable table:not([class]) code {
+  background: transparent;
+  padding: 0;
+  color: var(--md-default-fg-color--light);
+}
+
+/* A cool cast on the names, so the teal rule divides a label column from ink
+ * measurements rather than sitting between them. The same in every row: a
+ * colour that never varies cannot be mistaken for a verdict.
+ */
+.md-typeset .datatable table:not([class]) td.colsep code {
+  color: #316c6f;
+}
+
+/* Benchmark verdicts: the ratio's colour is the result — rose behind, plain
+ * ink level, green ahead. Neither is the link violet or the aside teal, so a
+ * coloured figure in a Ratio column is never mistaken for a link.
+ */
+.md-typeset .perf-ahead,
+.md-typeset .perf-par,
+.md-typeset .perf-behind {
+  font-family: var(--tf-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.md-typeset .perf-ahead {
+  color: var(--tf-green);
+}
+
+.md-typeset .perf-par {
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset .perf-behind {
+  color: var(--tf-rose);
+}
+
+/* A ratio against an eager reference only. Shown, but never as a win: the bar
+ * is a naive composition of PyTorch ops that nobody competes at.
+ */
+.md-typeset .perf-unrated {
+  color: var(--tf-muted);
+  font-family: var(--tf-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.md-typeset .perf-none {
+  color: var(--md-default-fg-color--light);
+}
+
+/* What the heading is about, not part of it: body face, running-text weight.
+ * In the display face at 800 it read as a second half of the op's name.
+ */
+.md-typeset h3 > small {
+  color: var(--tf-teal);
+  font-family: var(--tf-body);
+  font-size: 0.72em;
+  font-weight: 500;
+}
+
+/* A verdict repeated in an op heading sits in the display face around it. */
+.md-typeset h3 .perf-ahead,
+.md-typeset h3 .perf-par,
+.md-typeset h3 .perf-behind {
+  font-size: 0.82em;
+}
+
+/* A symbol heading is a name, not prose: mono, near body size. At the prose h2
+ * size a reference page becomes forty display-weight banners.
+ */
+.md-typeset h2.doc-heading,
+.md-typeset h3.doc-heading,
+.md-typeset h4.doc-heading,
+.md-typeset h5.doc-heading {
+  font-family: var(--tf-mono);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+.md-typeset h2.doc-heading {
+  margin: 2.1em 0 0.5em;
+  border-left-width: 4px;
+  font-size: 0.88rem;
+}
+
+.md-typeset h3.doc-heading {
+  margin: 1.5em 0 0.4em;
+  border-left-width: 3px;
+  border-left-color: var(--tf-violet-light);
+  font-size: 0.78rem;
+}
+
+.md-typeset h4.doc-heading,
+.md-typeset h5.doc-heading {
+  border-left-color: var(--tf-line);
+  font-size: 0.76rem;
+}
+
+/* The name is already mono at heading size; the inline chip on top of it is a
+ * second treatment of the same thing. The symbol chip keeps its own fill.
+ */
+.md-typeset .doc-heading code:not(.doc-symbol) {
+  padding: 0;
+  background: transparent;
+  font-size: 1em;
+}
+
+/* Only the class keeps its chip: a method is already inside one, so `meth`
+ * repeats what the position says. Keyed on the object, not the heading level —
+ * the levels shift between a package page and an op page.
+ */
+.md-typeset .doc-object.doc-function > .doc-heading .doc-symbol-heading,
+.md-typeset .doc-object.doc-attribute > .doc-heading .doc-symbol-heading {
+  display: none;
+}
+
+.md-typeset .doc-symbol-heading {
+  margin-right: 0.45em;
+  font-family: var(--tf-body);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  vertical-align: 0.12em;
+}
+
+/* A class and everything under it hang from one line — a spine, not a filled
+ * card: a panel over the wash reads as a patch of different paper.
+ */
+.md-typeset .doc-object.doc-class > .doc-contents {
+  margin-left: 0.15rem;
+  padding-left: 1.5rem;
+  border-left: 1px solid var(--tf-line-soft);
+}
+
+/* Everything under a class sits at one level; a second indent for the methods
+ * only pushed them away from the parameters they belong with. Their contents
+ * keep a teal hairline, which marks the group without moving it.
+ */
+.md-typeset .doc-object.doc-function > .doc-contents {
+  padding-left: 0;
+  border-left: 0;
+/* The signature carries the weight the heading gave up. */
+  margin-top: 1.7em;
+}
+
+/* A member's heading repeats the name the signature carries, so it collapses to
+ * a bare anchor. It stays in the document for the right-hand column to link to.
+ */
+.md-typeset .doc-object.doc-function > .doc-heading,
+.md-typeset .doc-object.doc-attribute > .doc-heading {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 0;
+  line-height: 0;
+}
+
+.md-typeset .doc-object.doc-function > .doc-heading .headerlink,
+.md-typeset .doc-object.doc-attribute > .doc-heading .headerlink {
+  display: none;
+}
+
+/* The two method entries under one class are siblings, not a list: space them
+ * rather than ruling between them.
+ */
+.md-typeset .doc-object.doc-function + .doc-object.doc-function {
+  margin-top: 1.6em;
+}
+
+/* One op is one unit: a rule above each symbol and room around it, or the page
+ * is a single column where nothing marks where one op ends.
+ */
+.md-typeset .doc-object.doc-class > .doc-heading {
+  margin-top: 3em;
+  padding-top: 1.3em;
+  border-top: 1px solid var(--tf-line-soft);
+}
+
+/* The first class under a family heading needs no rule: the heading is the break. */
+.md-typeset h2 + .doc-object.doc-class > .doc-heading,
+.md-typeset h2 + div > .doc-object.doc-class > .doc-heading {
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* A signature is a declaration, not a listing: violet like the other structural
+ * marks, no fill, no rounded box — so it does not read as a second example.
+ */
+.md-typeset .doc-signature > pre > code,
+.md-typeset div.doc-signature pre > code,
+.md-typeset pre > code.doc-signature {
+  border: 0;
+  border-left: 3px solid var(--tf-rule);
+  border-radius: 0;
+  background: transparent;
+  padding-left: 0.7rem;
+}
+
+/* Parameters, Returns, Raises: the label carries the break, the list stays tight
+ * under it.
+ */
+.md-typeset .doc-section-title {
+  margin-top: 1.4em;
+  margin-bottom: 0.3em;
+/* Parameters render as a definition list: the label in the display face, each
+ * name in mono, so the list reads as a signature rather than a paragraph.
+ */
+  color: var(--tf-muted);
+  font-family: var(--tf-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/* `property`, `classmethod`, `async` — a note about the symbol, not part of
+ * its name.
+ */
+.md-typeset .doc-labels .doc-label {
+  background: rgba(22, 112, 107, 0.1);
+  color: var(--tf-teal);
+  font-family: var(--tf-body);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.md-typeset .doc-section-item {
+  margin: 0.2em 0;
+}
+
+/* The page's own headings: a locator, so quieter and tighter than the left nav
+ * — smaller, muted, with a hairline to give the column an edge.
+ */
+.md-sidebar--secondary .md-nav__title {
+  color: var(--tf-muted);
+  font-family: var(--tf-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding-bottom: 0.5rem;
+  text-transform: uppercase;
+}
+
+.md-sidebar--secondary .md-nav__list {
+  border-left: 1px solid var(--tf-line-soft);
+}
+
+.md-sidebar--secondary .md-nav__link {
+  color: var(--tf-muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+  margin-top: 0.42rem;
+  padding-left: 0.7rem;
+}
+
+/* The section being read is marked on the rule the list hangs from, so the
+ * text itself does not have to change weight to say where you are.
+ */
+.md-sidebar--secondary .md-nav__link--active,
+.md-sidebar--secondary .md-nav__link--passed:hover,
+.md-sidebar--secondary .md-nav__link:hover {
+  color: var(--tf-violet);
+}
+
+.md-sidebar--secondary .md-nav__link--active {
+  box-shadow: inset 2px 0 var(--tf-violet);
+}
+
+/* A third-level entry is subordinate to the h2 above it: indented once, and a
+ * step down in size rather than a second bullet level.
+ */
+.md-sidebar--secondary .md-nav__list .md-nav__list .md-nav__link {
+  border-left: 0;
+  font-size: 0.65rem;
+  padding-left: 1.35rem;
+}
+
+.md-sidebar--secondary .md-nav__list .md-nav__list {
+  border-left: 0;
+}
+
+/* Han glyphs need the extra leading in a column this narrow. */
+html[lang="zh"] .md-sidebar--secondary .md-nav__link {
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
+/* Material's token map covers keywords, strings and numbers. A typical example
+ * is mostly names, operators and calls, which fell through to plain ink.
+ */
+.md-typeset .highlight .o,        /* operator: = * -> */
+.md-typeset .highlight .ow {
+  color: var(--tf-violet);
+}
+
+.md-typeset .highlight .p {       /* punctuation: ( ) , [ ] */
+  color: var(--tf-muted);
+}
+
+.md-typeset .highlight .nf,       /* function definition */
+.md-typeset .highlight .fm,
+.md-typeset .highlight .nc,       /* class */
+.md-typeset .highlight .nb,       /* builtin */
+.md-typeset .highlight .bp {
+  color: var(--tf-violet-light);
+}
+
+.md-typeset .highlight .nd,       /* decorator */
+.md-typeset .highlight .kn,       /* import */
+.md-typeset .highlight .kc {
+  color: var(--tf-teal);
+}
+
+.md-typeset .highlight .c1,       /* comment */
+.md-typeset .highlight .cm,
+.md-typeset .highlight .ch {
+  font-style: italic;
+}
+
+/* Language switcher: a quiet pill on the paper header, matching the source
+ * link beside it rather than Material's default bare-icon dropdown.
+ */
+.md-header__option .md-select__inner {
+  border-radius: 999px;
+}
+
+.md-header__option .md-select__link {
+  font-family: var(--tf-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* A page served from the default language because this locale has no
+ * translation yet. Reads as a status line, not as a warning.
+ */
+.md-typeset .locale-notice {
+  margin: -0.4rem 0 1.4rem;
+  padding: 0.5rem 0.8rem;
+  border-left: 3px solid var(--tf-line);
+  background: var(--tf-line-soft);
+  color: var(--tf-muted);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.md-typeset .locale-notice strong {
+  margin-right: 0.35em;
+  color: var(--md-default-fg-color);
+  font-weight: 700;
+}
+
+/* Han glyphs fill their em box: the Latin leading reads as cramped, and a
+ * display face at 800 falls through to a CJK face where that weight closes up
+ * the strokes. The size stays Latin. Scoped away from .locale-notice pages,
+ * whose body text is English.
+ */
+html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) {
+  line-height: 1.75;
+}
+
+html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) h1,
+html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) h2,
+html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) h3,
+html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) h4 {
+  font-weight: 700;
+}
+
+/* Inline code sits mid-sentence far more often in Chinese, and needs less box
+ * at that body size. Inline only: unscoped, this stripped code blocks too.
+ */
+html[lang="zh"] .md-typeset:not(:has(> .locale-notice)) code:not(pre > code) {
+  font-size: 0.8em;
+  padding: 0.04em 0.24em;
+}
+
+/* Underlines otherwise cut into the descender-free baseline of Han glyphs. */
+html[lang="zh"] .md-typeset a {
+  text-underline-offset: 0.18em;
+}
+
+html[lang="zh"] .md-nav,
+html[lang="zh"] .md-nav__title {
+  line-height: 1.5;
+}
+
+/* Sequence diagrams, a size up from mermaid's default; a wider one scrolls
+ * rather than shrinking the page. The autonumber bubble defaults to near-black,
+ * a blob at this size, so it takes the structural violet. */
+.md-typeset .mermaid {
+  overflow-x: auto;
+  --md-mermaid-sequence-number-bg-color: var(--tf-violet);
+}
+
+.md-typeset .mermaid text.sequenceNumber {
+  font-size: 12px !important;
+  font-weight: 700;
+}
+
+/* Flowcharts. Two roles: the layers dynamo traces, and the opaque node's
+ * interior. Colour comes from the palette rather than the diagram source, so
+ * the .md stays readable. */
+.md-typeset .mermaid g.node.traced > rect {
+  fill: var(--tf-violet-soft);
+  stroke: var(--tf-violet);
+}
+
+.md-typeset .mermaid g.node.opaque > rect {
+  fill: var(--tf-teal-soft);
+  stroke: var(--tf-rule);
+  stroke-dasharray: 5 3;
+}
+
+.md-typeset .mermaid .edgeLabel {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.md-typeset .mermaid .edgeLabel .label foreignObject > div {
+  color: var(--tf-violet);
+}
+
+/* The call-path figure on the torch.compile page: four layers of one call, every
+ * row the same width — a diagram engine sizes each box to its text, which reads
+ * as clutter when the rows are a stack. Violet traces, dashed teal is opaque. */
+.md-typeset figure.callpath {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 1.2em 0;
+}
+
+.md-typeset figure.callpath .cp-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.5rem 0.8rem;
+  border-radius: 0.2rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.md-typeset figure.callpath .cp-step > code {
+  background: none;
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.md-typeset figure.callpath .cp-traced {
+  border: 1px solid var(--tf-violet);
+  background: rgba(90, 62, 133, 0.08);
+}
+
+.md-typeset figure.callpath .cp-traced > code {
+  color: var(--tf-violet);
+}
+
+.md-typeset figure.callpath .cp-opaque {
+  border: 1px dashed var(--tf-rule);
+  background: rgba(22, 112, 107, 0.05);
+}
+
+.md-typeset figure.callpath .cp-opaque > code {
+  color: var(--tf-teal);
+}
+
+/* The boundary itself: a rule across the stack with its name sitting on it. */
+.md-typeset figure.callpath .cp-boundary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.15rem 0;
+  color: var(--tf-violet);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.md-typeset figure.callpath .cp-boundary::before,
+.md-typeset figure.callpath .cp-boundary::after {
+  flex: 1;
+  height: 2px;
+  background: rgba(90, 62, 133, 0.45);
+  content: "";
+}
+
+.md-typeset figure.callpath figcaption {
+  margin-top: 0.3rem;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.7rem;
+  line-height: 1.6;
+  text-align: left;
+}
+
+/* The workload key carries the shapes at the width of the page, so the table
+ * holds only `W1`, `W2`, … and the measurements.
+ */
+/* The workload key: what an op's workloads have in common, stated once, and
+ * what varies, one line per workload. Three columns — code, what varies, the
+ * benchmark's own id — so a reader compares down a column.
+ */
+.md-typeset .wl-key {
+  margin: 0.35em 0 0.8em;
+  font-family: var(--tf-mono);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+/* One rule per group, teal like every other label on these pages: it says how
+ * far the shared line above reaches.
+ */
+.md-typeset .wl-key .wl-group {
+  margin: 0 0 0.55em;
+  padding-left: 0.8em;
+  border-left: 2px solid rgba(22, 112, 107, 0.45);
+}
+
+.md-typeset .wl-key .wl-group:last-child {
+  margin-bottom: 0;
+}
+
+/* A row of entries, not a sentence: each cell holds together, so a long line
+ * wraps between entries rather than through a shape.
+ */
+.md-typeset .wl-key .wl-shared {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15em 0.32em;
+  margin: 0 0 0.15em;
+  font-size: inherit;
+  line-height: inherit;
+  color: rgba(26, 23, 32, 0.8);
+}
+
+.md-typeset .wl-key .wl-shared + .wl-shared {
+  margin-bottom: 0.2em;
+}
+
+.md-typeset .wl-key .wl-cell {
+  white-space: nowrap;
+}
+
+/* A middot between entries, not a second rule: the rule after the code falls in
+ * the same place on every row, a rule between entries would land wherever the
+ * previous name ended. Punctuation separates without claiming to align.
+ */
+.md-typeset .wl-key .wl-cell + .wl-cell::before {
+  content: "·";
+  margin-right: 0.32em;
+  color: rgba(26, 23, 32, 0.5);
+  font-weight: 400;
+}
+
+/* A tensor is a shape the op takes, a scalar a number it was given: the
+ * tensor's name carries the weight, the scalars stay plain text.
+ */
+.md-typeset .wl-key .wl-tensor .wl-k {
+  color: #175554;
+  font-weight: 700;
+}
+
+.md-typeset .wl-key .wl-scalar {
+  color: var(--tf-muted);
+}
+
+/* The number is what varies down the page; its name is the same every row. */
+.md-typeset .wl-key .wl-scalar .wl-v {
+  color: rgba(26, 23, 32, 0.85);
+}
+
+.md-typeset .wl-key .wl-dim .wl-v {
+  color: inherit;
+}
+
+/* Narrow windows have no width to hold a tensor list on one line; there,
+ * breaking inside a cell beats a line running off the page.
+ */
+@media (max-width: 50rem) {
+  .md-typeset .wl-key .wl-cell {
+    white-space: normal;
+  }
+}
+
+.md-typeset .wl-key ul.wl-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The id ranges right, off the same edge on every row, so the middle column is
+ * free to be as long as one workload needs without ragging the rest.
+ */
+.md-typeset .wl-key ul.wl-rows li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.9em;
+  margin: 0;
+}
+
+.md-typeset .wl-key ul.wl-rows b {
+  flex: 0 0 2.1em;
+  color: var(--tf-violet);
+  font-weight: 700;
+}
+
+/* A hairline between the code and what it ran on — the same rule the table
+ * draws between the workload column and its measurements.
+ */
+.md-typeset .wl-key .wl-delta {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 0.15em 0.32em;
+  padding-left: 0.9em;
+  border-left: 1px solid rgba(26, 23, 32, 0.2);
+}
+
+.md-typeset .wl-key .wl-delta:empty {
+  border-left: 0;
+}
+
+/* A tensor list wider than the column: one tensor per line, and no middots —
+ * stacked entries are already separated by the line break.
+ */
+.md-typeset .wl-key .wl-shared.wl-stack {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.md-typeset .wl-key .wl-shared.wl-stack .wl-cell + .wl-cell::before {
+  content: none;
+  margin-right: 0;
+}
+
+/* Scalars wider than the column: the id takes the first line beside the code,
+ * the scalars the second, with the rule running down both.
+ */
+.md-typeset .wl-key ul.wl-long li {
+  margin-bottom: 0.3em;
+}
+
+.md-typeset .wl-key ul.wl-long li:last-child {
+  margin-bottom: 0;
+}
+
+.md-typeset .wl-key ul.wl-long .wl-id {
+  order: 1;
+  flex: 1 1 auto;
+  margin-left: 0;
+  padding-left: 0.9em;
+  border-left: 1px solid rgba(26, 23, 32, 0.2);
+}
+
+.md-typeset .wl-key ul.wl-long .wl-delta {
+  order: 2;
+  flex: 0 0 calc(100% - 3em);
+  margin-left: 3em;
+}
+
+.md-typeset .wl-key .wl-id {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 0;
+  background: transparent;
+  color: var(--tf-muted);
+}
+
+/* A tensor's name is not its shape, and a symbol is not its value: teal
+ * separates them as it separates the label column from the measurements.
+ */
+.md-typeset .wl-key .wl-k {
+  color: #316c6f;
+}
+
+/* Parameters are how the op was called, not how big it is. */
+.md-typeset .wl-key .wl-dt,
+.md-typeset .wl-key .wl-dim,
+.md-typeset .wl-key .wl-dim .wl-k {
+  color: var(--tf-muted);
+}
+
+/* The workload column is now two characters wide, so it centres like the
+ * numbers rather than ranging left as a label did.
+ */
+.md-typeset .datatable table:not([class]) td.colsep b {
+  color: var(--tf-violet);
+  font-weight: 700;
+}
+
+
+
+/* Roofline figure (performance-guides/memory-bound). Log-log, so the two decades
+   between an elementwise kernel and the ridge stay legible. Teal is the roof,
+   violet the ridge, rose a kernel below it — the tables' rose for "behind". */
+.md-typeset figure.roofline {
+  display: block;
+  width: 100%;
+  margin: 1.4em auto;
+  text-align: center;
+}
+
+/* markdown="1" wraps the inline SVG in a <p>, whose bottom margin would open a
+   gap between the drawing and its caption. */
+.md-typeset figure.roofline p {
+  margin: 0;
+}
+
+/* max-width caps it at the drawing's own size, so on a wide screen it stays
+   centred at its natural scale instead of stretching to the column. */
+.md-typeset .tf-roofline {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  margin: 0 auto;
+  font-family: var(--tf-body);
+}
+
+.md-typeset .tf-roofline .tf-rl-region {
+  fill: var(--tf-teal-wash);
+}
+
+.md-typeset .tf-roofline .tf-rl-grid {
+  stroke: var(--tf-line-soft);
+  stroke-width: 1;
+}
+
+.md-typeset .tf-roofline .tf-rl-axis {
+  stroke: var(--tf-line);
+  stroke-width: 1.5;
+}
+
+.md-typeset .tf-roofline .tf-rl-roof {
+  fill: none;
+  stroke: var(--tf-teal);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.md-typeset .tf-roofline .tf-rl-drop {
+  stroke: var(--tf-violet-mid);
+  stroke-dasharray: 3 4;
+  stroke-width: 1.5;
+}
+
+.md-typeset .tf-roofline .tf-rl-ridge {
+  fill: var(--tf-violet);
+  stroke: var(--md-default-bg-color);
+  stroke-width: 2;
+}
+
+.md-typeset .tf-roofline .tf-rl-point {
+  fill: var(--tf-rose);
+  stroke: var(--md-default-bg-color);
+  stroke-width: 2;
+}
+
+.md-typeset .tf-roofline .tf-rl-tick,
+.md-typeset .tf-roofline .tf-rl-axis-title,
+.md-typeset .tf-roofline .tf-rl-sub,
+.md-typeset .tf-roofline .tf-rl-roof-label {
+  fill: var(--md-default-fg-color--light);
+  font-size: 13px;
+}
+
+.md-typeset .tf-roofline .tf-rl-axis-title {
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+
+.md-typeset .tf-roofline .tf-rl-roof-label {
+  fill: var(--tf-teal);
+  font-weight: 600;
+}
+
+.md-typeset .tf-roofline .tf-rl-label {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.md-typeset .tf-roofline .tf-rl-label--ridge {
+  fill: var(--tf-violet);
+}
+
+.md-typeset .tf-roofline .tf-rl-label--point {
+  fill: var(--tf-rose);
+}
+
+.md-typeset .tf-roofline .tf-rl-region-label {
+  fill: var(--md-default-fg-color--light);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.md-typeset figure.roofline figcaption {
+  max-width: none;
+  margin-top: 0.5rem;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.7rem;
+  line-height: 1.7;
+  text-align: left;
+}
+
+/* Access-pattern figure (global-memory-access). One row of memory cells per
+   pattern: teal is a sector the hardware fetches, a violet dot an element the
+   instruction reads. Their ratio is the efficiency the prose quotes. */
+.md-typeset figure.access-patterns {
+  display: block;
+  width: 100%;
+  margin: 1.4em auto;
+  text-align: center;
+}
+
+.md-typeset figure.access-patterns p {
+  margin: 0;
+}
+
+.md-typeset .tf-access {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  margin: 0 auto;
+  font-family: var(--tf-body);
+}
+
+.md-typeset .tf-access .ap-sector {
+  fill: none;
+  stroke: var(--tf-line);
+  stroke-width: 1;
+}
+
+.md-typeset .tf-access .ap-sector--fetched {
+  fill: var(--tf-teal-tint);
+}
+
+/* shared memory: no sectors, so the row is drawn as one undivided surface */
+.md-typeset .tf-access .ap-sector--onchip {
+  fill: var(--tf-violet-wash);
+  stroke: var(--tf-violet-tint);
+  stroke-dasharray: 3 3;
+}
+
+.md-typeset .tf-access .ap-cell {
+  fill: none;
+  stroke: var(--tf-line-soft);
+  stroke-width: 0.75;
+}
+
+.md-typeset .tf-access .ap-dot {
+  fill: var(--tf-violet);
+}
+
+.md-typeset .tf-access .ap-title {
+  fill: var(--md-default-fg-color);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.md-typeset .tf-access .ap-sub {
+  fill: var(--md-default-fg-color--light);
+  font-family: var(--tf-mono);
+  font-size: 11px;
+}
+
+.md-typeset .tf-access .ap-note {
+  fill: var(--md-default-fg-color--light);
+  font-size: 12.5px;
+}
+
+/* --lighter maps to the hairline colour; as text it is illegible. */
+.md-typeset .tf-access .ap-scale {
+  fill: var(--md-default-fg-color--light);
+  font-size: 12px;
+}
+
+/* Material caps figcaption at 24rem and centres it; these captions carry the
+   figure's argument and want the full column. */
+.md-typeset figure.access-patterns figcaption {
+  max-width: none;
+  margin-top: 0.5rem;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.7rem;
+  line-height: 1.7;
+  text-align: left;
+}
+
+/* Winning cell in a measurement table. Bold alone does not survive a page of
+   tables; the rose is the same one the benchmark pages use for a verdict. */
+.md-typeset .win {
+  color: var(--tf-rose);
+  font-weight: 700;
+}
+
+/* Which thread owns which element, by alternating tone: blocked banks four
+   cells per tone, striped alternates every cell. A neutral ink wash, so it does
+   not compete with the teal and violet that carry the argument. */
+.md-typeset .tf-access .ap-cell--t1 {
+  fill: var(--tf-ink-tint);
+}
+
+/* t0…t7 above each thread's span. The alternating tone shows where the
+   boundaries fall; only the labels say how many threads there are. */
+.md-typeset .tf-access .ap-owner {
+  fill: var(--md-default-fg-color--light);
+  font-family: var(--tf-mono);
+  font-size: 10px;
+}
+
+/* Bank-conflict figure (shared-memory-access). 32 bank columns per panel; the
+   count in a cell is how many of a warp's threads land on it, and the largest
+   is the conflict degree. Teal is one thread, rose several, empty none. */
+
+.md-typeset .tf-bank {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  margin: 0 auto;
+  font-family: var(--tf-body);
+}
+
+.md-typeset .tf-bank .bk-cell {
+  fill: none;
+  stroke: var(--tf-line-soft);
+  stroke-width: 0.75;
+}
+
+.md-typeset .tf-bank .bk-cell--one {
+  fill: var(--tf-teal-fill);
+}
+
+.md-typeset .tf-bank .bk-cell--many {
+  fill: var(--tf-rose-fill);
+}
+
+.md-typeset .tf-bank .bk-count {
+  fill: var(--md-default-fg-color);
+  font-family: var(--tf-mono);
+  font-size: 9px;
+}
+
+.md-typeset .tf-bank .bk-title {
+  fill: var(--md-default-fg-color);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.md-typeset .tf-bank .bk-sub {
+  fill: var(--md-default-fg-color--light);
+  font-family: var(--tf-mono);
+  font-size: 11px;
+}
+
+.md-typeset .tf-bank .bk-note,
+.md-typeset .tf-bank .bk-scale {
+  fill: var(--md-default-fg-color--light);
+  font-size: 12px;
+}
+
+.md-typeset .tf-bank .bk-axis {
+  fill: var(--md-default-fg-color--light);
+  font-family: var(--tf-mono);
+  font-size: 10px;
+}
+
+.md-typeset figure.bank-conflict figcaption {
+  max-width: none;
+  margin-top: 0.5rem;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.7rem;
+  line-height: 1.7;
+  text-align: left;
+}
