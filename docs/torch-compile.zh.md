@@ -12,12 +12,12 @@
 
 ### 判断一个算子是否已接入 {#supported}
 
-读类属性 `compile_op_names`：非空说明边界已经在算子层，`fullgraph=True` 可用；空 tuple 说明尚未迁移。
+读类属性 `compile_op_names`：非空说明这个类声明了编译边界（`compile_boundary = True`），边界在算子层，`fullgraph=True` 可用；空 tuple 说明它没有声明。
 
 ```python
 >>> from tileops.norm import RMSNormFwdOp
 >>> RMSNormFwdOp.compile_op_names
-('tileops::normalization_rms_norm_fwd',)
+('tileops::norm_rms_norm_fwd',)
 ```
 
 尚未迁移的算子在 `fullgraph=True` 下报错，默认设置下切图。
@@ -41,7 +41,7 @@ w = torch.randn(4096, device="cuda", dtype=torch.float16)
 block(x, w)
 ```
 
-用 `TORCH_LOGS=graph_code` 运行会打印捕获到的图：里面是 `tileops::normalization_rms_norm_fwd` 一个节点，不是 kernel 内部的多次调用。
+用 `TORCH_LOGS=graph_code` 运行会打印捕获到的图：里面是 `tileops::norm_rms_norm_fwd` 一个节点，不是 kernel 内部的多次调用。
 
 ### 调用时要遵守的五条约定
 
@@ -69,33 +69,30 @@ block(x, w)
 
 ```python
 class RMSNormFwdOp(Op):
-    # 这个算子注册几个 operator 就写几个 OperatorSpec；注册本身与
-    # compile_op_names 都由 manifest 条目生成
-    compile_boundary: ClassVar[tuple[OperatorSpec, ...]] = (OperatorSpec(),)
+    # the operators, their fakes and compile_op_names are generated from the manifest entry
+    compile_boundary: ClassVar[bool] = True
+    kernel_types: ClassVar[Mapping[str, type[Kernel]]] = {"rms_norm": RMSNormKernel}
 
-    def _infer_output_shapes(self, x_shape, weight_shape):
-        return {"output": tuple(x_shape)}          # manifest 的 shape_rules
+    def forward(self, x, weight=None):
+        # the only line: call the generated operator
+        return self._call_boundary(x, weight)
 
-    def forward(self, x, weight):
-        # 唯一一行：调用生成出来的那个算子
-        return self._wrapped(x, weight, self._instance_key)
-
-    def _eager_forward(self, x, weight):
-        ...                                        # 校验、连续化
+    def _eager_forward(self, x, weight=None):
+        ...                                        # the generated checks have run; make contiguous
         kernel = self.kernel_for("rms_norm", (x, weight), x.dtype)
         return kernel(x, weight)
 ```
 
-声明就这么多。operator 与它的 fake 都从条目生成：张量参数是 `signature.inputs` 的顺序，返回什么看 `signature.outputs`，写哪些参数看标了 `mutated: true` 的输入，每个输出的 dtype 取自条目，或者在条目标了 `caller_stated` 时取自调用方。名字是 `tileops::<family>_<snake(class)>`，这里就是 `tileops::normalization_rms_norm_fwd` —— 没有算子自己起名字，`compile_op_names` 也就不可能和注册的名字对不上。有第二个 operator（in-place 或 `out=` 形态）的算子再加一个 spec，说明那一个写哪个参数。
+声明就这么多。operator 与它的 fake 都从条目生成，每个副作用分支一个 operator：张量参数是 `signature.inputs` 的顺序，返回什么看 `signature.outputs`，写哪些参数恰好是标了 `mutated` 的输入，每个输出的形状与 dtype 取自签名。名字是 `tileops::<family>_<snake(class)>`（类名本身以 family 开头时只写一次），这里就是 `tileops::norm_rms_norm_fwd`；条目声明了写入输入或 `buffer: out` 时，对应分支的 operator 在名字后面加上 `_writes_<输入>` 或 `_out`。没有算子自己起名字，`compile_op_names` 也就不可能和注册的名字对不上。
 
 一次调用经过的各层，以及边界落在哪里：
 
 <figure class="callpath" markdown="0">
-  <div class="cp-step cp-traced"><code>Op.__call__</code><span>判定 target，失败则撤销</span></div>
+  <div class="cp-step cp-traced"><code>Op.__call__</code><span>调用 <code>forward</code>，不判定 target</span></div>
   <div class="cp-step cp-traced"><code>forward</code><span>一行，调用不透明算子</span></div>
   <div class="cp-boundary"><span>编译边界</span></div>
-  <div class="cp-step cp-opaque"><code>生成出来的算子</code><span>算子体，取回算子实例</span></div>
-  <div class="cp-step cp-opaque"><code>_eager_forward</code><span>校验、连续化、取 kernel、launch kernel</span></div>
+  <div class="cp-step cp-opaque"><code>生成出来的算子</code><span>取回算子实例，跑生成的检查，判定 target，失败则撤销</span></div>
+  <div class="cp-step cp-opaque"><code>_eager_forward</code><span>连续化、取 kernel、launch kernel</span></div>
   <figcaption>紫色两层在 dynamo 的追踪范围内，<code>forward</code> 那一行是它追到的最后一处；界下由不透明算子接手，编译器看不见。</figcaption>
 </figure>
 
@@ -106,11 +103,11 @@ class RMSNormFwdOp(Op):
 - **取字符串，不取整数。** 字符串在追踪期是常量，整数会被泛化成 `SymInt`。
 - **从不复用。** 正因为是常量，inductor 会把 fake 给出的形状固化进产物；复用键的算子会继承前一个实例的形状。
 
-**第二处，fake 用 `x.new_empty(shape)` 构造，而不是 `torch.empty_like(x)`。** fake 返回的张量，形状、dtype 与 stride 三项都必须与真实执行返回的一致；不一致或在追踪期报错，或在运行期按错误布局访问而静默出错。算子体先连续化再写入新分配的输出，真实输出恒为连续，而 `empty_like` 会把入参的 stride 一起复制 —— 非连续输入就让 fake 宣称了一种真实执行不会产出的布局。
+**第二处，fake 用 `torch.empty` 按签名检查推出的形状与 dtype 构造，而不是 `torch.empty_like(x)`。** fake 返回的张量，形状、dtype 与 stride 三项都必须与真实执行返回的一致；不一致或在追踪期报错，或在运行期按错误布局访问而静默出错。算子体先连续化再写入新分配的输出，真实输出恒为连续，而 `empty_like` 会把入参的 stride 一起复制 —— 非连续输入就让 fake 宣称了一种真实执行不会产出的布局。
 
-**第三处，target 判定在 `Op.__call__` 与 `kernel_for` 中各做一次。** 追踪期执行 `self.x = ...`，dynamo 把这次写入记成待办的副作用，等整张图跑完才补上；而不透明节点的执行早于补写，所以节点之外刚写下的判定结果，节点之内读不到。两件事因此都落在节点内部：
+**第三处，target 在节点内部判定，不在 `Op.__call__` 里。** 追踪期执行 `self.x = ...`，dynamo 把这次写入记成待办的副作用，等整张图跑完才补上；而不透明节点的执行早于补写，所以节点之外刚写下的判定结果，节点之内读不到。两件事因此都落在节点内部：
 
-- 少了节点内部这一次判定，第一次编译调用会静默用错实现。
+- 判定若写在节点之外，第一次编译调用会静默用错实现。
 - 判定失败时的撤销由做出判定的那一处负责，因为编译产物不保留调用点的 `try/except`。
 
 三处的原因是同一个：torch 的编译与声明机制以函数为单位，而要编译的是一个对象上的一次调用。
@@ -172,7 +169,7 @@ dynamo 是 `torch.compile` 的前端，工作在 CPython 的帧求值层（PEP 5
 
 这个位置同时决定了 fake 的写法。算子层并不知道外部 kernel 内部如何分块、如何 padding，唯一对所有 target 共同成立的形状规则写在 manifest 里，因此 fake 只能照 manifest 推导。
 
-节点内部对编译器不可见，但它对外的契约是完整的：schema 给出名字与参数类型，fake 给出输出的形状、dtype、设备与 stride，别名标注说明它不就地修改入参。契约完整，得失也就分得清楚：
+节点内部对编译器不可见，但它对外的契约是完整的：schema 给出名字与参数类型，fake 给出输出的形状、dtype、设备与 stride，别名标注恰好列出它写入的入参，`RMSNormFwdOp` 一个也没有。契约完整，得失也就分得清楚：
 
 - **节点之间的优化照常。** 排布 buffer、计算生命周期、与无依赖的相邻节点交换顺序、无人使用时整体删除。
 - **节点内部的优化没有了。** 相邻算子融不进来，输出必须写入显存。

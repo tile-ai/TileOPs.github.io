@@ -15,13 +15,14 @@ disagree, and what the boundary costs.
 
 ### Checking whether an op is in {#supported}
 
-Read the class attribute `compile_op_names`: non-empty means the boundary is at the op
-layer and `fullgraph=True` works, an empty tuple means the op has not migrated yet.
+Read the class attribute `compile_op_names`: non-empty means the class declares a
+compile boundary (`compile_boundary = True`), so the boundary is at the op layer and
+`fullgraph=True` works; an empty tuple means it declares none.
 
 ```python
 >>> from tileops.norm import RMSNormFwdOp
 >>> RMSNormFwdOp.compile_op_names
-('tileops::normalization_rms_norm_fwd',)
+('tileops::norm_rms_norm_fwd',)
 ```
 
 An op that has not migrated raises under `fullgraph=True`, and breaks the graph under
@@ -48,7 +49,7 @@ block(x, w)
 ```
 
 `TORCH_LOGS=graph_code` prints the captured graph: one node,
-`tileops::normalization_rms_norm_fwd`, not the calls inside the kernel.
+`tileops::norm_rms_norm_fwd`, not the calls inside the kernel.
 
 ### The five calling conventions
 
@@ -96,40 +97,38 @@ file is
 
 ```python
 class RMSNormFwdOp(Op):
-    # one OperatorSpec per operator this op registers; the registration and
-    # compile_op_names are generated from the manifest entry
-    compile_boundary: ClassVar[tuple[OperatorSpec, ...]] = (OperatorSpec(),)
+    # the operators, their fakes and compile_op_names are generated from the manifest entry
+    compile_boundary: ClassVar[bool] = True
+    kernel_types: ClassVar[Mapping[str, type[Kernel]]] = {"rms_norm": RMSNormKernel}
 
-    def _infer_output_shapes(self, x_shape, weight_shape):
-        return {"output": tuple(x_shape)}          # the manifest's shape_rules
-
-    def forward(self, x, weight):
+    def forward(self, x, weight=None):
         # the only line: call the generated operator
-        return self._wrapped(x, weight, self._instance_key)
+        return self._call_boundary(x, weight)
 
-    def _eager_forward(self, x, weight):
-        ...                                        # validate, make contiguous
+    def _eager_forward(self, x, weight=None):
+        ...                                        # the generated checks have run; make contiguous
         kernel = self.kernel_for("rms_norm", (x, weight), x.dtype)
         return kernel(x, weight)
 ```
 
-That is the whole declaration. The operator and its fake are generated from the entry:
-its tensor arguments are `signature.inputs` in order, what it returns is
-`signature.outputs`, which arguments it writes is the inputs marked `mutated: true`, and
-each output's dtype is the entry's, or the caller's where the entry marks the output
-`caller_stated`. Its name is `tileops::<family>_<snake(class)>` — here
-`tileops::normalization_rms_norm_fwd` — so no op chooses its own, and `compile_op_names`
-cannot disagree with what was registered. An op with a second operator, an in-place or an
-`out=` form, adds a second spec saying which argument that one writes.
+That is the whole declaration. The operators and their fakes are generated from the
+entry, one operator per effect branch: its tensor arguments are `signature.inputs` in
+order, what it returns is `signature.outputs`, the arguments it writes are exactly the
+inputs marked `mutated`, and each output's shape and dtype come from the signature. Its
+name is `tileops::<family>_<snake(class)>`, with the family written once where the class
+name already opens with it — here `tileops::norm_rms_norm_fwd`; where the entry declares
+a written input or `buffer: out`, that branch's operator adds `_writes_<input>` or `_out`.
+No op chooses its own name, so `compile_op_names` cannot disagree with what was
+registered.
 
 The layers one call passes through, and where the boundary falls:
 
 <figure class="callpath" markdown="0">
-  <div class="cp-step cp-traced"><code>Op.__call__</code><span>resolve the target, unsettle on failure</span></div>
+  <div class="cp-step cp-traced"><code>Op.__call__</code><span>calls <code>forward</code>, resolves no target</span></div>
   <div class="cp-step cp-traced"><code>forward</code><span>one line, calls the opaque operator</span></div>
   <div class="cp-boundary"><span>compile boundary</span></div>
-  <div class="cp-step cp-opaque"><code>the generated operator</code><span>recovers the instance</span></div>
-  <div class="cp-step cp-opaque"><code>_eager_forward</code><span>validate, contiguous, kernel, launch</span></div>
+  <div class="cp-step cp-opaque"><code>the generated operator</code><span>recovers the instance, runs the generated checks, resolves the target, unsettles on failure</span></div>
+  <div class="cp-step cp-opaque"><code>_eager_forward</code><span>contiguous, kernel, launch</span></div>
   <figcaption>The two violet layers are inside dynamo's trace, and that one line of <code>forward</code> is the last thing it reaches; below the boundary the opaque operator takes over, invisible to the compiler.</figcaption>
 </figure>
 
@@ -147,22 +146,21 @@ and does not fit a schema argument. Two details of the key are not free either:
   into the artefact, and an op reusing a key would inherit the previous instance's
   shape.
 
-**Second, the fake builds its result with `x.new_empty(shape)`, not
-`torch.empty_like(x)`.** What the fake returns has to match real execution in shape, dtype
+**Second, the fake builds its result with `torch.empty` from the shape and dtype the
+signature check infers, not `torch.empty_like(x)`.** What the fake returns has to match real execution in shape, dtype
 and stride; a mismatch either fails during tracing or — for a stride — has downstream code
 read the wrong layout and go silently wrong. The operator body makes the inputs contiguous
 before the kernel writes into a freshly allocated output, so the real output is always
 contiguous, while `empty_like` copies the input's strides: a non-contiguous input would
 have the fake declare a layout real execution never produces.
 
-**Third, the target is resolved twice — once in `Op.__call__`, once in
-`kernel_for`.** When traced code runs `self.x = ...`, dynamo records a pending
+**Third, the target is resolved inside the node, not in `Op.__call__`.** When traced code runs `self.x = ...`, dynamo records a pending
 side effect and applies it only after the whole graph has run, while the opaque node runs
 before that: a resolution written just outside the node is unreadable inside it. Two
 things follow, both inside the node:
 
-- Without the second resolution, the first compiled call silently runs the wrong
-  implementation.
+- A resolution made outside the node would have the first compiled call silently run
+  the wrong implementation.
 - Undoing a failed resolution is the job of whichever site made it, since a compiled
   artefact does not keep the call site's `try/except`.
 
@@ -267,9 +265,9 @@ every target is the one in the manifest, so the fake derives from it.
 
 The node's interior is invisible to the compiler, but its contract to the outside is
 complete: the schema gives the name and argument types, the fake gives the output's
-shape, dtype, device and stride, and the alias annotations say it does not write to
-its inputs. With the contract complete, what is kept and what is given up separate
-cleanly:
+shape, dtype, device and stride, and the alias annotations name exactly the inputs it
+writes — none, for `RMSNormFwdOp`. With the contract complete, what is kept and what is
+given up separate cleanly:
 
 - **Optimisation between nodes proceeds as usual.** Buffer assignment, lifetimes,
   reordering against neighbours it does not depend on, deletion when nothing
