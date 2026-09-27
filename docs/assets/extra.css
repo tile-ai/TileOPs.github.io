@@ -1232,7 +1232,7 @@ html[lang="zh"] .md-nav__title {
 .md-typeset .wl-key .wl-shared {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.15em 0.32em;
+  row-gap: 0.15em;
   margin: 0 0 0.15em;
   font-size: inherit;
   line-height: inherit;
@@ -1243,17 +1243,26 @@ html[lang="zh"] .md-nav__title {
   margin-bottom: 0.2em;
 }
 
+/* A middot between entries, not a second rule: punctuation separates without
+ * claiming to align. Each entry holds its middot in its left padding; the line
+ * is shifted left by that padding and clipped, so no line starts with one.
+ */
+.md-typeset .wl-key .wl-shared,
+.md-typeset .wl-key .wl-flow {
+  margin-left: -1.1em;
+  clip-path: inset(0 0 0 1.1em);
+}
+
 .md-typeset .wl-key .wl-cell {
+  position: relative;
+  padding-left: 1.1em;
   white-space: nowrap;
 }
 
-/* A middot between entries, not a second rule: the rule after the code falls in
- * the same place on every row, a rule between entries would land wherever the
- * previous name ended. Punctuation separates without claiming to align.
- */
-.md-typeset .wl-key .wl-cell + .wl-cell::before {
+.md-typeset .wl-key .wl-cell::before {
   content: "·";
-  margin-right: 0.32em;
+  position: absolute;
+  left: 0.25em;
   color: rgba(26, 23, 32, 0.5);
   font-weight: 400;
 }
@@ -1316,29 +1325,45 @@ html[lang="zh"] .md-nav__title {
  * draws between the workload columns and their measurements.
  */
 .md-typeset .wl-key .wl-delta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.15em 0.32em;
   padding-left: 0.9em;
   border-left: 1px solid rgba(26, 23, 32, 0.2);
+}
+
+/* Tensors, then scalars: one line when both fit, else the scalars wrap whole. */
+.md-typeset .wl-key .wl-flow,
+.md-typeset .wl-key .wl-part {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 0.15em;
+}
+
+.md-typeset .wl-key .wl-part {
+  min-width: 0;
+}
+
+/* Labels too long for the label column: each on its own line, values under it. */
+.md-typeset .wl-key ul.wl-rows.wl-long {
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 0;
+}
+
+.md-typeset .wl-key ul.wl-rows.wl-long .wl-id {
+  margin-top: 0.4em;
+}
+
+.md-typeset .wl-key ul.wl-rows.wl-long li:first-child .wl-id {
+  margin-top: 0;
 }
 
 .md-typeset .wl-key .wl-delta:empty {
   border-left: 0;
 }
 
-/* A tensor list wider than the column: one tensor per line, and no middots —
- * stacked entries are already separated by the line break.
- */
+/* A tensor list wider than the column: one tensor per line. */
 .md-typeset .wl-key .wl-shared.wl-stack {
   flex-direction: column;
   align-items: flex-start;
   gap: 0;
-}
-
-.md-typeset .wl-key .wl-shared.wl-stack .wl-cell + .wl-cell::before {
-  content: none;
-  margin-right: 0;
 }
 
 .md-typeset .wl-key .wl-id {

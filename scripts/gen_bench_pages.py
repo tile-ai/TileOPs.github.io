@@ -691,10 +691,9 @@ def _label_html(label: str) -> str:
 def _facts(spec, dtypes=()) -> OrderedDict:
     """Every scalar a workload sets but its dtype, as name -> (value, kind).
 
-    The symbols of the tensor templates come first, since those are the numbers
-    the shapes are made of; then the dimensions the manifest names outright,
-    then the parameters, which are how the op was called rather than how big it
-    is and stay dimmed wherever they are printed. A parameter set to one of
+    The symbols of the tensor templates come first, marked `sym` since a row's
+    concrete shapes already state them; then the dimensions the manifest names
+    outright, then the parameters, dimmed wherever they are printed. A parameter set to one of
     the row's `dtypes` — an `out_dtype` — is part of the case id, and the
     dtype column states it.
     """
@@ -703,7 +702,7 @@ def _facts(spec, dtypes=()) -> OrderedDict:
         return facts
     if spec.symbolic:
         for name, value in spec.bindings.items():
-            facts[name] = (str(value), "dim")
+            facts[name] = (str(value), "sym")
     for name, value in spec.dims:
         facts.setdefault(name, (value, "dim"))
     for name, value in spec.params:
@@ -749,12 +748,16 @@ _TAG = __import__("re").compile(r"<[^>]+>")
 WRAP_TENSORS = 96
 
 
+# Past this a label wraps in the key's label column; its cluster stacks instead.
+LONG_LABEL = 32
+
+
 def _width(entries) -> int:
     """The characters an entry list takes, separators included."""
     return sum(len(_TAG.sub("", body)) + 3 for body, _ in entries)
 
 
-def _tensors_of(specs: list, bases: list):
+def _tensors_of(specs: list, bases: list, symbolic: bool = True):
     """One tensor list for every dtype a label ran at, or None if none exists.
 
     Returns `(kind, [(names, shape, dtype)])`: `kind` is `"sym"` where the
@@ -764,11 +767,11 @@ def _tensors_of(specs: list, bases: list):
     follows the row. A row's own dtype is `bases[i]`, the first one its dtype
     column shows, so a case named by an `out_dtype` marks every input not in
     it. Any other difference between the rows leaves no one list true for all
-    of them.
+    of them. `symbolic=False` asks for the concrete list alone.
     """
     if not all(specs):
         return None
-    lists = [("sym", s.symbolic) if s.symbolic else ("con", s.tensors)
+    lists = [("sym", s.symbolic) if symbolic and s.symbolic else ("con", s.tensors)
              for s in specs]
     kind, first = lists[0]
     if any(k != kind or [e[:2] for e in es] != [e[:2] for e in first]
@@ -790,7 +793,8 @@ def label_groups(workloads: list, metrics: list) -> list:
     """An op's rows, one group per label, groups clustered by shape.
 
     Returns clusters of groups, each group a dict of `label`, `facts` (the
-    scalars it was set to), `tensors` (see `_tensors_of`) and `rows`, a list of
+    scalars it was set to), `tensors` (see `_tensors_of`), `concrete` (the same
+    tensors with the symbols substituted) and `rows`, a list of
     `(dtype, metrics)`. The snapshot lists an op's rows in the manifest's
     order, and every level keeps the order it first meets its members in, so a
     size sweep reads in the order the manifest declares it.
@@ -823,9 +827,10 @@ def label_groups(workloads: list, metrics: list) -> list:
                 split.setdefault(repr(key), []).append(member)
             parts = list(split.values())
         for part in parts:
+            specs, bases = [mb[0] for mb in part], [mb[4] for mb in part]
             groups.append({"label": label, "facts": part[0][1],
-                           "tensors": _tensors_of([mb[0] for mb in part],
-                                                  [mb[4] for mb in part]),
+                           "tensors": _tensors_of(specs, bases),
+                           "concrete": _tensors_of(specs, bases, symbolic=False),
                            "rows": [(mb[2], mb[3]) for mb in part]})
 
     clusters = OrderedDict()
@@ -840,24 +845,24 @@ def label_groups(workloads: list, metrics: list) -> list:
 def workload_key(clusters: list) -> list:
     """What each label of an op's table ran on, listed above it.
 
-    An op's workloads are nearly the same run at several sizes, so what they
-    share is stated once — in the manifest's own symbols, `q k [B, H, DK]` — and
-    each label carries only the symbols that vary on it, then the dtypes it ran
-    at. Inside the table's first column the same shapes would squeeze the
-    measurements off the window.
-
-    Order follows the table's row groups.
+    Labels written in the same symbols share one template, `q, k: [B, H, DK]`,
+    stated once; each label prints its shapes substituted, `q, k: [1, 8, 128]`.
+    What every label of a cluster shares goes above them, only when there are
+    two or more. Order follows the table's row groups.
     """
     if not clusters:
         return []
     blocks = []
     for cluster in clusters:
-        facts = [OrderedDict(g["facts"]) for g in cluster]
+        facts = [OrderedDict((n, v) for n, v in g["facts"].items()
+                             if not (g["concrete"] and v[1] == "sym"))
+                 for g in cluster]
         for f, g in zip(facts, cluster, strict=True):
             dtypes = list(OrderedDict.fromkeys(d for d, _ in g["rows"]))
             f["dtype"] = (", ".join(dtypes), "dim")
-        shared = [n for n in facts[0]
-                  if all(f.get(n) == facts[0][n] for f in facts)]
+        shared = ([n for n in facts[0]
+                   if all(f.get(n) == facts[0][n] for f in facts)]
+                  if len(cluster) > 1 else [])
         # One cluster is one symbolic template, stated once above its labels.
         tensors = cluster[0]["tensors"]
         symbolic = tensors is not None and tensors[0] == "sym"
@@ -866,15 +871,17 @@ def workload_key(clusters: list) -> list:
 
         rows_html = []
         for group, fact in zip(cluster, facts, strict=True):
-            varies = [_fact_html(n, *v) for n, v in fact.items()
-                      if n not in shared]
-            # Without a template the group has nothing to hold in common, so
-            # the row states its own tensors outright.
-            if group["tensors"] and not symbolic:
-                varies = _tensors_html(group["tensors"][1], None) + varies
+            # A long row breaks between tensors and scalars before inside either.
+            tensor_cells = (_tensors_html(group["concrete"][1], None)
+                            if group["concrete"] else [])
+            scalar_cells = [_fact_html(n, *v) for n, v in fact.items()
+                            if n not in shared]
+            parts = "".join(f'<span class="wl-part">{_cells(c)}</span>'
+                            for c in (tensor_cells, scalar_cells) if c)
+            flow = f'<span class="wl-flow">{parts}</span>' if parts else ""
             rows_html.append(
                 f'<li><code class="wl-id">{_label_html(group["label"])}</code>'
-                f'<span class="wl-delta">{_cells(varies)}</span></li>')
+                f'<span class="wl-delta">{flow}</span></li>')
 
         block = []
         # Tensors and scalars on lines of their own: what the op takes, then how
@@ -885,7 +892,9 @@ def workload_key(clusters: list) -> list:
             block.append(f'<p class="wl-shared{stack}">{_cells(head)}</p>')
         if scalars:
             block.append(f'<p class="wl-shared">{_cells(scalars)}</p>')
-        block.append('<ul class="wl-rows">' + "".join(rows_html) + "</ul>")
+        long = any(len(g["label"]) > LONG_LABEL for g in cluster)
+        block.append(f'<ul class="wl-rows{" wl-long" if long else ""}">'
+                     + "".join(rows_html) + "</ul>")
         blocks.append(f'<div class="wl-group">{"".join(block)}</div>')
     return ['<div class="wl-key">', *blocks, "</div>", ""]
 
@@ -1082,7 +1091,8 @@ def reading_page(sol_engine=(None, None)) -> str:
         "key above each table spells each label out: every input tensor as "
         "`name: shape, dtype`, tensors sharing a shape named together, and a "
         "tensor in a dtype of its own — a `mask` in `bool` — saying so where it "
-        "is read. After the tensors come the dimensions the op is sized by "
+        "is read, and a template shared by several labels, `q, k: [B, H, DK]`, "
+        "stated once above them. After the tensors come the dimensions the op is sized by "
         "rather than shaped by (`m`, `n`, `k` for a GEMM, `num_experts` for MoE "
         "routing), then dimmed, the parameters the call did not leave at the "
         "signature's default, then the dtypes the label ran at. A quantity the "
