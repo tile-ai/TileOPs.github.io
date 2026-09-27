@@ -1219,12 +1219,16 @@ def main():
     # The snapshot names a workload but does not carry its shapes; the spec
     # manifest declares both, under the same label. Ops it does not declare
     # keep the benchmark's own id — see `workload_cell`.
-    manifest = (workload_shape.load_manifest(args.manifest_dir)
-                if os.path.isdir(args.manifest_dir) else {})
+    has_manifest = os.path.isdir(args.manifest_dir)
+    manifest = workload_shape.load_manifest(args.manifest_dir) if has_manifest else {}
+    parametric = workload_shape.Parametric(
+        args.tileops,
+        workload_shape.load_adts(args.manifest_dir) if has_manifest else {})
     undeclared = set()
     for w in workloads:
         entry = manifest.get(w["op"])
-        w["spec"] = workload_shape.describe(entry, w["config"]) if entry else None
+        w["spec"] = (workload_shape.describe(entry, w["config"], w["op"], parametric)
+                     if entry else None)
         if not w["spec"]:
             undeclared.add(w["op"])
 

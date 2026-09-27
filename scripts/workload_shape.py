@@ -6,7 +6,10 @@ The snapshot names a workload only by its pytest id
 manifest, the YAML files under ``src/tileops/manifest/``, addressed by the ``<label>-<dtype>``
 that id is built from.
 
-A workload entry carries its shapes one of two ways: ``<tensor>_shape`` keys
+An entry in the parametric format declares its shapes over type indices, and a
+row gives the indices and its ``dtype_cases``; TileOPs' own ``tileops.manifest``
+instantiates it, imported from the checkout. A legacy entry carries its shapes
+one of two ways: ``<tensor>_shape`` keys
 outright, or ``signature.inputs.<tensor>.shape`` templates evaluated against
 the workload's own scalars. Templates are read only where no shape is given
 outright — all or nothing, so a tensor list is never half the op's inputs.
@@ -23,6 +26,7 @@ import ast
 import glob
 import os
 import re
+import sys
 from collections import OrderedDict
 
 import yaml
@@ -69,16 +73,36 @@ class Spec:
 # --- Manifest ---------------------------------------------------------------
 
 
+# The file holding the algebraic data types entries share, not op entries.
+_TYPES_FILE = "types.yaml"
+
+
+def _yaml_files(directory: str) -> list[str]:
+    return sorted(glob.glob(os.path.join(directory, "**", "*.yaml"), recursive=True))
+
+
 def load_manifest(directory: str) -> dict:
     """Every op entry in the YAML files under a manifest directory, keyed by op name."""
     ops: dict[str, dict] = {}
-    for path in sorted(glob.glob(os.path.join(directory, "**", "*.yaml"), recursive=True)):
+    for path in _yaml_files(directory):
+        if os.path.basename(path) == _TYPES_FILE:
+            continue
         with open(path, encoding="utf-8") as fh:
             doc = yaml.safe_load(fh) or {}
         for op, entry in doc.items():
             if isinstance(entry, dict):
                 ops[op] = entry
     return ops
+
+
+def load_adts(directory: str) -> dict:
+    """The algebraic data types a manifest directory declares, or {} before it had any."""
+    for path in _yaml_files(directory):
+        if os.path.basename(path) == _TYPES_FILE:
+            with open(path, encoding="utf-8") as fh:
+                doc = yaml.safe_load(fh) or {}
+            return (doc.get("adts") or {}) if isinstance(doc, dict) else {}
+    return {}
 
 
 # --- Shape templates --------------------------------------------------------
@@ -338,8 +362,148 @@ def _pair_counts(items: list) -> list:
     return [(k, v) for k, v in folded if k not in dropped]
 
 
-def describe(entry: dict, config: str) -> Spec | None:
+# --- Parametric entries -----------------------------------------------------
+# An entry in the parametric format states its shapes over type indices
+# (`forall`), a row gives those indices and its dtypes as `dtype_cases`, and the
+# case id is built by TileOPs from both. That instantiation — type families,
+# `let`, generators, presence — is TileOPs' own, so it is imported from the
+# checkout rather than re-derived here; without it the row keeps its id alone.
+
+
+def is_parametric(entry: dict) -> bool:
+    """Whether an entry is in the parametric format rather than the legacy one."""
+    if "source" in entry:
+        return False
+    return not any(isinstance(w, dict) and "dtypes" in w
+                   for w in entry.get("workloads") or [])
+
+
+class Parametric:
+    """Resolves parametric workloads with the `tileops.manifest` of a checkout."""
+
+    def __init__(self, tileops: str, adts: dict):
+        self.tileops = tileops
+        self.adts = adts
+        self._tools = None
+        self._plans: dict[str, object] = {}
+
+    def _load(self):
+        if self._tools is None:
+            try:
+                src = os.path.join(self.tileops, "src")
+                if src not in sys.path:
+                    sys.path.insert(0, src)
+                from tileops.manifest import workload
+                from tileops.manifest.plan import entry_plan
+                self._tools = (entry_plan, workload)
+            except Exception as exc:  # noqa: BLE001 — degrade to ids alone
+                print(f"warning: parametric workloads keep their ids alone "
+                      f"(tileops.manifest not importable: {exc})", file=sys.stderr)
+                self._tools = False
+        return self._tools
+
+    def describe(self, op: str, entry: dict, config: str) -> Spec | None:
+        tools = self._load()
+        if not tools:
+            return None
+        entry_plan, workload = tools
+        try:
+            if op not in self._plans:
+                self._plans[op] = entry_plan(op, entry, self.adts, resolve=False)
+            plan = self._plans[op]
+        except Exception:  # noqa: BLE001 — a signature this checkout cannot read
+            return None
+        for row in entry.get("workloads") or []:
+            label = row.get("label") if isinstance(row, dict) else None
+            if not label or not config.startswith(label):
+                continue
+            for case in row.get("dtype_cases") or [{}]:
+                try:
+                    call = workload.instantiate(plan, row, case)
+                except Exception:  # noqa: BLE001 — a row this checkout rejects
+                    continue
+                if call.case_id == config:
+                    return _parametric_spec(plan, row, call, workload)
+        return None
+
+
+def _fmt_param(value) -> str:
+    """A parameter as the row writes it; an ADT literal as `kind(field=value)`."""
+    if isinstance(value, dict) and len(value) == 1:
+        ((kind, fields),) = value.items()
+        inner = ",".join(f"{k}={_fmt_param(v)}" for k, v in (fields or {}).items())
+        return f"{kind}({inner})"
+    if isinstance(value, tuple):
+        value = list(value)
+    return _fmt_value(value)
+
+
+def _symbolic_branch(plan, row, call, workload):
+    """Each present input's shape in the manifest's symbols, type families expanded.
+
+    None when the branch cannot be rebuilt, so the row prints concrete shapes.
+    """
+    sig = plan.sig
+    try:
+        scope = {p: workload._convert(sig, p, row[p] if p in row
+                                      else sig.params[p].get("default"))
+                 for p in sig.params}
+        point = workload._point(sig, scope, set(row.get("some", [])))
+        shapes = plan.branch(point).shapes
+    except Exception:  # noqa: BLE001 — private helpers of another repository
+        return None
+    out = {}
+    for name in sig.inputs:
+        node = shapes.get(name)
+        if call.specs.get(name) is None:
+            continue
+        if node is None:
+            return None
+        out[name] = "[" + ", ".join(ast.unparse(e) for e in node.elts) + "]"
+    return out
+
+
+def _parametric_spec(plan, row, call, workload) -> Spec:
+    sig = plan.sig
+    present = [(n, call.specs[n]) for n in sig.inputs if call.specs.get(n) is not None]
+    dtypes = [spec.dtype for _, spec in present]
+    # The row's dtype is the one most of its inputs take, so the tensors in
+    # another one are the ones that say so.
+    dtype = max(dtypes, key=dtypes.count) if dtypes else None
+    # A tensor carries a dtype of its own only where it differs, so rows at
+    # another dtype still share one symbolic description.
+    shapes = [(n, list(spec.shape), None if spec.dtype == dtype else spec.dtype)
+              for n, spec in present]
+    tensors = _group_tensors((n, fmt_shape(d), dt) for n, d, dt in shapes)
+
+    symbolic, bindings = None, OrderedDict()
+    sym = _symbolic_branch(plan, row, call, workload)
+    if sym is not None and len(sym) == len(present):
+        for text in sym.values():
+            for node in ast.walk(ast.parse(text, mode="eval")):
+                if isinstance(node, ast.Name) and node.id in call.ix:
+                    value = call.ix[node.id]
+                    bindings[node.id] = (fmt_shape(value)
+                                         if isinstance(value, (tuple, list)) else value)
+        symbolic = _group_tensors((n, sym[n], dt) for n, _, dt in shapes)
+
+    dims, params = [], []
+    for key, value in row.items():
+        if key in ("some", "dtype_cases", "label") or key in bindings:
+            continue
+        if key in sig.forall:
+            dims.append((key, _fmt_param(value)))
+        elif key in sig.params:
+            if value != sig.params[key].get("default"):
+                params.append((key, _fmt_param(value)))
+    return Spec(row.get("label"), dtype, tensors, dims, params, symbolic, bindings)
+
+
+def describe(entry: dict, config: str, op: str | None = None,
+             parametric: Parametric | None = None) -> Spec | None:
     """Describe one benchmarked workload, or None if the manifest lacks it."""
+    if is_parametric(entry):
+        return parametric.describe(op, entry, config) if parametric and op else None
     found = _workload_of(entry, config)
     if not found:
         return None

@@ -151,3 +151,35 @@ def test_the_package_decides_the_family_not_a_word_in_the_name():
     assert g.family_of("GemmOp", "tileops.ops.gemm.gemm") == "linear_algebra"
     # An op defined in a module rather than a package still falls through.
     assert g.family_of("RmsNormFwdOp", None) == "normalization"
+
+
+def test_a_parametric_row_resolves_through_the_tileops_checkout():
+    # The parametric format is instantiated by TileOPs itself, so this needs a
+    # checkout: `./TileOPs`, or the one `TILEOPS` names.
+    tileops = os.environ.get("TILEOPS", os.path.join(REPO, "TileOPs"))
+    if not os.path.isdir(os.path.join(tileops, "src", "tileops", "manifest")):
+        pytest.skip("no TileOPs checkout to instantiate parametric rows with")
+    entry = {
+        "family": "gemm", "status": "implemented",
+        "signature": {
+            "types": {"Mat": {"params": {"t": "Bool", "R": "Dim", "C": "Dim"},
+                              "match": "t",
+                              "cases": [{"when": False, "is": "[R, C]"},
+                                        {"when": True, "is": "[C, R]"}]}},
+            "forall": {"M": "Dim", "N": "Dim", "K": "Dim",
+                       "T": "DType[float16 | bfloat16]"},
+            "params": {"trans_b": {"type": "bool", "default": True}},
+            "inputs": {"a": {"dtype": "T", "shape": "[M, K]"},
+                       "b": {"dtype": "T", "shape": "Mat[trans_b, K, N]"}},
+            "outputs": {"d": {"dtype": "T", "shape": "[M, N]"}}},
+        "workloads": [{"M": 16, "N": 32, "K": 64, "trans_b": False,
+                       "dtype_cases": [{"T": "bfloat16"}], "label": "nn"}],
+        "roofline": {"flops": "2 * M * N * K"},
+    }
+    spec = ws.describe(entry, "nn-bfloat16", "GemmFwdOp", ws.Parametric(tileops, {}))
+    # The type family is expanded on the branch the row selects, and the case
+    # id is TileOPs' own: a dtype the row does not assign names no workload.
+    assert spec.symbolic == [("a", "[M, K]", None), ("b", "[K, N]", None)]
+    assert dict(spec.bindings) == {"M": 16, "K": 64, "N": 32}
+    assert spec.params == [("trans_b", "false")]
+    assert ws.describe(entry, "nn-float16", "GemmFwdOp", ws.Parametric(tileops, {})) is None
