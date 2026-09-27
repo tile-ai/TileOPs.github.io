@@ -7,32 +7,24 @@ The spec goes first: it decides what the other five files contain, and in the en
 they are checked against. **The spec is this pipeline's input, and the other five are written
 from it.**{ .keystone }
 
-| # | File | Named in the spec by | Contents |
+| # | File | Held to the spec by | Contents |
 | --- | --- | --- | --- |
-| 1 | [`src/tileops/manifest/spec/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest/spec)`<family>.yaml` | the key is the op's class name | the spec itself |
-| 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/…` | `source.op` | the op class, subclassing `Op` |
-| 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/__init__.py` and [`src/tileops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops)`<family>.py` | — | the op's name, exported by its family and on the public path `tileops.<family>.<Op>` |
-| 3 | [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)`<family>/…` | `source.kernel` | the kernel class, subclassing `Kernel` |
-| 4 | [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)`test_<name>.py` | `source.test` | the comparison against `ref_api` |
-| 5 | [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)`bench_<name>.py` | `source.bench` | the benchmark |
+| 1 | [`src/tileops/manifest/spec/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest/spec)`<family>.yaml` | the validator's `schema` and `signature` levels | the spec itself |
+| 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/…` | the validator, against `__init__`, `forward` and the declared kernels; the checks generated around every call | the op class, subclassing `Op` |
+| 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/__init__.py` and [`src/tileops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops)`<family>.py` | the validator: the family's `__all__` agrees with the manifest | the op's name, exported by its family and on the public path `tileops.<family>.<Op>` |
+| 3 | [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)`<family>/…` | — | the kernel classes, subclassing `Kernel` |
+| 4 | [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)`test_<name>.py` | the contract tests, which run every workload row | the comparison against `ref_api` |
+| 5 | [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)`bench_<name>.py` | the validator's `bench` level | the benchmark |
 
 `GemmFwdOp` — the plainest matmul there is — runs through all six below.
 
 ## Step 1: write the spec
 
-What the fields mean and how to write them is in [writing a spec](manifest.md). Two things
-are specific to a new op.
+What the fields mean and how to write them is in [writing a spec](manifest.md). A new op
+starts at `status: spec-only`: the interface is settled and there is no implementation
+yet, so the checks that read code are skipped and do not fail over the missing class.
 
-The first is the status. A new op starts at `status: spec-only`, meaning the interface is
-settled and there is no implementation yet, so validation runs L0 — the structure check —
-and does not fail over the missing code.
-
-The second is `source.kernel_map`, the one field in the spec that nothing can derive.
-
-An op may have more than one kernel behind it: GEMM uses a matmul kernel at general
-shapes, and at M = 1 the problem degenerates to a matrix-vector product that a different
-kernel does faster. `kernel_map` is the roster of those kernels — a name for each, against
-the Kernel class that implements it:
+`GemmFwdOp`'s spec, with one of its workload rows:
 
 ```yaml
 GemmFwdOp:
@@ -40,195 +32,154 @@ GemmFwdOp:
   family: gemm
   status: spec-only
   signature:
-    inputs:
-      a: {dtype: "float16 | bfloat16"}
-      b: {dtype: "same_as(a)"}
-    outputs:
-      d: {dtype: "same_as(a)"}
+    types:
+      Mat:
+        params: {t: Bool, R: Dim, C: Dim}
+        match: t
+        cases:
+          - {when: false, is: "[R, C]"}
+          - {when: true, is: "[C, R]"}
+    forall: {M: Dim, N: Dim, K: Dim, T: "DType[float16 | bfloat16]"}
     params:
       trans_a: {type: bool, default: false}
       trans_b: {type: bool, default: true}
-    shape_rules:
-      - "d.shape == ((a.shape[1] if trans_a else a.shape[0]), (b.shape[0] if trans_b else b.shape[1]))"
-  source:
-    kernel: tileops/kernels/gemm/dense.py
-    kernel_map:
-      gemm_kernel: GemmKernel
-      gemv_kernel: GemvKernel
-    op: tileops/ops/gemm/gemm.py
-    test: tests/ops/test_gemm.py
-    bench: benchmarks/ops/bench_gemm.py
+    inputs:
+      a: {dtype: T, shape: "Mat[trans_a, M, K]"}
+      b: {dtype: T, shape: "Mat[trans_b, K, N]"}
+    outputs:
+      d: {dtype: T, shape: "[M, N]"}
+  workloads:
+    - {M: 4096, N: 4096, K: 7168, trans_a: false, trans_b: true,
+       dtype_cases: [{T: float16}, {T: bfloat16}], label: ds-v3-prefill-attn-proj}
+  roofline:
+    flops: "2 * M * N * K"
 ```
 
-Those names are how a kernel is asked for at runtime: `_eager_forward` picks one, passes
-the name to `kernel_for`, and the op layer looks the class up in `kernel_map` and
-builds it (see [step 2](#op-class)). An external backend registers against the same roster
-— whichever name it registers a `build_kernel` for is the kernel of the op it takes over.
-
-The names are yours to choose, they should say what the kernel is for, and once the op code
-uses one it should not change: it is the word the spec, the op and any backend all agree
-on. That is also why nothing can derive it — only whoever writes the kernels knows how many
-cases the op splits into.
+The spec names no file and no kernel: which kernels serve the op is a fact of the code,
+declared on the op class in step 2.
 
 ## Step 2: write the op class {#op-class}
 
-The op class subclasses [`Op`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops/op_base.py) and sits between the spec and the kernel: it validates the
-arguments against the spec, infers the output shapes, then fetches a kernel and launches
-it. It comes first because the spec dictates all of it, and the line where it builds a
-kernel is what fixes that kernel's constructor signature.
+The op class subclasses [`Op`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops/op_base.py) and sits between the spec and the kernel. The checks
+around every call — dtypes, shapes, the refinements, output shape inference — are
+generated from the signature when the class is defined, so the class writes none of them.
+What it writes is how a call reaches a kernel.
 
-### The class, and its four members
+### The class, and its members
 
-`GemmFwdOp`'s skeleton, with the parts of each body that are beside the point elided:
+`GemmFwdOp`'s skeleton, docstrings elided:
 
 ```python
 class GemmFwdOp(Op):
-    def __init__(self, trans_a=False, trans_b=True, kernel_map=None, tune=False):
-        self.trans_a, self.trans_b, self.tune = trans_a, trans_b, tune
-        self.dispatch_kernel(kernel_map)             # establishes this instance's kernel_map
+    compile_boundary: ClassVar[bool] = True           # optional: claims fullgraph=True
+    kernel_types: ClassVar[Mapping[str, type[Kernel]]] = {
+        "gemm_tma_kernel": GemmTmaKernel,
+        "gemm_cp_async_kernel": GemmCpAsyncKernel,
+        "gemv_kernel": GemvKernel,
+    }
 
-    @property
-    def default_kernel_map(self):                    # the spec's source.kernel_map
-        return {"gemm_kernel": GemmKernel, "gemv_kernel": GemvKernel}
-
-    def _infer_output_shapes(self, a_shape, b_shape):
-        m = a_shape[1] if self.trans_a else a_shape[0]
-        n = b_shape[0] if self.trans_b else b_shape[1]
-        return {"d": (m, n)}                         # the spec's shape_rules
+    def __init__(self, trans_a=False, trans_b=True, *, target=None, kernel_map=None, tune=False):
+        self.trans_a, self.trans_b = trans_a, trans_b
+        self.target, self.tune = target, tune
+        self.dispatch_kernel(kernel_map)              # installs this instance's kernel map
 
     def forward(self, a, b):
-        self._validate_dtypes(a, b)                  # generated by the base class
-        m, n, k = self._infer_mnk(a, b)
-        a, b = a.contiguous(), b.contiguous()        # handed over as the spec declares it
-        role = "gemv_kernel" if m == 1 else "gemm_kernel"
+        return self._call_boundary(a, b)              # the generated operator
+
+    def _eager_forward(self, a, b):                   # the generated checks have run
+        a, b = a.contiguous(), b.contiguous()         # handed over as the spec declares it
+        m, k = (a.shape[1], a.shape[0]) if self.trans_a else a.shape
+        n = b.shape[0] if self.trans_b else b.shape[1]
         kernel = self.kernel_for(
-            role,                                    # a name from kernel_map
-            (a, b),                                  # what a backend is described with
-            (m, n, k, a.dtype),                      # what this call is
+            "gemm",                                   # the memoization bucket
+            (a, b),                                   # the tensors the kernel gets
+            self._call_spec(m, n, k, a.dtype, a.device),  # what this call is
         )
         return kernel(a, b)
-
-    def entry_for(self, role, call):                 # the in-tree recipe
-        m, n, k, dtype = call
-        return call, lambda: self.kernel_map[role](m, n, k, dtype, tune=self.tune)
 ```
-
-Five members to write, the first four of them from the spec:
 
 | # | Member | Written from |
 | --- | --- | --- |
-| 1 | `__init__` | the names and defaults in `signature.params`, plus `kernel_map` and `tune`, closing with `self.dispatch_kernel(kernel_map)` to establish this instance's kernel_map |
-| 2 | `default_kernel_map` | `source.kernel_map`: the same names, against the Kernel classes themselves |
-| 3 | `_infer_output_shapes` | the rules in `signature.shape_rules` that derive an output's shape |
-| 4 | `forward` | `signature.inputs` — its order and defaults, optional inputs last — plus the validation, the contiguity, fetching the kernel and launching it |
-| 5 | `entry_for` | what two calls must share to reuse one kernel, and how that kernel is built |
+| 1 | `__init__` | the names, order and defaults in `signature.params`, then `target`, `kernel_map` and `tune`, closing with `self.dispatch_kernel(kernel_map)` |
+| 2 | `kernel_types` | the Kernel classes that can serve the op, each under a name; a `kernel_map=` override replaces one by that name |
+| 3 | `forward` | `signature.inputs` — its order, optional inputs last with default `None` |
+| 4 | `_eager_forward` | contiguity, the call record, fetching the kernel and launching it |
+| 5 | `compute_roof` | optional: the GPU-profile unit that prices the op's FLOPs, where it is not CUDA-core fp32 |
 
-Two more members arrive on their own. When the subclass is defined, the base class
-synthesises `_validate_dtypes` and `eval_roofline` from the spec's dtype declarations and
-its `roofline`, so they are there to call — and worth overriding only where the op needs
-something the spec cannot say.
+`_infer_output_shapes`, `_validate_dtypes` and `eval_roofline` are generated from the spec
+and are not written.
 
-### `kernel_for` and `entry_for`
+An op without a compile boundary writes the body of `_eager_forward` in `forward` itself;
+declaring the boundary moves it behind the generated operator. How that works is in
+[bringing an op into torch.compile](torch-compile.md).
+
+### `kernel_for`, and choosing among kernels
 
 A kernel is a compiled artefact, hundreds of milliseconds to seconds to build, while an op
 instance is called over and over at different shapes and dtypes. The op layer therefore
 keeps a memo table: a kernel this call needs and has built before comes straight back,
-and only otherwise is one built and stored. `kernel_for` is that table's only entrance,
-and the point where the in-tree implementation and an external backend part ways — the
-second layer of selection in [the backend protocol](backends.md).
+and only otherwise is one built and stored. `kernel_for` is that table's only entrance on
+the in-tree path; a [target](backends.md) serves the whole op instead and never reaches it.
 
 Its three arguments:
 
-**`role`** — which of this op's kernels the call wants, as a name from `kernel_map`.
+- **`role`** — the memoization bucket, one per kernel the op runs per call. `GemmFwdOp`
+  runs one, so it has one role, whichever of its three classes serves the call.
+- **`inputs`** — the tensors the kernel is about to be handed, in `signature.inputs`
+  order, one slot per input. An optional input that was not passed keeps its slot as
+  `None`.
+- **`call`** — what this call is. `GemmCall` carries every fact the GEMM kernels read:
+  `m`, `n`, `k`, the dtype, the layout, the device.
+
+Which class serves a call is decided by the classes, not the op. Each states the region
+it serves (`applies`, `refusal`), one is marked `general` for everything else, and two
+specialised classes claiming one call is an error, never a silent preference. The chosen
+class's `entry_for(call)` returns the **identity** two calls must share to reuse one
+kernel, and the **builder** that runs once per identity. Carry too little in the identity
+and a second dtype reuses the first dtype's kernel; carry the whole shape where the kernel
+depends on fewer quantities and it compiles once per distinct shape.
+
+An op with a single kernel and no call record writes `entry_for(role, call)` on the op
+itself and states the identity and builder there, as `RMSNormFwdOp` does:
 
 ```python
-role = "gemv_kernel" if m == 1 else "gemm_kernel"
+def entry_for(self, role, call):                    # call is the input dtype
+    n = math.prod(self.normalized_shape)
+    eps = torch.finfo(torch.float32).eps if self.eps is None else float(self.eps)
+    return call, lambda: self.kernel_map["rms_norm"](n, eps, call, tune=self.tune)
 ```
 
-The in-tree side looks up the Kernel class under that name; a backend looks up the
-`build_kernel` it registered under it. A role is a memoization bucket, one per kernel the
-op runs — never the name of the implementation selection picked for this call.
+An op with no in-tree implementation, written to depend on a backend, leaves out both
+`kernel_types` and `entry_for`; a call on a device no target claims then raises
+`OpNotAvailableError`.
 
-**`inputs`** — the tensors the kernel is about to be handed, in `signature.inputs` order,
-one slot per input.
+### Registering
 
-```python
-self.kernel_for(role, (a, b), ...)                     # GEMM: two required inputs
-self.kernel_for("group_norm", (x, weight, bias), ...)  # an absent optional input is None
-```
-
-The external path keys on it — the device, plus each slot's `(dtype, shape)`. The device
-counts because an artefact compiled for one card may hold resources on it. A backend's
-`build_kernel` receives the same tensors as `TensorSpec`s: device, dtype, shape, no
-data.
-
-An optional input that was not passed keeps its slot, as `None`; that is what a backend
-reads presence off, rather than counting slots. Squeeze the empty slots out, and a clamp
-with only a lower bound looks exactly like one with only an upper bound.
-
-**`call`** — what this call is, in whatever form the op's own `entry_for` reads. An op
-that selects among several implementations passes the record its family defines; an op
-with one implementation passes the few values its kernel is built from.
-
-`entry_for(role, call)` answers with the pair the memo table needs. What becomes of it
-once a backend serves the op is in [how one call reaches
-`build_kernel`](backends.md#from-op-layer).
-
-```python
-def entry_for(self, role, call):
-    m, n, k, dtype = call
-    return call, lambda: self.kernel_map[role](m, n, k, dtype, tune=self.tune)
-```
-
-The **identity** it returns first is what two calls must share to be one entry: the
-construction arguments, plus the device wherever the constructor could produce a different
-object on another card. Carry too little and a second dtype reuses the first dtype's
-kernel; carry the whole shape where the kernel depends on fewer quantities and you compile
-once per distinct shape.
-
-The **builder** it returns second runs once per identity, which is why compiling belongs
-inside it. It may return one Kernel, a sequence of Kernels built together, or a dataclass
-carrying them — the last two suit an op that launches several kernels per call.
-
-An op that selects among candidate Kernel classes writes no `entry_for` at all: the
-default asks the class selection chose, which states its own identity and builder. An op
-with no in-tree implementation, written to depend on a backend, leaves both out; a call on
-a device no target claims then raises `OpNotAvailableError`.
-
-### Finishing: the compile boundary, and registering
-
-Two things to finish, a few lines each:
-
-- **To support `torch.compile`**, declare a compile boundary as well: `forward` only calls
-  the opaque operator, and the validation, the kernel lookup and the launch move into
-  `_eager_forward`. The operator itself is generated from the spec, so declaring the
-  boundary is one class attribute. The op above declares none, so its `forward` holds all
-  the work. How to declare it is in [bringing an op into torch.compile](torch-compile.md).
-- **Add the op's name** to the imports and `__all__` in two places: its family's
-  [`src/tileops/ops/<family>/__init__.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops), where the class
-  is implemented, and [`src/tileops/<family>.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops), the public
-  path. Without the second, `from tileops.<family> import ...` will not find the op and
-  the API reference cannot collect it.
+Add the op's name to the imports and `__all__` in two places: its family's
+[`src/tileops/ops/<family>/__init__.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops),
+where the class is implemented, and
+[`src/tileops/<family>.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops), the public path.
+Without the second, `from tileops.<family> import ...` will not find the op and the API
+reference cannot collect it.
 
 ## Step 3: write the kernel
 
 A kernel class subclasses [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py), lives under [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels), is written in
-TileLang, compiles at construction and launches on `__call__`. Its constructor and call
-signatures are the ones step 2 just used — the `build` lambda and the `kernel(a, b)` that
-follows it.
+TileLang, compiles at construction and launches on `__call__`. Its constructor is what its
+`entry_for` builder calls, and its call signature is the `kernel(a, b)` of step 2.
 
 This is the one place of the six the spec does not constrain: a kernel neither reads the
-spec nor is checked against it, and the spec records only its path and class name.
+spec nor is checked against it.
 
 How the constructor and the call divide their arguments is a hard requirement: **only
-values compiled into the generated code go in the constructor.** `GemmKernel` divides them
-like this:
+values compiled into the generated code go in the constructor.** `GemmTmaKernel` divides
+them like this:
 
 ```python
-class GemmKernel(Kernel):
-    def __init__(self, m, n, k, dtype, config=None, tune=False, trans_a=False, trans_b=False):
-        self.kernel = _gemm_kernel(m, n, k, trans_a, trans_b, self.dtype_str)  # this line compiles
-        self.init_config(config, tune)      # block_m / block_n / block_k / num_stages
+class GemmTmaKernel(Kernel):
+    def __init__(self, m, n, k, dtype, config=None, tune=False, trans_a=False, trans_b=False, ...):
+        self.kernel = _gemm_kernel(m, n, k, trans_a, trans_b, self.dtype_str, ...)  # compiles
+        self.init_config(config, tune)      # tile sizes and pipeline depth
 
     def __call__(self, a, b):               # a call passes tensors, nothing else
         ...
@@ -236,8 +187,8 @@ class GemmKernel(Kernel):
 
 `m`, `n`, `k`, the dtype and the two layout flags are constructor arguments because the
 generated code treats them as constants: loop bounds, TMA descriptors and the WGMMA shape
-all unroll from them, as do the tile sizes (`block_m` and the rest). The tensors belong to
-`__call__`, where each call swaps pointers.
+all unroll from them, as do the tile sizes. The tensors belong to `__call__`, where each
+call swaps pointers.
 
 Dividing them wrong costs a recompile. A decode step advances one token at a time, so
 `seq_len` grows by one every step and batch changes with the running set:
@@ -256,9 +207,10 @@ misses, every step compiles, and decode goes nowhere.
 
 ## Step 4: write the test
 
-Tests live in [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops), and what they compare against is the spec's `ref_api`, point
-by point, over the shapes and dtypes the spec declares — small shapes marked `smoke` for
-the PR checks, large ones `full` for the nightly.
+Tests live in [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops) and compare against the spec's `ref_api`, over shapes the test
+chooses to reach the kernel's branches — small shapes marked `smoke` for the PR checks,
+large ones `full` for the nightly. The workload rows are not unit-test coverage; the
+contract tests already run each of them through the op.
 
 The scaffolding is `TestBase` and `FixtureBase` from
 [`tests/test_base.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/test_base.py), with the cases in `PARAMS`.
@@ -268,15 +220,19 @@ run different kernels.
 
 ## Step 5: write the benchmark
 
-Benchmarks live in [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops) and subclass `ManifestBenchmark`. The shapes are not
-written here: they come from the spec's `workloads` through `load_workloads(<op>)`, and
-hand-written shapes fail L4 validation:
+Benchmarks live in [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops) and subclass `ManifestBenchmark`. The calls are not
+written here: `manifest_calls(<Op>)` instantiates each workload row with each of its dtype
+cases and ids the case by its case id, and the validator's `bench` level fails a benchmark
+that writes its own:
 
 ```python
-from benchmarks.benchmark_base import ManifestBenchmark, workload_params
-from tileops.manifest import load_workloads
+from benchmarks.benchmark_base import ManifestBenchmark, manifest_calls
+from tileops.ops import GemmFwdOp
 
-_OP_NAME = "GemmFwdOp"
+
+@pytest.mark.parametrize("call", manifest_calls(GemmFwdOp))
+def test_gemm_bench(call) -> None:
+    ...
 ```
 
 Record at least one non-TileOPs baseline as well, or the row has nothing to compare
@@ -288,15 +244,14 @@ timed region. What the reported numbers mean is in [how a benchmark is timed](ti
 With the other five written, check your own work with the three commands below:
 
 ```bash
-python scripts/validate_manifest.py --check-op GemmFwdOp   # spec and code agree, all five levels
+python scripts/validate_manifest.py --check-op GemmFwdOp   # spec and code agree
 python -m pytest tests/ops/test_gemm.py -v                # numerics match ref_api
 python -m pytest benchmarks/ops/bench_gemm.py             # the benchmark produces numbers
 ```
 
 With all three passing, flip the spec's `status` from `spec-only` to `implemented`. That
-one edit takes validation from L0 to all five levels and puts the op inside CI's reach:
-every later change is held against the spec by the validator, the tests and the nightly
-benchmark.
+one edit turns on the checks that read code and puts the op inside CI's reach: every later
+change is held against the spec by the validator, the tests and the nightly benchmark.
 
 ## Afterwards
 

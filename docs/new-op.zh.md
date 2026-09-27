@@ -4,26 +4,22 @@
 
 其中 spec 要第一个写：后面五个文件的内容都由它决定，最后也都由它校验。**spec 是这条流程的输入，其余五处都是照它写出来的。**{ .keystone }
 
-| # | 文件 | spec 里由谁指名 | 内容 |
+| # | 文件 | 由谁对照 spec 检查 | 内容 |
 | --- | --- | --- | --- |
-| 1 | [`src/tileops/manifest/spec/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest/spec)`<family>.yaml` | 顶层的名字就是算子类名 | spec 本身 |
-| 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/…` | `source.op` | 算子类，继承 `Op` |
-| 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/__init__.py` 与 [`src/tileops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops)`<family>.py` | —— | 算子名，由所属家族导出，并出现在公开路径 `tileops.<family>.<Op>` 上 |
-| 3 | [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)`<family>/…` | `source.kernel` | kernel 类，继承 `Kernel` |
-| 4 | [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)`test_<名字>.py` | `source.test` | 与 `ref_api` 的数值比对 |
-| 5 | [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)`bench_<名字>.py` | `source.bench` | benchmark |
+| 1 | [`src/tileops/manifest/spec/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest/spec)`<family>.yaml` | 校验器的 `schema` 与 `signature` 两级 | spec 本身 |
+| 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/…` | 校验器对照 `__init__`、`forward` 与声明的 kernel；每次调用前后生成的检查 | 算子类，继承 `Op` |
+| 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/__init__.py` 与 [`src/tileops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops)`<family>.py` | 校验器：家族的 `__all__` 与 manifest 一致 | 算子名，由所属家族导出，并出现在公开路径 `tileops.<family>.<Op>` 上 |
+| 3 | [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)`<family>/…` | —— | kernel 类，继承 `Kernel` |
+| 4 | [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)`test_<名字>.py` | 契约测试，逐个跑每个 workload 行 | 与 `ref_api` 的数值比对 |
+| 5 | [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)`bench_<名字>.py` | 校验器的 `bench` 级 | benchmark |
 
 下文以最简单的矩阵乘 `GemmFwdOp` 为例走一遍这六处。
 
 ## 第一步：写 spec
 
-spec 各字段的含义与写法见[读写 manifest](manifest.md)，这里只说新算子特有的两件事。
+spec 各字段的含义与写法见[读写 manifest](manifest.md)。新算子先写成 `status: spec-only`，表示接口已经定下来、实现还没有，这时需要读代码的检查都跳过，不会因为找不到类而报错。
 
-第一件是状态。新算子先写成 `status: spec-only`，表示接口已经定下来、实现还没有，这时校验只跑 L0（结构检查），不会因为找不到实现而报错。
-
-第二件是 `source.kernel_map`，这份 spec 里唯一推导不出来的字段。
-
-一个算子可能对应多个 kernel：GEMM 在一般形状下用矩阵乘的 kernel，M 为 1 时退化成矩阵向量乘，换另一个 kernel 更快。`kernel_map` 就是这几个 kernel 的名单，每个 kernel 起一个名字，对应它的 Kernel 类：
+`GemmFwdOp` 的 spec，workload 只列一行：
 
 ```yaml
 GemmFwdOp:
@@ -31,151 +27,126 @@ GemmFwdOp:
   family: gemm
   status: spec-only
   signature:
-    inputs:
-      a: {dtype: "float16 | bfloat16"}
-      b: {dtype: "same_as(a)"}
-    outputs:
-      d: {dtype: "same_as(a)"}
+    types:
+      Mat:
+        params: {t: Bool, R: Dim, C: Dim}
+        match: t
+        cases:
+          - {when: false, is: "[R, C]"}
+          - {when: true, is: "[C, R]"}
+    forall: {M: Dim, N: Dim, K: Dim, T: "DType[float16 | bfloat16]"}
     params:
       trans_a: {type: bool, default: false}
       trans_b: {type: bool, default: true}
-    shape_rules:
-      - "d.shape == ((a.shape[1] if trans_a else a.shape[0]), (b.shape[0] if trans_b else b.shape[1]))"
-  source:
-    kernel: tileops/kernels/gemm/dense.py
-    kernel_map:
-      gemm_kernel: GemmKernel
-      gemv_kernel: GemvKernel
-    op: tileops/ops/gemm/gemm.py
-    test: tests/ops/test_gemm.py
-    bench: benchmarks/ops/bench_gemm.py
+    inputs:
+      a: {dtype: T, shape: "Mat[trans_a, M, K]"}
+      b: {dtype: T, shape: "Mat[trans_b, K, N]"}
+    outputs:
+      d: {dtype: T, shape: "[M, N]"}
+  workloads:
+    - {M: 4096, N: 4096, K: 7168, trans_a: false, trans_b: true,
+       dtype_cases: [{T: float16}, {T: bfloat16}], label: ds-v3-prefill-attn-proj}
+  roofline:
+    flops: "2 * M * N * K"
 ```
 
-算子在运行时按这些名字取 kernel：`_eager_forward` 里挑出用哪一个，把名字传给 `kernel_for`，算子层再从 `kernel_map` 找到对应的类去构造（见[第二步](#op-class)）。外部后端也是照这份名单注册的 —— 它为哪个名字注册 `build_kernel`，就接管了算子的哪一个 kernel。
-
-名字自己起，但要和 kernel 的用途对得上，而且写进算子代码之后就不该再改：它同时是 spec、算子实现与外部后端三方约定的那个词。这也是它推导不出来的原因 —— 只有写 kernel 的人知道这个算子要分几种情形。
+spec 不写文件路径，也不写 kernel：由哪些 kernel 服务这个算子是代码里的事，在第二步的算子类上声明。
 
 ## 第二步：写算子类 {#op-class}
 
-算子类继承 [`Op`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops/op_base.py)，是 spec 与 kernel 之间的一层：它按 spec 校验入参、推导输出形状，再取到 kernel 并 launch。先写它，是因为它的内容全部由 spec 决定，而它调用 kernel 的那一行同时定下了 kernel 的构造签名。
+算子类继承 [`Op`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops/op_base.py)，是 spec 与 kernel 之间的一层。每次调用前后的检查 —— dtype、形状、约束、输出形状推导 —— 都在类定义时照签名生成，算子类一条也不写。它要写的是一次调用怎么走到 kernel。
 
-### 类的骨架与四个成员
+### 类的骨架与成员
 
-`GemmFwdOp` 的骨架，方法体略去与本页无关的部分：
+`GemmFwdOp` 的骨架，略去 docstring：
 
 ```python
 class GemmFwdOp(Op):
-    def __init__(self, trans_a=False, trans_b=True, kernel_map=None, tune=False):
-        self.trans_a, self.trans_b, self.tune = trans_a, trans_b, tune
-        self.dispatch_kernel(kernel_map)             # 建立 kernel_map，不可省略
+    compile_boundary: ClassVar[bool] = True           # optional: claims fullgraph=True
+    kernel_types: ClassVar[Mapping[str, type[Kernel]]] = {
+        "gemm_tma_kernel": GemmTmaKernel,
+        "gemm_cp_async_kernel": GemmCpAsyncKernel,
+        "gemv_kernel": GemvKernel,
+    }
 
-    @property
-    def default_kernel_map(self):                    # spec 的 source.kernel_map
-        return {"gemm_kernel": GemmKernel, "gemv_kernel": GemvKernel}
-
-    def _infer_output_shapes(self, a_shape, b_shape):
-        m = a_shape[1] if self.trans_a else a_shape[0]
-        n = b_shape[0] if self.trans_b else b_shape[1]
-        return {"d": (m, n)}                         # spec 的 shape_rules
+    def __init__(self, trans_a=False, trans_b=True, *, target=None, kernel_map=None, tune=False):
+        self.trans_a, self.trans_b = trans_a, trans_b
+        self.target, self.tune = target, tune
+        self.dispatch_kernel(kernel_map)              # installs this instance's kernel map
 
     def forward(self, a, b):
-        self._validate_dtypes(a, b)                  # 基类按 spec 生成，直接调用
-        m, n, k = self._infer_mnk(a, b)
-        a, b = a.contiguous(), b.contiguous()        # 按 spec 声明的形状交给 kernel
-        role = "gemv_kernel" if m == 1 else "gemm_kernel"
+        return self._call_boundary(a, b)              # the generated operator
+
+    def _eager_forward(self, a, b):                   # the generated checks have run
+        a, b = a.contiguous(), b.contiguous()         # handed over as the spec declares it
+        m, k = (a.shape[1], a.shape[0]) if self.trans_a else a.shape
+        n = b.shape[0] if self.trans_b else b.shape[1]
         kernel = self.kernel_for(
-            role,                                    # kernel_map 里的名字
-            (a, b),                                  # 后端按这些张量被描述
-            (m, n, k, a.dtype),                      # 本次调用是什么
+            "gemm",                                   # the memoization bucket
+            (a, b),                                   # the tensors the kernel gets
+            self._call_spec(m, n, k, a.dtype, a.device),  # what this call is
         )
         return kernel(a, b)
-
-    def entry_for(self, role, call):                 # 自带实现的构造方法
-        m, n, k, dtype = call
-        return call, lambda: self.kernel_map[role](m, n, k, dtype, tune=self.tune)
 ```
 
-要自己写的是这五个成员，前四个内容都从 spec 来：
-
-| # | 成员 | 照 spec 的哪一部分写 |
+| # | 成员 | 照什么写 |
 | --- | --- | --- |
-| 1 | `__init__` | `signature.params` 的名字与默认值，另加 `kernel_map` 与 `tune`；结尾调用 `self.dispatch_kernel(kernel_map)` 建立本实例的 kernel_map |
-| 2 | `default_kernel_map` | `source.kernel_map`：名字照抄，取值换成 Kernel 类本身 |
-| 3 | `_infer_output_shapes` | `signature.shape_rules` 里推导输出形状那几条 |
-| 4 | `forward` | `signature.inputs` 的顺序与默认值（可选输入排在必填之后），加上校验、连续化、取 kernel、launch kernel |
-| 5 | `entry_for` | 两次调用要共享哪些值才算同一个 kernel，以及这个 kernel 怎么构造 |
+| 1 | `__init__` | `signature.params` 的名字、顺序与默认值，再加 `target`、`kernel_map`、`tune`；结尾调用 `self.dispatch_kernel(kernel_map)` |
+| 2 | `kernel_types` | 能服务这个算子的 Kernel 类，各起一个名字；`kernel_map=` 按这个名字替换其中一个 |
+| 3 | `forward` | `signature.inputs` 的顺序，可选输入排在最后、默认 `None` |
+| 4 | `_eager_forward` | 连续化、调用记录、取 kernel、launch kernel |
+| 5 | `compute_roof` | 可选：给算子 FLOPs 定价的 GPU profile 单元，不是 CUDA core fp32 时才写 |
 
-另有两个成员不用写：`_validate_dtypes` 与 `eval_roofline` 由基类在子类定义时照 spec 的 dtype 声明与 `roofline` 生成并装上，直接调用即可，只有需要特殊行为时才自己覆写。
+`_infer_output_shapes`、`_validate_dtypes` 与 `eval_roofline` 都照 spec 生成，不用写。
 
-### `kernel_for` 与 `entry_for`
+不声明编译边界的算子，把 `_eager_forward` 的内容直接写在 `forward` 里；声明了边界，这些内容挪到生成的 operator 后面。做法见[接入 torch.compile](torch-compile.md)。
 
-kernel 是编译产物，构造一次要几百毫秒到几秒，而一个算子实例会被反复调用，形状与 dtype 各不相同。算子层因此维护一张记忆表：本次调用要的 kernel 已经构造过就取回来，没有才构造并存进去。`kernel_for` 是这张表唯一的入口，也是自带实现与外部后端的分岔点（[后端协议](backends.md)里的第二层选择）。
+### `kernel_for` 与 kernel 的选择
+
+kernel 是编译产物，构造一次要几百毫秒到几秒，而一个算子实例会被反复调用，形状与 dtype 各不相同。算子层因此维护一张记忆表：本次调用要的 kernel 已经构造过就取回来，没有才构造并存进去。`kernel_for` 是自带实现走到这张表的唯一入口；[target](backends.md) 服务的是整个算子，不经过它。
 
 三个参数：
 
-**`role`** —— 本次要这个算子的哪一个 kernel，取值是 `kernel_map` 里的名字。
+- **`role`**：记忆表的桶，算子一次调用跑几个 kernel 就有几个。`GemmFwdOp` 只跑一个，所以只有一个 role，不论三个类中哪一个服务这次调用。
+- **`inputs`**：即将传给 kernel 的张量，顺序照 `signature.inputs`，一个输入占一个位置。没传的可选输入留下位置，值为 `None`。
+- **`call`**：本次调用是什么。`GemmCall` 带着 GEMM 各 kernel 要读的全部事实：`m`、`n`、`k`、dtype、布局、设备。
+
+由哪个类服务一次调用，由这些类自己决定，不由算子决定。每个类声明自己服务的范围（`applies`、`refusal`），其中一个标为 `general`，负责其余情形；两个专用类同时认领一次调用会报错，不会静默挑一个。选中的类用 `entry_for(call)` 返回两样东西：两次调用要共享什么才算同一个 kernel 的**身份**，以及每个身份只跑一次的**构造方法**。身份带少了，第二种 dtype 会复用第一种 dtype 的 kernel；kernel 只依赖其中几个量却把整个形状带上，就变成一个形状编译一次。
+
+只有一个 kernel、也没有调用记录的算子，在算子类上自己写 `entry_for(role, call)`，在那里给出身份与构造方法，`RMSNormFwdOp` 就是这样：
 
 ```python
-role = "gemv_kernel" if m == 1 else "gemm_kernel"
+def entry_for(self, role, call):                    # call is the input dtype
+    n = math.prod(self.normalized_shape)
+    eps = torch.finfo(torch.float32).eps if self.eps is None else float(self.eps)
+    return call, lambda: self.kernel_map["rms_norm"](n, eps, call, tune=self.tune)
 ```
 
-自带实现按这个名字找到 Kernel 类，外部后端按它找到注册在同名下的 `build_kernel`。role 是记忆表的一个桶，算子跑几个 kernel 就有几个 —— 它不是选择挑中的那个实现的名字。
+完全没有自带实现、只依赖外部后端的算子，`kernel_types` 与 `entry_for` 都不写；在没有 target 认领设备时，调用会抛 `OpNotAvailableError`。
 
-**`inputs`** —— 即将传给 kernel 的那些张量，顺序照 `signature.inputs`，一个输入占一个位置。
+### 注册
 
-```python
-self.kernel_for(role, (a, b), ...)                # GEMM：两个必填输入
-self.kernel_for("group_norm", (x, weight, bias), ...)  # 没传的可选输入位置上是 None
-```
-
-外部路径按它查表：设备加上每个位置的 `(dtype, shape)`。设备也算在内，因为为一块卡编译的产物可能持有那块卡上的资源。后端的 `build_kernel` 收到的也是它，每个张量转成只有 device、dtype、shape 的 `TensorSpec`，不含数据。
-
-没传的可选输入要留下位置、值为 `None`：后端由这个值判断输入传没传，而不是数位置个数 —— 挤掉空位，只给下界的 clamp 与只给上界的就成了同一个描述。
-
-`inputs` 漏掉当场不报错，装上后端才抛 `OpNotAvailableError` —— 这个算子于是只能用自带 kernel，外部 target 接管不了（见[安装之后：两种状态](backends.md#three-states)）。
-
-**`call`** —— 本次调用是什么，形式由这个算子自己的 `entry_for` 决定。有多个实现可选的算子传家族定义的那条记录；只有一个实现的算子传它构造 kernel 用到的那几个值。
-
-`entry_for(role, call)` 返回记忆表要的那一对。换成外部后端服务这个算子时这两者怎么走，见[算子层这一侧的调用](backends.md#from-op-layer)。
-
-```python
-def entry_for(self, role, call):
-    m, n, k, dtype = call
-    return call, lambda: self.kernel_map[role](m, n, k, dtype, tune=self.tune)
-```
-
-先返回的**身份**是两次调用要共享什么才算同一条记录：构造参数，再加上设备 —— 只要换一块卡构造出来的对象可能不同就要带上。带少了，第二种 dtype 会复用第一种 dtype 的 kernel；kernel 其实只依赖其中几个量却把整个形状带上，就变成一个形状编译一次。
-
-后返回的**构造方法**每个身份只跑一次，所以编译放在里面是安全的。返回值可以是一个 Kernel、一组一起构造出来的 Kernel，或一个带着它们的 dataclass —— 后两种适合一次调用要 launch 多个 kernel 的算子。
-
-有多个候选 Kernel 类可选的算子根本不写 `entry_for`：默认实现会去问选择挑中的那个类，由它给出自己的身份与构造方法。完全没有自带实现、只指望外部后端的算子两者都不写 —— 那样在没有 target 认领设备时，调用会抛 `OpNotAvailableError`。
-
-### 收尾：编译边界与注册
-
-两件事收尾，都是几行的事：
-
-- **要支持 `torch.compile`**，得多声明一条编译边界：`forward` 只调用那个不透明算子，校验、取 kernel、launch kernel 挪进 `_eager_forward`。上面这个算子没有声明，所以 `forward` 里就是全部工作。做法见[接入 torch.compile](torch-compile.md)。
-- **把算子名加进两处的导入与 `__all__`**：算子所属家族的 [`src/tileops/ops/<family>/__init__.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops)（类的实现位置），以及 [`src/tileops/<family>.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops)（公开路径）。缺了后者，`from tileops.<family> import ...` 拿不到这个算子，API 参考也收不到它。
+把算子名加进两处的导入与 `__all__`：算子所属家族的 [`src/tileops/ops/<family>/__init__.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops)（类的实现位置），以及 [`src/tileops/<family>.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops)（公开路径）。缺了后者，`from tileops.<family> import ...` 拿不到这个算子，API 参考也收不到它。
 
 ## 第三步：写 kernel
 
-kernel 类继承 [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py)，放在 [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 下，用 TileLang 写，构造时编译、`__call__` 时启动。构造参数与调用参数照第二步 `build` 里那次构造、以及 `kernel(a, b)` 那次调用来定。
+kernel 类继承 [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py)，放在 [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 下，用 TileLang 写，构造时编译、`__call__` 时启动。构造函数由它的 `entry_for` 构造方法调用，调用签名就是第二步里的 `kernel(a, b)`。
 
-它是这六处里唯一不受 spec 约束的一处：kernel 不读 spec，spec 校验器也不检查它的内容，只登记它的路径与类名。
+它是这六处里唯一不受 spec 约束的一处：kernel 不读 spec，也不对照 spec 检查。
 
-构造参数与调用参数的划分有一条硬性要求：**只有会被编译进生成代码的值才进构造函数。** `GemmKernel` 是这样分的：
+构造参数与调用参数的划分有一条硬性要求：**只有会被编译进生成代码的值才进构造函数。** `GemmTmaKernel` 是这样分的：
 
 ```python
-class GemmKernel(Kernel):
-    def __init__(self, m, n, k, dtype, config=None, tune=False, trans_a=False, trans_b=False):
-        self.kernel = _gemm_kernel(m, n, k, trans_a, trans_b, self.dtype_str)  # 这一行就编译了
-        self.init_config(config, tune)      # block_m / block_n / block_k / num_stages
+class GemmTmaKernel(Kernel):
+    def __init__(self, m, n, k, dtype, config=None, tune=False, trans_a=False, trans_b=False, ...):
+        self.kernel = _gemm_kernel(m, n, k, trans_a, trans_b, self.dtype_str, ...)  # compiles
+        self.init_config(config, tune)      # tile sizes and pipeline depth
 
-    def __call__(self, a, b):               # 每次调用只传张量
+    def __call__(self, a, b):               # a call passes tensors, nothing else
         ...
 ```
 
-`m`、`n`、`k`、dtype 与两个布局标志进了构造函数，因为生成的代码里这些值是常量：循环边界、TMA 描述符、WGMMA 的形状都按它们展开。tile 尺寸（`block_m` 等）同理。张量本身留给 `__call__`，每次调用只换指针。
+`m`、`n`、`k`、dtype 与两个布局标志进了构造函数，因为生成的代码里这些值是常量：循环边界、TMA 描述符、WGMMA 的形状都按它们展开，tile 尺寸同理。张量本身留给 `__call__`，每次调用只换指针。
 
 分错的代价是重新编译。decode 一步一步往前走，`seq_len` 每步 +1，batch 随 running set 变化：
 
@@ -192,7 +163,7 @@ out = kernel(q, k, v)                       # seq_len 从张量形状里读
 
 ## 第四步：写测试
 
-测试放在 [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)，比对对象就是 spec 的 `ref_api`，逐点比。形状与 dtype 取 spec 声明的范围，小形状标 `smoke` 进 PR 检查，大形状标 `full` 留给 nightly。
+测试放在 [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)，比对对象是 spec 的 `ref_api`，形状由测试自己挑，以覆盖 kernel 的各个分支；小形状标 `smoke` 进 PR 检查，大形状标 `full` 留给 nightly。workload 行不是单元测试的覆盖面，契约测试已经把每一行都交给算子跑过。
 
 骨架用 [`tests/test_base.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/test_base.py) 里的 `TestBase` 与 `FixtureBase`，用例写在 `PARAMS` 里。
 
@@ -200,13 +171,16 @@ out = kernel(q, k, v)                       # seq_len 从张量形状里读
 
 ## 第五步：写 benchmark
 
-benchmark 放在 [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)，继承 `ManifestBenchmark`。形状不自己写，而是经 `load_workloads(<算子名>)` 从 spec 的 `workloads` 取 —— 手写形状过不了 L4 校验：
+benchmark 放在 [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)，继承 `ManifestBenchmark`。调用不自己写：`manifest_calls(<Op>)` 把每个 workload 行配上它的每个 dtype case 各实例化一次，并以 case id 命名；自己写调用的 benchmark 过不了校验器的 `bench` 级：
 
 ```python
-from benchmarks.benchmark_base import ManifestBenchmark, workload_params
-from tileops.manifest import load_workloads
+from benchmarks.benchmark_base import ManifestBenchmark, manifest_calls
+from tileops.ops import GemmFwdOp
 
-_OP_NAME = "GemmFwdOp"
+
+@pytest.mark.parametrize("call", manifest_calls(GemmFwdOp))
+def test_gemm_bench(call) -> None:
+    ...
 ```
 
 另外至少要记一个非 TileOPs 的基线，否则这一行没有比较对象。基线若需要转换输入，转换的代码留在它自己的计时区间内，不要挪出去。报出来的数字各是什么意思，见[benchmark 怎么计时](timing.md)。
@@ -216,12 +190,12 @@ _OP_NAME = "GemmFwdOp"
 上面五处都写完之后，先跑下面三条命令自查一遍：
 
 ```bash
-python scripts/validate_manifest.py --check-op GemmFwdOp   # spec 与实现一致，五级全跑
-python -m pytest tests/ops/test_gemm.py -v                # 数值与 ref_api 一致
-python -m pytest benchmarks/ops/bench_gemm.py             # benchmark 能出数
+python scripts/validate_manifest.py --check-op GemmFwdOp   # spec and code agree
+python -m pytest tests/ops/test_gemm.py -v                # numerics match ref_api
+python -m pytest benchmarks/ops/bench_gemm.py             # the benchmark produces numbers
 ```
 
-三样都过，再把 spec 的 `status` 从 `spec-only` 反转成 `implemented`。这一改动的效果是让校验从 L0 扩到五级全跑，算子由此进入 CI 的保护范围：往后每次改动，spec 校验器、测试与 nightly benchmark 都会对照 spec 检查一遍。
+三样都过，再把 spec 的 `status` 从 `spec-only` 反转成 `implemented`。这一改动打开所有需要读代码的检查，算子由此进入 CI 的保护范围：往后每次改动，spec 校验器、测试与 nightly benchmark 都会对照 spec 检查一遍。
 
 ## 接下来
 
