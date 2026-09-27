@@ -33,7 +33,9 @@ bash scripts/dev.sh serve     # or: build, bench
 | `mkdocs build` | Any warning of ours fails; griffe's are TileOPs' docstrings, not this repo's gate |
 | `python scripts/check_api_pages.py` | Every `::: tileops.<family>.<Op>` under `docs/api/` is in that family's `__all__`; an exported op no page names is printed, not failed |
 
-Eight tests, and that is the intended size. `tests/fixtures/` is a trimmed
+The suite stays small — `pytest --collect-only -q` lists it. The parametric-workload
+test needs a TileOPs checkout (`./TileOPs`, or `$TILEOPS`) and skips without one; CI's
+Renderer job provides it. `tests/fixtures/` is a trimmed
 snapshot, `tests/golden/` the three data pages it must produce; a change to what
 they say fails by design — read the diff, then `python tests/refresh_golden.py`.
 A unit test is added only for a rule the golden pages do not show.

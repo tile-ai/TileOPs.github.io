@@ -13,6 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # A parametric workload is instantiated by TileOPs' own `tileops.manifest`,
+      # which needs only PyYAML, so the renderer test of that path runs against it.
+      - uses: actions/checkout@v4
+        with:
+          repository: tile-ai/TileOPs
+          path: TileOPs
+          fetch-depth: 1
+          sparse-checkout: |
+            src/tileops
+          sparse-checkout-cone-mode: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -21,7 +31,7 @@ jobs:
       - run: ruff check scripts hooks.py tests
       # The renderer's own tests, including the golden pages: a change to what
       # the Benchmarks section says shows up here as a diff to review.
-      - run: pytest
+      - run: pytest -rs
       - run: shellcheck scripts/render_bench.sh
 
   css:
