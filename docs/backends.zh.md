@@ -147,12 +147,9 @@ d = op(a, b)                     # 所有输入必须在同一设备上：a.devi
 #   一个都没有返回 True  → 用 TileOPs 自带的 kernel
 #   两个以上返回 True    → 抛 AmbiguousTargetError，要求显式写 target=
 
-# ── 算子层：GemmFwdOp.forward 里唯一取 kernel 的那一处 ───────────────
-kernel = self.kernel_for(
-    "gemm_kernel",               # kernel_map 里的名字
-    (a, b),                      # 即将传给 kernel 的张量，顺序照 signature.inputs
-    (m, n, k, a.dtype),          # 本次调用是什么；由 entry_for 读，自带实现用，这次不走
-)
+# ── 算子层：先跑由 manifest 签名生成的检查，再把整个算子交给 target ──
+#   GemmFwdOp 自己的 _eager_forward 与 kernel_for 只服务自带实现，这次不走
+#   传给 target 的张量顺序照 signature.inputs，不写入的输入先转成连续
 
 # ── 算子层：按设备与输入签名查外部记忆表 ─────────────────────────────
 #   ("acme:0", (float16, (4096, 4096)), (float16, (4096, 4096)))
@@ -167,7 +164,7 @@ kernel = self.kernel_for(
 #   → 返回一个可调用对象
 
 # ── 算子层：存进记忆表，然后 launch ─────────────────────────────────
-return kernel(a, b)              # d = a @ b.T，由 acme 的 kernel 算出
+#   kernel(a, b)                 # d = a @ b.T，由 acme 的 kernel 算出
 ```
 
 后端要写的只有其中一步 —— 那个 `build_gemm`，以及把它注册进来：
@@ -175,7 +172,7 @@ return kernel(a, b)              # d = a @ b.T，由 acme 的 kernel 算出
 ```python
 def build_gemm(a: TensorSpec, b: TensorSpec, *, trans_a, trans_b):
     m = a.shape[1] if trans_a else a.shape[0]
-    if m == 1:                                  # 名字不传进来，情形从 spec 自行判断
+    if m == 1:                                  # 情形由后端从 TensorSpec 自行判断
         return AcmeGemv(a, b, trans_a, trans_b)
     return AcmeGemm(a, b, trans_a, trans_b)
 
@@ -183,13 +180,13 @@ def build_gemm(a: TensorSpec, b: TensorSpec, *, trans_a, trans_b):
 register_kernel_builder(op="GemmFwdOp", target="acme", build_kernel=build_gemm)
 ```
 
-`build_gemm` 由算子层调用，后端自己从不调它：import 后端模块时只是把它登记进注册表，真正被调是在一次调用走到 `kernel_for`、且外部记忆表未命中的时候，每个「设备 + 输入签名」一次。它返回的可调用对象随后由算子层 launch，也由算子层存进记忆表。
+`build_gemm` 由算子层调用，后端自己从不调它：import 后端模块时只是把它登记进注册表，真正被调是在一次调用由这个 target 服务、且外部记忆表未命中的时候，每个「设备 + 输入签名」一次。它返回的可调用对象随后由算子层 launch，也由算子层存进记忆表。
 
 四点对应关系值得记住：
 
-- **`entry_for` 由算子作者写，与后端无关。** 它只服务自带实现：给出自带 kernel 按什么查表、又怎么构造。target 选中后端时这两个答案都不会被问。
+- **`kernel_for` 与 `entry_for` 由算子作者写，与后端无关。** 它们只服务自带实现：取哪个自带 kernel、按什么查表、又怎么构造。target 选中后端时整个算子由 target 服务，这几处都不会执行。
 - **张量按位置传，参数按名字传。** `build_kernel(*inputs, **params)`：位置实参是 `TensorSpec`（没传的可选输入是 `None`），关键字实参是 manifest 里 `params` 的名字与本次调用的确定值。
-- **一个 `(算子, target)` 只注册一个 builder。** 算子内部分几种情形（GEMM 的 `gemm_kernel` 与 `gemv_kernel`）不会传进来，`build_kernel` 从 `TensorSpec` 自行判断该返回哪个 kernel。
+- **一个 `(算子, target)` 只注册一个 builder。** 自带实现内部分几种 kernel（GEMM 的 `kernel_types` 里有三个）不会传进来，`build_kernel` 从 `TensorSpec` 自行判断该返回哪个 kernel。
 - **不必自己做记忆。** 同一个设备与输入签名，算子层不会再调第二次；要更细的区分或更少的重建，在 `build_kernel` 内部另加一层缓存。算子完全没有自带实现时 `entry_for` 可以不写，那时没有 target 认领设备，调用直接抛 `OpNotAvailableError`。
 
 ## 实现一个可运行的后端 {#runnable}
@@ -202,7 +199,7 @@ register_kernel_builder(op="GemmFwdOp", target="acme", build_kernel=build_gemm)
 $ python -c "import torch; from tileops.norm import RMSNormFwdOp; \
              RMSNormFwdOp(normalized_shape=(64,))(torch.randn(4,64,dtype=torch.float16), \
                                                   torch.randn(64,dtype=torch.float16))"
-ValueError: RMSNormKernel is a CUDA kernel; got x on cpu and weight on cpu.
+OpNotAvailableError: RMSNormFwdOp's in-tree kernels do not run on cpu; known targets for this op: []
 
 $ pip install -e .
 
@@ -234,7 +231,7 @@ register_detector(
 
 两个名字含义不同：`target="torch_cpu"` 是这一套 kernel 的名字，由后端作者决定；`device.type == "cpu"` 是它认领的设备类型，由 torch 定义。
 
-**第三步，照 manifest 签名写 `build_kernel`。** `RMSNormFwdOp` 的 spec 声明了两个输入 `x`、`weight` 与两个参数 `normalized_shape`、`eps`，函数的形参照抄这份声明：
+**第三步，照 manifest 签名写 `build_kernel`。** `RMSNormFwdOp` 的 spec 声明了两个输入 `x`、`weight`（可选）与两个参数 `normalized_shape`、`eps`，函数的形参照抄这份声明：
 
 ```python
 from .kernels import CpuRMSNorm
@@ -242,7 +239,7 @@ from .kernels import CpuRMSNorm
 
 def build_rms_norm(
     x: TensorSpec,
-    weight: TensorSpec,
+    weight: TensorSpec | None,
     *,
     normalized_shape,
     eps,
@@ -317,23 +314,24 @@ docker run --rm --gpus all -v "$PWD/..":/work -w /work \
 
 ```yaml
 signature:
-  inputs:                       # 声明顺序即传入顺序
-    x: {dtype: "float16 | bfloat16"}
-    weight: {dtype: "same_as(x)"}
+  forall: {B: Shape, T: "DType[float16 | bfloat16]"}
   params:                       # 按这些名字作为关键字参数传入
     normalized_shape: {type: "list[int] | tuple[int, ...]"}
     eps: {type: "float | None", default: null}
+  inputs:                       # 声明顺序即传入顺序
+    x: {dtype: T, shape: "[*B, *normalized_shape]"}
+    weight: {dtype: T, shape: "[*normalized_shape]", optional: true}
 ```
 
 对应的 builder 签名：
 
 ```python
-def build_rms_norm(x: TensorSpec, weight: TensorSpec, *, normalized_shape, eps):
+def build_rms_norm(x: TensorSpec, weight: TensorSpec | None, *, normalized_shape, eps):
 ```
 
 两点要注意。
 
-- **`eps` 收到的是 `1e-6`，不是 `None`。** manifest 里默认值写作 null，算子层已经把它规范化成确定的数值。所有可选参数都是如此。
+- **参数按算子实例保存的值传入。** 构造时没给 `eps`，收到的就是 manifest 的默认值 `None`，含义与参考 API 相同，由 builder 按那个语义处理；没传的可选输入 `weight` 收到 `None`。
 - **返回值按 `signature.outputs` 的声明给出** —— 单输出返回张量，多输出按声明顺序返回 tuple，纯原地写入的算子返回 `None`。
 
 ### 构造函数只接收编译期参数
@@ -402,17 +400,7 @@ target 定下来之前，算子层不查询与特定硬件绑定的信息 ——
 
 ## 错误信息与处理
 
-以下四条均为实测输出，分别对应一种成因和一种处理方式。
-
-**某个算子的取 kernel 处没有传入张量：**
-
-```
-OpNotAvailableError: target 'torch_cpu' serves GemmOp, but its 'gemm_kernel' call site
-does not hand over the tensors a builder is described with; that op is not wired to
-external targets yet
-```
-
-TileOPs 的算子都按契约传入张量，所以见到这条错误意味着算子那一侧出现了回退，不是后端的问题：提 issue 并附上算子名。
+以下三条均为实测输出，分别对应一种成因和一种处理方式。
 
 **未为该算子注册 builder：**
 
@@ -435,8 +423,7 @@ UnknownTargetError: no backend registered target 'nope'; known targets: ['torch_
 **以 `target=BUILTIN` 强制使用 TileOPs 自带的实现：**
 
 ```
-ValueError: RMSNormKernel is a CUDA kernel; got x on cpu and weight on cpu.
-Another target's backend serves other devices.
+OpNotAvailableError: RMSNormFwdOp's in-tree kernels do not run on cpu; known targets for this op: ['torch_cpu']
 ```
 
 `BUILTIN` 显式绕过所有后端。自带实现无法在 CPU 张量上运行，这条错误正说明了「不改用自带实现」这条规则所要避免的后果。
@@ -474,7 +461,7 @@ TileOPs 不解析 `torch.device`，而是把它原样传给 `detect`。这样做
 | --- | --- | --- |
 | 1 | torch 侧的公开 API 与参数语义 | 这个算子如何被调用、参数名与各参数的含义均已确定，后端既不定义也不能改动 |
 | 2 | manifest 校验 | dtype 或形状不合规的调用被算子层拒绝，不会到达后端 |
-| 3 | 参数规范化 | 后端收到的参数都是确定值。manifest 里把 `eps` 的类型声明为 float 或 None 时，传下来的是算子层算好的那个数，不是 `None` |
+| 3 | 参数按名字传入 | 后端收到的参数名是 manifest `params` 的名字，值是算子实例保存的值；manifest 默认为 null 且调用方没给的参数，收到的是 `None` |
 | 4 | 输入的连续性归一 | 后端只收到连续张量，不必处理非连续输入 |
 | 5 | kernel 的记忆与重用 | 构造函数按特化调用一次：设备与输入签名相同的后续调用直接使用上一次的返回值。因此构造函数内部可以编译，算子层保证它不会被重复调用 |
 | 6 | `torch.compile` 与 CUDA graph 的边界 | 算子层把一次调用包成不透明算子并另配一个 fake，使编译器在不执行的前提下也能推出输出的形状与 dtype。**后端的 kernel 不为编译做任何事**，细节见[接入 torch.compile](torch-compile.md) |

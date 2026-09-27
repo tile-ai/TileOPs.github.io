@@ -181,12 +181,9 @@ d = op(a, b)                     # every input on one device: a.device == b.devi
 #   none True          → the kernels TileOPs ships run
 #   two or more True   → AmbiguousTargetError, asking for an explicit target=
 
-# ── op layer: the one place GemmFwdOp.forward fetches a kernel ───────
-kernel = self.kernel_for(
-    "gemm_kernel",               # a name from kernel_map
-    (a, b),                      # the tensors the kernel is about to get, in signature.inputs order
-    (m, n, k, a.dtype),          # what this call is; entry_for reads it, in-tree only
-)
+# ── op layer: run the checks generated from the manifest signature, then hand the whole op to the target ──
+#   GemmFwdOp's own _eager_forward and kernel_for serve the in-tree path only, and do not run
+#   the tensors go to the target in signature.inputs order, inputs it does not write made contiguous
 
 # ── op layer: look up the external memo table — device, then input signature ──
 #   ("acme:0", (float16, (4096, 4096)), (float16, (4096, 4096)))
@@ -201,7 +198,7 @@ kernel = self.kernel_for(
 #   → returns something callable
 
 # ── op layer: store it, then launch ─────────────────────────────────
-return kernel(a, b)              # d = a @ b.T, computed by acme's kernel
+#   kernel(a, b)                 # d = a @ b.T, computed by acme's kernel
 ```
 
 A backend writes one step of that — `build_gemm` — and registers it:
@@ -209,7 +206,7 @@ A backend writes one step of that — `build_gemm` — and registers it:
 ```python
 def build_gemm(a: TensorSpec, b: TensorSpec, *, trans_a, trans_b):
     m = a.shape[1] if trans_a else a.shape[0]
-    if m == 1:                                  # the name is not passed in; decide from the specs
+    if m == 1:                                  # the backend decides the case from the specs
         return AcmeGemv(a, b, trans_a, trans_b)
     return AcmeGemm(a, b, trans_a, trans_b)
 
@@ -218,20 +215,20 @@ register_kernel_builder(op="GemmFwdOp", target="acme", build_kernel=build_gemm)
 ```
 
 The op layer calls `build_gemm`; the backend never calls it itself. Importing the backend
-module only records it in the registry, and the call comes when an op call reaches
-`kernel_for` and misses the external memo table — once per device and input
+module only records it in the registry, and the call comes when this target serves an op call
+and it misses the external memo table — once per device and input
 signature. Whatever it returns, the op layer stores and launches.
 
 Four things follow from that:
 
-- **`entry_for` is the op author's, not a backend's.** It serves the in-tree path only,
-  answering with what the in-tree kernel is looked up on and how it is built. Neither
-  answer is asked for once a target serves the call.
+- **`kernel_for` and `entry_for` are the op author's, not a backend's.** They serve the
+  in-tree path only: which in-tree kernel to fetch, what it is looked up on and how it is
+  built. Once a target serves the op, it serves the whole op, and none of them runs.
 - **Tensors arrive positionally, params by name.** `build_kernel(*inputs, **params)`: the
   positional arguments are `TensorSpec`s (`None` for an optional input the call omitted),
   the keywords the manifest's `params` names with the values this call settled on.
-- **One builder per `(op, target)`.** Which case the op split into internally — GEMM's
-  `gemm_kernel` versus `gemv_kernel` — is not passed in; `build_kernel` decides from the
+- **One builder per `(op, target)`.** Which of its kernels the in-tree path would run —
+  GEMM declares three in `kernel_types` — is not passed in; `build_kernel` decides from the
   `TensorSpec`s which kernel to return.
 - **No memoisation of its own is needed.** For the same device and input signature the op
   layer does not call again; for a finer split, or fewer rebuilds, add a cache inside
@@ -255,7 +252,7 @@ What installing it changes:
 $ python -c "import torch; from tileops.norm import RMSNormFwdOp; \
              RMSNormFwdOp(normalized_shape=(64,))(torch.randn(4,64,dtype=torch.float16), \
                                                   torch.randn(64,dtype=torch.float16))"
-ValueError: RMSNormKernel is a CUDA kernel; got x on cpu and weight on cpu.
+OpNotAvailableError: RMSNormFwdOp's in-tree kernels do not run on cpu; known targets for this op: []
 
 $ pip install -e .
 
@@ -295,7 +292,7 @@ the backend author's to choose, while `device.type == "cpu"` is the device type 
 defined by torch.
 
 **Step 3, a `build_kernel` written to the manifest signature.** `RMSNormFwdOp`'s spec
-declares two inputs, `x` and `weight`, and two params, `normalized_shape` and `eps`; the
+declares two inputs, `x` and an optional `weight`, and two params, `normalized_shape` and `eps`; the
 function's parameters follow that declaration:
 
 ```python
@@ -304,7 +301,7 @@ from .kernels import CpuRMSNorm
 
 def build_rms_norm(
     x: TensorSpec,
-    weight: TensorSpec,
+    weight: TensorSpec | None,
     *,
     normalized_shape,
     eps,
@@ -386,25 +383,26 @@ is the op's manifest signature — `RMSNormFwdOp` in
 
 ```yaml
 signature:
-  inputs:                       # declaration order is call order
-    x: {dtype: "float16 | bfloat16"}
-    weight: {dtype: "same_as(x)"}
+  forall: {B: Shape, T: "DType[float16 | bfloat16]"}
   params:                       # passed as keyword arguments under these names
     normalized_shape: {type: "list[int] | tuple[int, ...]"}
     eps: {type: "float | None", default: null}
+  inputs:                       # declaration order is call order
+    x: {dtype: T, shape: "[*B, *normalized_shape]"}
+    weight: {dtype: T, shape: "[*normalized_shape]", optional: true}
 ```
 
 The corresponding builder signature:
 
 ```python
-def build_rms_norm(x: TensorSpec, weight: TensorSpec, *, normalized_shape, eps):
+def build_rms_norm(x: TensorSpec, weight: TensorSpec | None, *, normalized_shape, eps):
 ```
 
 Two things to note about it.
 
-- **`eps` arrives as `1e-6`, not `None`.** The manifest default is null, and the op layer
-  has already normalised it to a definite value. Every optional parameter behaves this
-  way.
+- **Parameters arrive as the op instance holds them.** An `eps` not given at construction
+  arrives as the manifest default, `None`, meaning what it means in the reference API,
+  and the builder handles it that way; an omitted `weight` arrives as `None`.
 - **The return value follows `signature.outputs`** — a tensor for a single output,
   a tuple in declaration order for several, `None` for a pure in-place write.
 
@@ -501,18 +499,7 @@ GPU — what they check is this premise, not the backend.
 
 ## Error messages and what to do
 
-All four are measured output, each with one cause and one way to handle it.
-
-**An op's kernel-fetch site handed over no tensors:**
-
-```
-OpNotAvailableError: target 'torch_cpu' serves GemmOp, but its 'gemm_kernel' call site
-does not hand over the tensors a builder is described with; that op is not wired to
-external targets yet
-```
-
-Every op in TileOPs hands its tensors over, so this error means a regression on the op
-side rather than a backend problem: file an issue naming the op.
+All three are measured output, each with one cause and one way to handle it.
 
 **No builder registered for the op:**
 
@@ -536,8 +523,7 @@ The package did not install, or the target name is misspelled. Use
 **`target=BUILTIN` forces the implementation TileOPs ships:**
 
 ```
-ValueError: RMSNormKernel is a CUDA kernel; got x on cpu and weight on cpu.
-Another target's backend serves other devices.
+OpNotAvailableError: RMSNormFwdOp's in-tree kernels do not run on cpu; known targets for this op: ['torch_cpu']
 ```
 
 `BUILTIN` bypasses backends explicitly. The shipped implementation cannot run on
@@ -590,7 +576,7 @@ author meets them:
 | --- | --- | --- |
 | 1 | The public torch-side API and the meaning of each parameter | How the op is called, the parameter names and their semantics are settled; a backend neither defines nor changes them |
 | 2 | Manifest validation | A call whose dtype or shape does not conform is rejected at the op layer and never reaches the backend |
-| 3 | Parameter normalisation | Parameters arrive as definite values. Where the manifest declares `eps` as float or None, what arrives is the number the op layer computed, not `None` |
+| 3 | Parameters by name | Parameters arrive under the manifest's `params` names, with the values the op instance holds; a parameter the manifest defaults to null and the caller did not give arrives as `None` |
 | 4 | Input contiguity | A backend only ever receives contiguous tensors |
 | 5 | Memoisation and reuse of kernels | The builder is called once per specialization: a later call with the same device and input signature reuses the previous return value. A builder may therefore compile, and the op layer guarantees it is not called again |
 | 6 | The `torch.compile` and CUDA-graph boundary | The op layer wraps a call as an opaque operator and registers a fake alongside, so the compiler can infer the output's shape and dtype without executing. **A backend's kernels do nothing for compilation**; see [Bringing an op into torch.compile](torch-compile.md) |
