@@ -607,9 +607,10 @@ DETAIL_HEADER = (
     "<table>",
     "<thead>",
     "<tr>",
-    # These three say what the row is; the rule after them divides that from
+    # These two say what the row is; the rule after them divides that from
     # what it measured. Each spans both header rows, so the rule has no gap.
-    '<th rowspan="2" class="colsep">Workload</th>',
+    '<th rowspan="2">Workload</th>',
+    '<th rowspan="2" class="colsep">dtype</th>',
     "<th>Ratio</th>",
     "<th>Device time</th>",
     '<th colspan="2">Alternatives</th>',
@@ -653,27 +654,61 @@ def _stack(cells: list[str]) -> str:
     return f"{head}<br>{tail}"
 
 
-WORKLOAD_CODE = "W"
+def _label_of(w: dict, m: dict) -> tuple[str, list[str]]:
+    """The manifest label a row ran under, and the dtypes its case id names.
+
+    A case id is the label followed by one dtype per dtype index the case
+    assigns, so `square-b4-float8_e4m3fn-bfloat16` is the label `square-b4` at
+    `fp8e4m3/bf16`. A row with no manifest entry strips the trailing dtype names
+    off its own id; an id that ends in none is its own label.
+    """
+    config, spec = w["config"], w.get("spec")
+    label = spec.label if spec and spec.label else None
+    if label and config.startswith(label + "-"):
+        tokens = config[len(label) + 1:].split("-")
+    elif label:
+        tokens = [spec.dtype] if spec.dtype else []
+    else:
+        parts = config.split("-")
+        tokens = []
+        while len(parts) > 1 and parts[-1] in workload_shape.DTYPE_ABBR:
+            tokens.insert(0, parts.pop())
+        label = "-".join(parts)
+        if not tokens and m.get("dtype"):
+            tokens = [m["dtype"]]
+    return label, tokens
 
 
-def _facts(spec) -> OrderedDict:
-    """Every scalar a workload sets, as name -> (value, kind).
+def _dtype_text(tokens: list[str]) -> str:
+    return "/".join(workload_shape.abbr_dtype(t) for t in tokens) or EMPTY
+
+
+def _label_html(label: str) -> str:
+    """A label that may wrap after any hyphen, and nowhere else."""
+    return html.escape(label).replace("-", "-<wbr>")
+
+
+def _facts(spec, dtypes=()) -> OrderedDict:
+    """Every scalar a workload sets but its dtype, as name -> (value, kind).
 
     The symbols of the tensor templates come first, since those are the numbers
     the shapes are made of; then the dimensions the manifest names outright,
     then the parameters, which are how the op was called rather than how big it
-    is and stay dimmed wherever they are printed.
+    is and stay dimmed wherever they are printed. A parameter set to one of
+    the row's `dtypes` — an `out_dtype` — is part of the case id, and the
+    dtype column states it.
     """
     facts = OrderedDict()
-    if spec.dtype:
-        facts["dtype"] = (workload_shape.abbr_dtype(spec.dtype), "dim")
+    if not spec:
+        return facts
     if spec.symbolic:
         for name, value in spec.bindings.items():
             facts[name] = (str(value), "dim")
     for name, value in spec.dims:
         facts.setdefault(name, (value, "dim"))
     for name, value in spec.params:
-        facts[name] = (value, "param")
+        if value not in dtypes:
+            facts[name] = (value, "param")
     return facts
 
 
@@ -709,10 +744,9 @@ def _cells(entries) -> str:
 
 _TAG = __import__("re").compile(r"<[^>]+>")
 
-# How wide a line of entries may be before it is set differently, in characters
-# of the key's monospace against the content column.
-WRAP_TENSORS = 96   # a tensor list wraps -> one tensor per line
-WRAP_DELTA = 74     # a row's own scalars wrap -> id and scalars on two lines
+# How wide a tensor list may be before it is set one tensor per line, in
+# characters of the key's monospace against the content column.
+WRAP_TENSORS = 96
 
 
 def _width(entries) -> int:
@@ -720,87 +754,127 @@ def _width(entries) -> int:
     return sum(len(_TAG.sub("", body)) + 3 for body, _ in entries)
 
 
-def _cluster(rows: list) -> list:
-    """An op's workloads, grouped by what they have in common.
+def _tensors_of(specs: list, bases: list):
+    """One tensor list for every dtype a label ran at, or None if none exists.
 
-    The key is the description with every size taken out: which tensors, named
-    together how, in the manifest's symbols. The dtype is not part of it — a
-    workload in `f16` beside one in `bf16` carries that as one more thing that
-    varies. A tensor in a dtype of its own does split the group, since then the
-    tensor list itself differs.
+    Returns `(kind, [(names, shape, dtype)])`: `kind` is `"sym"` where the
+    shapes are the manifest's symbols, `"con"` where they are concrete. A
+    tensor states a dtype where it is the same in every row and not the row's
+    own — an `f32` bias beside `bf16` and `f16` inputs — and none where it
+    follows the row. A row's own dtype is `bases[i]`, the first one its dtype
+    column shows, so a case named by an `out_dtype` marks every input not in
+    it. Any other difference between the rows leaves no one list true for all
+    of them.
     """
-    groups = OrderedDict()
-    for code, w in rows:
-        spec = w.get("spec")
-        if not spec:
-            key = None
-        elif spec.symbolic:
-            key = ("sym", *(c for c, _ in _tensors_html(spec.symbolic,
-                                                        spec.dtype)))
+    if not all(specs):
+        return None
+    lists = [("sym", s.symbolic) if s.symbolic else ("con", s.tensors)
+             for s in specs]
+    kind, first = lists[0]
+    if any(k != kind or [e[:2] for e in es] != [e[:2] for e in first]
+           for k, es in lists):
+        return None
+    out = []
+    for i, (names, shape, _) in enumerate(first):
+        dtypes = [es[i][2] or s.dtype for s, (_, es) in zip(specs, lists, strict=True)]
+        if all(d == b for d, b in zip(dtypes, bases, strict=True)):
+            out.append((names, shape, None))
+        elif len(set(dtypes)) == 1:
+            out.append((names, shape, dtypes[0]))
         else:
-            # No template to write the shapes in: the row prints its own, so
-            # the group is only there to hold workloads taking the same tensors.
-            key = ("con", *(n for n, _, _ in spec.tensors))
-        groups.setdefault(key, []).append((code, w))
-    return list(groups.values())
+            return None
+    return kind, out
 
 
-def workload_key(rows: list) -> list:
-    """What each row of an op's table ran on, listed above it.
+def label_groups(workloads: list, metrics: list) -> list:
+    """An op's rows, one group per label, groups clustered by shape.
+
+    Returns clusters of groups, each group a dict of `label`, `facts` (the
+    scalars it was set to), `tensors` (see `_tensors_of`) and `rows`, a list of
+    `(dtype, metrics)`. The snapshot lists an op's rows in the manifest's
+    order, and every level keeps the order it first meets its members in, so a
+    size sweep reads in the order the manifest declares it.
+
+    A label whose dtypes differ in anything but the dtype — another shape,
+    another symbol value — is one group per description, each under the same
+    label: folding them would state one row's shapes for another's numbers.
+
+    A cluster holds the groups written in the same symbols: which tensors,
+    named together how. The dtype is not part of it. Groups with concrete
+    shapes cluster by tensor names alone, since each prints its own shapes.
+    """
+    buckets = OrderedDict()
+    for w, m in zip(workloads, metrics, strict=True):
+        label, dtypes = _label_of(w, m)
+        spec = w.get("spec")
+        facts = _facts(spec, dtypes)
+        base = dtypes[0] if dtypes else spec and spec.dtype
+        buckets.setdefault((label, tuple(facts.items())), []).append(
+            (spec, facts, _dtype_text(dtypes), m, base))
+
+    groups = []
+    for (label, _), members in buckets.items():
+        parts = [members]
+        if _tensors_of([mb[0] for mb in members], [mb[4] for mb in members]) is None:
+            split = OrderedDict()
+            for member in members:
+                spec = member[0]
+                key = spec and (spec.symbolic, spec.tensors, spec.dtype, member[4])
+                split.setdefault(repr(key), []).append(member)
+            parts = list(split.values())
+        for part in parts:
+            groups.append({"label": label, "facts": part[0][1],
+                           "tensors": _tensors_of([mb[0] for mb in part],
+                                                  [mb[4] for mb in part]),
+                           "rows": [(mb[2], mb[3]) for mb in part]})
+
+    clusters = OrderedDict()
+    for group in groups:
+        t = group["tensors"]
+        key = (None if t is None else
+               (t[0], *t[1]) if t[0] == "sym" else (t[0], *(n for n, _, _ in t[1])))
+        clusters.setdefault(key, []).append(group)
+    return list(clusters.values())
+
+
+def workload_key(clusters: list) -> list:
+    """What each label of an op's table ran on, listed above it.
 
     An op's workloads are nearly the same run at several sizes, so what they
     share is stated once — in the manifest's own symbols, `q k [B, H, DK]` — and
-    each row carries only the symbols that vary on it. Inside the table's first
-    column the same shapes would squeeze the measurements off the window.
+    each label carries only the symbols that vary on it, then the dtypes it ran
+    at. Inside the table's first column the same shapes would squeeze the
+    measurements off the window.
 
-    Order follows the table's rows, so `W3` is the third row.
+    Order follows the table's row groups.
     """
-    if not rows:
+    if not clusters:
         return []
     blocks = []
-    for group in _cluster(rows):
-        specs = [w.get("spec") for _, w in group]
-        if not specs[0]:
-            # No manifest entry: the id is all there is to say. Still a group
-            # and still a list, so the code column lines up with every other
-            # op's and the styling is the one thing that does not vary.
-            bare = "".join(
-                f'<li><b>{code}</b><span class="wl-delta"></span>'
-                f'<code class="wl-id">{html.escape(w["config"])}</code></li>'
-                for code, w in group)
-            blocks.append('<div class="wl-group"><ul class="wl-rows">'
-                          + bare + "</ul></div>")
-            continue
-        facts = [_facts(s) for s in specs]
-        # A symbolic template describes the whole group only where every
-        # workload in it resolved to the same symbols.
-        symbolic = specs[0].symbolic
-        if not all(s.symbolic == symbolic for s in specs):
-            symbolic = None
+    for cluster in clusters:
+        facts = [OrderedDict(g["facts"]) for g in cluster]
+        for f, g in zip(facts, cluster, strict=True):
+            dtypes = list(OrderedDict.fromkeys(d for d, _ in g["rows"]))
+            f["dtype"] = (", ".join(dtypes), "dim")
         shared = [n for n in facts[0]
                   if all(f.get(n) == facts[0][n] for f in facts)]
-
-        head = _tensors_html(symbolic, specs[0].dtype) if symbolic else []
+        # One cluster is one symbolic template, stated once above its labels.
+        tensors = cluster[0]["tensors"]
+        symbolic = tensors is not None and tensors[0] == "sym"
+        head = _tensors_html(tensors[1], None) if symbolic else []
         scalars = [_fact_html(n, *facts[0][n]) for n in shared]
 
-        rows_html, deltas = [], []
-        for (code, _), spec, fact in zip(group, specs, facts, strict=True):
+        rows_html = []
+        for group, fact in zip(cluster, facts, strict=True):
             varies = [_fact_html(n, *v) for n, v in fact.items()
                       if n not in shared]
             # Without a template the group has nothing to hold in common, so
             # the row states its own tensors outright.
-            if not symbolic:
-                varies = _tensors_html(spec.tensors, spec.dtype) + varies
-            deltas.append(varies)
+            if group["tensors"] and not symbolic:
+                varies = _tensors_html(group["tensors"][1], None) + varies
             rows_html.append(
-                f'<li><b>{code}</b><span class="wl-delta">'
-                + _cells(varies) +
-                f'</span><code class="wl-id">{html.escape(spec.label)}</code></li>')
-        # Where one row's scalars are wider than the column, the whole group is
-        # set on two lines — id under the code, scalars under that — so every
-        # row in it breaks the same way.
-        long = (" wl-long" if any(_width(d) > WRAP_DELTA for d in deltas)
-                else "")
+                f'<li><code class="wl-id">{_label_html(group["label"])}</code>'
+                f'<span class="wl-delta">{_cells(varies)}</span></li>')
 
         block = []
         # Tensors and scalars on lines of their own: what the op takes, then how
@@ -811,12 +885,15 @@ def workload_key(rows: list) -> list:
             block.append(f'<p class="wl-shared{stack}">{_cells(head)}</p>')
         if scalars:
             block.append(f'<p class="wl-shared">{_cells(scalars)}</p>')
-        block.append(f'<ul class="wl-rows{long}">' + "".join(rows_html) + "</ul>")
+        block.append('<ul class="wl-rows">' + "".join(rows_html) + "</ul>")
         blocks.append(f'<div class="wl-group">{"".join(block)}</div>')
     return ['<div class="wl-key">', *blocks, "</div>", ""]
 
 
-def detail_row(code: str, m: dict) -> str:
+def detail_row(dtype: str, m: dict, label: str | None = None,
+               span: int = 1) -> str:
+    """One measured row. The first row of a label group carries the label,
+    spanning the group's dtype rows."""
     ordered = sorted(m["rivals"].items(), key=lambda kv: kv[1]["busy_ms"])
     names = _stack([f"<code>{html.escape(t)}</code>" for t, _ in ordered])
     times = _stack([_sig_ms(r["busy_ms"]) for _, r in ordered])
@@ -827,9 +904,15 @@ def detail_row(code: str, m: dict) -> str:
     gap = _ratio_cell(real[0]["speedup"] if real else
                       weak[0]["speedup"] if weak else None,
                       rated=bool(real))
+    name = ""
+    if label is not None:
+        rowspan = f' rowspan="{span}"' if span > 1 else ""
+        name = (f'<td class="wl-name"{rowspan}>'
+                f"<code>{_label_html(label)}</code></td>")
     return (
         "<tr>"
-        f'<td class="colsep"><b>{code}</b></td>'
+        f"{name}"
+        f'<td class="colsep">{html.escape(dtype)}</td>'
         f"<td>{gap}</td>"
         f"<td>{_sig_ms(m['busy_ms'])}</td>"
         f"<td>{names}</td>"
@@ -994,15 +1077,19 @@ def reading_page(sol_engine=(None, None)) -> str:
         "## Columns", "",
         "| Column | Meaning |",
         "| --- | --- |",
-        "| **Workload** | `W1`, `W2`, … — the key above each table spells each "
-        "one out: the benchmark's own id for it, the dtype it ran at, and every "
-        "input tensor as `name: shape, dtype`. Tensors sharing a shape are "
-        "named together, and each carries its own dtype, so a `mask` in `bool` "
-        "says so where it is read. After the tensors come the dimensions the op "
-        "is sized by rather than shaped by (`m`, `n`, `k` for a GEMM, "
-        "`num_experts` for MoE routing), then dimmed, the parameters the call "
-        "did not leave at the signature's default. A quantity the others "
-        "already fix — `max_seqlen_q` is `max(q_lens)` — is not repeated. |",
+        "| **Workload** | The label the TileOPs spec manifest gives the "
+        "workload, once per group of rows that ran it at several dtypes. The "
+        "key above each table spells each label out: every input tensor as "
+        "`name: shape, dtype`, tensors sharing a shape named together, and a "
+        "tensor in a dtype of its own — a `mask` in `bool` — saying so where it "
+        "is read. After the tensors come the dimensions the op is sized by "
+        "rather than shaped by (`m`, `n`, `k` for a GEMM, `num_experts` for MoE "
+        "routing), then dimmed, the parameters the call did not leave at the "
+        "signature's default, then the dtypes the label ran at. A quantity the "
+        "others already fix — `max_seqlen_q` is `max(q_lens)` — is not "
+        "repeated. Labels and rows keep the manifest's order. |",
+        "| **dtype** | The dtype the row ran at; a case with two dtype indices "
+        "names both, `fp8e4m3/bf16`. |",
         "| **Ratio** | `alt / ours` — the fastest alternative's device time "
         "divided by ours, the one number the colour grades. |",
         "| **Device time** | Milliseconds the device spent executing the call's "
@@ -1144,17 +1231,17 @@ def data_page(title: str, fams: list[str], rows_by_fam: dict,
             # count is the length of the list under it, and a tick on every op
             # says nothing. Only a mark that warns survives.
             warn = f" <small>{tmark}</small>" if tmark in ("❌", "⏭️") else ""
-            ordered = sorted(zip(workloads_of[op], metrics_by_op[op], strict=True),
-                             key=lambda z: z[0]["config"])
-            coded = [(f"{WORKLOAD_CODE}{i}", w)
-                     for i, (w, _) in enumerate(ordered, 1)]
+            clusters = label_groups(workloads_of[op], metrics_by_op[op])
             lines += [f"{op_h} {_op_cell(op, module, ref)}{warn}",
-                      "", *workload_key(coded),
+                      "", *workload_key(clusters),
                       # No `markdown="1"`, and no blank line until `</div>`: a
                       # blank line would end the raw-HTML block mid-table.
                       '<div class="datatable">', *DETAIL_HEADER]
-            for (code, _), (_, m) in zip(coded, ordered, strict=True):
-                lines.append(detail_row(code, m))
+            for group in (g for c in clusters for g in c):
+                rows = group["rows"]
+                for i, (dtype, m) in enumerate(rows):
+                    lines.append(detail_row(dtype, m, group["label"] if i == 0 else None,
+                                            len(rows)))
             lines += [*DETAIL_FOOTER, "</div>", ""]
     return "\n".join(lines) + "\n"
 

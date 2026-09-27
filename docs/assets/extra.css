@@ -634,7 +634,11 @@ html[lang="zh"] .md-typeset .keystone {
   text-align: center;
 }
 
-.md-typeset .datatable table:not([class]) td.colsep {
+/* The label spans its dtype rows, and wraps at a hyphen rather than widening
+ * the column: an attention label runs past seventy characters.
+ */
+.md-typeset .datatable table:not([class]) td.wl-name {
+  white-space: normal;
   text-align: left;
 }
 
@@ -669,8 +673,8 @@ html[lang="zh"] .md-typeset .keystone {
 }
 
 /* Two header rows, still one middle rule: it belongs under the whole header
- * block, not between its halves. The `Workload` cell spans both rows, so its
- * own bottom edge already sits on that line.
+ * block, not between its halves. The `Workload` and `dtype` cells span both
+ * rows, so their own bottom edges already sit on that line.
  */
 /* Each header word underlined thin and grey — under `Alternatives` that also
  * says how far a header spanning two columns reaches. The heavy rule stays
@@ -698,9 +702,15 @@ html[lang="zh"] .md-typeset .keystone {
 
 /* A cool cast on the names, so the teal rule divides a label column from ink
  * measurements rather than sitting between them. The same in every row: a
- * colour that never varies cannot be mistaken for a verdict.
+ * colour that never varies cannot be mistaken for a verdict. As wide as the
+ * label up to 18em and no narrower: a table squeezed to the page would
+ * otherwise break the label at every hyphen.
  */
-.md-typeset .datatable table:not([class]) td.colsep code {
+.md-typeset .datatable table:not([class]) td.wl-name code {
+  display: inline-block;
+  width: max-content;
+  max-width: 18em;
+  white-space: normal;
   color: #316c6f;
 }
 
@@ -1191,12 +1201,10 @@ html[lang="zh"] .md-nav__title {
   text-align: left;
 }
 
-/* The workload key carries the shapes at the width of the page, so the table
- * holds only `W1`, `W2`, … and the measurements.
- */
 /* The workload key: what an op's workloads have in common, stated once, and
- * what varies, one line per workload. Three columns — code, what varies, the
- * benchmark's own id — so a reader compares down a column.
+ * what varies, one line per label. Two columns — the label, what varies — so a
+ * reader compares down a column. It carries the shapes at the width of the
+ * page, so the table holds only the labels and the measurements.
  */
 .md-typeset .wl-key {
   margin: 0.35em 0 0.8em;
@@ -1280,35 +1288,35 @@ html[lang="zh"] .md-nav__title {
   }
 }
 
+/* Labels in one column, what varies in the next. A label past the column's
+ * width wraps at its hyphens, so a long one never pushes the values off.
+ */
 .md-typeset .wl-key ul.wl-rows {
+  display: grid;
+  grid-template-columns: fit-content(24em) minmax(0, 1fr);
+  gap: 0.1em 0.9em;
+  align-items: baseline;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* The id ranges right, off the same edge on every row, so the middle column is
- * free to be as long as one workload needs without ragging the rest.
- */
 .md-typeset .wl-key ul.wl-rows li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 0.9em;
-  margin: 0;
+  display: contents;
 }
 
-.md-typeset .wl-key ul.wl-rows b {
-  flex: 0 0 2.1em;
-  color: var(--tf-violet);
-  font-weight: 700;
+/* No width for two columns: each label on its own line, what varies under it. */
+@media (max-width: 50rem) {
+  .md-typeset .wl-key ul.wl-rows {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
-/* A hairline between the code and what it ran on — the same rule the table
- * draws between the workload column and its measurements.
+/* A hairline between the label and what it ran on — the same rule the table
+ * draws between the workload columns and their measurements.
  */
 .md-typeset .wl-key .wl-delta {
   display: flex;
-  flex: 1 1 auto;
   flex-wrap: wrap;
   gap: 0.15em 0.32em;
   padding-left: 0.9em;
@@ -1333,37 +1341,10 @@ html[lang="zh"] .md-nav__title {
   margin-right: 0;
 }
 
-/* Scalars wider than the column: the id takes the first line beside the code,
- * the scalars the second, with the rule running down both.
- */
-.md-typeset .wl-key ul.wl-long li {
-  margin-bottom: 0.3em;
-}
-
-.md-typeset .wl-key ul.wl-long li:last-child {
-  margin-bottom: 0;
-}
-
-.md-typeset .wl-key ul.wl-long .wl-id {
-  order: 1;
-  flex: 1 1 auto;
-  margin-left: 0;
-  padding-left: 0.9em;
-  border-left: 1px solid rgba(26, 23, 32, 0.2);
-}
-
-.md-typeset .wl-key ul.wl-long .wl-delta {
-  order: 2;
-  flex: 0 0 calc(100% - 3em);
-  margin-left: 3em;
-}
-
 .md-typeset .wl-key .wl-id {
-  flex: 0 0 auto;
-  margin-left: auto;
   padding: 0;
   background: transparent;
-  color: var(--tf-muted);
+  color: #316c6f;
 }
 
 /* A tensor's name is not its shape, and a symbol is not its value: teal
@@ -1379,16 +1360,6 @@ html[lang="zh"] .md-nav__title {
 .md-typeset .wl-key .wl-dim .wl-k {
   color: var(--tf-muted);
 }
-
-/* The workload column is now two characters wide, so it centres like the
- * numbers rather than ranging left as a label did.
- */
-.md-typeset .datatable table:not([class]) td.colsep b {
-  color: var(--tf-violet);
-  font-weight: 700;
-}
-
-
 
 /* Roofline figure (performance-guides/memory-bound). Log-log, so the two decades
    between an elementwise kernel and the ridge stay legible. Teal is the roof,

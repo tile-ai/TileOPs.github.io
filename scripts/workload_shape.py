@@ -41,7 +41,7 @@ DTYPE_ABBR = {
     "float16": "f16", "bfloat16": "bf16", "float32": "f32", "float64": "f64",
     "float8_e4m3fn": "fp8e4m3", "float8_e5m2": "fp8e5m2",
     "int8": "i8", "int16": "i16", "int32": "i32", "int64": "i64",
-    "uint8": "u8", "bool": "bool",
+    "uint8": "u8", "bool": "bool", "complex64": "c64", "complex128": "c128",
 }
 
 

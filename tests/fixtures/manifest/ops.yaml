@@ -17,7 +17,7 @@ DeltaDecodeFwdOp:
       - "q.shape == (B, H, DK)"
   workloads:
     - {q_shape: [1, 8, 128], k_shape: [1, 8, 128], v_shape: [1, 8, 128],
-       state_shape: [1, 8, 128, 128], dtypes: [bfloat16], label: decode-b1-h8}
+       state_shape: [1, 8, 128, 128], dtypes: [bfloat16, float16], label: decode-b1-h8}
     - {q_shape: [8, 8, 128], k_shape: [8, 8, 128], v_shape: [8, 8, 128],
        state_shape: [8, 8, 128, 128], dtypes: [bfloat16], label: decode-b8-h8}
 

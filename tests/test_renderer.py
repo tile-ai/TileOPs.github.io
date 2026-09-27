@@ -79,9 +79,11 @@ def test_a_run_reports_what_it_could_not_describe(rendered):
 def test_without_a_manifest_the_pages_still_render(tmp_path):
     pages, _ = render(str(tmp_path / "bare"), manifest_dir=str(tmp_path / "none"))
     assert pages, "a missing manifest must not stop the deploy"
-    # No shapes to state, so every workload is named by its benchmark id alone.
+    # No shapes to state, so every workload is named by its benchmark id alone,
+    # the trailing dtype split off so the label's dtypes still share one group.
     assert "wl-tensor" not in "".join(pages.values())
-    assert "decode-b1-h8-bfloat16" in "".join(pages.values())
+    assert ('<td class="wl-name" rowspan="2"><code>decode-<wbr>b1-<wbr>h8</code></td>'
+            '<td class="colsep">bf16</td>') in "".join(pages.values())
 
 
 def test_a_manifest_in_a_subdirectory_renders_the_same_pages(tmp_path, rendered):

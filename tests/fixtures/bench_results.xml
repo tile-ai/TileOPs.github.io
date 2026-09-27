@@ -23,6 +23,23 @@
         <property name="torch-ref_ratio" value="11.39"/>
       </properties>
     </testcase>
+    <testcase classname="bench" name="test_bench[decode-b1-h8-float16]">
+      <properties>
+        <property name="op" value="DeltaDecodeFwdOp"/>
+        <property name="op_module" value="tileops.ops.linear_attention.delta"/>
+        <property name="tileops_device_busy_ms" value="0.0033"/>
+        <property name="tileops_latency_ms" value="0.0090"/>
+        <property name="tileops_tflops" value="0.508"/>
+        <property name="tileops_flops" value="1572864"/>
+        <property name="tileops_bytes" value="8388608"/>
+        <property name="tileops_timing" value="cupti"/>
+        <property name="tileops_n_kernels" value="1"/>
+        <property name="fla_device_busy_ms" value="0.0142"/>
+        <property name="fla_ratio" value="4.30"/>
+        <property name="torch-ref_device_busy_ms" value="0.0353"/>
+        <property name="torch-ref_ratio" value="10.70"/>
+      </properties>
+    </testcase>
 
     <!-- Behind the same library kernel. -->
     <testcase classname="bench" name="test_bench[decode-b8-h8-bfloat16]">

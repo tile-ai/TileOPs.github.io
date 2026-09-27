@@ -2,7 +2,7 @@
 
 !!! info "Nightly snapshot"
 
-    **GPU** NVIDIA H200 · **commit** [`0123456789ab`](https://github.com/tile-ai/TileOPs/commit/0123456789abcdef0123456789abcdef01234567) · **run date** 2026-01-01 · **5 ops**, 8 workloads
+    **GPU** NVIDIA H200 · **commit** [`0123456789ab`](https://github.com/tile-ai/TileOPs/commit/0123456789abcdef0123456789abcdef01234567) · **run date** 2026-01-01 · **5 ops**, 9 workloads
     · [nightly run](https://github.com/tile-ai/TileOPs/actions/runs/1234567890)
 
 ## Environment
@@ -32,5 +32,5 @@ Not published by this run: `image`, `driver`, `cuda`, `torch`, `tilelang`.
 | Page | Ops | Workloads |
 | --- | --- | --- |
 | [Elementwise](elementwise.md) | 3 | 4 |
-| [Linear Attention](linear-attention.md) | 1 | 2 |
+| [Linear Attention](linear-attention.md) | 1 | 3 |
 | [SSM](ssm.md) | 1 | 2 |
