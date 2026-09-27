@@ -79,19 +79,19 @@ what runs when you call `op(...)`.
 
 ## Native sparse attention
 
-::: tileops.attention.NSACmpFwdVarlenOp
+::: tileops.attention.NSACmpVarlenFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.attention.NSATopkVarlenOp
+::: tileops.attention.NSATopkVarlenFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.attention.NSAFwdVarlenOp
+::: tileops.attention.NSAVarlenFwdOp
     options:
       show_root_heading: true
       heading_level: 3

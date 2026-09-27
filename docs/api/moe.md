@@ -6,7 +6,7 @@ Both are documented under each op — `__init__` and `forward`, where `forward` 
 what runs when you call `op(...)`.
 
 A routed mixture-of-experts layer is available two ways here. `FusedMoeFwdOp` runs
-the whole FFN. The rest are its stages, callable on their own: the op that picks
+the whole FFN, and `FusedMoeSharedExpertFwdOp` adds a shared expert beside the routed ones. The rest are its stages, callable on their own: the op that picks
 each token's experts, the ops that move tokens into an expert-contiguous layout and
 back, and the expert GEMMs that run on it. `MoeGroupedGemmFwdOp` is one grouped
 GEMM; `MoeExpertMLPFwdOp` is the pair of them with the gated activation fused into
@@ -22,9 +22,15 @@ the routes are few enough to read the weights once per route rather than once pe
       heading_level: 3
       members: ["__init__", "forward"]
 
+::: tileops.moe.FusedMoeSharedExpertFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
 ## Routing and layout
 
-::: tileops.moe.FusedTopKOp
+::: tileops.moe.FusedTopKFwdOp
     options:
       show_root_heading: true
       heading_level: 3

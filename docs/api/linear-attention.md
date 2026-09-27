@@ -7,7 +7,7 @@ what runs when you call `op(...)`.
 
 ## DeltaNet
 
-::: tileops.linear_attention.DeltaNetAutogradOp
+::: tileops.linear_attention.DeltaNetAutogradFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -26,6 +26,12 @@ what runs when you call `op(...)`.
       members: ["__init__", "forward"]
 
 ::: tileops.linear_attention.DeltaNetDecodeFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
+::: tileops.linear_attention.DeltaNetInferenceFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -54,6 +60,12 @@ what runs when you call `op(...)`.
       members: ["__init__", "forward"]
 
 ::: tileops.linear_attention.GLADecodeFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
+::: tileops.linear_attention.GLAInferenceFwdOp
     options:
       show_root_heading: true
       heading_level: 3
