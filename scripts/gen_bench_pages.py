@@ -174,6 +174,9 @@ _KEYWORD_FAMILY = [
     (("grouped_gemm", "gemm", "matmul", "linear"), "linear_algebra"),
     (("moe", "expert"), "moe"),
     (("conv",), "convolution"), (("pool",), "pool"), (("fft",), "fft"),
+    # Ahead of `fp8`: the FP8 lightning indexer is published on the attention
+    # API page, a module of its own rather than in the `attention` package.
+    (("lightning_indexer",), "attention"),
     (("quant", "fp8"), "quantization"),
     (("rope", "rotary", "positional"), "positional"),
     (("mhc",), "mhc"), (("topk", "top_k"), "topk"),
