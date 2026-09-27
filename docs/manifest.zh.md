@@ -103,7 +103,7 @@ load_workloads("RMSNormFwdOp")             # that op's workload rows
 1. **起名，定 family。** 键是类名，条目写进 `spec/<family>.yaml`。
 2. **写签名。** 会变的轴长、形状、dtype 都在 `forall` 里声明，每个张量的 `dtype` 与 `shape` 用这些类型变量来写。`params` 是算子 `__init__` 的参数列表，不含代码自己管的执行策略参数（`target`、`kernel_map`、`tune`）。可选输入排在必选输入之后。按参考 API 支持的来声明，不按当前 kernel 支持的来声明。
 3. **写约束。** `shape_rules` 写关于类型变量取值的谓词，如 `H % G == 0`；派生的量写成 `let`；由开关选定的形状写成类型族。规则不读张量（`x.shape`、`x is None`），是否传入写成 `present(x)`。
-4. **写 `workloads`。** 每一行恰好给出没有生成器能确定的类型变量、每个没有默认值的构造参数、`some`（这次传入的可选张量）、`dtype_cases` 与 `label`。`implemented` 条目的每个可选张量，至少一行传、至少一行不传。label 是 case id 的一部分，而 case id 是 nightly 历史数据的键，改 label 会让历史断开。
+4. **写 `workloads`。** 每一行恰好给出没有生成器能确定的类型变量、每个没有默认值的构造参数、`some`（这次传入的可选张量）、`dtype_cases`（条目有 `DType` 类型变量时才写；dtype 参数按参数写）与 `label`。`implemented` 条目的每个可选张量，至少一行传、至少一行不传。label 是 case id 的一部分，而 case id 是 nightly 历史数据的键，改 label 会让历史断开。
 5. **写 `roofline`。** 用同一组类型变量写内联的 `flops`（访存不是「每个张量读或写一次」时再写 `bytes`），或者写一个 `func`，由它从检查过的调用算出两者。
 
 接口先于实现落地时写 `status: spec-only`，这时需要读代码的检查都跳过；改成 `implemented` 后这些检查全部打开。

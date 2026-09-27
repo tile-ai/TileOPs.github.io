@@ -136,7 +136,8 @@ Five steps, each one checkable immediately.
    A rule never reads a tensor (`x.shape`, `x is None`): presence is `present(x)`.
 4. **Write `workloads`.** Each row gives exactly the indices no generator determines,
    every construction parameter without a default, `some` for the optional tensors it
-   passes, `dtype_cases`, and a `label`. Each optional tensor of an implemented entry is
+   passes, `dtype_cases` where the entry has `DType` indices (a dtype parameter is
+   written as a parameter), and a `label`. Each optional tensor of an implemented entry is
    passed in at least one row and omitted in at least one. The label is part of the case
    id, which keys nightly history, so renaming it breaks that history.
 5. **Write `roofline`.** Inline `flops` (and `bytes`, where the traffic is not simply
