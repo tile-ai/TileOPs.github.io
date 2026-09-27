@@ -13,7 +13,7 @@ from it.**{ .keystone }
 | 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/…` | the validator, against `__init__`, `forward` and the declared kernels; the checks generated around every call | the op class, subclassing `Op` |
 | 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/__init__.py` and [`src/tileops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops)`<family>.py` | the validator: the family's `__all__` agrees with the manifest | the op's name, exported by its family and on the public path `tileops.<family>.<Op>` |
 | 3 | [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)`<family>/…` | — | the kernel classes, subclassing `Kernel` |
-| 4 | [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)`test_<name>.py` | the contract tests, which run every workload row | the comparison against `ref_api` |
+| 4 | [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)`test_<name>.py` | the contract tests, which run every workload row | the comparison against the reference `ref_program` |
 | 5 | [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)`bench_<name>.py` | the validator's `bench` level | the benchmark |
 
 `GemmFwdOp` — the plainest matmul there is — runs through all six below.
@@ -207,9 +207,10 @@ misses, every step compiles, and decode goes nowhere.
 
 ## Step 4: write the test
 
-Tests live in [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops) and compare against the spec's `ref_api`, over shapes the test
-chooses to reach the kernel's branches — small shapes marked `smoke` for the PR checks,
-large ones `full` for the nightly. The workload rows are not unit-test coverage; the
+Tests live in [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops) and compare against `ref_program`, the reference the
+workload (or the test class) defines, over shapes the test chooses to reach the kernel's
+branches — small shapes marked `smoke` for the PR checks, large ones `full` for the
+nightly. The workload rows are not unit-test coverage; the
 contract tests already run each of them through the op.
 
 The scaffolding is `TestBase` and `FixtureBase` from
@@ -251,7 +252,7 @@ With the other five written, check your own work with the three commands below:
 
 ```bash
 python scripts/validate_manifest.py --check-op GemmFwdOp   # spec and code agree
-python -m pytest tests/ops/test_gemm.py -v                # numerics match ref_api
+python -m pytest tests/ops/test_gemm.py -v                # numerics match ref_program
 python -m pytest benchmarks/ops/bench_gemm.py             # the benchmark produces numbers
 ```
 

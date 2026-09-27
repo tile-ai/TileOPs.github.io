@@ -10,7 +10,7 @@
 | 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/…` | 校验器对照 `__init__`、`forward` 与声明的 kernel；每次调用前后生成的检查 | 算子类，继承 `Op` |
 | 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/__init__.py` 与 [`src/tileops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops)`<family>.py` | 校验器：家族的 `__all__` 与 manifest 一致 | 算子名，由所属家族导出，并出现在公开路径 `tileops.<family>.<Op>` 上 |
 | 3 | [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)`<family>/…` | —— | kernel 类，继承 `Kernel` |
-| 4 | [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)`test_<名字>.py` | 契约测试，逐个跑每个 workload 行 | 与 `ref_api` 的数值比对 |
+| 4 | [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)`test_<名字>.py` | 契约测试，逐个跑每个 workload 行 | 与参考实现 `ref_program` 的数值比对 |
 | 5 | [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)`bench_<名字>.py` | 校验器的 `bench` 级 | benchmark |
 
 下文以最简单的矩阵乘 `GemmFwdOp` 为例走一遍这六处。
@@ -163,7 +163,7 @@ out = kernel(q, k, v)                       # seq_len 从张量形状里读
 
 ## 第四步：写测试
 
-测试放在 [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)，比对对象是 spec 的 `ref_api`，形状由测试自己挑，以覆盖 kernel 的各个分支；小形状标 `smoke` 进 PR 检查，大形状标 `full` 留给 nightly。workload 行不是单元测试的覆盖面，契约测试已经把每一行都交给算子跑过。
+测试放在 [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)，比对对象是 workload（或测试类）定义的参考实现 `ref_program`，形状由测试自己挑，以覆盖 kernel 的各个分支；小形状标 `smoke` 进 PR 检查，大形状标 `full` 留给 nightly。workload 行不是单元测试的覆盖面，契约测试已经把每一行都交给算子跑过。
 
 骨架用 [`tests/test_base.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/test_base.py) 里的 `TestBase` 与 `FixtureBase`，用例写在 `PARAMS` 里。
 
@@ -196,7 +196,7 @@ def test_gemm_bench(call) -> None:
 
 ```bash
 python scripts/validate_manifest.py --check-op GemmFwdOp   # spec and code agree
-python -m pytest tests/ops/test_gemm.py -v                # numerics match ref_api
+python -m pytest tests/ops/test_gemm.py -v                # numerics match ref_program
 python -m pytest benchmarks/ops/bench_gemm.py             # the benchmark produces numbers
 ```
 

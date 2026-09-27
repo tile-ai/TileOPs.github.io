@@ -48,7 +48,7 @@ required once the other direction also has an entry — and the validator requir
 | `signature` | yes | the op's type, below |
 | `workloads` | yes | the calls tests and benchmarks run |
 | `roofline` | yes | the cost of one call, specified in [Roofline](design/roofline.md) |
-| `composition` | no | for a composite op, the sub-ops it may hold |
+| `composition` | no | for a composite op, its stages in order: the sub-op classes it may hold and its own kernel roles |
 
 The signature is a function type over named type indices:
 
@@ -62,8 +62,8 @@ The signature is a function type over named type indices:
 | `shape_rules` | refinements: predicates on index values |
 | `dtype_combos` | the supported combinations of several `DType` indices, where not every one works |
 
-Key order in `params`, `inputs` and `outputs` is argument position, so reordering is a
-breaking change.
+Key order is position — `params` in `__init__`, `inputs` in `forward`, `outputs` in the
+returned tuple — so reordering is a breaking change.
 
 ## Reading a spec
 
@@ -244,8 +244,8 @@ cu_seqlens_q: {dtype: int32, shape: "[B + 1]", values: "prefix_sum(q_lens)",
 
 **The signature**
 
-- **Order is position.** Key order in `params`, `inputs` and `outputs` is argument order;
-  reordering is a breaking change.
+- **Order is position.** `params` order is `__init__` order, `inputs` order is `forward`
+  order, `outputs` order is return order; reordering is a breaking change.
 - **Write against the reference.** Dtypes and parameters follow the authoritative
   reference, never the current code; code that disagrees is fixed, with the entry
   `spec-only` until it conforms.

@@ -33,7 +33,7 @@ TileOPs 的组织方式相反：算子的规格先声明，实现由规格推导
 | `signature` | 是 | 算子的类型，见下表 |
 | `workloads` | 是 | 测试与 benchmark 执行的调用 |
 | `roofline` | 是 | 一次调用的开销，规范见 [Roofline](design/roofline.md) |
-| `composition` | 否 | 复合算子可能持有的子算子 |
+| `composition` | 否 | 复合算子按顺序列出的各阶段：可能持有的子算子类，以及它自己的 kernel 角色 |
 
 签名是一个以具名类型变量为参数的函数类型：
 
@@ -47,7 +47,7 @@ TileOPs 的组织方式相反：算子的规格先声明，实现由规格推导
 | `shape_rules` | 约束：关于类型变量取值的谓词 |
 | `dtype_combos` | 多个 `DType` 变量不是任意组合都支持时，列出支持的组合 |
 
-`params`、`inputs`、`outputs` 里键的顺序就是参数的位置，调换顺序是不兼容的改动。
+键的顺序就是位置：`params` 对应 `__init__`，`inputs` 对应 `forward`，`outputs` 对应返回的 tuple，调换顺序是不兼容的改动。
 
 ## 读一份 spec
 
@@ -196,7 +196,7 @@ cu_seqlens_q: {dtype: int32, shape: "[B + 1]", values: "prefix_sum(q_lens)",
 
 **签名**
 
-- **顺序即位置。** `params`、`inputs`、`outputs` 里键的顺序就是参数顺序，调换顺序是不兼容的改动。
+- **顺序即位置。** `params` 的顺序是 `__init__` 的参数顺序，`inputs` 是 `forward` 的参数顺序，`outputs` 是返回值顺序；调换顺序是不兼容的改动。
 - **照参考实现写。** dtype 与参数依照权威的参考实现，不照当前代码；代码与之不符时改代码，改好之前条目标 `spec-only`。
 - **同名即相等。** 形状相同的张量写同一个形状；不是「名字相等」的关系写成约束或 `let`。
 
