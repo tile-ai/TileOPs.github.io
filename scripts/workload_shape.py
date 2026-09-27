@@ -423,7 +423,7 @@ class Parametric:
                 except Exception:  # noqa: BLE001 — a row this checkout rejects
                     continue
                 if call.case_id == config:
-                    return _parametric_spec(plan, row, call, workload)
+                    return _parametric_spec(plan, row, case, call, workload)
         return None
 
 
@@ -463,16 +463,18 @@ def _symbolic_branch(plan, row, call, workload):
     return out
 
 
-def _parametric_spec(plan, row, call, workload) -> Spec:
+def _parametric_spec(plan, row, case, call, workload) -> Spec:
     sig = plan.sig
     present = [(n, call.specs[n]) for n in sig.inputs if call.specs.get(n) is not None]
-    dtypes = [spec.dtype for _, spec in present]
-    # The row's dtype is the one most of its inputs take, so the tensors in
-    # another one are the ones that say so.
-    dtype = max(dtypes, key=dtypes.count) if dtypes else None
+    # The row's dtype is the first one its case id names, so a tensor in
+    # another dtype — an int32 index, an fp32 state — is the one that says so.
+    # A row with no dtype case takes the dtype most of its inputs have.
+    named = [str(case[i]) for i in sig.forall if i in case]
+    dtypes = [str(spec.dtype) for _, spec in present]
+    dtype = named[0] if named else (max(dtypes, key=dtypes.count) if dtypes else None)
     # A tensor carries a dtype of its own only where it differs, so rows at
     # another dtype still share one symbolic description.
-    shapes = [(n, list(spec.shape), None if spec.dtype == dtype else spec.dtype)
+    shapes = [(n, list(spec.shape), None if str(spec.dtype) == dtype else str(spec.dtype))
               for n, spec in present]
     tensors = _group_tensors((n, fmt_shape(d), dt) for n, d, dt in shapes)
 
