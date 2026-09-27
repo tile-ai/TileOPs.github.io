@@ -7,6 +7,7 @@ a template rejected, a package deciding where an op is published, an expression
 the evaluator must refuse.
 """
 import os
+import shutil
 import subprocess
 import sys
 
@@ -81,6 +82,16 @@ def test_without_a_manifest_the_pages_still_render(tmp_path):
     # No shapes to state, so every workload is named by its benchmark id alone.
     assert "wl-tensor" not in "".join(pages.values())
     assert "decode-b1-h8-bfloat16" in "".join(pages.values())
+
+
+def test_a_manifest_in_a_subdirectory_renders_the_same_pages(tmp_path, rendered):
+    # The YAML may sit in a subdirectory of the manifest package; the shapes
+    # must not depend on which level it is read from.
+    spec = tmp_path / "manifest" / "spec"
+    spec.mkdir(parents=True)
+    shutil.copy(os.path.join(FIXTURES, "manifest", "ops.yaml"), spec)
+    pages, _ = render(str(tmp_path / "out"), manifest_dir=str(spec.parent))
+    assert pages == rendered[0]
 
 
 # --- Rules the pages do not show -------------------------------------------

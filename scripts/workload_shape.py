@@ -3,7 +3,7 @@
 
 The snapshot names a workload only by its pytest id
 (``hidden-state-prefill-float16``); the shapes live in the TileOPs spec
-manifest, ``src/tileops/manifest/*.yaml``, addressed by the ``<label>-<dtype>``
+manifest, the YAML files under ``src/tileops/manifest/``, addressed by the ``<label>-<dtype>``
 that id is built from.
 
 A workload entry carries its shapes one of two ways: ``<tensor>_shape`` keys
@@ -70,9 +70,9 @@ class Spec:
 
 
 def load_manifest(directory: str) -> dict:
-    """Every op entry in a manifest directory, keyed by op name."""
+    """Every op entry in the YAML files under a manifest directory, keyed by op name."""
     ops: dict[str, dict] = {}
-    for path in sorted(glob.glob(os.path.join(directory, "*.yaml"))):
+    for path in sorted(glob.glob(os.path.join(directory, "**", "*.yaml"), recursive=True)):
         with open(path, encoding="utf-8") as fh:
             doc = yaml.safe_load(fh) or {}
         for op, entry in doc.items():

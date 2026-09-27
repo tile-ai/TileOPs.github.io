@@ -70,7 +70,7 @@ if [ -d TileOPs/.git ] && [ "$bench_commit" != "unknown" ]; then
     while read -r path; do
       [ -n "$path" ] || continue
       git -C TileOPs show "$bench_commit:$path" > "$manifest_dir/$(basename "$path")" && n=$((n + 1))
-    done < <(git -C TileOPs ls-tree --name-only "$bench_commit" src/tileops/manifest/ \
+    done < <(git -C TileOPs ls-tree -r --name-only "$bench_commit" src/tileops/manifest/ \
              | grep '\.yaml$' || true)
     if [ "$n" -gt 0 ]; then
       manifest_arg=(--manifest-dir "$manifest_dir")
