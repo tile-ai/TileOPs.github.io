@@ -1081,7 +1081,7 @@ def reading_page(sol_engine=(None, None)) -> str:
         "## Where the shapes come from", "",
         "The snapshot records what each workload measured, not what it ran on: "
         "the shapes are read from the TileOPs [spec manifest]"
-        f"({_GH}/tree/main/src/tileops/manifest), joined to a row by the label "
+        f"({_GH}/tree/main/src/tileops/manifest/spec), joined to a row by the label "
         "and dtype the benchmark id is built from. A workload the manifest does "
         "not declare — a benchmark written by hand rather than driven by a spec "
         "— shows that id alone, with no shapes under it.",

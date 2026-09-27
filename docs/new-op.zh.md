@@ -6,7 +6,7 @@
 
 | # | 文件 | spec 里由谁指名 | 内容 |
 | --- | --- | --- | --- |
-| 1 | [`src/tileops/manifest/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest)`<family>.yaml` | 顶层的名字就是算子类名 | spec 本身 |
+| 1 | [`src/tileops/manifest/spec/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest/spec)`<family>.yaml` | 顶层的名字就是算子类名 | spec 本身 |
 | 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/…` | `source.op` | 算子类，继承 `Op` |
 | 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/__init__.py` 与 [`src/tileops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops)`<family>.py` | —— | 算子名，由所属家族导出，并出现在公开路径 `tileops.<family>.<Op>` 上 |
 | 3 | [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)`<family>/…` | `source.kernel` | kernel 类，继承 `Kernel` |

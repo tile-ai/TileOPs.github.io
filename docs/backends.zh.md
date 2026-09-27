@@ -313,7 +313,7 @@ docker run --rm --gpus all -v "$PWD/..":/work -w /work \
 
 ### 签名来自 manifest
 
-**编写 kernel 只需读 manifest，不必读 TileOPs 的源码。** builder 的签名就是该算子的 manifest 签名。以 [`src/tileops/manifest/normalization.yaml`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/normalization.yaml) 里的 `RMSNormFwdOp` 为例：
+**编写 kernel 只需读 manifest，不必读 TileOPs 的源码。** builder 的签名就是该算子的 manifest 签名。以 [`src/tileops/manifest/spec/norm.yaml`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/spec/norm.yaml) 里的 `RMSNormFwdOp` 为例：
 
 ```yaml
 signature:

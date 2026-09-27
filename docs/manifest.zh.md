@@ -2,7 +2,7 @@
 
 传统算子库以实现为中心：算子逐个写、逐个调优，支持哪些形状、哪些 dtype、跑多快，都由实现事后说明，文档写的是追述。
 
-TileOPs 的组织方式相反：算子的规格先声明，实现由规格推导。每个算子的规格称为它的 **spec**，写在 [`src/tileops/manifest/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest) 下的 YAML 文件里；这些文件合起来就是 manifest。
+TileOPs 的组织方式相反：算子的规格先声明，实现由规格推导。每个算子的规格称为它的 **spec**，写在 [`src/tileops/manifest/spec/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest/spec) 下以 family 命名的 YAML 文件里；这些文件合起来就是 manifest。
 
 **一个算子有了 spec，就成为整个系统的数据输入。** 各个环节读同一份声明，而不是各自去读实现：
 
@@ -101,7 +101,7 @@ load_workloads("RMSNormFwdOp")             # 该算子的 workload 列表
 
 1. **起名，选 family。** 键是算子的类名，spec 写进 `family` 对应的那个文件。
 2. **写 `signature`。** 张量进 `inputs` / `outputs`，非张量进 `params`；按调用顺序排，可选输入排在必填输入之后。dtype 写参考 API 支持的全部范围，不是当前 kernel 支持的范围。
-3. **写 `shape_rules`。** 输出形状必须由 `shape` 与 `shape_rules` 完全确定。涉及 `dim` 的算子用 [`shape_rules.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/shape_rules.py) 里的 `dim_range_validity`、`reduced_shape` 等辅助函数 —— 算子层调的是同一批函数，两边不会各说一套。
+3. **写 `shape_rules`。** 输出形状必须由 `shape` 与 `shape_rules` 完全确定。
 4. **写 `workloads`。** 单张量输入的算子，形状键必须是 `{输入名}_shape`，其余键只能是 `params` 的名字或保留的 `dtypes` / `label`。
 5. **写 `roofline` 与 `source`。**
 

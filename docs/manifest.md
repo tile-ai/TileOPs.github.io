@@ -7,7 +7,7 @@ runs, gets described afterwards.
 TileOPs is organised the other way round: an op's specification is declared first, and
 the implementation is derived from it. That
 specification is the op's **spec**, a YAML declaration under
-[`src/tileops/manifest/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest); those files together are the manifest.
+[`src/tileops/manifest/spec/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest/spec), named after its family; those files together are the manifest.
 
 **A spec makes the op an input to the whole system.** Every stage reads the same
 declaration rather than reading the implementation:
@@ -135,9 +135,7 @@ Five steps, each one checkable immediately.
    in call order, optional inputs after the required ones. Declare the dtypes the
    reference API supports, not the ones the current kernel does.
 3. **Write `shape_rules`.** `shape` and `shape_rules` together have to determine an
-   output's shape completely. For ops with a `dim`, use the helpers in
-   [`shape_rules.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/shape_rules.py) — `dim_range_validity`, `reduced_shape` and the rest — which the
-   op layer calls too, so the two cannot disagree.
+   output's shape completely.
 4. **Write `workloads`.** For a single-tensor-input op the shape key must be
    `{input}_shape`, and every other key must be a `params` name or the reserved
    `dtypes` / `label`.

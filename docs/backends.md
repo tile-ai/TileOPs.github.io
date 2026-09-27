@@ -382,7 +382,7 @@ that TileOPs is too old.
 
 **Writing a kernel needs the manifest, not the TileOPs source.** A builder's signature
 is the op's manifest signature — `RMSNormFwdOp` in
-[`src/tileops/manifest/normalization.yaml`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/normalization.yaml):
+[`src/tileops/manifest/spec/norm.yaml`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/manifest/spec/norm.yaml):
 
 ```yaml
 signature:

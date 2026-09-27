@@ -9,7 +9,7 @@ from it.**{ .keystone }
 
 | # | File | Named in the spec by | Contents |
 | --- | --- | --- | --- |
-| 1 | [`src/tileops/manifest/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest)`<family>.yaml` | the key is the op's class name | the spec itself |
+| 1 | [`src/tileops/manifest/spec/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest/spec)`<family>.yaml` | the key is the op's class name | the spec itself |
 | 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/…` | `source.op` | the op class, subclassing `Op` |
 | 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/__init__.py` and [`src/tileops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops)`<family>.py` | — | the op's name, exported by its family and on the public path `tileops.<family>.<Op>` |
 | 3 | [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)`<family>/…` | `source.kernel` | the kernel class, subclassing `Kernel` |
