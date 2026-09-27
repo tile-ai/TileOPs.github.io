@@ -59,9 +59,10 @@ compiled path behave differently from the eager one.
 - **Construct the op instance once and reuse it.** The instance key is a compile-time
   constant and each instance is its own compiled graph, so constructing one inside a loop
   recompiles every iteration.
-- **Do not rely on strides passing through.** A non-contiguous input is made contiguous
-  inside the node and the output is always contiguous; convert outside the op if later
-  work needs another layout.
+- **Do not rely on strides passing through.** A non-contiguous input the op does not
+  write is made contiguous inside the node, and an output the op allocates is always
+  contiguous; convert outside the op if later work needs another layout. An output that
+  is a written input (`alias`) or a caller's `out` keeps that tensor's storage.
 - **Meta tensors cannot warm anything up.** Once an op has a boundary, a call with
   meta or fake tensors returns at the fake and never reaches kernel construction.
 - **Warm up before a CUDA-graph capture.** Call once with real tensors at the same
@@ -82,8 +83,7 @@ With the boundary at the op layer, a caller can rely on three things.
 - **`fullgraph=True` works**, for an op that declares this contract — see [checking
   whether an op is in](#supported).
 - **Output shape, dtype and stride come from the manifest**, not from how a kernel
-  tiles or pads internally. Inputs are made contiguous inside the node, and the
-  output is always contiguous.
+  tiles or pads internally. An output the op allocates is always contiguous.
 
 ## Declaring the boundary on a new op: `RMSNormFwdOp`
 

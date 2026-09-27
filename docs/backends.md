@@ -34,9 +34,10 @@ With those four written, `pip install` is all it takes. What follows: their sign
 how one call reaches them, and a [complete backend](#runnable) written to these four steps,
 installable as it stands.
 
-After the first op comes a `build_kernel` per op. **Every op the target model uses has to
-be covered** — a missing one is an error, with no fall back to the implementation TileOPs
-ships, because those kernels cannot launch on this target's devices.
+After the first op comes a `build_kernel` per op. **Every op the target model uses that
+builds kernels of its own has to be covered** — a missing one is an error, with no fall
+back to the implementation TileOPs ships, because those kernels cannot launch on this
+target's devices. A composite op, which only runs sub-ops, needs no builder.
 
 ## The protocol: four functions
 
@@ -460,28 +461,29 @@ The caller warms up before capture — at least one non-captured call at the sam
 shape — because building a kernel may compile. During capture only one path is
 allowed: memo hit, then call.
 
-## After install: two states {#three-states}
+## After install: three states {#three-states}
 
 Once `detect` claims a class of devices, **every** op on those devices is served by
 that target, a missing one is an error, and there is no fall back to the
-implementation TileOPs ships.
+implementation TileOPs ships. The one exception is a composite op, which builds no
+kernel of its own.
 
 The reason for not falling back: selecting a target means this device belongs to other
 hardware, where the shipped kernels cannot launch at all. Falling back would trade a
 clear "this target does not implement this op" for an incomprehensible launch
 failure.
 
-So after install, each op is in one of two states:
+So after install, each op is in one of three states:
 
 | State | Result |
 | --- | --- |
-| The target registered a `build_kernel` for the op | it runs |
-| It did not | an error naming the target and the op, with no fall back to the shipped implementation |
+| The target registered a `build_kernel` for the op | it runs, the whole op on the target |
+| It did not, and the op builds kernels of its own | an error naming the target and the op, with no fall back to the shipped implementation |
+| It did not, and the op is a composite | the op runs its composition, and each sub-op settles on a target itself |
 
 Covering every op the target model uses is therefore work on the backend's side. The op
-side is settled by design: an op hands over the tensors its kernel is about to get, which
-is what lets the external path compute a memo key (see [how one call reaches
-`build_kernel`](#from-op-layer)).
+side is settled by design: the op layer keys the external path on the call's own inputs
+(see [how one call reaches `build_kernel`](#from-op-layer)).
 
 ### No hardware queried before the target is settled
 
@@ -577,7 +579,7 @@ author meets them:
 | 1 | The public torch-side API and the meaning of each parameter | How the op is called, the parameter names and their semantics are settled; a backend neither defines nor changes them |
 | 2 | Manifest validation | A call whose dtype or shape does not conform is rejected at the op layer and never reaches the backend |
 | 3 | Parameters by name | Parameters arrive under the manifest's `params` names, with the values the op instance holds; a parameter the manifest defaults to null and the caller did not give arrives as `None` |
-| 4 | Input contiguity | A backend only ever receives contiguous tensors |
+| 4 | Input contiguity | Every input the call does not write arrives contiguous; an input it writes arrives as the caller passed it, unless the manifest declares it `contiguous: true` |
 | 5 | Memoisation and reuse of kernels | The builder is called once per specialization: a later call with the same device and input signature reuses the previous return value. A builder may therefore compile, and the op layer guarantees it is not called again |
 | 6 | The `torch.compile` and CUDA-graph boundary | The op layer wraps a call as an opaque operator and registers a fake alongside, so the compiler can infer the output's shape and dtype without executing. **A backend's kernels do nothing for compilation**; see [Bringing an op into torch.compile](torch-compile.md) |
 | 7 | Roofline, profiling and numerical tests | The op layer's existing tests run once with the backend's kernel and compare against the manifest's `ref_api`; performance reports are produced as usual |
@@ -647,8 +649,7 @@ These are outside the protocol, each for a reason:
 | --- | --- |
 | Two backends on one target | A target is one set of kernels from one provider. Registering the same `(op, target)` twice is an error, because it means two packages both claim to serve it |
 | Falling back across targets | A named target without an implementation is an error; another target is not used instead |
-| Replacing a composite op wholesale | A composite op's computation lives in the sub-ops it constructs; substitution belongs at that level |
 | A backend changing input shapes, or restoring outputs on the caller's behalf | That is what the op layer provides to every target; changing it means changing it for all of them |
-| One call spanning several devices | CPU scalars travel as params, not tensor inputs, so all inputs are on one device |
+| One call spanning several devices | All inputs are on one device, except the tensors the manifest declares `device: cpu` |
 | A caller-provided workspace or explicit stream | What a backend needs is the current stream, and torch's stream is an implicit current value |
 | autograd integration | This path serves inference; forward and backward are separate ops |

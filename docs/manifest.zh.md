@@ -152,6 +152,7 @@ load_workloads("RMSNormFwdOp")             # that op's workload rows
       output: {dtype: T, shape: "[B, C, *L]"}
     shape_rules:
       - "num_groups > 0 and C % num_groups == 0"
+      - "B * (C // num_groups) * prod(L) != 1"
   workloads:
     - {B: 8, C: 128, L: [32, 32], num_groups: 32, dtype_cases: [{T: float16}], label: image-g32}
     - {B: 8, C: 128, L: [32, 32], num_groups: 32, some: [weight, bias],
