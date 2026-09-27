@@ -210,8 +210,9 @@ misses, every step compiles, and decode goes nowhere.
 
 Tests live in [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops) and compare against `ref_program`, the reference the
 workload (or the test class) defines, over shapes the test chooses to reach the kernel's
-branches. `smoke` cases run on every PR; `full` cases run on a PR that touches the test
-file and on the nightly; `nightly` marks long-running cases only the nightly runs. The workload rows are not unit-test coverage; the
+branches. Cases marked `smoke` run on every PR. Cases marked `full` run on any PR that
+changes their test file, and on the nightly. Long-running cases are marked `nightly` and
+run only on the nightly. The workload rows are not unit-test coverage; the
 contract tests already run each of them through the op.
 
 The scaffolding is `TestBase` and `FixtureBase` from

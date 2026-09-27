@@ -17,7 +17,8 @@ The pages are ordered by how much an op composes: the pointwise transforms first
 the axis reductions and the normalizations built on them, then the matmul and the
 expert routing over it, then the windowed and spectral transforms, then the
 sequence-model kernels built on all of the above. It is the order `tileops` declares
-its op families in, except Top-k: its one op is exported from `tileops.attention`.
+its op families in. The exception is Top-k, whose one op is exported from
+`tileops.attention`.
 
 | Page | What it covers |
 | --- | --- |

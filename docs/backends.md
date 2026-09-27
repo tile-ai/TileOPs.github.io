@@ -276,48 +276,49 @@ constructing its first op, imports the module named there, and the registration 
 module top level fill the registry. There is no base class to inherit and no interface to
 implement.
 
-**Step 2, a target name and a `detect`.** This `detect` is a single line — it claims every
-CPU device:
+**Step 2, a target name and a `detect`.** Both live in `target.py`, and `detect` is a
+single line — it claims every CPU device:
 
 ```python
-from tileops.backend import TensorSpec, register_detector, register_kernel_builder
+TARGET = "torch_cpu"
 
-register_detector(
-    target="torch_cpu",
-    detect=lambda device: device.type == "cpu",
-)
+
+def detect(device: torch.device) -> bool:
+    return device.type == "cpu"
 ```
 
-The two names mean different things: `target="torch_cpu"` names this set of kernels and is
+The two names mean different things: `TARGET = "torch_cpu"` names this set of kernels and is
 the backend author's to choose, while `device.type == "cpu"` is the device type it claims,
 defined by torch.
 
 **Step 3, a `build_kernel` written to the manifest signature.** `RMSNormFwdOp`'s spec
 declares two inputs, `x` and an optional `weight`, and two params, `normalized_shape` and `eps`; the
-function's parameters follow that declaration:
+function's parameters follow that declaration. It sits in `ops/rms_norm.py` with the
+kernel class `CpuRMSNorm`:
 
 ```python
-from .kernels import CpuRMSNorm
-
-
-def build_rms_norm(
-    x: TensorSpec,
-    weight: TensorSpec | None,
-    *,
-    normalized_shape,
-    eps,
-):
+def build_rms_norm(x: TensorSpec, weight: TensorSpec | None, *, normalized_shape, eps):
+    if eps is None:                     # a null manifest default: the ref API's meaning
+        eps = torch.finfo(torch.float32).eps
     return CpuRMSNorm(normalized_shape, eps, x.dtype)
 ```
 
-**Step 4, the registrations at module top level.** One per op taken over:
+**Step 4, the registrations at module top level.** `BUILDERS` in `ops/__init__.py` lists
+every op the target takes over, with each key spelled as in the manifest. The package's
+`__init__.py` registers one detector, then one builder per entry:
 
 ```python
-register_kernel_builder(
-    op="RMSNormFwdOp",
-    target="torch_cpu",
-    build_kernel=build_rms_norm,
-)
+BUILDERS = {
+    "RMSNormFwdOp": build_rms_norm,
+    "GemmFwdOp": build_gemm,
+}
+```
+
+```python
+register_detector(target=TARGET, detect=detect)
+
+for _op, _build_kernel in BUILDERS.items():
+    register_kernel_builder(op=_op, target=TARGET, build_kernel=_build_kernel)
 ```
 
 ## The template project: layout, tests, and retargeting it
@@ -330,11 +331,12 @@ Each file in the example covers one part of the work:
 | --- | --- |
 | `pyproject.toml` | the entry point declaration, which is the whole install mechanism |
 | `src/tileops_cpu/__init__.py` | all registration code |
-| `src/tileops_cpu/kernels.py` | the kernel implementation; a real backend compiles here |
-| `src/tileops_cpu/pending.py` | a builder registered under `op="GemmOp"` — the manifest key is `GemmFwdOp`, and a name that does not match is never called |
+| `src/tileops_cpu/target.py` | the target name and `detect` |
+| `src/tileops_cpu/ops/__init__.py` | `BUILDERS`, the table of every op the target takes over. Its keys are spelled as in the manifest; a builder under a misspelt key is never called |
+| `src/tileops_cpu/ops/rms_norm.py`, `ops/gemm.py` | one module per op, holding the kernel and the builder that constructs it. A real backend compiles in the kernel's constructor |
 | `tests/test_takeover.py` | numerics, validation, normalisation, outputs |
 | `tests/test_discovery.py` | entry point and registration |
-| `tests/test_errors.py` | the four error paths |
+| `tests/test_errors.py` | the three error paths: an unregistered op raises rather than falling back, an unknown target raises, and a failed call binds the op to no target |
 | `tests/test_memoization.py` | when `build_kernel` is called again |
 
 `CpuRMSNorm` does not receive the row count when it is constructed, which is
@@ -346,7 +348,7 @@ The tests need an environment with `tileops` installed:
 
 ```bash
 pip install -e .          # add --no-deps when tileops is already installed
-python -m pytest -q       # with a GPU: 22 passed; without: 20 passed, 2 skipped
+python -m pytest -q       # 24 passed, both with two H200s visible and with CUDA_VISIBLE_DEVICES=""
 ```
 
 The same holds inside the TileOPs dev image, again without modifying TileOPs:
@@ -368,9 +370,9 @@ that TileOPs is too old.
 ### Turning it into a backend for real hardware
 
 1. Copy the repository, rename `tileops_cpu` to `tileops_<hardware>`, and the target name with it.
-2. Change `_detect` to claim the corresponding device type.
-3. Replace `kernels.py` with real kernels — compile on construction, launch on `__call__`.
-4. Pick the first op to take over and write its `build_kernel` against the op's manifest signature.
+2. Change `detect` in `target.py` to claim the corresponding device type.
+3. Replace the kernels in the `ops/` modules with real ones, which compile on construction and launch on `__call__`.
+4. Pick the first op to take over, write its `build_kernel` against the op's manifest signature, and add it to `BUILDERS`.
 5. The four files under [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/main/tests) carry over largely as they are; substitute the op and target names.
 6. Add a `build_kernel` per op from there, until every op the target model uses is covered.
 
@@ -496,8 +498,8 @@ If such a failure does show up on your hardware, the traceback stops inside Tile
 than in the backend's `build_kernel`. That is a regression on the TileOPs side: file an
 issue with the traceback.
 
-The example marks two tests `requires_cuda_runtime`, and they skip on a machine with no
-GPU — what they check is this premise, not the backend.
+Every test in the example also passes where no GPU is visible, and none is skipped; that
+run is itself the check of this premise.
 
 ## Error messages and what to do
 
@@ -578,7 +580,7 @@ author meets them:
 | --- | --- | --- |
 | 1 | The public torch-side API and the meaning of each parameter | How the op is called, the parameter names and their semantics are settled; a backend neither defines nor changes them |
 | 2 | Manifest validation | A call whose dtype or shape does not conform is rejected at the op layer and never reaches the backend |
-| 3 | Parameters by name | Parameters arrive under the manifest's `params` names, with the values the op instance holds; for a parameter the manifest defaults to null, that is the value the op settled on, `None` or a number |
+| 3 | Parameters by name | Parameters arrive under the manifest's `params` names, with the values the op instance holds. For a parameter the manifest defaults to null, that is the value the op settled on, either `None` or a number |
 | 4 | Input contiguity | Every input the call does not write arrives contiguous; an input it writes arrives as the caller passed it, unless the manifest declares it `contiguous: true` |
 | 5 | Memoisation and reuse of kernels | The builder is called once per specialization: a later call with the same device and input signature reuses the previous return value. A builder may therefore compile, and the op layer guarantees it is not called again |
 | 6 | The `torch.compile` and CUDA-graph boundary | The op layer wraps a call as an opaque operator and registers a fake alongside, so the compiler can infer the output's shape and dtype without executing. **A backend's kernels do nothing for compilation**; see [Bringing an op into torch.compile](torch-compile.md) |
@@ -613,8 +615,8 @@ reaches `build_kernel`](#from-op-layer).
 
 Two consequences:
 
-- **An entry is not kept for good.** A call that fails revokes the op's target decision
-  and drops its memo table. A backend must not assume the callable it returned stays
+- **An entry may not last.** When a call fails, the op revokes its target decision and
+  drops its memo table. A backend must not assume the callable it returned stays
   alive; whatever resources it
   depends on, it holds references to itself.
 - **A finer or a coarser grain is resolved on the backend side.** Finer

@@ -130,7 +130,7 @@ def entry_for(self, role, call):                    # call is the input dtype
 
 ## 第三步：写 kernel
 
-kernel 类继承 [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py)，放在 [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 下，用 TileLang 写，构造时编译，实现 `forward`，由基类的 `__call__` 调用。构造函数由它的 `entry_for` 构造方法调用，调用签名就是第二步里的 `kernel(a, b)`。
+kernel 类继承 [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py)，放在 [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 下，用 TileLang 编写，在构造时编译。它实现 `forward`，基类的 `__call__` 会调用它。构造函数由它的 `entry_for` 构造方法调用，调用签名就是第二步里的 `kernel(a, b)`。
 
 它是这六处里唯一不受 spec 约束的一处：kernel 不读 spec，也不对照 spec 检查。
 
@@ -163,7 +163,7 @@ out = kernel(q, k, v)                       # seq_len 从张量形状里读
 
 ## 第四步：写测试
 
-测试放在 [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)，比对对象是 workload（或测试类）定义的参考实现 `ref_program`，形状由测试自己挑，以覆盖 kernel 的各个分支；标 `smoke` 的用例每个 PR 都跑；标 `full` 的在改动了该测试文件的 PR 和 nightly 里跑；耗时长的标 `nightly`，只在 nightly 跑。workload 行不是单元测试的覆盖面，契约测试已经把每一行都交给算子跑过。
+测试放在 [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)，比对对象是 workload（或测试类）定义的参考实现 `ref_program`，形状由测试自己挑，以覆盖 kernel 的各个分支；`smoke` 用例每个 PR 都运行；`full` 用例在改动其测试文件的 PR 和 nightly 中运行；耗时长的用例标 `nightly`，只在 nightly 运行。workload 行不是单元测试的覆盖面，契约测试已经把每一行都交给算子跑过。
 
 骨架用 [`tests/test_base.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/test_base.py) 里的 `TestBase` 与 `FixtureBase`，用例写在 `PARAMS` 里。
 

@@ -51,7 +51,7 @@ block(x, w)
 - **不要依赖 stride 原样传递。** 算子不写入的非连续输入在节点内部连续化，算子自己分配的输出恒为连续张量；后续计算需要别的布局，在算子之外自行转换。输出若就是被写入的输入（`alias`）或调用方给的 `out`，沿用那个张量的存储。
 - **不能用 meta 张量预热。** 有了边界，传入 meta 或 fake 张量的调用就在 fake 处返回，走不到构造 kernel 那一步。
 - **CUDA graph 捕获之前先行预热。** 用真实张量、相同形状至少调用一次：构造 kernel 允许编译，捕获期间只允许查表命中后直接调用。各阶段分别允许执行哪些操作，见[各阶段允许做什么](backends.md#phase-limits)。
-- **换一块卡可能重新构造。** 经 target 服务的调用按设备记住 kernel，同一个实例换一块卡就重新构造一次；自带 kernel 的记忆键是它的 `entry_for` 的返回值，只有构造结果随设备而变时才带上设备。构造函数里指名的 `target=` 在首次编译调用中同样生效；构造失败不会把算子固定到任何 target。
+- **换一块卡可能要重新构造。** 由 target 服务的调用，设备是 kernel 记忆键的一部分，同一个实例换到另一块卡上会重新构造一次。自带 kernel 的记忆键是它的 `entry_for` 的返回值，只有构造结果与设备有关时才包含设备。构造函数里指名的 `target=` 在首次编译调用中同样生效；构造失败不会把算子固定到任何 target。
 
 ### 接入之后成立的三项保证
 
@@ -83,7 +83,7 @@ class RMSNormFwdOp(Op):
         return kernel(x, weight)
 ```
 
-声明就这么多。operator 与它的 fake 都从条目生成，每个副作用分支一个 operator：张量参数是 `signature.inputs` 的顺序，返回什么看 `signature.outputs`，写哪些参数恰好是标了 `mutated` 的输入，每个输出的形状与 dtype 取自签名。名字是 `tileops::<family>_<snake(class)>`（类名本身以 family 开头时只写一次），这里就是 `tileops::norm_rms_norm_fwd`；分支写入某个输入、填写 `buffer: out` 或不产出某个输出时，operator 名字依次加上 `_writes_<输入>`、`_out`、`_without_<输出>`。没有算子自己起名字，`compile_op_names` 也就不可能和注册的名字对不上。
+声明就这么多。operator 与它的 fake 都从条目生成，每个副作用分支一个 operator：张量参数是 `signature.inputs` 的顺序，返回什么看 `signature.outputs`，写哪些参数恰好是标了 `mutated` 的输入，每个输出的形状与 dtype 取自签名。名字是 `tileops::<family>_<snake(class)>`（类名本身以 family 开头时只写一次），这里就是 `tileops::norm_rms_norm_fwd`；一个分支的 operator 若写入某个输入、填写 `buffer: out` 或不产出某个输出，名字后面就按这个顺序分别加上 `_writes_<输入>`、`_out`、`_without_<输出>`。没有算子自己起名字，`compile_op_names` 也就不可能和注册的名字对不上。
 
 一次调用经过的各层，以及边界落在哪里：
 

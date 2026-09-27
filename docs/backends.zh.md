@@ -218,43 +218,41 @@ torch_cpu = "tileops_cpu"
 
 `pip install` 之后不需要任何初始化：TileOPs 在构造第一个算子时枚举这个组、import 其中声明的模块，模块顶层的注册调用就把注册表填好。既没有需要继承的基类，也没有需要实现的接口。
 
-**第二步，起 target 名，写 `detect`。** 这里的 `detect` 只有一行 —— 认领所有 CPU 设备：
+**第二步，起 target 名，写 `detect`。** 两者都在 `target.py` 里，`detect` 只有一行 —— 认领所有 CPU 设备：
 
 ```python
-from tileops.backend import TensorSpec, register_detector, register_kernel_builder
+TARGET = "torch_cpu"
 
-register_detector(
-    target="torch_cpu",
-    detect=lambda device: device.type == "cpu",
-)
+
+def detect(device: torch.device) -> bool:
+    return device.type == "cpu"
 ```
 
-两个名字含义不同：`target="torch_cpu"` 是这一套 kernel 的名字，由后端作者决定；`device.type == "cpu"` 是它认领的设备类型，由 torch 定义。
+两个名字含义不同：`TARGET = "torch_cpu"` 是这一套 kernel 的名字，由后端作者决定；`device.type == "cpu"` 是它认领的设备类型，由 torch 定义。
 
-**第三步，照 manifest 签名写 `build_kernel`。** `RMSNormFwdOp` 的 spec 声明了两个输入 `x`、`weight`（可选）与两个参数 `normalized_shape`、`eps`，函数的形参照抄这份声明：
+**第三步，照 manifest 签名写 `build_kernel`。** `RMSNormFwdOp` 的 spec 声明了两个输入 `x`、`weight`（可选）与两个参数 `normalized_shape`、`eps`，函数的形参照抄这份声明。它和 kernel 类 `CpuRMSNorm` 一起放在 `ops/rms_norm.py` 里：
 
 ```python
-from .kernels import CpuRMSNorm
-
-
-def build_rms_norm(
-    x: TensorSpec,
-    weight: TensorSpec | None,
-    *,
-    normalized_shape,
-    eps,
-):
+def build_rms_norm(x: TensorSpec, weight: TensorSpec | None, *, normalized_shape, eps):
+    if eps is None:                     # manifest 默认为 null：取参考 API 的含义
+        eps = torch.finfo(torch.float32).eps
     return CpuRMSNorm(normalized_shape, eps, x.dtype)
 ```
 
-**第四步，在模块顶层注册。** 每个要接管的算子登记一次：
+**第四步，在模块顶层注册。** `ops/__init__.py` 里的 `BUILDERS` 列出这个 target 接管的全部算子，每个键都按 manifest 中的拼写书写；包的 `__init__.py` 登记一个 detector，再给表里每个算子登记一次 builder：
 
 ```python
-register_kernel_builder(
-    op="RMSNormFwdOp",
-    target="torch_cpu",
-    build_kernel=build_rms_norm,
-)
+BUILDERS = {
+    "RMSNormFwdOp": build_rms_norm,
+    "GemmFwdOp": build_gemm,
+}
+```
+
+```python
+register_detector(target=TARGET, detect=detect)
+
+for _op, _build_kernel in BUILDERS.items():
+    register_kernel_builder(op=_op, target=TARGET, build_kernel=_build_kernel)
 ```
 
 ## 模板项目：结构、测试与改造
@@ -267,11 +265,12 @@ register_kernel_builder(
 | --- | --- |
 | `pyproject.toml` | entry point 声明，也就是全部安装机制 |
 | `src/tileops_cpu/__init__.py` | 全部注册代码 |
-| `src/tileops_cpu/kernels.py` | kernel 实现，真实后端在此处编译 |
-| `src/tileops_cpu/pending.py` | 一个用 `op="GemmOp"` 注册的 builder —— manifest 的键是 `GemmFwdOp`，名字不一致就永远不会被调到 |
+| `src/tileops_cpu/target.py` | target 名与 `detect` |
+| `src/tileops_cpu/ops/__init__.py` | `BUILDERS`，即这个 target 接管的全部算子。键按 manifest 中的拼写书写，键写错的 builder 永远不会被调用 |
+| `src/tileops_cpu/ops/rms_norm.py`、`ops/gemm.py` | 每个算子一个模块，存放 kernel 实现和构造它的 builder。真实后端在 kernel 的构造函数里编译 |
 | `tests/test_takeover.py` | 数值、校验、归一与输出 |
 | `tests/test_discovery.py` | entry point 与注册 |
-| `tests/test_errors.py` | 四条错误路径 |
+| `tests/test_errors.py` | 三条错误路径：未登记的算子报错而不回退，未知的 target 报错，调用失败后算子不固定到任何 target |
 | `tests/test_memoization.py` | `build_kernel` 在什么条件下被重新调用 |
 
 其中 `CpuRMSNorm` 在构造时**得不到行数**，正是「构造函数只接收编译期参数」这一条的体现。
@@ -282,7 +281,7 @@ register_kernel_builder(
 
 ```bash
 pip install -e .          # tileops 已安装时加 --no-deps
-python -m pytest -q       # 有 GPU：22 passed；无 GPU：20 passed, 2 skipped
+python -m pytest -q       # 两块 H200 可见与 CUDA_VISIBLE_DEVICES="" 两种情况下都是 24 passed
 ```
 
 在 TileOPs 的 dev 镜像中运行同样不需要修改 TileOPs：
@@ -300,9 +299,9 @@ docker run --rm --gpus all -v "$PWD/..":/work -w /work \
 ### 改造成面向真实硬件的后端
 
 1. 复制该仓库，把 `tileops_cpu` 改为 `tileops_<硬件名>`，target 名同样改写。
-2. 修改 `_detect`，认领对应的设备类型。
-3. 把 `kernels.py` 替换为真实 kernel，构造时编译，`__call__` 时启动。
-4. 选定第一个要接管的算子，照它的 manifest 签名编写 `build_kernel`。
+2. 修改 `target.py` 里的 `detect`，认领对应的设备类型。
+3. 把 `ops/` 下各模块的 kernel 替换为真实 kernel：构造时编译，调用 `__call__` 时启动。
+4. 选定第一个要接管的算子，照它的 manifest 签名编写 `build_kernel`，并在 `BUILDERS` 里加一行。
 5. [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/main/tests) 中的四个文件大体可以直接沿用，替换其中的算子名与 target 名即可。
 6. 之后逐个算子增加 `build_kernel`，直到覆盖目标模型用到的全部算子。
 
@@ -397,7 +396,7 @@ target 定下来之前，算子层不查询与特定硬件绑定的信息 ——
 
 万一在自己的硬件上撞到这种失败，调用栈会停在 TileOPs 内部、而不是后端的 `build_kernel` 里。那是 TileOPs 一侧的回退，提 issue 并附上调用栈。
 
-示例仓库为两个测试加了 `requires_cuda_runtime` 标记，在没有 GPU 的机器上自动跳过 —— 它们检验的正是这条前提，而不是后端本身。
+在看不到 GPU 的环境里，示例仓库的全部测试照常通过，没有跳过项；这次运行本身就检查了这条前提。
 
 ## 错误信息与处理
 
@@ -462,7 +461,7 @@ TileOPs 不解析 `torch.device`，而是把它原样传给 `detect`。这样做
 | --- | --- | --- |
 | 1 | torch 侧的公开 API 与参数语义 | 这个算子如何被调用、参数名与各参数的含义均已确定，后端既不定义也不能改动 |
 | 2 | manifest 校验 | dtype 或形状不合规的调用被算子层拒绝，不会到达后端 |
-| 3 | 参数按名字传入 | 后端收到的参数名是 manifest `params` 的名字，值是算子实例保存的值；manifest 默认为 null 的参数，收到的是算子选定的值，可能是 `None`，也可能是一个数 |
+| 3 | 参数按名字传入 | 后端收到的参数名是 manifest `params` 的名字，值是算子实例保存的值。manifest 中默认为 null 的参数，传入的是算子选定的值，可能是 `None`，也可能是一个具体数值 |
 | 4 | 输入的连续性归一 | 本次调用不写入的输入都转成连续张量；被写入的输入按调用方传入的原样交给后端，除非 manifest 声明它 `contiguous: true` |
 | 5 | kernel 的记忆与重用 | 构造函数按特化调用一次：设备与输入签名相同的后续调用直接使用上一次的返回值。因此构造函数内部可以编译，算子层保证它不会被重复调用 |
 | 6 | `torch.compile` 与 CUDA graph 的边界 | 算子层把一次调用包成不透明算子并另配一个 fake，使编译器在不执行的前提下也能推出输出的形状与 dtype。**后端的 kernel 不为编译做任何事**，细节见[接入 torch.compile](torch-compile.md) |
@@ -486,7 +485,7 @@ TileOPs 按**设备加输入签名**记住 `build_kernel` 的返回值。这个�
 
 两点由此而来：
 
-- **条目不会一直保留。** 调用失败会撤销算子的 target 判定，并清空它的记忆表。后端不得假设自己返回的可调用对象一直存活；它所依赖的资源应由它自己持有引用。
+- **条目不一定一直保留。** 一次调用失败时，算子会撤销它的 target 判定，并清空记忆表。后端不得假设自己返回的可调用对象一直存活；它所依赖的资源应由它自己持有引用。
 - **需要更细或更粗的粒度，都在后端一侧解决。** 更细的区分在后端内部处理；希望减少重建次数，可以在 `build_kernel` 内部另加一层缓存。
 
 ## 调用方可用的接口
