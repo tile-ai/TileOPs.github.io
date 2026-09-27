@@ -54,7 +54,7 @@ The signature is a function type over named type indices:
 
 | Sub-field | Contents |
 | --- | --- |
-| `forall` | every free index with its kind: `Dim` (an axis length), `Shape` (a tuple of axes), `DType[...]` (one of a set of dtypes) |
+| `forall` | every free index with its kind: `Dim` (an axis length), `Shape` (a tuple of axes), `DType[...]` (one of a set of dtypes), `Seq[Int]` (a value list only a generator takes) |
 | `params` | the `__init__` parameters: `type`, optional `default` and `kw_only` |
 | `inputs` / `outputs` | tensors, each `{dtype, shape}` written in those indices, plus presence and effect flags |
 | `types` | type families: a shape chosen by the value of a flag |

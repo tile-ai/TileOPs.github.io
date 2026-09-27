@@ -220,19 +220,25 @@ run different kernels.
 
 ## Step 5: write the benchmark
 
-Benchmarks live in [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops) and subclass `ManifestBenchmark`. The calls are not
-written here: `manifest_calls(<Op>)` instantiates each workload row with each of its dtype
-cases and ids the case by its case id, and the validator's `bench` level fails a benchmark
-that writes its own:
+Benchmarks live in [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops) and time each call through a `ManifestBenchmark`
+built around the op and the call's workload. The calls are not written here:
+`manifest_calls(<Op>)` instantiates each workload row with each of its dtype cases and ids
+the case by its case id, and the validator's `bench` level fails a benchmark that writes
+its own:
 
 ```python
 from benchmarks.benchmark_base import ManifestBenchmark, manifest_calls
 from tileops.ops import GemmFwdOp
+from workloads.gemm import GemmWorkload
 
 
 @pytest.mark.parametrize("call", manifest_calls(GemmFwdOp))
 def test_gemm_bench(call) -> None:
-    ...
+    workload = GemmWorkload.from_call(call)
+    a, b = workload.gen_inputs()
+    op = GemmFwdOp(**call.arguments({}))
+    bm = ManifestBenchmark(op, workload)
+    bm.compare({"tileops": op, "torch-cublas": workload.ref_program}, a, b)
 ```
 
 Record at least one non-TileOPs baseline as well, or the row has nothing to compare

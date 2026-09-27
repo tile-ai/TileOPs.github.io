@@ -171,16 +171,21 @@ out = kernel(q, k, v)                       # seq_len 从张量形状里读
 
 ## 第五步：写 benchmark
 
-benchmark 放在 [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)，继承 `ManifestBenchmark`。调用不自己写：`manifest_calls(<Op>)` 把每个 workload 行配上它的每个 dtype case 各实例化一次，并以 case id 命名；自己写调用的 benchmark 过不了校验器的 `bench` 级：
+benchmark 放在 [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)，每个调用交给一个围绕算子与该调用 workload 构造的 `ManifestBenchmark` 计时。调用不自己写：`manifest_calls(<Op>)` 把每个 workload 行配上它的每个 dtype case 各实例化一次，并以 case id 命名；自己写调用的 benchmark 过不了校验器的 `bench` 级：
 
 ```python
 from benchmarks.benchmark_base import ManifestBenchmark, manifest_calls
 from tileops.ops import GemmFwdOp
+from workloads.gemm import GemmWorkload
 
 
 @pytest.mark.parametrize("call", manifest_calls(GemmFwdOp))
 def test_gemm_bench(call) -> None:
-    ...
+    workload = GemmWorkload.from_call(call)
+    a, b = workload.gen_inputs()
+    op = GemmFwdOp(**call.arguments({}))
+    bm = ManifestBenchmark(op, workload)
+    bm.compare({"tileops": op, "torch-cublas": workload.ref_program}, a, b)
 ```
 
 另外至少要记一个非 TileOPs 的基线，否则这一行没有比较对象。基线若需要转换输入，转换的代码留在它自己的计时区间内，不要挪出去。报出来的数字各是什么意思，见[benchmark 怎么计时](timing.md)。
