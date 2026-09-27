@@ -40,7 +40,7 @@ Inside, `bench_kernel` is three stages — collect, attribute, measure:
 
 ```python
 # Collect: each call runs under its own iteration number
-with _phase_session():                          # kernels + mappings + launch APIs
+with _phase_session():                          # kernels + copies + mappings + launch APIs
     for i in range(n_repeat):
         with _labelled(_PREPARE_ID):            # the L2 flush and other preparation
             prepare_one(i)
@@ -87,7 +87,7 @@ Five choices in it, each for a reason:
 
 | Case | Raises | Meaning |
 | --- | --- | --- |
-| CUPTI discarded records | `_CUPTIRecordsLostError` | the reading is gone though the iteration did run — the whole phase is measured again, up to 3 times, asking for a 4× larger buffer each time |
+| CUPTI discarded records | `_CUPTIRecordsLostError` | the reading is gone though the iteration did run — the whole phase is measured again, up to 3 attempts in all, asking for a 4× larger buffer each time |
 | Nothing discarded, but a kernel carries no iteration number | `_OffThreadLaunchError` | a thread that never pushed an id launched it |
 | Nothing discarded, and one iteration has no kernels at all | `_CUPTIAttributionError` | that call never reached the device |
 
@@ -163,7 +163,7 @@ call for a stop:
 | --- | --- | --- |
 | The timed closure contains `Tensor.backward` or `torch.autograd.grad` | the backward kernels come from the autograd engine's own thread, carry no iteration number, and the case raises instead of producing a figure | Drive a single fused node with `backward_of(out)`; for a chain, set `torch.autograd.set_multithreading_enabled(False)` |
 | Another thread in the process uses the GPU, or the timed closure uses CUPTI's `CUSTOM0` external id | those kernels carry no iteration number, or the closure overwrites the one the timer set, and it raises either way | Have the timed call launch its own work; use `CUSTOM1` / `CUSTOM2` instead |
-| The op produces its result through `copy_` — in-place elementwise, MoE's write-back | that copy goes through `cudaMemcpyAsync`, which a kernel-only collection never sees, so the reading is short and nothing raises | Collect `MEMCPY` / `MEMSET` as a check and confirm the window has none |
+| The op produces its result through `copy_` — in-place elementwise, MoE's write-back | the copy is collected but left out of `device_busy_ms` and reported as `uncounted_copy_ms`, so the reading is short | Pass `count_copies=True` for the case, which counts copies in every tag's reading |
 | One call launches several kernels | the gaps between kernels land in `latency_ms`, so comparing by it against a fused implementation charges them to your side | Conclude from `device_busy_ms` only; `latency_ms` compares between rows of equal `n_kernels` |
 | One call takes more than 10 ms | the iteration count hits the floor of 10, the wall-clock far exceeds the 100 ms budget, and p10/p90 over 10 samples are coarse | Accept the longer wall-clock, or state an iteration count and the sample size |
 | You want a kernel-level benchmark | the op has no spec, so shapes and roofline have to be written by hand and the spec validator cannot see them | Measure through the Op interface and write a [spec](manifest.md) |

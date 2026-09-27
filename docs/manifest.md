@@ -91,7 +91,7 @@ RMSNormFwdOp:
        dtype_cases: [{T: float16}, {T: bfloat16}], label: llama-8b-prefill}
     - {B: [4, 2048], normalized_shape: [128], dtype_cases: [{T: bfloat16}], label: qk-norm-head}
   roofline:
-    flops: "4 * prod(B) * prod(normalized_shape)"
+    flops: "(4 if present(weight) else 3) * prod(B) * prod(normalized_shape)"
 ```
 
 Read it in five steps:
@@ -196,11 +196,11 @@ and the roofline reads presence with `present`:
       - "num_groups > 0 and C % num_groups == 0"
       - "B * (C // num_groups) * prod(L) != 1"
   workloads:
-    - {B: 8, C: 128, L: [32, 32], num_groups: 32, dtype_cases: [{T: float16}], label: image-g32}
+    - {B: 8, C: 128, L: [32, 32], num_groups: 32, dtype_cases: [{T: float16}], label: image}
     - {B: 8, C: 128, L: [32, 32], num_groups: 32, some: [weight, bias],
-       dtype_cases: [{T: float16}], label: image-g32-affine}
+       dtype_cases: [{T: float16}], label: image-affine}
   roofline:
-    flops: "(5 if present(weight) or present(bias) else 3) * B * C * prod(L)"
+    flops: "(5 + (1 if present(weight) else 0) + (1 if present(bias) else 0)) * B * C * prod(L)"
 ```
 
 (Excerpt: the entry has more rows and dtypes.) An op may dispatch on whether an optional

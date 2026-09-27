@@ -578,7 +578,7 @@ author meets them:
 | --- | --- | --- |
 | 1 | The public torch-side API and the meaning of each parameter | How the op is called, the parameter names and their semantics are settled; a backend neither defines nor changes them |
 | 2 | Manifest validation | A call whose dtype or shape does not conform is rejected at the op layer and never reaches the backend |
-| 3 | Parameters by name | Parameters arrive under the manifest's `params` names, with the values the op instance holds; a parameter the manifest defaults to null and the caller did not give arrives as `None` |
+| 3 | Parameters by name | Parameters arrive under the manifest's `params` names, with the values the op instance holds; for a parameter the manifest defaults to null, that is the value the op settled on, `None` or a number |
 | 4 | Input contiguity | Every input the call does not write arrives contiguous; an input it writes arrives as the caller passed it, unless the manifest declares it `contiguous: true` |
 | 5 | Memoisation and reuse of kernels | The builder is called once per specialization: a later call with the same device and input signature reuses the previous return value. A builder may therefore compile, and the op layer guarantees it is not called again |
 | 6 | The `torch.compile` and CUDA-graph boundary | The op layer wraps a call as an opaque operator and registers a fake alongside, so the compiler can infer the output's shape and dtype without executing. **A backend's kernels do nothing for compilation**; see [Bringing an op into torch.compile](torch-compile.md) |
@@ -613,8 +613,9 @@ reaches `build_kernel`](#from-op-layer).
 
 Two consequences:
 
-- **The memo table is bounded and an entry can be evicted at any time.** A backend
-  must not assume the callable it returned stays alive; whatever resources it
+- **An entry is not kept for good.** A call that fails revokes the op's target decision
+  and drops its memo table. A backend must not assume the callable it returned stays
+  alive; whatever resources it
   depends on, it holds references to itself.
 - **A finer or a coarser grain is resolved on the backend side.** Finer
   distinctions happen inside the backend; to rebuild less often, add a cache inside

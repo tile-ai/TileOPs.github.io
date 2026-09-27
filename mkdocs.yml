@@ -42,7 +42,8 @@ nav:
   # the sequence-model kernels built on all of the above. Pages are not one per
   # family. The FP8 lightning indexer is a section of the Attention page, where its
   # single op is used, and the sequence-modeling family is two pages, mHC and Engram,
-  # being two unrelated algorithms. Trace comes last — a tool rather than an op.
+  # being two unrelated algorithms. Top-k keeps its page before GEMM though its op is
+  # exported from `tileops.attention`. Trace comes last — a tool rather than an op.
   - API Reference:
     - api/index.md
     - Elementwise: api/elementwise.md

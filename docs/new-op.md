@@ -50,7 +50,7 @@ GemmFwdOp:
       d: {dtype: T, shape: "[M, N]"}
   workloads:
     - {M: 4096, N: 4096, K: 7168, trans_a: false, trans_b: true,
-       dtype_cases: [{T: float16}, {T: bfloat16}], label: ds-v3-prefill-attn-proj}
+       dtype_cases: [{T: float16}, {T: bfloat16}], label: ds-v3-prefill-mlp-up}
   roofline:
     flops: "2 * M * N * K"
 ```
@@ -165,7 +165,8 @@ reference cannot collect it.
 ## Step 3: write the kernel
 
 A kernel class subclasses [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py), lives under [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels), is written in
-TileLang, compiles at construction and launches on `__call__`. Its constructor is what its
+TileLang, compiles at construction and implements `forward`, which the base class's
+`__call__` runs. Its constructor is what its
 `entry_for` builder calls, and its call signature is the `kernel(a, b)` of step 2.
 
 This is the one place of the six the spec does not constrain: a kernel neither reads the
@@ -181,13 +182,13 @@ class GemmTmaKernel(Kernel):
         self.kernel = _gemm_kernel(m, n, k, trans_a, trans_b, self.dtype_str, ...)  # compiles
         self.init_config(config, tune)      # tile sizes and pipeline depth
 
-    def __call__(self, a, b):               # a call passes tensors, nothing else
+    def forward(self, a, b):                # a call passes tensors, nothing else
         ...
 ```
 
 `m`, `n`, `k`, the dtype and the two layout flags are constructor arguments because the
 generated code treats them as constants: loop bounds, TMA descriptors and the WGMMA shape
-all unroll from them, as do the tile sizes. The tensors belong to `__call__`, where each
+all unroll from them, as do the tile sizes. The tensors belong to `forward`, where each
 call swaps pointers.
 
 Dividing them wrong costs a recompile. A decode step advances one token at a time, so
@@ -209,8 +210,8 @@ misses, every step compiles, and decode goes nowhere.
 
 Tests live in [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops) and compare against `ref_program`, the reference the
 workload (or the test class) defines, over shapes the test chooses to reach the kernel's
-branches — small shapes marked `smoke` for the PR checks, large ones `full` for the
-nightly. The workload rows are not unit-test coverage; the
+branches. `smoke` cases run on every PR; `full` cases run on a PR that touches the test
+file and on the nightly; `nightly` marks long-running cases only the nightly runs. The workload rows are not unit-test coverage; the
 contract tests already run each of them through the op.
 
 The scaffolding is `TestBase` and `FixtureBase` from

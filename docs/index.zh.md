@@ -4,7 +4,7 @@ TileOPs 是一个面向大模型推理的算子库，构建在 [TileLang](https:
 
 它与手写算子库的不同之处在于组织方式：每个算子先以一份 spec 声明，再由 agent 依据这份 spec 生成实现。spec 既是代码生成的唯一依据，也是验收的标准 —— 正确性对照 spec 指定的参考实现，性能对照 roofline 模型给出的上界，两项都不依赖人的判断。因此一个实现可以随时从 spec 重新生成，而反过来做不到。
 
-对使用者而言，它就是一批可以直接调用的算子：形状与 dtype 在调用时确定，特化后的 kernel 在首次使用时自动调优并缓存，随后可以与 CUDA graph 配合使用；每个算子各自声明是否支持 `torch.compile(fullgraph=True)`。
+对使用者而言，它就是一批可以直接调用的算子：形状与 dtype 在调用时确定，特化后的 kernel 在首次使用时构造并缓存，随后可以与 CUDA graph 配合使用；每个算子各自声明是否支持 `torch.compile(fullgraph=True)`。
 
 ## 安装
 

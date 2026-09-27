@@ -45,7 +45,7 @@ GemmFwdOp:
       d: {dtype: T, shape: "[M, N]"}
   workloads:
     - {M: 4096, N: 4096, K: 7168, trans_a: false, trans_b: true,
-       dtype_cases: [{T: float16}, {T: bfloat16}], label: ds-v3-prefill-attn-proj}
+       dtype_cases: [{T: float16}, {T: bfloat16}], label: ds-v3-prefill-mlp-up}
   roofline:
     flops: "2 * M * N * K"
 ```
@@ -130,7 +130,7 @@ def entry_for(self, role, call):                    # call is the input dtype
 
 ## 第三步：写 kernel
 
-kernel 类继承 [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py)，放在 [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 下，用 TileLang 写，构造时编译、`__call__` 时启动。构造函数由它的 `entry_for` 构造方法调用，调用签名就是第二步里的 `kernel(a, b)`。
+kernel 类继承 [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py)，放在 [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 下，用 TileLang 写，构造时编译，实现 `forward`，由基类的 `__call__` 调用。构造函数由它的 `entry_for` 构造方法调用，调用签名就是第二步里的 `kernel(a, b)`。
 
 它是这六处里唯一不受 spec 约束的一处：kernel 不读 spec，也不对照 spec 检查。
 
@@ -142,11 +142,11 @@ class GemmTmaKernel(Kernel):
         self.kernel = _gemm_kernel(m, n, k, trans_a, trans_b, self.dtype_str, ...)  # compiles
         self.init_config(config, tune)      # tile sizes and pipeline depth
 
-    def __call__(self, a, b):               # a call passes tensors, nothing else
+    def forward(self, a, b):                # a call passes tensors, nothing else
         ...
 ```
 
-`m`、`n`、`k`、dtype 与两个布局标志进了构造函数，因为生成的代码里这些值是常量：循环边界、TMA 描述符、WGMMA 的形状都按它们展开，tile 尺寸同理。张量本身留给 `__call__`，每次调用只换指针。
+`m`、`n`、`k`、dtype 与两个布局标志进了构造函数，因为生成的代码里这些值是常量：循环边界、TMA 描述符、WGMMA 的形状都按它们展开，tile 尺寸同理。张量本身留给 `forward`，每次调用只换指针。
 
 分错的代价是重新编译。decode 一步一步往前走，`seq_len` 每步 +1，batch 随 running set 变化：
 
@@ -163,7 +163,7 @@ out = kernel(q, k, v)                       # seq_len 从张量形状里读
 
 ## 第四步：写测试
 
-测试放在 [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)，比对对象是 workload（或测试类）定义的参考实现 `ref_program`，形状由测试自己挑，以覆盖 kernel 的各个分支；小形状标 `smoke` 进 PR 检查，大形状标 `full` 留给 nightly。workload 行不是单元测试的覆盖面，契约测试已经把每一行都交给算子跑过。
+测试放在 [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)，比对对象是 workload（或测试类）定义的参考实现 `ref_program`，形状由测试自己挑，以覆盖 kernel 的各个分支；标 `smoke` 的用例每个 PR 都跑；标 `full` 的在改动了该测试文件的 PR 和 nightly 里跑；耗时长的标 `nightly`，只在 nightly 跑。workload 行不是单元测试的覆盖面，契约测试已经把每一行都交给算子跑过。
 
 骨架用 [`tests/test_base.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/test_base.py) 里的 `TestBase` 与 `FixtureBase`，用例写在 `PARAMS` 里。
 

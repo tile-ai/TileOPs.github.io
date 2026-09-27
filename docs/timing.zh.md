@@ -27,7 +27,7 @@ samples = bench_kernel(op, args=(x, weight))   # 每次迭代一个 Sample
 
 ```python
 # 采集：每次调用在自己的迭代号下执行
-with _phase_session():                          # kernel + 映射 + launch 类 API
+with _phase_session():                          # kernel + 拷贝 + 映射 + launch 类 API
     for i in range(n_repeat):
         with _labelled(_PREPARE_ID):            # 准备工作用专用 id 标记
             prepare_one(i)
@@ -64,7 +64,7 @@ for i in range(n_repeat):
 
 | 情形 | 报什么 | 含义 |
 | --- | --- | --- |
-| CUPTI 丢了记录 | `_CUPTIRecordsLostError` | 那次迭代跑过，只是读数丢了 —— 整个 phase 重测，最多 3 次，每次把缓冲要大 4 倍 |
+| CUPTI 丢了记录 | `_CUPTIRecordsLostError` | 那次迭代跑过，只是读数丢了 —— 整个 phase 重测，总共最多测 3 次，每次把缓冲要大 4 倍 |
 | 没有丢弃，但有 kernel 带不上迭代号 | `_OffThreadLaunchError` | 某个没有标记迭代号的线程发起了它 |
 | 没有丢弃，某次迭代一个 kernel 都没有 | `_CUPTIAttributionError` | 这次调用没上设备 |
 
@@ -112,7 +112,7 @@ decode 尺度上，算子的执行时间可能短于发起它的那次 Python �
 | --- | --- | --- |
 | 被测闭包里包了 `Tensor.backward` 或 `torch.autograd.grad` | 反向的 kernel 由 autograd 引擎的线程发出，带不上迭代号，整个用例报错，不产出数字 | 单个融合节点用 `backward_of(out)` 直接驱动；多节点链改用 `torch.autograd.set_multithreading_enabled(False)` |
 | 进程里有别的线程在用 GPU，或被测闭包自己用了 CUPTI 的 `CUSTOM0` external id | 那些 kernel 带不上迭代号，或者迭代号被闭包盖掉，同样报错 | 让被计时的调用自己启动它的工作；external id 改用 `CUSTOM1` / `CUSTOM2` |
-| 算子靠 `copy_` 回写才产出结果，例如原地 elementwise 与 MoE 的写回 | 那次拷贝走 `cudaMemcpyAsync`，只采集 kernel 活动的计时看不见它，读数偏小，而且不报错 | 采集 `MEMCPY` / `MEMSET` 当检查用，确认窗口内没有 |
+| 算子靠 `copy_` 回写才产出结果，例如原地 elementwise 与 MoE 的写回 | 拷贝会被采集，但默认不计入 `device_busy_ms`，另记在 `uncounted_copy_ms`，读数偏小 | 给这个用例传 `count_copies=True`，所有 tag 的读数都计入拷贝 |
 | 一次调用发多个 kernel | kernel 之间的空隙落在 `latency_ms` 里，用它与融合实现比较，空隙算在多 kernel 这一方 | 结论只用 `device_busy_ms`；`latency_ms` 仅在两行 `n_kernels` 相同时可比 |
 | 单次调用超过 10 ms | 迭代次数被下限 10 顶住，墙钟远超 100 ms 的预算，10 个样本给出的 p10/p90 很粗 | 接受更长的墙钟，或显式指定迭代次数并写明样本量 |
 | 想加一个 kernel 级的 benchmark | 这个算子没有 spec，形状与 roofline 只能手写，spec 校验器也查不到它 | 经 Op 接口测，并补一份 [spec](manifest.md) |

@@ -13,7 +13,7 @@ judgement call. An implementation can therefore be regenerated from its spec,
 while the reverse does not hold.
 
 To a caller it is simply a set of operators: shapes and dtype come from the call,
-the specialized kernel is auto-tuned and cached on first use and works under CUDA
+the specialized kernel is built and cached on first use and works under CUDA
 graphs afterwards, and each op declares whether it supports
 `torch.compile(fullgraph=True)`.
 
