@@ -9,7 +9,7 @@ TileOPs 的组织方式相反：算子的规格先声明，实现由规格推导
 | 谁消费 | 读 spec 里的什么 | 产出 |
 | --- | --- | --- |
 | 算子层 | `signature` | 每次调用前后的检查、输出形状推导、dtype 检查，以及 `torch.compile` 看到的 operator |
-| [契约测试](https://github.com/tile-ai/TileOPs/tree/main/tests) | `workloads` | 每个 workload 行对应一次调用，交给算子执行 |
+| [契约测试](https://github.com/tile-ai/TileOPs/tree/main/tests) | `workloads` | 每个 workload 行的每个 dtype case 对应一次调用，交给算子执行 |
 | [每晚的 benchmark](https://github.com/tile-ai/TileOPs/tree/main/benchmarks) | `workloads` | 这些调用各自的 device time |
 | [roofline](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/perf) | `roofline` | 一次调用的计算量与访存量，效率的分母 |
 | 本文档站 | `signature`、`workloads` | Benchmarks 页每一行下面列出的形状 |
@@ -23,7 +23,7 @@ TileOPs 的组织方式相反：算子的规格先声明，实现由规格推导
 
 每个 family 文件是一个 `算子名 → 条目` 的映射；大的 family 拆成若干个 `<family>_<shard>.yaml`。加载时各文件合并，算子名重复即报错。多个条目共用的代数数据类型写在 `spec/types.yaml`。
 
-条目的键是算子的 Python 类名 `{Name}{Fwd|Bwd}Op`，校验器要求 `cls.__name__` 与它逐字相同。
+条目的键是算子的 Python 类名 `{Name}[{Fwd|Bwd}]Op`，另一个方向也有条目时方向后缀必须写，校验器要求 `cls.__name__` 与它逐字相同。
 
 | 字段 | 必填 | 内容 |
 | --- | --- | --- |
@@ -101,7 +101,7 @@ load_workloads("RMSNormFwdOp")             # that op's workload rows
 五步，每一步写完都能立即检查。
 
 1. **起名，定 family。** 键是类名，条目写进 `spec/<family>.yaml`。
-2. **写签名。** 会变的轴长、形状、dtype 都在 `forall` 里声明，每个张量的 `dtype` 与 `shape` 用这些类型变量来写。`params` 列出参考 API 的 `__init__` 参数。可选输入排在必选输入之后。dtype 按参考 API 支持的来声明，不按当前 kernel 支持的来声明。
+2. **写签名。** 会变的轴长、形状、dtype 都在 `forall` 里声明，每个张量的 `dtype` 与 `shape` 用这些类型变量来写。`params` 是算子 `__init__` 的参数列表，不含代码自己管的执行策略参数（`target`、`kernel_map`、`tune`）。可选输入排在必选输入之后。按参考 API 支持的来声明，不按当前 kernel 支持的来声明。
 3. **写约束。** `shape_rules` 写关于类型变量取值的谓词，如 `H % G == 0`；派生的量写成 `let`；由开关选定的形状写成类型族。规则不读张量（`x.shape`、`x is None`），是否传入写成 `present(x)`。
 4. **写 `workloads`。** 每一行恰好给出没有生成器能确定的类型变量、每个没有默认值的构造参数、`some`（这次传入的可选张量）、`dtype_cases` 与 `label`。`implemented` 条目的每个可选张量，至少一行传、至少一行不传。label 是 case id 的一部分，而 case id 是 nightly 历史数据的键，改 label 会让历史断开。
 5. **写 `roofline`。** 用同一组类型变量写内联的 `flops`（访存不是「每个张量读或写一次」时再写 `bytes`），或者写一个 `func`，由它从检查过的调用算出两者。
@@ -196,7 +196,7 @@ cu_seqlens_q: {dtype: int32, shape: "[B + 1]", values: "prefix_sum(q_lens)",
 **签名**
 
 - **顺序即位置。** `params`、`inputs`、`outputs` 里键的顺序就是参数顺序，调换顺序是不兼容的改动。
-- **接口声明完整。** `params` 覆盖参考 API 的全部参数，即使 kernel 只支持默认值。
+- **照参考实现写。** dtype 与参数依照权威的参考实现，不照当前代码；代码与之不符时改代码，改好之前条目标 `spec-only`。
 - **同名即相等。** 形状相同的张量写同一个形状；不是「名字相等」的关系写成约束或 `let`。
 
 **约束与是否传入**

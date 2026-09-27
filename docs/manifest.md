@@ -16,7 +16,7 @@ declaration rather than reading the implementation:
 | Consumer | Reads from the spec | Produces |
 | --- | --- | --- |
 | The op layer | `signature` | the checks around every call, output shape inference, the dtype check, and the operator `torch.compile` sees |
-| [The contract tests](https://github.com/tile-ai/TileOPs/tree/main/tests) | `workloads` | one call per workload row, run through the op |
+| [The contract tests](https://github.com/tile-ai/TileOPs/tree/main/tests) | `workloads` | one call per workload row and dtype case, run through the op |
 | [The nightly benchmark](https://github.com/tile-ai/TileOPs/tree/main/benchmarks) | `workloads` | the device time of each of those calls |
 | [Roofline](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/perf) | `roofline` | the FLOPs and bytes one call moves — the denominator of efficiency |
 | This site | `signature`, `workloads` | the shapes printed under each row of the Benchmarks pages |
@@ -36,7 +36,8 @@ Each family file is a mapping `op name → entry`; a large family shards into
 `<family>_<shard>.yaml`. The files merge at load time, and a duplicate op name is an
 error. Algebraic data types that several entries share live in `spec/types.yaml`.
 
-The key is the op's Python class name, `{Name}{Fwd|Bwd}Op`, and the validator requires
+The key is the op's Python class name, `{Name}[{Fwd|Bwd}]Op` — the direction suffix is
+required once the other direction also has an entry — and the validator requires
 `cls.__name__` to equal it character for character.
 
 | Field | Required | Contents |
@@ -127,9 +128,9 @@ Five steps, each one checkable immediately.
    `spec/<family>.yaml`.
 2. **Write the signature.** Declare each axis length, shape and dtype that varies in
    `forall`, and write every tensor's `dtype` and `shape` in those indices. `params`
-   lists the `__init__` parameters of the reference API. Optional inputs come after the
-   required ones. Declare the dtypes the reference API supports, not the ones the
-   current kernel does.
+   is the op's `__init__` parameter list, less the execution-policy parameters the code
+   owns (`target`, `kernel_map`, `tune`). Optional inputs come after the required ones.
+   Declare what the reference API supports, not what the current kernel does.
 3. **Write the refinements.** `shape_rules` hold predicates on index values, such as
    `H % G == 0`; a derived quantity is a `let`; a shape a flag chooses is a type family.
    A rule never reads a tensor (`x.shape`, `x is None`): presence is `present(x)`.
@@ -243,8 +244,9 @@ cu_seqlens_q: {dtype: int32, shape: "[B + 1]", values: "prefix_sum(q_lens)",
 
 - **Order is position.** Key order in `params`, `inputs` and `outputs` is argument order;
   reordering is a breaking change.
-- **Declare the whole interface.** `params` covers every parameter of the reference API,
-  even where the kernel supports only the default.
+- **Write against the reference.** Dtypes and parameters follow the authoritative
+  reference, never the current code; code that disagrees is fixed, with the entry
+  `spec-only` until it conforms.
 - **A shared name is an equality.** Tensors of one shape write one shape term; a
   relationship that is not an equality of names is a refinement or a `let`.
 
