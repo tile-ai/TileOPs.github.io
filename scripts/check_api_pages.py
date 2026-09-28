@@ -33,9 +33,14 @@ def _names(path: Path, variable: str) -> list[str]:
     if not path.is_file():
         raise SystemExit(f"no such file: {path} — is there a TileOPs checkout?")
     for node in ast.parse(path.read_text(encoding="utf-8"), filename=str(path)).body:
-        if not isinstance(node, ast.Assign):
+        # `__all__: list[str] = []` is an AnnAssign, with one target and no list.
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            targets = [node.target]
+        else:
             continue
-        if not any(isinstance(t, ast.Name) and t.id == variable for t in node.targets):
+        if not any(isinstance(t, ast.Name) and t.id == variable for t in targets):
             continue
         # Anything but a literal of strings is refused rather than read past: a
         # name silently dropped here is an op this check would stop looking at.
