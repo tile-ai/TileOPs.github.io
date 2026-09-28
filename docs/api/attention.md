@@ -7,12 +7,6 @@ what runs when you call `op(...)`.
 
 ## Multi-head attention
 
-::: tileops.attention.MultiHeadAttentionBwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
 ::: tileops.attention.MultiHeadAttentionDecodePagedWithKVCacheFwdOp
     options:
       show_root_heading: true
