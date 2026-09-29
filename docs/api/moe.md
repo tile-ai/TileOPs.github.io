@@ -12,7 +12,7 @@ back, and the expert GEMMs that run on it. `MoeGroupedGemmFwdOp` is one grouped
 GEMM; `MoeExpertMLPFwdOp` is the pair of them with the gated activation fused into
 the first; `FusedMoEExpertsFwdOp` is that MLP with the permutes around it, on the
 tight (no-pad) layout, and `IndexedExpertMLPFwdOp` is the backend it picks instead when
-the routes are few enough to read the weights once per route rather than once per expert. The routing has to produce the layout the GEMM expects.
+the routes are few enough to read the weights once per route rather than once per expert. `SharedExpertMLPFwdOp` is the dense gated MLP of the shared expert. The routing has to produce the layout the GEMM expects.
 
 ## Fused forward
 
@@ -75,6 +75,12 @@ the routes are few enough to read the weights once per route rather than once pe
       members: ["__init__", "forward"]
 
 ::: tileops.moe.IndexedExpertMLPFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
+::: tileops.moe.SharedExpertMLPFwdOp
     options:
       show_root_heading: true
       heading_level: 3

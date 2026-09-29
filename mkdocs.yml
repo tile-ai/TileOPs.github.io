@@ -56,6 +56,7 @@ nav:
     - Convolution: api/convolution.md
     - FFT: api/fft.md
     - MoE: api/moe.md
+    - Sampling: api/sampling.md
     - RoPE: api/rope.md
     - Attention: api/attention.md
     - Linear Attention: api/linear-attention.md

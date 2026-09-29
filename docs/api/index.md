@@ -25,13 +25,14 @@ its op families in. The exception is Top-k, whose one op is exported from
 | [Elementwise](elementwise.md) | unary and binary maps, activations, dropout, and the in-place forms |
 | [Reduction](reduction.md) | sums, extrema, arg-reductions, cumulative scans, softmax |
 | [Normalization](normalization.md) | RMSNorm, LayerNorm, GroupNorm, BatchNorm and the fused variants |
-| [Quantization](quantization.md) | fp8 quantization |
+| [Quantization](quantization.md) | INT8, FP8 and INT4 quantization, and INT8 dequantization |
 | [Top-k](topk.md) | top-k selection |
 | [GEMM](linear-algebra.md) | dense matmul — plain, batched, and the fp8 variants |
 | [Pooling](pool.md) | average, max and adaptive pooling, with and without indices, plus the chunked sequence mean |
 | [Convolution](convolution.md) | forward convolution over 1D, 2D and 3D inputs |
 | [FFT](fft.md) | the discrete transform |
 | [MoE](moe.md) | the routed mixture-of-experts FFN and its separately callable stages |
+| [Sampling](sampling.md) | logits masks (top-k, top-p, min-p) and sampling, including chain speculative sampling |
 | [RoPE](rope.md) | rotary position embedding — NeoX and interleaved layouts, Llama 3.1, YaRN, LongRoPE |
 | [Attention](attention.md) | forward and backward attention, including the paged and decode kernels |
 | [Linear Attention](linear-attention.md) | DeltaNet, Gated DeltaNet and gated linear attention |
