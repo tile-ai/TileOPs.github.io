@@ -70,8 +70,8 @@ def on_page_markdown(markdown, page, config, files):
 _BENCH_ORDER = [
     "index.md", "reading.md",
     "elementwise.md", "reduction.md", "normalization.md", "quantization.md",
-    "gemm.md", "conv-pool.md", "moe.md", "rope.md", "attention.md",
-    "linear-attention.md", "ssm.md", "other.md",
+    "gemm.md", "conv-pool.md", "moe.md", "sampling.md", "rope.md",
+    "attention.md", "linear-attention.md", "ssm.md", "other.md",
 ]
 
 

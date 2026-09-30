@@ -179,6 +179,7 @@ plugins:
             FFT: FFT
             mHC: mHC
             MoE: MoE
+            Sampling: Sampling
             Engram: Engram
             Top-k: Top-k
             Trace: Trace

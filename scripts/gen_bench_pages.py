@@ -96,7 +96,7 @@ FAMILY_TITLE = {
     "ssm": "SSM", "scan": "Scan", "normalization": "Normalization",
     "moe": "MoE", "linear_algebra": "GEMM", "reduction": "Reduction",
     "elementwise": "Elementwise", "convolution": "Convolution", "pool": "Pooling",
-    "quantization": "Quantization", "positional": "RoPE",
+    "quantization": "Quantization", "sampling": "Sampling", "positional": "RoPE",
     "fft": "FFT", "mhc": "mHC", "engram": "Engram", "topk": "Top-k",
     "other": "Other",
 }
@@ -145,9 +145,10 @@ def api_op_order(api_dir: str = API_DIR,
 # (slug, page title, families in display order), in the order the API Reference
 # nav lists the same families — pointwise, then the reductions and the
 # normalizations built on them, then quantization, then the matrix multiply and
-# the expert routing over it, then the positional rotation, then the
-# sequence-mixing kernels built on all of the above. A page is one family except
-# where too few ops carry one: `Conv & Pool` is two, `Other` the rest.
+# the expert routing over it, then the sampling, then the positional rotation,
+# then the sequence-mixing kernels built on all of the above. A page is one
+# family except where too few ops carry one: `Conv & Pool` is two, `Other` the
+# rest.
 DATA_PAGES = [
     ("elementwise", "Elementwise", ["elementwise"]),
     ("reduction", "Reduction", ["reduction"]),
@@ -156,6 +157,7 @@ DATA_PAGES = [
     ("gemm", "GEMM", ["linear_algebra"]),
     ("conv-pool", "Conv & Pool", ["pool", "convolution"]),
     ("moe", "MoE", ["moe"]),
+    ("sampling", "Sampling", ["sampling"]),
     ("rope", "RoPE", ["positional"]),
     ("attention", "Attention", ["attention"]),
     ("linear-attention", "Linear Attention", ["linear_attention"]),
@@ -184,19 +186,33 @@ _KEYWORD_FAMILY = [
     (("reduce", "argmax", "argmin", "argreduce", "mean", "sum", "max", "min"),
      "reduction"),
 ]
-# The package decides the family; the keywords below only speak for ops the
-# layout does not place — a module rather than a package (`rope.py`), and the
-# mixed `sequence_modeling`. Every package that maps to a family belongs here:
-# `linear_attention` left out of it fell through to the keyword `linear` and
-# published linear-attention ops on the GEMM page.
+# The manifest declares each op's family under TileOPs' names; these are this
+# file's. `sequence_modeling` is absent: mHC and Engram publish on pages of
+# their own, so one family name cannot place them.
+_MANIFEST_FAMILY = {
+    "elementwise": "elementwise", "reduction": "reduction",
+    "attention": "attention", "pool": "pool", "norm": "normalization",
+    "moe": "moe", "linear_attention": "linear_attention",
+    "quantization": "quantization", "sampling": "sampling", "mamba": "ssm",
+    "rope": "positional", "gemm": "linear_algebra",
+    "convolution": "convolution", "fft": "fft",
+}
+# For an op the manifest does not declare: its package, then the keywords above.
+# Every package that maps to a family belongs here — `linear_attention` left out
+# of it fell through to the keyword `linear` and published on the GEMM page.
 _MODULE_FAMILY = {"attention": "attention", "elementwise": "elementwise",
                   "reduction": "reduction", "norm": "normalization",
                   "moe": "moe", "gemm": "linear_algebra",
+                  "quantization": "quantization", "sampling": "sampling",
                   "linear_attention": "linear_attention",
                   "mamba": "ssm"}
 
 
-def family_of(op: str, op_module: str | None) -> str:
+def family_of(op: str, op_module: str | None,
+              manifest_family: str | None = None) -> str:
+    fam = _MANIFEST_FAMILY.get((manifest_family or "").lower())
+    if fam:
+        return fam
     mod = (op_module or "").lower()
     parts = mod.split(".")
     if len(parts) >= 4 and parts[0] == "tileops" and parts[1] == "ops":
@@ -1346,7 +1362,8 @@ def main():
     for op, ms in metrics_by_op.items():
         s = op_summary(ms)
         row = (op, module_of.get(op), s, _test_mark(tests.get(op)), ref)
-        fam = family_of(op, module_of.get(op))
+        fam = family_of(op, module_of.get(op),
+                        (manifest.get(op) or {}).get("family"))
         rows_by_fam[fam].append(row)
         by_page[page_of_family(fam)].append(row)
         all_rows.append(row)
