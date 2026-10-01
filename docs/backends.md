@@ -11,7 +11,8 @@ devices run your kernels.
 **A backend supplies one thing: something callable that computes this call.**
 Everything else is the op layer's.
 
-This page is about a target, the largest of the three ways in. The first half is the
+This page is about a target, the one of the three extension mechanisms that covers the
+whole op. The first half is the
 work, in the order it is done: the four things to write, the protocol's four functions,
 how one call reaches them, a backend that installs and runs as it stands, how to turn the
 template into a backend for real hardware, the four rules for writing a kernel, what each
@@ -21,9 +22,10 @@ The second half is why the protocol looks like this: the two layers of selection
 layer's contract, when a kernel is rebuilt, what a caller can reach for, and what the
 protocol deliberately leaves out.
 
-## Three ways in {#three-ways}
+## Three ways to extend dispatch {#three-ways}
 
-How much of an op a package outside TileOPs takes over decides which of three it uses.
+A package outside TileOPs picks one of three mechanisms by how much of an op it takes
+over.
 The two smaller ones write a kernel class against a [kernel
 interface](new-op.md#kernel-selection), the same contract the in-tree
 implementations are written against; a target writes a `build_kernel` against the op's
@@ -31,13 +33,13 @@ manifest signature instead.
 
 | # | | `kernel_map=` | `register_implementation` | target |
 | --- | --- | --- | --- | --- |
-| 1 | Changes | the class running behind one key; which calls that key serves does not change | adds a key, with its own applicability and precedence | every call of the op |
+| 1 | Changes | the class registered under one key; which calls that key serves is unchanged | adds a key, with its own applicability and precedence | every call of the op |
 | 2 | Applies to | the one op instance the caller constructed it on | every instance of that op constructed afterwards | every instance that settles on the target |
 | 3 | Written against | the kernel interface | the kernel interface | the op's manifest signature |
 | 4 | Calls the new class does not serve | an error when that key is selected | still served by the in-tree implementations | none: a target serves them all |
 
 **`kernel_map=`** is a constructor argument of every op, a mapping from key to class. It
-swaps the class behind that key in this instance; the key keeps the registered
+replaces the class registered under that key in this instance; the key keeps the registered
 implementation's `applies`, `general` and `preferred_over`, and the replacement, like
 every implementation, inherits the key's interface and is built through its own
 `entry_for`. A selected key whose replacement cannot serve the call is an error, never a
@@ -92,7 +94,8 @@ register_implementation("LayerNormFwdOp", "torch_short_rows", _NarrowTorchLayerN
 ```
 
 Here `n <= 64` goes to `_NarrowTorchLayerNorm` and `n = 1024` stays with the in-tree
-`LayerNormKernel`. The addition reaches only op instances constructed after the call.
+`LayerNormKernel`. The added implementation applies only to op instances constructed
+after the call.
 Registering the same key twice under one op raises `BackendError`; a key an in-tree
 implementation already uses raises `reuse keys it has` when an instance is constructed.
 
@@ -674,7 +677,7 @@ third-party backend neither bypasses one nor substitutes its own.
 The kernels TileOPs ships ([`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)) are the **default
 implementation**: they have no target name and are not in the registry.
 
-**The default state is no substitution.** With no backend installed, no `target=` named
+**The in-tree implementations run by default.** With no backend installed, no `target=` named
 and no process default set, calls run the shipped implementation. Nothing is preconfigured
 to substitute: a backend serves an op only once it is installed and either claims the
 device through its `detect`, or is named by `target=` or `set_default_target`.

@@ -108,7 +108,7 @@ class GemmFwdOp(Op):
 | --- | --- | --- |
 | 1 | `__init__` | the names, order and defaults in `signature.params`, then `target`, `kernel_map` and `tune`, closing with `self.dispatch_kernel(kernel_map)` |
 | 2 | `kernel_types` | the Kernel classes that can serve the op, each under a key; a `kernel_map=` override replaces one by that key |
-| 3 | `interfaces` | one entry per place the op calls a kernel: the name `kernel_for` uses → the `KernelInterface` class the implementations of that place inherit |
+| 3 | `interfaces` | one entry per kernel call the op makes: the name `kernel_for` uses → the `KernelInterface` class every implementation of that call inherits |
 | 4 | `forward` | `signature.inputs` — its order, optional inputs last with default `None` |
 | 5 | `_eager_forward` | contiguity, the call spec, fetching the kernel and launching it |
 | 6 | `compute_roof` | optional: the GPU-profile unit that prices the op's FLOPs, where it is not CUDA-core fp32 |
@@ -130,14 +130,13 @@ the in-tree path; a [target](backends.md) serves the whole op instead and never 
 
 Its two arguments:
 
-- **`interface`** — a key of `interfaces`, naming one place in the op where a kernel is
-  called. `GemmFwdOp` calls a kernel in one place, so it declares one, `"gemm"`. A second
-  interface is opened only where the semantics or the call contract changes:
+- **`interface`** — a key of `interfaces`, naming one kernel call the op makes.
+  `GemmFwdOp` makes one, so it declares one, `"gemm"`. A second interface is opened only where the semantics or the call contract changes:
   `BatchNormFwdOp` has `batch_norm_fwd_train` and `batch_norm_fwd_infer`, which return
   different things. A faster kernel for some shape range or some architecture is another
   implementation of the interface already there.
-- **`call`** — a frozen `CallSpec` subclass carrying the facts of this call that selection
-  and building read: shapes, the dtype, the op's semantic parameters, and the device. It
+- **`call`** — a frozen `CallSpec` subclass carrying the facts needed to select and build
+  the kernel: shapes, the dtype, the op's semantic parameters, and the device. It
   has to be the interface's `request` type. The dispatcher derives the device facts (`arch`,
   `sm_count`, `calibration`, `smem_budget`) itself, from
   `call.device` on a miss.
@@ -195,7 +194,7 @@ ambiguous`. Declaration order decides nothing. Where one implementation should g
 range to another, the one that should win declares `preferred_over`, rather than the
 other one excluding that range in its own `applies`.
 
-`GemmFwdOp`'s three implementations divide the `"gemm"` interface like this:
+`GemmFwdOp`'s three implementations cover the `"gemm"` interface's calls like this:
 
 | # | Key | Serves | Declares |
 | --- | --- | --- | --- |
@@ -230,7 +229,8 @@ An op with no in-tree implementation, written to depend on a backend, declares n
 `kernel_types` nor `interfaces`; a call on a device no target claims then raises
 `OpNotAvailableError`.
 
-A backend adds an implementation to an interface, or replaces the class behind one key,
+A backend adds an implementation to an interface, or replaces the class registered under
+one key,
 without changing TileOPs; both are in [adding a hardware backend](backends.md).
 
 ### Registering

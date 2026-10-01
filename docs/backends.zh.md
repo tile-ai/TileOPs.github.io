@@ -12,16 +12,16 @@ TileLang 是多后端 DSL，每种硬件各有一套独立的 kernel，由各自
 
 ## 三种接入方式 {#three-ways}
 
-一个仓库之外的包要接管某个算子的多少调用，决定了它用三种方式中的哪一种。范围较小的两种，写出的 kernel 类遵守 [kernel 接口](new-op.md#kernel-selection)，与自带实现遵守同一份契约；target 遵守的则是算子在 manifest 中的签名，写一个 `build_kernel`。
+一个仓库之外的包按自己的接管范围，在三种方式中选一种。范围较小的两种，写出的 kernel 类遵守 [kernel 接口](new-op.md#kernel-selection)，与自带实现遵守同一份契约；target 遵守的则是算子在 manifest 中的签名，写一个 `build_kernel`。
 
 | # | | `kernel_map=` | `register_implementation` | target |
 | --- | --- | --- | --- | --- |
-| 1 | 改变什么 | 一个 key 背后运行的类；这个 key 服务哪些调用不变 | 新增一个 key，带有它自己的适用范围与优先关系 | 算子的全部调用 |
+| 1 | 改变什么 | 一个 key 登记的类；这个 key 服务哪些调用不变 | 新增一个 key，带有它自己的适用范围与优先关系 | 算子的全部调用 |
 | 2 | 作用于 | 调用方构造的那一个算子实例 | 注册之后构造的所有该算子实例 | 选中该 target 的算子实例 |
 | 3 | 依据的契约 | kernel 接口 | kernel 接口 | 算子在 manifest 中的签名 |
 | 4 | 新类不服务的调用 | 该 key 被选中时报错 | 仍由自带实现服务 | 不存在，target 服务全部调用 |
 
-**`kernel_map=`** 是每个算子构造函数的参数，值是从 key 到类的映射。它只替换这个实例中该 key 背后运行的类：这个 key 仍按原来登记的实现声明的 `applies`、`general` 与 `preferred_over` 参与选择，替换者与其他实现一样继承这个 key 所属的接口，由它自己的 `entry_for` 构造。该 key 被选中而替换者不服务这次调用时报错，不退回被替换的实现。下例取自 [`tests/test_kernel_dispatch.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/test_kernel_dispatch.py)：
+**`kernel_map=`** 是每个算子构造函数的参数，值是从 key 到类的映射。它只把这个实例中该 key 登记的类换掉：这个 key 仍按原来登记的实现声明的 `applies`、`general` 与 `preferred_over` 参与选择，替换者与其他实现一样继承这个 key 所属的接口，由它自己的 `entry_for` 构造。该 key 被选中而替换者不服务这次调用时报错，不退回被替换的实现。下例取自 [`tests/test_kernel_dispatch.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/test_kernel_dispatch.py)：
 
 ```python
 class _TorchLayerNorm(Kernel, LayerNormFwdInterface):
@@ -64,9 +64,9 @@ class _NarrowTorchLayerNorm(_TorchLayerNorm):
 register_implementation("LayerNormFwdOp", "torch_short_rows", _NarrowTorchLayerNorm)
 ```
 
-这样 `n <= 64` 的调用由 `_NarrowTorchLayerNorm` 服务，`n = 1024` 仍由自带的 `LayerNormKernel` 服务。新增的实现只进入注册之后构造的算子实例。同一个算子下重复注册同一个 key 报 `BackendError`；key 与自带实现的 key 相同时，构造实例时报 `reuse keys it has`。
+这样 `n <= 64` 的调用由 `_NarrowTorchLayerNorm` 服务，`n = 1024` 仍由自带的 `LayerNormKernel` 服务。新增的实现只对注册之后构造的算子实例生效。同一个算子下重复注册同一个 key 报 `BackendError`；key 与自带实现的 key 相同时，构造实例时报 `reuse keys it has`。
 
-`register_implementation` 在后端模块被导入时执行，入口与 target 用的是同一条 entry point；`kernel_map=` 则由调用方在构造算子时传入，不经过注册。以下各节讲 target。
+`register_implementation` 在后端模块被导入时执行，通过 target 所用的同一个 entry point 触发；`kernel_map=` 则由调用方在构造算子时传入，不经过注册。以下各节讲 target。
 
 ## 写一个后端要做的四件事
 
@@ -242,7 +242,7 @@ register_kernel_builder(op="GemmFwdOp", target="acme", build_kernel=build_gemm)
 
 四点对应关系值得记住：
 
-- **`kernel_for` 与各实现的 `entry_for` 只服务自带实现。** 它们决定取哪个自带 kernel、按什么查表、又怎么构造。target 选中后端时整个算子由 target 服务，这几处都不会执行。
+- **`kernel_for` 与各实现的 `entry_for` 只服务自带实现。** 它们决定取哪个自带 kernel、按什么查表、又怎么构造。算子选中某个 target 之后，整个算子由这个 target 服务，这几处都不会执行。
 - **张量按位置传，参数按名字传。** `build_kernel(*inputs, **params)`：位置实参是 `TensorSpec`（没传的可选输入是 `None`），关键字实参是 manifest 里 `params` 的名字与本次调用的确定值。
 - **一个 `(算子, target)` 只注册一个 builder。** 自带实现内部分几种 kernel（GEMM 的 `kernel_types` 里有三个）不会传进来，`build_kernel` 从 `TensorSpec` 自行判断该返回哪个 kernel。
 - **不必自己缓存构建结果。** 设备与输入签名相同时，算子层不会再调用一次 `build_kernel`；需要更细的区分或更少的重建，在 `build_kernel` 内部另加一层缓存。专为外部后端而写的算子，`kernel_types` 与 `interfaces` 都不声明，没有 target 认领设备时调用直接抛 `OpNotAvailableError`。

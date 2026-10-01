@@ -99,7 +99,7 @@ class GemmFwdOp(Op):
 | --- | --- | --- |
 | 1 | `__init__` | `signature.params` 的名字、顺序与默认值，再加 `target`、`kernel_map`、`tune`；结尾调用 `self.dispatch_kernel(kernel_map)` |
 | 2 | `kernel_types` | 能服务这个算子的 Kernel 类，各起一个 key；`kernel_map=` 按这个 key 替换其中一个 |
-| 3 | `interfaces` | 算子调用 kernel 的每一处各占一条：`kernel_for` 用的名字 → 这一处的各实现所继承的 `KernelInterface` 类 |
+| 3 | `interfaces` | 算子发出的每一个 kernel 调用各占一条：`kernel_for` 用的名字 → 这个调用的各实现所继承的 `KernelInterface` 类 |
 | 4 | `forward` | `signature.inputs` 的顺序，可选输入排在最后、默认 `None` |
 | 5 | `_eager_forward` | 把输入变成连续的，构造 call spec，取出 kernel，再调用它 |
 | 6 | `compute_roof` | 可选。算子的 FLOPs 按哪个硬件单元的峰值定价，默认是 CUDA core 上的 fp32，用别的单元时才写 |
@@ -114,10 +114,10 @@ kernel 是编译产物，构造一次要几百毫秒到几秒，而一个算子�
 
 `kernel_for` 接受两个参数：
 
-- **`interface`**：`interfaces` 的一个 key，指算子调用 kernel 的一处。`GemmFwdOp` 只在一处调用 kernel，因此只声明一个 `"gemm"`。只有语义或调用契约改变时才新开一个接口：`BatchNormFwdOp` 的 `batch_norm_fwd_train` 与 `batch_norm_fwd_infer` 返回的东西不同。某个形状范围或某个架构上更快的 kernel 是已有接口的另一个实现。
-- **`call`**：一个冻结的 `CallSpec` 子类，带着这次调用中选择与构建会读取的事实：形状、dtype、算子的语义参数与设备。它必须是这个接口 `request` 指定的类型。设备事实（`arch`、`sm_count`、`calibration`、`smem_budget`）由派发机制在未命中时从 `call.device` 推出，调用方不填。
+- **`interface`**：`interfaces` 的一个 key，指算子发出的某一个 kernel 调用。`GemmFwdOp` 只发出一个 kernel 调用，因此只声明一个 `"gemm"`。只有语义或调用契约改变时才新开一个接口：`BatchNormFwdOp` 的 `batch_norm_fwd_train` 与 `batch_norm_fwd_infer` 返回的东西不同。某个形状范围或某个架构上更快的 kernel 是已有接口的另一个实现。
+- **`call`**：一个冻结的 `CallSpec` 子类，带着选择实现和构造 kernel 所需的信息：形状、dtype、算子的语义参数与设备。它必须是这个接口 `request` 指定的类型。设备事实（`arch`、`sm_count`、`calibration`、`smem_budget`）由派发机制在未命中时从 `call.device` 推出，调用方不填。
 
-算子用接口抽象 `forward` 声明的参数、按同样的顺序调用取回的 kernel。
+算子按接口的抽象 `forward` 方法所声明的参数、以同样的顺序调用取回的 kernel。
 
 接口是写在 [`src/tileops/kernels/<family>/call_spec.py`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 里的一个类，与它在 `request` 中指名的 call spec 放在一起；只有一个 kernel 文件的 family 把两者都写在那个文件里。名字是 `{Name}{Fwd|Bwd}Interface`，变体词写在方向之前，由 `interface-names-lint` 检查。它的抽象 `forward` 是各实现（自带的与后端提供的）唯一依据的契约，docstring 因此写明每个张量的形状、dtype、内存布局、设备，以及是否被原地写入：
 
@@ -150,11 +150,11 @@ class GemmFwdInterface(KernelInterface):
 | 1 | `devices`、`supported_archs` | 实现能在哪些设备上运行 | CUDA 设备，全部架构 |
 | 2 | `applies(call)`、`refusal(call)` | 实现服务哪些调用，正面写出 | 服务全部调用 |
 | 3 | `general`、`preferred_over` | 两个实现都服务同一次调用时谁胜出 | 不胜过任何实现 |
-| 4 | `entry_for(call)` | build identity，以及每个 identity 只跑一次的构造方法 | 以整个 call spec 为 identity，用 `cls(call)` 构造 |
+| 4 | `entry_for(call)` | build identity，以及每个 identity 只运行一次的 builder | 以整个 call spec 为 identity，用 `cls(call)` 构造 |
 
 派发机制先按可用性过滤，再在剩下的、且适用的实现中选出唯一的胜者：`general` 的实现低于其他所有实现，其余按各自 `preferred_over` 列出的 key 比较。一个实现都不剩时报 `no implementation serves this call`；没有任何 key 能在这次调用的设备类型上运行时报 `OpNotAvailableError`；剩下的实现之间互相没有优先关系时报 `dispatch is ambiguous`。实现的声明顺序不影响选择结果。需要让出一段范围时，由应当胜出的一方声明 `preferred_over`，而不是让另一方在自己的 `applies` 里把这段范围排除掉。
 
-`GemmFwdOp` 的三个实现这样分割 `"gemm"` 接口：
+`GemmFwdOp` 的三个实现这样分担 `"gemm"` 接口的调用：
 
 | # | key | 服务 | 声明 |
 | --- | --- | --- | --- |
@@ -162,9 +162,9 @@ class GemmFwdInterface(KernelInterface):
 | 2 | `gemv` | 沿 K 规约且最多两行的形状，这种形状在 CUDA core 上规约更快 | `supported_archs = [90]`、经 `band_for` 实现的 `applies`、`preferred_over = frozenset({"gemm_tma"})` |
 | 3 | `gemm_cp_async` | 其余两个都不认领的全部形状，前提是一行 K 至少占满一次 4 字节读取 | `supported_archs = [80, 86, 89, 90]`、`general = True`，以及拒绝更窄 K 行的 `refusal` |
 
-`entry_for(call)` 返回两样东西：两次调用共享它才算同一个 kernel 的 **build identity**，以及每个 identity 只运行一次的**构建函数**。identity 少带一个量，第二种 dtype 就会复用第一种 dtype 的 kernel；kernel 只依赖其中几个量却把整个形状都带上，就变成每个形状各编译一次。
+`entry_for(call)` 返回两样东西：两次调用共享它才算同一个 kernel 的 **build identity**，以及每个 identity 只运行一次的 **builder**。identity 少带一个量，第二种 dtype 就会复用第一种 dtype 的 kernel；kernel 只依赖其中几个量却把整个形状都带上，就变成每个形状各编译一次。
 
-只有一个实现的接口，除继承接口外不需要别的声明。`RMSNormKernel` 就是 `RMSNormFwdOp` 派发的全部内容（[`src/tileops/kernels/norm/rms_norm.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/norm/rms_norm.py)）：
+只有一个实现的接口，除继承接口外不需要别的声明。`RMSNormKernel` 是 `RMSNormFwdOp` 唯一的实现（[`src/tileops/kernels/norm/rms_norm.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/norm/rms_norm.py)）：
 
 ```python
 class RMSNormKernel(Kernel, RMSNormFwdInterface):
@@ -180,7 +180,7 @@ class RMSNormKernel(Kernel, RMSNormFwdInterface):
 
 完全没有自带实现、只依赖外部后端的算子，`kernel_types` 与 `interfaces` 都不写；在没有 target 认领设备时，调用会抛 `OpNotAvailableError`。
 
-后端可以为一个接口新增实现，也可以替换一个 key 背后的类，这两件事都不改动 TileOPs，见[接入一类新硬件](backends.md)。
+后端可以为一个接口新增实现，也可以替换某个 key 登记的类，这两件事都不改动 TileOPs，见[接入一类新硬件](backends.md)。
 
 ### 注册
 
@@ -188,7 +188,7 @@ class RMSNormKernel(Kernel, RMSNormFwdInterface):
 
 ## 第三步：写 kernel
 
-kernel 类继承 [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py) 与它实现的那个接口，放在 [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 下，用 TileLang 编写，在构造时编译。它实现 `forward`，基类的 `__call__` 会调用它。构造函数由本类 `entry_for` 给出的构造方法调用，`forward` 接受接口规定的参数，就是第二步里的 `kernel(a, b)`。
+kernel 类继承 [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py) 与它实现的那个接口，放在 [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 下，用 TileLang 编写，在构造时编译。它实现 `forward`，基类的 `__call__` 会调用它。构造函数由本类 `entry_for` 返回的 builder 调用，`forward` 接受接口规定的参数，就是第二步里的 `kernel(a, b)`。
 
 它是这六处里唯一不受 spec 约束的一处：kernel 不读 spec，也不对照 spec 检查。
 
