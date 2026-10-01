@@ -147,7 +147,9 @@ The kernel that comes back is called with the parameters of the interface's abst
 
 An interface is a class in
 [`src/tileops/kernels/<family>/call_spec.py`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels),
-beside the call spec it names in `request`. Its abstract `forward` is the whole contract
+beside the call spec it names in `request`; a family with one kernel file keeps both in
+that file. Its name is `{Name}{Fwd|Bwd}Interface`, with variant words before the
+direction, which `interface-names-lint` checks. Its abstract `forward` is the whole contract
 an implementation — in-tree or from a backend — is written against, so its docstring
 states each tensor's shape, dtype, layout, device and whether it is written in place:
 

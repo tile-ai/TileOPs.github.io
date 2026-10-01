@@ -119,7 +119,7 @@ kernel 是编译产物，构造一次要几百毫秒到几秒，而一个算子�
 
 取回的 kernel 按接口抽象 `forward` 的参数表、按同样的顺序调用。
 
-接口是写在 [`src/tileops/kernels/<family>/call_spec.py`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 里的一个类，与它在 `request` 中指名的 call spec 放在一起。它的抽象 `forward` 是各实现（自带的与后端提供的）唯一依据的契约，docstring 因此写明每个张量的形状、dtype、内存布局、设备，以及是否被原地写入：
+接口是写在 [`src/tileops/kernels/<family>/call_spec.py`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 里的一个类，与它在 `request` 中指名的 call spec 放在一起；只有一个 kernel 文件的 family 把两者都写在那个文件里。名字是 `{Name}{Fwd|Bwd}Interface`，变体词写在方向之前，由 `interface-names-lint` 检查。它的抽象 `forward` 是各实现（自带的与后端提供的）唯一依据的契约，docstring 因此写明每个张量的形状、dtype、内存布局、设备，以及是否被原地写入：
 
 ```python
 class GemmFwdInterface(KernelInterface):
