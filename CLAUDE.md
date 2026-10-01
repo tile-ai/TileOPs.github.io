@@ -77,21 +77,23 @@ implementation of the same op on that workload.
 
 English at the site root, Chinese under `/zh/`. A Chinese page is a
 `<name>.zh.md` beside the English `<name>.md`, full prose, never an
-`include-markdown` shell. `backends.md`, `torch-compile.md` and everything under
-`performance-guides/memory-bound/` were authored in Chinese: edit the `.zh.md`
-first, then bring the English page in line. Everything else goes the other way.
+`include-markdown` shell. `backends.md`, `torch-compile.md`, everything under
+`performance-guides/memory-bound/` and the two guides under `user-guide/manifest/`
+and `user-guide/dispatch/` were authored in Chinese: edit the `.zh.md` first, then
+bring the English page in line. Everything else goes the other way.
 
 | Rule | Detail |
 |------|--------|
 | Coverage | Whichever pages have a `.zh.md` — `ls docs/**/*.zh.md` |
 | Never translate | `api/` and `benchmarks/`, both generated; `design/`, mirrored English |
 | Missing translation | Falls back to English at the same URL, and `hooks.py` prepends a "本页暂无中文版" notice. The fallback runs zh → en only: a page that exists only as `.zh.md` leaves its `nav` entry on a missing file and the English sidebar renders a dead link |
-| Figures | A figure with text needs one SVG per language: translate the `<text>` nodes and the `aria-label`, keep the geometry. English runs longer than Chinese — grow the `viewBox` rather than let text overflow |
+| Figures | A figure with text needs one SVG per language: `img/<name>.svg` for English and `img/<name>.zh.svg` beside it, which the `zh` build picks up for the same reference. Translate the `<text>` nodes and the `aria-label`, keep the geometry. English runs longer than Chinese — grow the `viewBox` rather than let text overflow. The user-guide figures are drawn from sources under `figures/user-guide/` (`<name>.zh.puml`, `<name>.en.puml`, `manifest/overview.py`): edit the source, then run `figures/user-guide/render.sh` |
 | Nav labels | `nav_translations` in the `i18n` plugin block; keep an entry for every `nav` title |
 | Chinese search | Requires `jieba` |
 | Punctuation | Full-width in Chinese prose: `，。：；（）`. Latin quotes and brackets stay half-width inside code spans |
 | Latin in Chinese | A space either side of a Latin token: `由 spec 驱动`, `形状和 dtype`. Not inside code spans |
-| Keep in English | kernel, spec, agent, dtype, roofline, GEMM, target, and every op name. Why: translating them loses the link to the API |
+| Keep in English | kernel, spec, agent, dtype, roofline, GEMM, target, op, family, backend, and every op name. Why: translating them loses the link to the API |
+| Terms | 「kernel 接口」 for kernel interface, 「in-tree 实现」 for an in-tree implementation, 「build identity」 and 「构建函数」 for what `entry_for` returns |
 | Inline code | Real identifiers only (`GemmOp`, `eval_roofline`, paths, flags). A concept mentioned in prose is not code |
 | Type | `extra.css` gives `html[lang="zh"]` looser leading and headings at 700, not 800 — at 800 a CJK fallback face closes up the strokes. Scoped away from fallback pages, whose body text is English. No CJK webfont: Han glyphs come from the platform UI face (`--tf-cjk`) |
 

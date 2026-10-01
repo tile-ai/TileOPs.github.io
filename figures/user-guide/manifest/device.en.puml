@@ -1,0 +1,56 @@
+@startuml device
+skinparam defaultFontName "Noto Sans SC"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #6B5FA0
+skinparam TitleFontColor #4A2C8F
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 28
+skinparam rectangle {
+  BorderColor #3AA9B8
+  BackgroundColor #E2F6F8
+  RoundCorner 12
+}
+skinparam card {
+  BorderColor #8E6CCF
+  BackgroundColor #F8F5FD
+}
+<style>
+card {
+  MinimumWidth 210
+  HorizontalAlignment center
+}
+rectangle {
+  MinimumWidth 260
+}
+</style>
+title How the call device is chosen\n(workload instantiation places tensors by the same rule)
+
+card "A tensor declaring device: cpu stays on the CPU\nand takes no part below" as pre
+card "Any call-time input?" as c1
+card "device parameter not None?" as c2
+card "Any construction-time tensor?" as c3
+card "The current CUDA device;\nNone without CUDA" as r5 #E2F6F8;line:3AA9B8
+
+rectangle "Their device; they must share one" as r1
+rectangle "device; a string is parsed\nby torch.device" as r2
+rectangle "Their device; several must share one" as r3
+
+pre -down-> c1
+c1 -down-> c2 : no
+c2 -down-> c3 : no
+c3 -down-> r5 : no
+c1 -right-> r1 : yes
+c2 -right-> r2 : yes
+c3 -right-> r3 : yes
+
+r1 -[hidden]down- r2
+r2 -[hidden]down- r3
+
+note bottom of r5 #FBFAFE
+  Once the call device is chosen, out and the outputs
+  are checked or allocated on it; construction-time tensors
+  are copied to it and cast to their signature dtype
+end note
+@enduml

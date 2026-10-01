@@ -12,8 +12,9 @@ point for tuning. On an H200, the measured values are
 [**57.27** TFLOP/s for fp32 FMA and **4.50** TB/s of memory bandwidth](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/perf/profiles/h200.yaml).
 The **ridge point** of the roofline is where the bandwidth slope meets the
 compute ceiling. Dividing compute by bandwidth places it at an arithmetic
-intensity of **12.72 flop/byte**: the number of floating-point operations per
-byte moved when compute and bandwidth are saturated at the same time:
+intensity of **12.72 flop/byte**, the number of floating-point operations per
+byte moved when compute and bandwidth are saturated at the same time. The
+figure below shows the H200 roofline:
 
 <figure class="roofline" markdown="1">
 

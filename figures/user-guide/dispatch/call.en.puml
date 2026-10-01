@@ -1,0 +1,65 @@
+@startuml call
+skinparam defaultFontName "Noto Sans SC"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #6B5FA0
+skinparam TitleFontColor #4A2C8F
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 125
+skinparam BoxPadding 6
+skinparam sequence {
+  LifeLineBorderColor #CFC6E6
+  ParticipantBorderColor #8E6CCF
+  DividerBackgroundColor #F8F5FD
+  DividerBorderColor #CFC6E6
+  GroupBorderColor #8E6CCF
+  GroupHeaderFontColor #4A2C8F
+}
+hide stereotype
+skinparam participant<<sys>> {
+  BackgroundColor #E2F6F8
+  BorderColor #3AA9B8
+}
+skinparam participant<<dev>> {
+  BackgroundColor #EFE9FA
+  BorderColor #8E6CCF
+}
+box "Written by the developer" #F8F5FD
+  participant "Op class\n_eager_forward" as op <<dev>>
+end box
+box "Provided by the system" #F3FBFC
+  participant "Op base\nkernel_for" as base <<sys>>
+  participant "CallSpec\ndevice facts" as facts <<sys>>
+end box
+box "Written by the developer" #F8F5FD
+  participant "Implementations of\nthe kernel interface" as impl <<dev>>
+  participant "entry" as entry <<dev>>
+end box
+
+op -> op : Build the call spec from the tensors and the op's params
+op -> base : kernel_for(interface, call)
+activate base
+base -> base : Look up (interface, call) in the dispatch cache
+alt Hit
+  base --> op : the resolved entry
+else Miss
+  base -> base : Check the call's type and hashability
+  loop Each implementation of the interface
+    base -> impl : unavailable(call), then refusal(call) if available
+    impl -> facts : Read arch, sm_count, calibration, smem_budget
+    facts -> facts : Resolved from call.device on first read
+    impl --> base : a reason, or None
+  end
+  base -> base : Take the one winner by precedence among the available, applicable ones; for a key replaced through kernel_map=, check the replacement serves the call
+  base -> impl : entry_for(call)
+  impl --> base : (build identity, factory)
+  opt This (implementation class, build identity)\nis not built yet
+    base -> entry : Run the factory with call.device current
+  end
+  base -> base : Request tuning on the entry when the op tunes; store in the dispatch cache
+  base --> op : entry
+end
+deactivate base
+op -> entry : entry(tensors)
+entry --> op : result
+@enduml

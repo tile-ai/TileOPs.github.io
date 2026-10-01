@@ -1,0 +1,62 @@
+@startuml new-op
+skinparam defaultFontName "Noto Sans SC"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #6B5FA0
+skinparam TitleFontColor #4A2C8F
+skinparam activity {
+  BorderColor #8E6CCF
+  BackgroundColor #FFFFFF
+  DiamondBorderColor #3AA9B8
+  DiamondBackgroundColor #E2F6F8
+  StartColor #6B5FA0
+  EndColor #6B5FA0
+}
+skinparam swimlane {
+  BorderColor #CFC6E6
+  TitleFontStyle bold
+}
+title 新增一个 op：开发者的步骤与系统的检查
+
+|#F8F5FD|开发者|
+start
+:写 spec，status 为 spec-only;
+|#F3FBFC|系统|
+:validator 静态检查签名，
+实例化每条 workload 行;
+|开发者|
+:写 call spec、kernel 接口与实现；
+按需覆写 entry_for，并声明 devices、
+supported_archs、applies、preferred_over
+或 general;
+:写 Op 类：~__init~__、kernel_types、
+interfaces、forward 与 docstring，
+在实现包与 tileops.<family> 中导出;
+|系统|
+:由签名生成调用检查、形状推导、
+dtype 检查与 eval_roofline；
+compile boundary 类另有 operator 与 fake/meta;
+|开发者|
+:在 workloads/ 写 ref_program;
+:在 tests/ops/ 写正确性测试：
+默认 BUILTIN target，设备取自
+run_device()，按需标记 in_tree_kernels
+或 cuda_only;
+:在 benchmarks/ops/ 写 benchmark 函数，
+用 manifest_calls 取得调用，选择对比基线;
+:status 改为 implemented;
+|系统|
+:CI：validator 核对代码与 spec，
+manifest 测试，GPU 上的正确性测试;
+while (检查通过？) is (否)
+  |开发者|
+  :修改实现，不修改 spec;
+  |系统|
+  :CI 重新检查;
+endwhile (是)
+:合入 main;
+:nightly 按 case id 运行 benchmark，
+检查每个调用都被测到;
+:roofline 工具计算效率，文档站更新;
+stop
+@enduml

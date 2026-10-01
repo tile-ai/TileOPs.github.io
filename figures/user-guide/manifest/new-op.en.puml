@@ -1,0 +1,68 @@
+@startuml new-op
+skinparam defaultFontName "Noto Sans SC"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #6B5FA0
+skinparam TitleFontColor #4A2C8F
+skinparam activity {
+  BorderColor #8E6CCF
+  BackgroundColor #FFFFFF
+  DiamondBorderColor #3AA9B8
+  DiamondBackgroundColor #E2F6F8
+  StartColor #6B5FA0
+  EndColor #6B5FA0
+}
+skinparam swimlane {
+  BorderColor #CFC6E6
+  TitleFontStyle bold
+}
+title Adding an op: the developer's steps and the system's checks
+
+|#F8F5FD|Developer|
+start
+:Write the spec with status spec-only;
+|#F3FBFC|System|
+:The validator checks the signature
+statically and instantiates every
+workload row;
+|Developer|
+:Write the call spec, the kernel interface
+and its implementations: override entry_for
+where needed, and declare devices,
+supported_archs, applies, preferred_over
+or general;
+:Write the Op class (~__init~__, kernel_types,
+interfaces, forward, docstring), and export it
+from its package and tileops.<family>;
+|System|
+:Generate the call checks, shape inference,
+dtype checks and eval_roofline from the
+signature, and for a compile-boundary class
+the operator and fake/meta;
+|Developer|
+:Write ref_program in workloads/;
+:Write correctness tests in tests/ops/:
+BUILTIN target by default, device from
+run_device(), marked in_tree_kernels
+or cuda_only where needed;
+:Write the benchmark function in
+benchmarks/ops/: calls from manifest_calls,
+and the baselines to compare;
+:Set status to implemented;
+|System|
+:CI: the validator checks code against
+the spec, then manifest tests and
+correctness tests on a GPU;
+while (Checks pass?) is (no)
+  |Developer|
+  :Fix the implementation, not the spec;
+  |System|
+  :CI checks again;
+endwhile (yes)
+:Merge into main;
+:Nightly runs the benchmarks by case id
+and checks every call is measured;
+:The roofline tool computes efficiency,
+and the docs site updates;
+stop
+@enduml

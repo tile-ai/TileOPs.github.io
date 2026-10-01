@@ -31,7 +31,17 @@ nav:
   - Home: index.md
   - User Guide:
     - user-guide/index.md
-    - Writing a Spec: manifest.md
+    - Reading and Writing Specs:
+      - user-guide/manifest/index.md
+      - Concepts: user-guide/manifest/concepts.md
+      - Spec Fields: user-guide/manifest/writing.md
+      - Extensions: user-guide/manifest/extensions.md
+      - Calls and Validation: user-guide/manifest/calls.md
+      - Examples: user-guide/manifest/examples.md
+    - Kernel Dispatch:
+      - user-guide/dispatch/index.md
+      - Adding a Kernel: user-guide/dispatch/writing.md
+      - Backend Integration: user-guide/dispatch/backends.md
     - Adding an Op: new-op.md
     - Timing Benchmarks: timing.md
     - Using torch.compile: torch-compile.md
@@ -152,14 +162,22 @@ plugins:
             Home: 首页
             Design: 设计文档
             User Guide: 使用指南
-            Writing a Spec: 读写 manifest
-            Adding an Op: 添加新算子
-            Timing Benchmarks: benchmark 怎么计时
+            Reading and Writing Specs: 读写 manifest
+            Concepts: 概念
+            Spec Fields: 写一个 spec
+            Extensions: 扩展写法
+            Calls and Validation: 调用与校验
+            Examples: 示例
+            Kernel Dispatch: op 如何选择 kernel
+            Adding a Kernel: 如何为 op 新增 kernel
+            Backend Integration: backend 如何接入
+            Adding an Op: 添加新 op
+            Timing Benchmarks: benchmark 的计时方法
             Using torch.compile: 接入 torch.compile
-            Adding a Backend: 接入新硬件后端
+            Adding a Backend: 接入新硬件 backend
             Architecture: 架构
-            Manifest: 算子清单
-            Op Interfaces: 算子接口
+            Manifest: manifest 规范
+            Op Interfaces: op 接口
             Slot Rules: Slot 规则
             Roofline: Roofline
             Testing: 测试

@@ -45,7 +45,7 @@ Two things this reference does not carry:
 
 - **What each op is allowed to receive.** The authoritative dtype domains, shape rules
   and measured workloads are in the op's spec; see [Writing a
-  Spec](../manifest.md).
+  Spec](../user-guide/manifest/index.md).
 - **How fast it is.** Device time against the fastest alternative on each workload is on
   the [Benchmarks](../benchmarks/index.md) pages.
 

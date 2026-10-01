@@ -1,31 +1,31 @@
 # How a benchmark is timed
 
-The nightly benchmark measures one row per workload per op, reporting `device_busy_ms`:
-the union of the execution intervals of every kernel that call produces. CUPTI records each
-kernel's device-side start and end, an external correlation id attributes it to an
-iteration, L2 is cleared before every iteration, and 25 ms of warm-up plus 100 ms of
-measurement give the median.
+The nightly benchmark measures one row per workload per op and reports
+`device_busy_ms`: the union of the execution intervals on the device of every kernel
+that call produces. CUPTI records each kernel's device-side start and end, and an
+external correlation id attributes the kernel to an iteration. L2 is cleared before
+every iteration, warm-up runs for 25 ms and measurement for 100 ms, and the result is
+the median.
 
-**So every number in the table is time the device spent executing kernels: none of the
-host cost of issuing the call, and none of the gaps between kernels. For reading the
-tables, that is the whole story.**{ .keystone }
+**Every number in the tables is therefore time the device spent executing kernels. It
+excludes the host cost of issuing the call and the gaps between kernels. Reading the
+tables requires nothing more than this.**{ .keystone }
 
-The rest is there when you need it:
+The remaining sections are for reference:
 
-- [How one measurement runs](#how-one-measurement-runs) — the pseudocode, and the five
-  choices in it: calibration, the iteration count, clearing L2, attribution, failing
-  closed.
-- [What is measured](#what-is-measured) — what `device_busy_ms` is, and why the gaps
-  between kernels are left out.
-- [Why not wall-clock time](#why-not-wall-clock-time) — at decode sizes CUDA events
-  cannot measure a small kernel.
-- [When to change how you measure](#when-to-change-how-you-measure) — only needed when
-  writing a benchmark yourself; it covers what this method cannot measure.
+- [How one measurement runs](#how-it-runs): the pseudocode, and its five choices:
+  calibration, the iteration count, clearing L2, attribution, and failing closed.
+- [What is measured](#what-is-measured): the definition of `device_busy_ms`, and why
+  the gaps between kernels are left out.
+- [Why not wall-clock time](#why-not-wall-clock): at decode sizes, CUDA events cannot
+  measure the execution time of a small kernel.
+- [When to change how you measure](#when-to-change): needed only when writing a
+  benchmark, including the cases this method cannot measure.
 
 Every number below was measured on an H200, in the `tileops-runner:cu132-torch2.13`
 image.
 
-## How one measurement runs
+## How one measurement runs {#how-it-runs}
 
 ```python
 from benchmarks.timing import bench_kernel
@@ -33,10 +33,10 @@ from benchmarks.timing import bench_kernel
 samples = bench_kernel(op, args=(x, weight))   # one Sample per iteration
 ```
 
-A benchmark rarely calls it directly, going through `ManifestBenchmark.profile()` or
-`.compare()`, which take medians over these samples and compute the derived columns.
+A benchmark rarely calls `bench_kernel` directly. It calls `ManifestBenchmark.profile()`
+or `.compare()`, which take medians over these samples and compute the derived columns.
 
-Inside, `bench_kernel` is three stages — collect, attribute, measure:
+Inside, `bench_kernel` has three stages: collect, attribute and measure.
 
 ```python
 # Collect: each call runs under its own iteration number
@@ -67,61 +67,66 @@ for i in range(n_repeat):
     n_kernels.append(len(claimed[i]))
 ```
 
-Five choices in it, each for a reason:
+The five choices, and the reason for each:
 
-1. **Calibrate.** Three calls estimate what one call costs.
-2. **Convert that into an iteration count.** The budgets — 25 ms of warm-up, 100 ms of
-   measurement — divide by the per-call cost, clamped to `[10, 200]`: a short op gets many
-   samples, a long one need not run 200 times.
+1. **Calibrate.** Three calls estimate the cost of one call.
+2. **Convert that into an iteration count.** The budgets, 25 ms of warm-up and 100 ms of
+   measurement, are divided by the per-call cost, and the result is clamped to
+   `[10, 200]`. A short op therefore gets more samples, and a long one does not have to
+   run 200 times.
 3. **Clear L2 before every iteration, and drain the device.** Without the clear, the
    first iteration reads from HBM and every later one from L2, so the median reports the
-   best case of a full cache hit. Draining keeps the previous iteration out of this one.
-4. **Collect and attribute.** The iteration number goes onto CUPTI's external correlation
-   id stack, and the correlation id a kernel record carries maps back to it.
-   **Attribution does not look at timestamps** — which iteration a kernel belongs to is
+   best case of a full cache hit. Draining keeps the previous iteration from overlapping
+   this one.
+4. **Collect and attribute.** Each iteration pushes its iteration number as CUPTI's
+   external correlation id, so every launch issued inside it carries that id; the
+   correlation id in a kernel record maps back to the iteration number.
+   **Attribution does not use timestamps**: which iteration a kernel belongs to is
    written in its record, independent of when it ran. A kernel shorter than the host
-   overhead is attributed as reliably as a long one, and a call whose kernel count varies
-   between iterations still measures.
-5. **Fail closed.** Three attribution failures raise three different errors and produce
+   overhead is therefore attributed as reliably as a long one, and a call whose kernel
+   count varies between iterations can still be measured.
+5. **Fail closed.** Three attribution failures each raise a different error and produce
    no number:
 
 | Case | Raises | Meaning |
 | --- | --- | --- |
-| CUPTI discarded records | `_CUPTIRecordsLostError` | the reading is gone though the iteration did run — the whole phase is measured again, up to 3 attempts in all, asking for a 4× larger buffer each time |
-| Nothing discarded, but a kernel carries no iteration number | `_OffThreadLaunchError` | a thread that never pushed an id launched it |
-| Nothing discarded, and one iteration has no kernels at all | `_CUPTIAttributionError` | that call never reached the device |
+| CUPTI discarded records | `_CUPTIRecordsLostError` | the iteration did run, but the reading is lost; the whole phase is measured again, up to 3 attempts in all, with a 4× larger buffer each time |
+| Nothing discarded, but a kernel carries no iteration number | `_OffThreadLaunchError` | the kernel was launched by a thread that never pushed an iteration number |
+| Nothing discarded, and one iteration has no kernels at all | `_CUPTIAttributionError` | that call never ran on the device |
 
-## What is measured
+## What is measured {#what-is-measured}
 
-**`device_busy_ms`: the union of the execution intervals of every kernel one call
-produces.** A CUPTI kernel record gives the device-side execution bounds, with none of the
-host cost of issuing the call. Three cases:
+**`device_busy_ms` is the length of the union of the execution intervals on the device
+of every kernel one call produces.** A CUPTI kernel record gives the device-side start
+and end of execution, excluding the host cost of issuing the call. There are three
+cases:
 
-- **A single-kernel call** — the kernel's execution time on the device.
-- **A multi-kernel call** — the union of the intervals: the total time at least one of
-  the call's kernels was executing. Two kernels running concurrently are not counted
-  twice; that would be SM time, not time the device was busy.
-- **The gaps between kernels** — not counted.
+- **A single-kernel call**: the kernel's execution time on the device.
+- **A multi-kernel call**: the union of the intervals, that is, the total time during
+  which at least one of the call's kernels was executing. Two concurrent kernels are not
+  counted twice, because the sum of the two would be SM time, not the time the device was
+  busy.
+- **The gaps between kernels**: not counted.
 
-A gap is left out because it cannot be attributed: the device really was idle, but the
-cause is either the op's own data dependency or the CPU not having issued the next kernel
-yet, and CUPTI's records do not distinguish the two. A quantity whose cause is unknown
-cannot judge an implementation.
+A gap is left out because its cause cannot be determined. The device really was idle,
+but the cause is either the op's own data dependency or the CPU not having issued the
+next kernel yet, and CUPTI's records do not distinguish the two. A quantity whose cause
+cannot be determined cannot be used to judge an implementation.
 
-`tflops` and `bandwidth_tbs` divide by the same quantity: they describe the throughput
-reached while the device was executing, and a denominator that included in-call idleness
-would depress them systematically.
+`tflops` and `bandwidth_tbs` divide by the same quantity. They describe the throughput
+reached while the device was executing, and a denominator that included idle time
+within the call would lower them systematically.
 
-Defined this way, the number is immune to how fast the host is. Changing CUPTI's
-collection buffer from 256 KB to 32 MB takes the median `latency_ms` of one three-kernel
-call from 35 us to 2068 us while `device_busy_ms` stays at 19.1 us — a late host does not
-change any kernel's execution time, it only pushes them apart on the timeline, and the
-union is the same.
+Defined this way, the number does not depend on how fast the host is. Changing CUPTI's
+collection buffer from 256 KB to 32 MB raises the median `latency_ms` of one
+three-kernel call from 35 us to 2068 us, while `device_busy_ms` stays at 19.1 us. A host
+that issues kernels late does not change any kernel's execution time; it only spreads
+the kernels apart on the timeline, and the length of the union is unchanged.
 
-## Why not wall-clock time
+## Why not wall-clock time {#why-not-wall-clock}
 
-At decode sizes an op can finish faster than the Python call that launched it. Four
-methods, one 3 us kernel, four numbers:
+At decode sizes, an op can finish faster than the Python call that launched it. Four
+methods applied to one 3 us kernel give four readings:
 
 | Method | Reading |
 | --- | --- |
@@ -130,41 +135,43 @@ methods, one 3 us kernel, four numbers:
 | One pair of events around the loop, divided by the iteration count | 6.07 us |
 | CUDA graph replay | 4.30 us |
 
-The device executed for 1.95 us; the 6 us the event methods read is the rate at which the
-CPU issues the next call, not the kernel's execution time. **That is the only reason
-TileOPs times with CUPTI**, and it is why a row that fell back to CUDA events cannot be
-compared with the others: there `device_busy_ms` and `latency_ms` carry the same number,
-and the `timing` field records `cuda-events`.
+The device executed for 1.95 us. The 6 us the event methods read is the interval at
+which the CPU issues the next call, not the kernel's execution time. **This is the only
+reason TileOPs times with CUPTI**, and it is why a row that fell back to CUDA events
+cannot be compared with the other rows: in that row `device_busy_ms` and `latency_ms`
+hold the same number, and the `timing` field records `cuda-events`.
 
 ## Comparing several implementations
 
-Comparing implementations within one case, `compare()` times each twice, in the order
-A B C C B A, and takes the median over both passes.
+To compare implementations within one case, `compare()` times each implementation
+twice, in the order A B C C B A, and takes the median over the samples of both passes.
 
-In a fixed order the implementation that ran first and the one that ran last sit at
-different clocks and temperatures, and that difference reads as a difference between the
-implementations. A symmetric order puts each implementation's two passes in the first and
-second half of the case, cancelling monotonic drift to first order. Two details:
+In a fixed order, the implementation that runs first and the one that runs last see
+different clocks and temperatures, and that difference reads as a difference between
+the implementations. A symmetric order puts each implementation's two passes in the
+first and second half of the case, which cancels monotonic drift to first order. Two
+details:
 
 - **The budget is split, not doubled.** Each pass gets 12.5 ms of warm-up and 50 ms of
-  measurement, with half the iteration bounds: the point is symmetry, not more samples,
-  and the sample count matches timing one implementation.
-- **Both passes must use the same timing method.** One pass on CUPTI and the other
-  fallen back to CUDA events raises rather than pooling, which would put one median over
-  two kinds of measurement.
+  measurement, with half the iteration bounds. The symmetric order is meant to cancel
+  drift, not to add samples, so the sample count matches that of timing one
+  implementation.
+- **Both passes must use the same timing method.** When one pass uses CUPTI and the
+  other falls back to CUDA events, `compare()` raises instead of pooling the results,
+  since pooling would put two kinds of measurement into one median.
 
-## When to change how you measure
+## When to change how you measure {#when-to-change}
 
-The default case needs none of this: one kernel per call, through the Op interface, timed
-by `bench_kernel`, no other thread using the GPU — where most ops are today. Seven cases
-call for a stop:
+The default case needs no change: one kernel per call, called through the Op
+interface, timed by `bench_kernel`, with no other thread using the GPU. Most ops are in
+this case today. Seven cases need separate handling:
 
 | Your case | If you ignore it | What to do |
 | --- | --- | --- |
 | The timed closure contains `Tensor.backward` or `torch.autograd.grad` | the backward kernels come from the autograd engine's own thread, carry no iteration number, and the case raises instead of producing a figure | Drive a single fused node with `backward_of(out)`; for a chain, set `torch.autograd.set_multithreading_enabled(False)` |
 | Another thread in the process uses the GPU, or the timed closure uses CUPTI's `CUSTOM0` external id | those kernels carry no iteration number, or the closure overwrites the one the timer set, and it raises either way | Have the timed call launch its own work; use `CUSTOM1` / `CUSTOM2` instead |
-| The op produces its result through `copy_` — in-place elementwise, MoE's write-back | the timer collects the copy but leaves it out of `device_busy_ms` and reports it as `uncounted_copy_ms`, so the reading is short | Pass `count_copies=True` for the case; every tag's reading then includes the copies |
-| One call launches several kernels | the gaps between kernels land in `latency_ms`, so comparing by it against a fused implementation charges them to your side | Conclude from `device_busy_ms` only; `latency_ms` compares between rows of equal `n_kernels` |
-| One call takes more than 10 ms | the iteration count hits the floor of 10, the wall-clock far exceeds the 100 ms budget, and p10/p90 over 10 samples are coarse | Accept the longer wall-clock, or state an iteration count and the sample size |
-| You want a kernel-level benchmark | the op has no spec, so shapes and roofline have to be written by hand and the spec validator cannot see them | Measure through the Op interface and write a [spec](manifest.md) |
-| You are adding an external baseline | moving the baseline's input conversion out of its timed region has this repository carry that time instead | Keep the conversion inside the baseline's timed region, and let the import fail where that baseline is the point |
+| The op produces its result through `copy_`, as in-place elementwise ops and MoE's write-back do | the timer collects the copy but by default leaves it out of `device_busy_ms` and reports it as `uncounted_copy_ms`, so the reading is too low | Pass `count_copies=True` for the case; every tag's reading then includes the copies |
+| One call launches several kernels | the gaps between kernels land in `latency_ms`, so a comparison by it against a fused implementation charges the gaps to the multi-kernel side | Draw conclusions from `device_busy_ms` only; `latency_ms` is comparable only between rows with equal `n_kernels` |
+| One call takes more than 10 ms | the iteration count hits the floor of 10, the wall-clock time far exceeds the 100 ms budget, and p10/p90 over 10 samples are coarse | Accept the longer wall-clock time, or state an iteration count and the sample size |
+| You want a kernel-level benchmark | the op has no spec, so shapes and roofline have to be written by hand and the spec validator cannot see them | Measure through the Op interface and write a [spec](user-guide/manifest/index.md) |
+| You are adding an external baseline | moving the baseline's input conversion out of its timed region makes this repository carry that time instead | Keep the conversion inside the baseline's timed region; where that baseline is the reason the benchmark exists, require its dependency and let the import fail when it is missing |

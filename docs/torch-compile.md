@@ -1,23 +1,31 @@
 # Bringing an op into torch.compile
 
-Bringing a TileOPs op into `torch.compile` makes it one node in the user's compiled
-graph, and that node's shape does not change with the backend serving it.
+A TileOPs op brought into `torch.compile` becomes one node in the user's compiled
+graph, and that node does not change with the backend serving it.
 
-It takes one thing: a compile boundary declared at the op layer, with everything outside
-it traced by dynamo and everything inside it invisible to the compiler.
+Bringing an op in takes one piece of work: declaring a compile boundary at the op
+layer. Dynamo traces everything outside the boundary, and everything inside it is
+invisible to the compiler.
 
-The body covers the work — checking whether an op is already in, compiling a call, the
-five conventions, and the declaration an op that is not in yet needs. The appendix covers
-why the boundary can only be drawn there: how dynamo works, where it and the op layer
-disagree, and what the boundary costs.
+The body covers the work of bringing an op in:
+
+1. checking whether an op is already in;
+1. compiling code that calls it;
+1. the five calling conventions;
+1. the code an op that is not in yet needs to declare the boundary.
+
+The appendix explains why the boundary can only be drawn this way: how dynamo works,
+where it and the op layer disagree, why the boundary sits at the op layer, and what the
+boundary costs and does not provide.
 
 ## Calling an op that is already in
 
 ### Checking whether an op is in {#supported}
 
-Read the class attribute `compile_op_names`: non-empty means the class declares a
-compile boundary (`compile_boundary = True`), so the boundary is at the op layer and
-`fullgraph=True` works; an empty tuple means it declares none.
+Read the class attribute `compile_op_names`. A non-empty value means the class
+declares a compile boundary (`compile_boundary = True`), so the boundary is at the op
+layer and `fullgraph=True` works. An empty tuple means the class declares no compile
+boundary.
 
 ```python
 >>> from tileops.norm import RMSNormFwdOp
@@ -25,13 +33,13 @@ compile boundary (`compile_boundary = True`), so the boundary is at the op layer
 ('tileops::norm_rms_norm_fwd',)
 ```
 
-An op that has not migrated raises under `fullgraph=True`, and breaks the graph under
+An op that has not migrated raises under `fullgraph=True` and breaks the graph under
 the default settings.
 
-### Compiling a call
+### Compiling code that calls it
 
-Construct the op instance, hand the function that calls it to `torch.compile`, and
-that is all:
+Construct the op instance and pass the function that calls it to `torch.compile`. No
+other step is needed:
 
 ```python
 import torch
@@ -48,53 +56,55 @@ w = torch.randn(4096, device="cuda", dtype=torch.float16)
 block(x, w)
 ```
 
-`TORCH_LOGS=graph_code` prints the captured graph: one node,
-`tileops::norm_rms_norm_fwd`, not the calls inside the kernel.
+Running with `TORCH_LOGS=graph_code` prints the captured graph. It has one node,
+`tileops::norm_rms_norm_fwd`, and the calls inside the kernel do not appear in it.
 
 ### The five calling conventions
 
-Each follows from a mechanism at the boundary, and breaking any of them makes the
-compiled path behave differently from the eager one.
+Each convention follows from a mechanism at the boundary. Breaking any of them makes
+the compiled path behave differently from the eager one.
 
 - **Construct the op instance once and reuse it.** The instance key is a compile-time
-  constant and each instance is its own compiled graph, so constructing one inside a loop
-  recompiles every iteration.
-- **Do not rely on strides passing through.** A non-contiguous input the op does not
-  write is made contiguous inside the node, and an output the op allocates is always
-  contiguous; convert outside the op if later work needs another layout. An output that
-  is a written input (`alias`) or a caller's `out` keeps that tensor's storage.
-- **Meta tensors cannot warm anything up.** Once an op has a boundary, a call with
-  meta or fake tensors returns at the fake and never reaches kernel construction.
-- **Warm up before a CUDA-graph capture.** Call once with real tensors at the same
-  shape: building a kernel may compile, while capture allows only a memo hit and the call
-  that follows it. See [what each phase may do](backends.md#phase-limits).
+  constant and each instance has its own compiled graph, so constructing an instance
+  inside a loop recompiles on every iteration.
+- **Strides are not passed through.** A non-contiguous input the op does not write is
+  made contiguous inside the node, and an output the op allocates is always contiguous.
+  When later work needs another layout, convert outside the op. An output that is a
+  written input (`alias`) or a caller's `out` keeps that tensor's storage.
+- **Meta tensors cannot be used for warm-up.** Once an op declares the boundary, a call
+  with meta or fake tensors returns at the fake and never reaches kernel construction.
+- **Warm up before a CUDA graph capture.** Call the op at least once with real tensors
+  at the same shape: building a kernel may compile, while a capture allows only a cache
+  hit followed by the call. What each phase allows is in
+  [what each phase may do](backends.md#phase-limits).
 - **A second card may need its own build.** For a call a target serves, the device is
-  part of the kernel's memo key, so the same instance builds again on a second card. An
-  in-tree kernel is keyed by the build identity the selected implementation's `entry_for`
-  returns, which includes the device only when the build depends on it. A `target=` named in the constructor
-  is honoured on the first compiled call too, and a failed build pins the op to no
-  target.
+  part of the kernel's cache key, so the same instance builds the kernel again on a
+  second card. The cache key of an in-tree kernel is the build identity the selected
+  implementation's `entry_for` returns, which includes the device only when the build
+  depends on it. A `target=` given to the constructor also takes effect on the first
+  compiled call, and a failed build pins the op to no target.
 
 ### The three guarantees once an op is in
 
-With the boundary at the op layer, a caller can rely on three things.
+With the boundary at the op layer, a caller can rely on three things:
 
 - **The graph does not change with the target.** The same code compiles to the same
-  graph on another backend or another card, so the artefact is independent of who serves
-  the op.
-- **`fullgraph=True` works**, for an op that declares this contract — see [checking
-  whether an op is in](#supported).
-- **Output shape, dtype and stride come from the manifest**, not from how a kernel
-  tiles or pads internally. An output the op allocates is always contiguous.
+  graph on another backend or another card, so the compiled artefact does not depend on
+  the backend.
+- **`fullgraph=True` works** for an op that declares this contract; see
+  [Checking whether an op is in](#supported).
+- **Output shape, dtype and stride come from the manifest.** They do not depend on how a
+  kernel tiles or pads internally. An output the op allocates is always contiguous.
 
 ## Declaring the boundary on a new op: `RMSNormFwdOp`
 
-The code bringing one op in takes: how the boundary is declared, how the fake is
-written, and why the target is resolved again inside the node. For the tracing, graph
-breaks and guards below, see [how dynamo works](#how-dynamo-works).
+This section gives the code needed to bring one op in: how the boundary is declared,
+how the fake is written, and why the target is resolved again inside the node. The
+tracing, graph breaks and guards it refers to are described in
+[How dynamo works](#dynamo).
 
-`RMSNormFwdOp` was the first op brought in. Its skeleton, docstrings elided — the full
-file is
+`RMSNormFwdOp` was the first op brought in. Its skeleton, with docstrings elided; the
+full file is
 [`src/tileops/ops/norm/rms_norm.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops/norm/rms_norm.py):
 
 ```python
@@ -121,15 +131,19 @@ class RMSNormFwdOp(Op):
 ```
 
 That is the whole declaration. The operators and their fakes are generated from the
-entry, one operator per effect branch: its tensor arguments are `signature.inputs` in
-order, what it returns is `signature.outputs`, the arguments it writes are exactly the
-inputs marked `mutated`, and each output's shape and dtype come from the signature. Its
-name is `tileops::<family>_<snake(class)>`, with the family written once where the class
-name already opens with it — here `tileops::norm_rms_norm_fwd`; when a branch writes
-an input, fills a `buffer: out` or omits an output, its operator's name gains
-`_writes_<input>`, `_out` and `_without_<output>` respectively, in that order.
-No op chooses its own name, so `compile_op_names` cannot disagree with what was
-registered.
+manifest entry, one operator per effect branch:
+
+- its tensor arguments are `signature.inputs`, in order;
+- its return value is given by `signature.outputs`;
+- the arguments it writes are exactly the inputs marked `mutated`;
+- each output's shape and dtype come from the signature.
+
+The operator's name is `tileops::<family>_<snake(class)>`, with the family written only
+once when the class name already starts with it; here the name is
+`tileops::norm_rms_norm_fwd`. When a branch writes an input, fills a `buffer: out` or
+omits an output, its operator's name gains `_writes_<input>`, `_out` and
+`_without_<output>` respectively, in that order. No op names its own operator, so
+`compile_op_names` cannot disagree with the registered names.
 
 The layers one call passes through, and where the boundary falls:
 
@@ -137,68 +151,71 @@ The layers one call passes through, and where the boundary falls:
   <div class="cp-step cp-traced"><code>Op.__call__</code><span>calls <code>forward</code>, resolves no target</span></div>
   <div class="cp-step cp-traced"><code>forward</code><span>one line, calls the opaque operator</span></div>
   <div class="cp-boundary"><span>compile boundary</span></div>
-  <div class="cp-step cp-opaque"><code>the generated operator</code><span>recovers the instance, runs the generated checks, resolves the target, unsettles on failure</span></div>
-  <div class="cp-step cp-opaque"><code>_eager_forward</code><span>contiguous, kernel, launch</span></div>
-  <figcaption>The two violet layers are inside dynamo's trace, and that one line of <code>forward</code> is the last thing it reaches; below the boundary the opaque operator takes over, invisible to the compiler.</figcaption>
+  <div class="cp-step cp-opaque"><code>the generated operator</code><span>recovers the instance, runs the generated checks, resolves the target, undoes the resolution on failure</span></div>
+  <div class="cp-step cp-opaque"><code>_eager_forward</code><span>makes the inputs contiguous, fetches the kernel, launches it</span></div>
+  <figcaption>The two violet layers are inside dynamo's trace, and the one line of <code>forward</code> is the last thing dynamo traces. Below the boundary the opaque operator runs, invisible to the compiler.</figcaption>
 </figure>
 
-Three things in it are not free choices.
+Three parts of this code are fixed.
 
-**First, the instance is recovered through a string key rather than passed directly.**
-The schema's types are a fixed set — `Tensor`, `int`, `float`, `bool`, `str` and a few
-more — with no "arbitrary Python object", while what the operator body needs
-(`kernel_map`, the settled target, the memo table of built kernels) hangs off the instance
-and does not fit a schema argument. Two details of the key are not free either:
+**First, the instance is recovered through a string key, not passed as an object.**
+The schema's types are a fixed set, such as `Tensor`, `int`, `float`, `bool` and
+`str`, with no "arbitrary Python object". What the operator body needs (`kernel_map`,
+the resolved target, and the cache table of built kernels) is stored on the instance and
+cannot be split into schema arguments. Two details of the key are also fixed:
 
-- **A string, not an integer.** A string is a compile-time constant during tracing,
-  where an integer is generalised to a `SymInt`.
-- **Never reused.** Because it is constant, inductor bakes the shape the fake gave
-  into the artefact, and an op reusing a key would inherit the previous instance's
-  shape.
+- **The key is a string, not an integer.** A string is a constant during tracing, while
+  an integer is generalised to a `SymInt`.
+- **A key is never reused.** Because the key is a constant, inductor bakes the shape the
+  fake gave into the compiled artefact, and an op that reused a key would inherit the
+  previous instance's shape.
 
-**Second, the fake builds its result with `torch.empty` from the shape and dtype the
-signature check infers, not `torch.empty_like(x)`.** What the fake returns has to match real execution in shape, dtype
-and stride; a mismatch either fails during tracing or — for a stride — has downstream code
-read the wrong layout and go silently wrong. The operator body makes the inputs contiguous
-before the kernel writes into a freshly allocated output, so the real output is always
-contiguous, while `empty_like` copies the input's strides: a non-contiguous input would
-have the fake declare a layout real execution never produces.
+**Second, the fake builds its output with `torch.empty` from the shape and dtype the
+signature check infers, not with `torch.empty_like(x)`.** The tensor the fake returns
+must match real execution in shape, dtype and stride. A mismatch either fails during
+tracing or, for a stride, makes downstream code read memory in the wrong layout and
+produce wrong results silently. The operator body makes the inputs contiguous before the
+kernel writes into a newly allocated output, so the real output is always contiguous.
+`empty_like` copies the input's strides, so for a non-contiguous input the fake would
+declare a layout real execution never produces.
 
-**Third, the target is resolved inside the node, not in `Op.__call__`.** When traced code runs `self.x = ...`, dynamo records a pending
-side effect and applies it only after the whole graph has run, while the opaque node runs
-before that: a resolution written just outside the node is unreadable inside it. Two
-things follow, both inside the node:
+**Third, the target is resolved inside the node, not in `Op.__call__`.** When traced
+code runs `self.x = ...`, dynamo records the write as a pending side effect and applies
+it only after the whole graph has run, while the opaque node runs before that. A
+resolution written just outside the node therefore cannot be read inside it. Two things
+follow, and both happen inside the node:
 
-- A resolution made outside the node would have the first compiled call silently run
+- A resolution made outside the node would make the first compiled call silently run
   the wrong implementation.
-- Undoing a failed resolution is the job of whichever site made it, since a compiled
+- Undoing a failed resolution is the job of the place that made it, because a compiled
   artefact does not keep the call site's `try/except`.
 
-All three follow from one fact: torch's compilation and declaration mechanisms
-work per function, while what needs compiling is one call on an object.
+All three have the same cause: torch's compilation and declaration mechanisms work per
+function, while what needs compiling is one call on an object.
 
 ## Appendix: why the boundary looks like this
 
-### How dynamo works
+### How dynamo works {#dynamo}
 
-This section is about how dynamo decides what may enter a graph — which is where
-the conditions an op has to satisfy come from.
+This section describes how dynamo decides what code may enter a compiled graph. The
+conditions an op has to satisfy to be brought into `torch.compile` come from these
+rules.
 
-Dynamo is the front end of `torch.compile`, working at CPython's frame evaluation
+Dynamo is the front end of `torch.compile`, and works at CPython's frame evaluation
 layer (PEP 523).
 
-**It has exactly one entry point: `torch.compile`.** `torch.compile(fn)` returns a
-wrapper, and tracing happens when that wrapper is called; `nn.Module.compile()`
-and the decorator form are two other spellings of the same entry. A call that does
-not go through it takes the ordinary Python path and has nothing to do with dynamo
-— below, that path is called eager.
+**Dynamo has exactly one entry point: `torch.compile`.** `torch.compile(fn)` returns a
+wrapper, and tracing happens when the wrapper is called; `nn.Module.compile()` and the
+decorator form are two other spellings of the same entry. A call that does not go
+through it takes the ordinary Python path and has nothing to do with dynamo. This page
+calls that path eager.
 
 On the first call, dynamo takes over the frame, symbolically executes the bytecode
-instruction by instruction, records the tensor operations as one FX graph, leaves
-what cannot enter the graph in Python, and notes a set of guards for the graph —
-the premises this trace relied on, such as a tensor's dtype and rank. Later calls
-reuse the compiled artefact when every guard holds; if one fails, the new case is
-traced again.
+instruction by instruction, records the tensor operations as one FX graph, and leaves
+what cannot enter the graph to run in Python. It also records a set of guards for the
+graph: the premises this trace relied on, such as a tensor's dtype and rank. A later
+call reuses the compiled artefact when every guard holds; when one fails, dynamo traces
+the new case again.
 
 Three terms have fixed meanings on this page:
 
@@ -206,29 +223,29 @@ Three terms have fixed meanings on this page:
 | --- | --- |
 | Graph | the FX graph dynamo captured; one trace produces one |
 | Node | one operator call in the graph, with input edges and the output's shape and dtype |
-| Traced | inside dynamo's symbolic execution. Tracing performs no real computation; it records |
+| Traced | inside dynamo's symbolic execution. Tracing performs no real computation; it only records |
 
-The graph then goes to a backend (inductor and others) for fusion, memory planning
-and code generation. The larger a graph is, the more neighbouring operators can
-fuse, so every op in an operator library has to be able to appear as a node in
-someone else's graph.
+The graph then goes to a compiler backend (inductor and others) for fusion, memory
+planning and code generation. The larger a graph is, the more neighbouring operators
+can fuse, so every op in an operator library has to be able to appear as a node in a
+user's graph.
 
-Two of dynamo's rules matter for bringing an op in:
+Two of dynamo's rules decide how an op is brought in:
 
-- **It inlines by default.** A called function is not itself a boundary, and its
-  body is folded into the same trace. Keeping a stretch of Python out of the trace
-  takes an explicit declaration.
-- **Untraceable code is handled one of two ways.** By default dynamo breaks the graph, falling
-  back to Python for that stretch, so one graph becomes several; under
-  `fullgraph=True` it raises instead. Raising surfaces the problem during
-  development, which is why an operator library treats `fullgraph=True` as its
-  acceptance criterion.
+- **Dynamo inlines by default.** A called function is not itself a boundary, and its
+  body is folded into the same trace. Keeping a stretch of Python code out of the trace
+  requires an explicit declaration.
+- **Untraceable code is handled in one of two ways.** By default dynamo breaks the
+  graph: that stretch falls back to Python, and one graph becomes several. Under
+  `fullgraph=True` dynamo raises instead. Raising surfaces the problem during
+  development, which is why an operator library uses `fullgraph=True` as its acceptance
+  criterion.
 
 ### Where the op layer and dynamo disagree
 
-Applying those rules to a TileOPs op makes the obstacle plain. Dynamo compiles
-frames, that is, functions; a TileOPs op is an object, and one call does four
-things, of which only the last belongs in the graph:
+Applying those rules to a TileOPs op shows the obstacle. Dynamo compiles frames, that
+is, functions, while a TileOPs op is an object. One call does four things, and only the
+last belongs in the graph:
 
 | What a call does | Should dynamo capture it |
 | --- | --- |
@@ -239,72 +256,79 @@ things, of which only the last belongs in the graph:
 
 The table needs three qualifications.
 
-**"Should not be captured" is not "does not run."** All four happen on every call;
-the only question is what enters the graph.
+**Work that should not be captured still runs.** All four things happen on every call;
+the only difference is whether they enter the graph.
 
-**The distinction has to be annotated by hand** — dynamo cannot draw it. Torch
-provides two interfaces: `torch.library.custom_op` registers the call as an
-operator, so dynamo puts a single node in the graph and does not trace into the
-implementation, and `register_fake` tells the compiler what the node outputs,
-receiving only the inputs' metadata and never touching real data.
+**The distinction has to be annotated by hand**, because dynamo cannot draw it. Torch
+provides two interfaces for this:
 
-**Without the annotation, tracing goes in and fails.** With the boundary
+- `torch.library.custom_op` registers the call as an operator, so dynamo puts a single
+  node in the graph and does not trace into the implementation;
+- `register_fake` tells the compiler what the node outputs; it receives only the
+  inputs' metadata and never touches real data.
+
+**Without the annotation, dynamo traces into the code and fails.** With the boundary
 undeclared, `RMSNormFwdOp` compiles in neither of its two states:
 
 - An instance that has not built a kernel builds one during the call, and dynamo
   traces into the TileLang JIT inside the constructor.
-- An instance that already has one skips the construction, but still re-parses the
+- An instance that already has one skips construction, but still re-parses the
   TileLang program on every call, so dynamo traces into `@tilelang.jit` and stops at
   `inspect.signature`.
 
-### Why the boundary falls at the op layer
+### Why the boundary falls at the op layer {#at-op-layer}
 
-The boundary could sit at the op layer, or lower down at the kernel layer. The
-difference shows up in the user's compiled graph.
+The boundary could sit at the op layer or lower, at the kernel layer. The difference
+shows in the user's compiled graph.
 
-The node's identity in that graph — its name, arguments, granularity, and the
-output its fake declares — is the operator the user sees. With the boundary at the
-kernel layer, changing backend changes that node, the same op compiles to a
-different graph under a different target, and the compiled artefact is tied to the
-backend. At the op layer it does not: the node's identity is the op's, independent
-of who serves it.
+The node's identity in that graph (its name, arguments, granularity, and the output
+its fake declares) is the op the user sees. With the boundary at the kernel layer,
+changing backend changes that node: the same op compiles to a different graph under a
+different target, and the compiled artefact is tied to the backend. With the boundary
+at the op layer, the node's identity is the op's, independent of the backend serving
+it.
 
-That position also settles how the fake is written. The op layer does not know how
-an external kernel tiles or pads internally; the one shape rule that holds for
-every target is the one in the manifest, so the fake derives from it.
+That position also decides how the fake is written. The op layer does not know how an
+external kernel tiles or pads internally. The only shape rule that holds for every
+target is the one in the manifest, so the fake derives its output from the manifest.
 
-The node's interior is invisible to the compiler, but its contract to the outside is
-complete: the schema gives the name and argument types, the fake gives the output's
-shape, dtype, device and stride, and the alias annotations name exactly the inputs it
-writes — none, for `RMSNormFwdOp`. With the contract complete, what is kept and what is
-given up separate cleanly:
+The node's interior is invisible to the compiler, but its contract with the outside is
+complete:
 
-- **Optimisation between nodes proceeds as usual.** Buffer assignment, lifetimes,
-  reordering against neighbours it does not depend on, deletion when nothing
-  consumes it.
-- **Optimisation inside the node is gone.** Neighbours cannot fuse in, and the
-  output must be written to memory.
+- the schema gives the name and argument types;
+- the fake gives the output's shape, dtype, device and stride;
+- the alias annotations name exactly the inputs the node writes, of which
+  `RMSNormFwdOp` has none.
 
-For an operator library the trade is worth it: inside the node is a kernel TileLang
-has already compiled, which inductor need not touch.
+Because the contract is complete, what the boundary keeps and what it gives up
+separate cleanly:
+
+- **Optimisation between nodes proceeds as usual.** This includes buffer assignment,
+  lifetimes, reordering against neighbours the node does not depend on, and deleting the
+  node when nothing consumes its output.
+- **Optimisation inside the node is lost.** Neighbouring operators cannot fuse into
+  the node, and its output must be written to memory.
+
+For an operator library the trade is worth it: inside the node is a kernel TileLang has
+already compiled, which inductor does not need to touch.
 
 ### What the boundary costs
 
-Measured on an idle H200 at 2048×4096, fp16. Per-call figures are the minimum of
-three runs of 2000 iterations × 9 rounds:
+Measured on an idle H200 at 2048×4096, fp16. Per-call figures are the minimum of three
+runs of 2000 iterations × 9 rounds:
 
 | | Boundary at the kernel layer | Boundary at the op layer |
 | --- | --- | --- |
 | Kernel time | 0.0119 ms | 0.0117 ms |
 | Eager, per call | 42.5–45.2 µs | 38.2–42.0 µs |
 
-The kernel itself is unaffected — where the boundary sits has nothing to do with
-how the kernel computes. The eager path is 3–5 µs faster because, with the boundary
+The kernel itself is unaffected, because where the boundary sits has nothing to do
+with how the kernel computes. The eager path is 3–5 µs faster because, with the boundary
 moved up, a call crosses one operator boundary instead of two.
 
-The cost on the graph side is in [why the boundary falls at the op
-layer](#why-the-boundary-falls-at-the-op-layer): fusion does not cross the node boundary,
-and the node's output always lands in memory.
+The cost on the graph side is described in
+[Why the boundary falls at the op layer](#at-op-layer): fusion does not cross the node
+boundary, and the node's output is always written to memory.
 
 ### What the boundary does not provide
 
@@ -312,5 +336,5 @@ and the node's output always lands in memory.
 | --- | --- |
 | Fusion across the node boundary | The node's interior is opaque to the compiler, so the elementwise work on either side stays outside |
 | autograd through the node | This path serves inference; forward and backward are separate ops |
-| Switching target within one compiled artefact | The target belongs to the op instance — another target means another instance, and another graph |
-| Building a kernel from meta tensors | A call with meta tensors answers with shapes and dtypes only |
+| Switching target within one compiled artefact | The target belongs to the op instance: another target means another instance, and another graph |
+| Building a kernel from meta tensors | A call with meta tensors returns only shapes and dtypes |

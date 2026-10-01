@@ -1,0 +1,54 @@
+@startuml extension
+skinparam defaultFontName "Noto Sans SC"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #6B5FA0
+skinparam TitleFontColor #4A2C8F
+skinparam rectangle {
+  RoundCorner 8
+}
+skinparam package {
+  BorderColor #CFC6E6
+  BackgroundColor #FBFAFE
+  FontColor #4A2C8F
+}
+hide stereotype
+skinparam rectangle<<sys>> {
+  BackgroundColor #E2F6F8
+  BorderColor #3AA9B8
+}
+skinparam rectangle<<dev>> {
+  BackgroundColor #EFE9FA
+  BorderColor #8E6CCF
+}
+skinparam rectangle<<ext>> {
+  BackgroundColor #E8F6EA
+  BorderColor #6DBA7A
+}
+rectangle "Generated call checks" as chk <<sys>>
+
+package "target: replaces the whole op" {
+  rectangle "build_kernel registered by\nregister_kernel_builder" as tgt <<ext>>
+}
+
+package "The op instance's in-tree implementation" {
+  rectangle "The Op class's _eager_forward" as body <<dev>>
+  package "Implementations of one kernel interface\n(installed at construction)" as snap {
+    rectangle "Classes in kernel_types\ninheriting the interface" as intree <<dev>>
+    rectangle "kernel_map=\nreplaces the class behind a key,\nkeeping the key's rule\n(this instance only)" as repl <<ext>>
+    rectangle "register_implementation\nadds a key\n(every instance built afterwards)" as added <<ext>>
+    intree -[hidden]down- repl
+    repl -[hidden]down- added
+  }
+}
+
+chk --> tgt : a target registered\na builder for the op
+chk --> body : served in-tree
+body --> snap : kernel_for selects among\nthese by the selection rule
+
+legend bottom
+  Cyan: provided by the system
+  Purple: written by TileOPs developers
+  Green: provided by a backend
+endlegend
+@enduml

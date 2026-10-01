@@ -1,0 +1,54 @@
+@startuml extension
+skinparam defaultFontName "Noto Sans SC"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #6B5FA0
+skinparam TitleFontColor #4A2C8F
+skinparam rectangle {
+  RoundCorner 8
+}
+skinparam package {
+  BorderColor #CFC6E6
+  BackgroundColor #FBFAFE
+  FontColor #4A2C8F
+}
+hide stereotype
+skinparam rectangle<<sys>> {
+  BackgroundColor #E2F6F8
+  BorderColor #3AA9B8
+}
+skinparam rectangle<<dev>> {
+  BackgroundColor #EFE9FA
+  BorderColor #8E6CCF
+}
+skinparam rectangle<<ext>> {
+  BackgroundColor #E8F6EA
+  BorderColor #6DBA7A
+}
+rectangle "生成的调用检查" as chk <<sys>>
+
+package "target：替换整个 op" {
+  rectangle "register_kernel_builder\n注册的 build_kernel" as tgt <<ext>>
+}
+
+package "op 实例的 in-tree 实现" {
+  rectangle "Op 类的 _eager_forward" as body <<dev>>
+  package "一个 kernel 接口的实现（构造时安装）" as snap {
+    rectangle "kernel_types 中\n继承该接口的类" as intree <<dev>>
+    rectangle "kernel_map=\n替换 key 背后运行的类\n沿用该 key 的规则\n（只作用于这个实例）" as repl <<ext>>
+    rectangle "register_implementation\n新增的 key\n（此后构造的所有实例）" as added <<ext>>
+    intree -[hidden]down- repl
+    repl -[hidden]down- added
+  }
+}
+
+chk --> tgt : target 为该 op\n注册了 builder
+chk --> body : 由 in-tree 实现服务
+body --> snap : kernel_for 按选择规则\n在这些实现中选择
+
+legend bottom
+  青色：系统提供
+  紫色：TileOPs 开发者编写
+  绿色：backend 提供
+endlegend
+@enduml

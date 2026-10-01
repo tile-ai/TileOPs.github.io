@@ -4,15 +4,15 @@
 
 1. [Benchmarks](../benchmarks/index.md) — a nightly run on an H200, reporting
    device time per op per workload against the fastest other implementation of
-   the same op. How the numbers are taken and how to read the ratio is set out
-   in "How these numbers are taken" in that section.
+   the same op. How the numbers are taken and how to read the ratio are
+   described in "How these numbers are taken" in that section.
 
 ## Tools for locating a problem
 
 1. [In-Kernel Timeline Trace](trace-timeline.md) — annotate a kernel body with
    markers and read back a per-CTA timeline: gaps, stalls, and how far the
-   producer and consumer overlap. None of that is visible to a per-kernel
-   profiler. The API is [Trace](../api/trace.md).
+   producer and consumer overlap. A per-kernel profiler does not show this
+   information. The API is [Trace](../api/trace.md).
 
 ## Tuning practice for TileLang
 

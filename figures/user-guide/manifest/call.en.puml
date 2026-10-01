@@ -1,0 +1,92 @@
+@startuml call
+skinparam defaultFontName "Noto Sans SC"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #6B5FA0
+skinparam TitleFontColor #4A2C8F
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 125
+skinparam BoxPadding 6
+skinparam sequence {
+  LifeLineBorderColor #CFC6E6
+  ParticipantBorderColor #8E6CCF
+  ActorBorderColor #6B5FA0
+  ActorBackgroundColor #EFE9FA
+  DividerBackgroundColor #F8F5FD
+  DividerBorderColor #CFC6E6
+  GroupBorderColor #8E6CCF
+  GroupHeaderFontColor #4A2C8F
+}
+hide stereotype
+skinparam participant<<sys>> {
+  BackgroundColor #E2F6F8
+  BorderColor #3AA9B8
+}
+skinparam participant<<dev>> {
+  BackgroundColor #EFE9FA
+  BorderColor #8E6CCF
+}
+skinparam participant<<ext>> {
+  BackgroundColor #F4F4F6
+  BorderColor #9A98A8
+}
+title The path of one op call
+
+actor "Caller" as caller
+box "Generated" #F3FBFC
+  participant "Generated\nchecks" as chk <<sys>>
+  participant "Op base" as base <<sys>>
+end box
+box "Written by the developer" #F8F5FD
+  participant "Op class" as op <<dev>>
+  participant "Kernel\nimplementation" as kern <<dev>>
+end box
+participant "target" as tgt <<ext>>
+
+== Construction ==
+caller -> chk : Op(params)
+activate chk
+chk -> chk : Check params by type; check invariants; run the checks construction can evaluate
+chk --> caller : op instance
+deactivate chk
+
+== Call ==
+caller -> chk : op(tensors, ...)
+activate chk
+chk -> chk : 1. Settle which optional\n    tensors are passed\n2. Check domain restrictions\n3. Choose type-family branches\n4. Infer indices,\n    check refinements\n5. Check output buffers
+alt Every written tensor is empty
+  chk -> chk : Build the outputs from the signature; run nothing
+else A target registered a builder
+  chk -> tgt : Call with forward's inputs
+  tgt --> chk : outputs
+else In-tree implementation
+  chk -> op : 6. forward(tensors, ...)
+  activate op
+  op -> base : kernel_for(interface, call spec)
+  activate base
+  opt First time this call spec is seen
+    base -> base : Select an implementation: availability → applicability → precedence
+    base -> kern : entry_for(call)
+    kern --> base : build identity and factory
+    opt First time this build identity is seen
+      base -> kern : Build the entry
+    end
+  end
+  base --> op : entry
+  deactivate base
+  op -> kern : entry(tensors)
+  kern --> op : result
+  op --> chk : outputs
+  deactivate op
+end
+chk -> chk : 7. Check the outputs' count,\n    shapes, dtypes, device\n    and layout
+chk --> caller : outputs
+deactivate chk
+
+note over chk, kern #FBFAFE
+  An op declaring a compile boundary: forward only calls
+  _call_boundary, the same steps run inside the generated
+  torch.library operator, and the in-tree implementation is
+  _eager_forward; fake/meta come from the same signature
+end note
+@enduml

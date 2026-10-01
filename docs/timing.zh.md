@@ -1,15 +1,15 @@
 # benchmark 的计时方法
 
-nightly benchmark 给每个算子的每个 workload 各测一行，报出的 `device_busy_ms` 是这次调用产生的全部 kernel 在设备上执行区间的并集。CUPTI 记下每个 kernel 的执行起止，按 external correlation id 归到某次迭代；每次迭代之前清空 L2，25 ms 预热、100 ms 测量，取中位数。
+nightly benchmark 为每个 op 的每个 workload 各测一行，报出的 `device_busy_ms` 是这次调用产生的全部 kernel 在设备上执行区间的并集。CUPTI 记录每个 kernel 的执行起止时间，并按 external correlation id 把它归到某一次迭代。每次迭代之前清空 L2，预热 25 ms、测量 100 ms，结果取中位数。
 
-**所以表里的每个数都是设备执行 kernel 的时间：不含 CPU 发起调用的开销，也不含 kernel 之间的空隙。读表到这里就够了。**{ .keystone }
+**因此表中的每个数都是设备执行 kernel 的时间，不含 CPU 发起调用的开销，也不含 kernel 之间的空隙。阅读表格只需要知道这一点。**{ .keystone }
 
-余下各节按需要查：
+其余各节供需要时查阅：
 
-- [一次测量的流程](#how-it-runs) —— 伪代码，以及校准、迭代次数、清 L2、归属、失败即停五处安排。
-- [被测量的量](#what-is-measured) —— `device_busy_ms` 的定义，以及 kernel 之间的空隙为什么不计入。
-- [为什么不是墙钟时间](#why-not-wall-clock) —— decode 尺度上 CUDA events 测不出小 kernel。
-- [什么时候要改测法](#when-to-change) —— 自己写 benchmark 时才用得上，含这套测法测不到的几种情形。
+- [一次测量的流程](#how-it-runs)：伪代码，以及校准、迭代次数、清空 L2、归属与失败即停五项安排。
+- [被测量的量](#what-is-measured)：`device_busy_ms` 的定义，以及 kernel 之间的空隙不计入的原因。
+- [为什么不是墙钟时间](#why-not-wall-clock)：在 decode 尺度上，CUDA events 测不出小 kernel 的执行时间。
+- [什么时候要改测法](#when-to-change)：只在自行编写 benchmark 时用到，包括这套测法测不到的几种情形。
 
 下文的数字都在 H200 上实测，镜像为 `tileops-runner:cu132-torch2.13`。
 
@@ -21,9 +21,9 @@ from benchmarks.timing import bench_kernel
 samples = bench_kernel(op, args=(x, weight))   # 每次迭代一个 Sample
 ```
 
-写 benchmark 一般不直接调它，而是走 `ManifestBenchmark.profile()` 或 `.compare()`：那一层在这些样本上取中位数、算派生列。
+编写 benchmark 时一般不直接调用 `bench_kernel`，而是调用 `ManifestBenchmark.profile()` 或 `.compare()`。这一层在样本上取中位数，并计算派生列。
 
-`bench_kernel` 内部分三段 —— 采集、归属、计量：
+`bench_kernel` 内部分为采集、归属与计量三段：
 
 ```python
 # 采集：每次调用在自己的迭代号下执行
@@ -54,37 +54,37 @@ for i in range(n_repeat):
     n_kernels.append(len(claimed[i]))
 ```
 
-五处安排各有原因：
+五项安排及其原因如下：
 
-1. **校准。** 先跑 3 次，估出单次调用的耗时。
-2. **换算迭代次数。** 预热 25 ms、测量 100 ms 的预算除以单次耗时，钳在 `[10, 200]`：短算子采样多，长算子不必跑满 200 次。
-3. **每次迭代之前清 L2，并等设备排空。** 不清 L2，第一次迭代从 HBM 读、之后都从 L2 读，中位数报的就是缓存全命中的最好情况；排空是为了上一次迭代不与这一次重叠。
-4. **采集与归属。** 每次迭代把迭代号标记为 CUPTI 的 external correlation id，区间内发出的每次 launch 都带上它，kernel 记录里的 correlation id 再经这层映射回到迭代号。**归属不看时间戳** —— 一个 kernel 属于哪次迭代写在记录里，与它何时执行无关；所以比主机开销还短的 kernel 归属得一样可靠，一次调用的 kernel 数在迭代之间变化也测得出来。
-5. **失败即停。** 三种归属失败各报一种错，不产出数字。
+1. **校准。** 先运行 3 次，估计单次调用的耗时。
+2. **换算迭代次数。** 用预热 25 ms、测量 100 ms 的预算除以单次耗时，结果限制在 `[10, 200]` 之内。耗时短的 op 因此采样更多，耗时长的 op 不必运行满 200 次。
+3. **每次迭代之前清空 L2，并等待设备排空。** 不清空 L2 时，第一次迭代从 HBM 读取，之后的迭代都从 L2 读取，中位数反映的是缓存全部命中的最好情况。等待排空使上一次迭代不与这一次重叠。
+4. **采集与归属。** 每次迭代把迭代号标记为 CUPTI 的 external correlation id，区间内发出的每次 launch 都带上这个 id；kernel 记录中的 correlation id 再经这层映射对应回迭代号。**归属不依据时间戳**：一个 kernel 属于哪次迭代写在记录里，与它何时执行无关。因此比主机开销还短的 kernel 同样能被可靠归属，一次调用的 kernel 数在迭代之间变化时也能测出。
+5. **失败即停。** 三种归属失败各报一种错误，不产出数字。
 
 | 情形 | 报什么 | 含义 |
 | --- | --- | --- |
-| CUPTI 丢了记录 | `_CUPTIRecordsLostError` | 那次迭代跑过，只是读数丢了 —— 整个 phase 重测，总共最多测 3 次，每次把缓冲要大 4 倍 |
-| 没有丢弃，但有 kernel 带不上迭代号 | `_OffThreadLaunchError` | 某个没有标记迭代号的线程发起了它 |
-| 没有丢弃，某次迭代一个 kernel 都没有 | `_CUPTIAttributionError` | 这次调用没上设备 |
+| CUPTI 丢了记录 | `_CUPTIRecordsLostError` | 那次迭代已经执行，只是读数丢失。整个 phase 重新测量，总共最多测 3 次，每次把缓冲扩大 4 倍 |
+| 没有丢弃，但有 kernel 无法对应到迭代号 | `_OffThreadLaunchError` | 这个 kernel 由一个没有标记迭代号的线程发起 |
+| 没有丢弃，但某次迭代没有任何 kernel | `_CUPTIAttributionError` | 这次调用没有在设备上执行 |
 
 ## 被测量的量 {#what-is-measured}
 
-**`device_busy_ms`：一次调用产生的全部 kernel，在设备上执行区间的并集长度。** CUPTI 的 kernel 记录给出设备上的执行起止，不含 CPU 发起这次调用的开销。三种情形：
+**`device_busy_ms` 是一次调用产生的全部 kernel 在设备上执行区间的并集长度。** CUPTI 的 kernel 记录给出设备上的执行起止时间，不含 CPU 发起这次调用的开销。分三种情形：
 
-- **单 kernel 的调用** —— 就是这个 kernel 在设备上的执行时长。
-- **多 kernel 的调用** —— 各区间的并集，即设备上至少有一个该调用的 kernel 在执行的总时长。两个 kernel 并发不计成两份，那是 SM 时间，不是设备忙的时间。
-- **kernel 之间的空隙** —— 不计入。
+- **单 kernel 的调用**：这个 kernel 在设备上的执行时长。
+- **多 kernel 的调用**：各执行区间的并集，即设备上至少有一个属于该调用的 kernel 在执行的总时长。两个并发的 kernel 不计为两份，因为两份之和是 SM 时间，不是设备忙碌的时间。
+- **kernel 之间的空隙**：不计入。
 
-空隙不计入，是因为它归不了因：设备那段时间确实空闲，但成因可能是算子自身的数据依赖，也可能是 CPU 还没发出下一个 kernel，两者在 CUPTI 的记录里没有区别。分不清成因的量，不能用来判断一个实现的好坏。
+空隙不计入，是因为无法确定它的成因。设备在那段时间确实空闲，但成因可能是 op 自身的数据依赖，也可能是 CPU 尚未发出下一个 kernel，两者在 CUPTI 的记录中没有区别。成因无法区分的量不能用来判断一个实现的好坏。
 
-`tflops` 与 `bandwidth_tbs` 的分母也是这个量：它们描述设备执行期间达到的吞吐，分母含调用内的空闲会把它系统性压低。
+`tflops` 与 `bandwidth_tbs` 的分母也是这个量。它们描述设备执行期间达到的吞吐，分母若包含调用内的空闲时间，会把吞吐系统性地压低。
 
-这样定义的量对主机的快慢免疫。CUPTI 的采集缓冲从 256 KB 换成 32 MB，同一个三 kernel 调用的 `latency_ms` 中位数从 35 us 涨到 2068 us，`device_busy_ms` 始终 19.1 us —— 主机晚发不改变任何 kernel 的执行时长，只是把它们在时间轴上推远，并集不变。
+这样定义的量不受主机快慢的影响。把 CUPTI 的采集缓冲从 256 KB 换成 32 MB 后，同一个三 kernel 调用的 `latency_ms` 中位数从 35 us 增加到 2068 us，`device_busy_ms` 始终是 19.1 us。主机晚发出 kernel 不改变任何 kernel 的执行时长，只是把它们在时间轴上推远，并集长度不变。
 
 ## 为什么不是墙钟时间 {#why-not-wall-clock}
 
-decode 尺度上，算子的执行时间可能短于发起它的那次 Python 调用。同一个 3 us 的 kernel，四种测法读出四个数：
+在 decode 尺度上，op 的执行时间可能短于发起它的那次 Python 调用。对同一个 3 us 的 kernel，四种测法得到四个读数：
 
 | 测法 | 读数 |
 | --- | --- |
@@ -93,27 +93,27 @@ decode 尺度上，算子的执行时间可能短于发起它的那次 Python �
 | 整个循环一对 events，再除以迭代数 | 6.07 us |
 | CUDA graph 重放 | 4.30 us |
 
-设备上实际执行 1.95 us，event 方案读出的 6 us 是 CPU 发起下一次调用的节奏，不是 kernel 的执行时间。**这是 TileOPs 用 CUPTI 计时的唯一理由**，也是为什么退回 CUDA events 之后那一行不能与其余行比较：`device_busy_ms` 与 `latency_ms` 记同一个数，`timing` 字段记为 `cuda-events`。
+设备上的实际执行时间是 1.95 us，event 方案读出的 6 us 是 CPU 发起下一次调用的间隔。**这是 TileOPs 用 CUPTI 计时的唯一理由**，也是退回 CUDA events 的那一行不能与其余行比较的原因：这一行的 `device_busy_ms` 与 `latency_ms` 记录同一个数，`timing` 字段记为 `cuda-events`。
 
 ## 比较多个实现
 
-同一个用例里比较几个实现，`compare()` 按 A B C C B A 各跑两段，两段样本合并后取中位数。
+在同一个用例中比较多个实现时，`compare()` 按 A B C C B A 的顺序让每个实现各运行两段，两段样本合并后取中位数。
 
-固定顺序下先跑和后跑的实现处在不同的时钟与温度状态，这个差别会被读成实现之间的差别；对称顺序让每个实现的两段分列全程的前后两半，单调漂移一阶抵消。两个细节：
+在固定顺序下，先运行和后运行的实现处在不同的时钟与温度状态，这个差别会被误读为实现之间的差别。对称顺序让每个实现的两段分别位于全程的前半和后半，单调漂移在一阶上相互抵消。有两个细节：
 
-- **预算是拆开的，不是翻倍。** 每段 12.5 ms 预热、50 ms 测量，迭代上下限各取一半 —— 要的是对称，不是更多样本，样本量与单实现计时相当。
-- **两段的计时方法必须一致。** 一段走 CUPTI、另一段退回 CUDA events 时直接报错，不合并，否则一个中位数横跨两种测量。
+- **预算拆分，不翻倍。** 每段预热 12.5 ms、测量 50 ms，迭代次数的上下限各取一半。对称顺序的目的是抵消漂移，不是增加样本，因此样本量与单个实现计时时相当。
+- **两段的计时方法必须一致。** 一段使用 CUPTI、另一段退回 CUDA events 时直接报错，不合并结果，否则一个中位数会混合两种测量方法。
 
 ## 什么时候要改测法 {#when-to-change}
 
-默认情形什么都不用管：一次调用只发一个 kernel、经由 Op 接口、走 `bench_kernel`、进程里没有别的线程用 GPU —— 当前多数算子都是这样。下面七种要停下来处理：
+默认情形下不需要任何处理：一次调用只发出一个 kernel，经由 Op 接口，使用 `bench_kernel`，并且进程中没有其他线程使用 GPU。当前多数 op 属于这种情形。以下七种情形需要单独处理：
 
-| 情形 | 不处理会怎样 | 该怎么做 |
+| 情形 | 不处理的后果 | 处理方法 |
 | --- | --- | --- |
-| 被测闭包里包了 `Tensor.backward` 或 `torch.autograd.grad` | 反向的 kernel 由 autograd 引擎的线程发出，带不上迭代号，整个用例报错，不产出数字 | 单个融合节点用 `backward_of(out)` 直接驱动；多节点链改用 `torch.autograd.set_multithreading_enabled(False)` |
-| 进程里有别的线程在用 GPU，或被测闭包自己用了 CUPTI 的 `CUSTOM0` external id | 那些 kernel 带不上迭代号，或者迭代号被闭包盖掉，同样报错 | 让被计时的调用自己启动它的工作；external id 改用 `CUSTOM1` / `CUSTOM2` |
-| 算子靠 `copy_` 回写才产出结果，例如原地 elementwise 与 MoE 的写回 | 计时会采集这次拷贝，但默认不计入 `device_busy_ms`，另记在 `uncounted_copy_ms`，读数因此偏小 | 给这个用例传 `count_copies=True`，所有 tag 的读数都会计入拷贝 |
-| 一次调用发多个 kernel | kernel 之间的空隙落在 `latency_ms` 里，用它与融合实现比较，空隙算在多 kernel 这一方 | 结论只用 `device_busy_ms`；`latency_ms` 仅在两行 `n_kernels` 相同时可比 |
-| 单次调用超过 10 ms | 迭代次数被下限 10 顶住，墙钟远超 100 ms 的预算，10 个样本给出的 p10/p90 很粗 | 接受更长的墙钟，或显式指定迭代次数并写明样本量 |
-| 想加一个 kernel 级的 benchmark | 这个算子没有 spec，形状与 roofline 只能手写，spec 校验器也查不到它 | 经 Op 接口测，并补一份 [spec](manifest.md) |
-| 加一个外部基线 | 基线的输入转换若移出它的计时区间，等于本仓库替它承担了这部分时间 | 转换留在基线的计时区间内。这个基线是 benchmark 存在的理由时，要求依赖存在、让 import 失败 |
+| 被测闭包中包含 `Tensor.backward` 或 `torch.autograd.grad` | 反向的 kernel 由 autograd 引擎的线程发出，无法对应到迭代号，整个用例报错，不产出数字 | 单个融合节点用 `backward_of(out)` 直接驱动；多节点链改用 `torch.autograd.set_multithreading_enabled(False)` |
+| 进程中有其他线程在使用 GPU，或被测闭包自身使用了 CUPTI 的 `CUSTOM0` external id | 那些 kernel 无法对应到迭代号，或迭代号被闭包覆盖，同样报错 | 由被计时的调用自己启动它的工作；external id 改用 `CUSTOM1` / `CUSTOM2` |
+| op 依靠 `copy_` 回写才产出结果，例如原地 elementwise 与 MoE 的写回 | 计时会采集这次拷贝，但默认不计入 `device_busy_ms`，而是另记在 `uncounted_copy_ms` 中，读数因此偏小 | 为这个用例传入 `count_copies=True`，所有 tag 的读数都会计入拷贝 |
+| 一次调用发出多个 kernel | kernel 之间的空隙计入 `latency_ms`，用它与融合实现比较时，空隙算在多 kernel 的一方 | 结论只依据 `device_busy_ms`；`latency_ms` 只在两行的 `n_kernels` 相同时可比 |
+| 单次调用超过 10 ms | 迭代次数停在下限 10，墙钟时间远超 100 ms 的预算，10 个样本给出的 p10/p90 很粗 | 接受更长的墙钟时间，或显式指定迭代次数并写明样本量 |
+| 需要新增一个 kernel 级的 benchmark | 这个 op 没有 spec，形状与 roofline 只能手写，spec 校验器也检查不到它 | 经由 Op 接口测量，并补一份 [spec](user-guide/manifest/index.md) |
+| 新增一个外部基线 | 如果基线的输入转换被移出它的计时区间，相当于本仓库替它承担了这部分时间 | 转换保留在基线的计时区间内。这个基线是该 benchmark 存在的理由时，要求依赖必须存在，缺失时让 import 失败 |

@@ -1,10 +1,15 @@
 # TileOPs
 
-TileOPs 是一个面向大模型推理的算子库，构建在 [TileLang](https://github.com/tile-ai/tilelang) 之上，同一套算子接口可以由不同后端在不同硬件上实现。
+TileOPs 是一个面向大模型推理的算子库，构建在 [TileLang](https://github.com/tile-ai/tilelang) 之上。同一套 op 接口可以由不同 backend 在不同硬件上实现。
 
-它与手写算子库的不同之处在于组织方式：每个算子先以一份 spec 声明，再由 agent 依据这份 spec 生成实现。spec 既是代码生成的唯一依据，也是验收的标准 —— 正确性对照 spec 指定的参考实现，性能对照 roofline 模型给出的上界，两项都不依赖人的判断。因此一个实现可以随时从 spec 重新生成，而反过来做不到。
+TileOPs 与手写算子库的区别在于组织方式：每个 op 先以一份 spec 声明，再由 agent 依据这份 spec 生成实现。spec 是代码生成的唯一依据，也是验收的标准：
 
-对使用者而言，它就是一批可以直接调用的算子：形状与 dtype 在调用时确定，特化后的 kernel 在首次使用时构造并缓存，随后可以与 CUDA graph 配合使用；每个算子各自声明是否支持 `torch.compile(fullgraph=True)`。
+- 正确性以 spec 指定的参考实现为准；
+- 性能以 roofline 模型给出的上界为准。
+
+两项验收都不依赖人的判断。因此一个实现可以随时从 spec 重新生成，spec 却不能从实现反推。
+
+对使用者而言，TileOPs 提供一批可以直接调用的 op。形状与 dtype 在调用时确定；特化后的 kernel 在首次使用时构造并缓存，之后可以与 CUDA graph 配合使用。每个 op 各自声明是否支持 `torch.compile(fullgraph=True)`。
 
 ## 安装
 
@@ -14,7 +19,7 @@ pip install tileops
 
 ## 快速开始
 
-算子在构造时不绑定任何形状。形状和 dtype 取自调用传入的张量，特化后的 kernel 于首次调用时编译并缓存。
+op 在构造时不绑定任何形状。形状和 dtype 取自调用时传入的张量，特化后的 kernel 在首次调用时编译并缓存。
 
 ```python
 import torch
@@ -28,11 +33,11 @@ d = op(a, b)                         # -> [M, N]
 flops, nbytes = op.eval_roofline()   # 本次调用所需的计算量与访存量
 ```
 
-## 从这里继续
+## 后续阅读
 
-- [使用指南](user-guide/index.md) —— 读写 manifest、接入 `torch.compile`、benchmark 怎么计时、接入新硬件后端
-- [API 参考](api/index.md) —— 各算子族的构造参数与调用方式
-- [性能数据](benchmarks/index.md) —— 每晚在 H200 上实测，逐个 workload 与其他实现对比
+- [使用指南](user-guide/index.md)：读写 manifest、接入 `torch.compile`、benchmark 的计时方法、接入新硬件 backend。
+- [API 参考](api/index.md)：各 op family 的构造参数与调用方式。
+- [性能数据](benchmarks/index.md)：每晚在 H200 上实测，逐个 workload 与其他实现对比。
 
 ## 相关链接
 

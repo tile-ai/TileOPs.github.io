@@ -1,27 +1,27 @@
 # 优化 global memory 访问
 
-一个线程要读一行里的多个元素时，写法有四种。这一页给出它们在两个 workload 上的实测对比，以及怎么挑一种。
+一个线程读取一行中的多个元素时，有四种写法。本页给出它们在两个 workload 上的实测对比，以及选择的依据。
 
 ## 确认 DRAM 带宽是否为当前的瓶颈 {#regime}
 
-[Elementwise](https://tile-ai.github.io/TileOPs.github.io/api/elementwise/) 与 [Reduction](https://tile-ai.github.io/TileOPs.github.io/api/reduction/) 是典型的访存受限 kernel。下面每条建议都写明触发的条件、成因，以及反例与正例代码。
+[Elementwise](https://tile-ai.github.io/TileOPs.github.io/api/elementwise/) 与 [Reduction](https://tile-ai.github.io/TileOPs.github.io/api/reduction/) 是典型的访存受限 kernel。本页每条建议都写明触发条件、成因，以及反例与正例代码。
 
-这一页的实测都在同一组条件下取得：**输入大于 L2 的 60 MiB，且 block 数足以填满整卡**（H200 有 132 个 SM）。此时 DRAM 带宽是主要瓶颈，访存模式的差别直接反映在性能上。
+本页的实测都在同一组条件下取得：**输入大于 L2 的 60 MiB，且 block 数足以填满整卡**（H200 有 132 个 SM）。此时 DRAM 带宽是主要瓶颈，访存模式的差别直接反映在性能上。
 
 !!! warning "适用范围"
 
-    这组条件之外，主要性能瓶颈可能由别的因素决定，这里给出的一些结论会反转。
+    在这组条件之外，主要瓶颈可能是其他因素，本页的部分结论会反转。
 
-下表按这两个条件划出三个区间，逐行给出判据，以及这两页的结论在各区间里怎么用。表里的瓶颈是主导因素，kernel 越复杂，同时起作用的因素越多：
+下表按这两个条件划分三个区间，逐行给出判据，以及 global memory 与 shared memory 两页的结论在各区间的用法。表中列出的是主导瓶颈；kernel 越复杂，同时起作用的因素越多。
 
 | 区间 | 判据 | 主要瓶颈 | 结论的用法 |
 | --- | --- | --- | --- |
 | 带宽饱和 | 输入 > 60 MiB，block 数在 SM 数的两倍以上 | DRAM 带宽，即 sector 利用率 | 直接适用 |
 | 数据小 | 输入装得进 L2，单次耗时在几十微秒以内 | kernel 发射的固定开销、缓存状态 | 避开反例即可，换 access pattern 没有收益 |
-| block 少 | block 数不到 SM 数的两倍 | 每条载入指令的宽度、在飞的字节数 | 保住载入宽度优先，改动逐个实测 |
+| block 少 | block 数不到 SM 数的两倍 | 每条载入指令的宽度、在飞的字节数 | 优先保证载入宽度，每项改动单独实测 |
 
-- **数据小时，发射开销与缓存状态占主导。** 同一个行求和 kernel 的四种 access pattern（fp16，256 线程，时钟未锁）在 65536 × 4096（512 MB）上测得的访存带宽是 4.20 到 4.43 TB/s，彼此相差不超过 6%；换成 2048 × 4096（16 MB，装得进 L2）后单次耗时十几微秒，同一个 access pattern 两次测量之间可差三倍。这个区间里换 access pattern 没有收益，制约性能的是别的因素。
-- **block 少时，载入宽度带来的收益大于合并规则算出的差别。** warp 数量不足，靠并发的请求数掩盖访存延迟不再可行，只能让每个请求更宽、每个线程持有更多在飞的字节。以载入宽度换取其他好处的改法，在这个区间都可能反转。
+- **数据小时，发射开销与缓存状态占主导。** 同一个行求和 kernel 的四种 access pattern（fp16，256 线程，时钟未锁）在 65536 × 4096（512 MB）上测得的访存带宽是 4.20 到 4.43 TB/s，彼此相差不超过 6%；换成 2048 × 4096（16 MB，装得进 L2）后单次耗时十几微秒，同一个 access pattern 两次测量之间可差三倍。在这个区间里，制约性能的是其他因素，更换 access pattern 没有收益。
+- **block 少时，载入宽度带来的收益大于合并规则算出的差别。** warp 数量不足时，无法靠并发的请求数掩盖访存延迟，只能让每个请求更宽、每个线程持有更多在飞的字节。牺牲载入宽度来换取其他收益的改法，在这个区间都可能得到相反的结果。
 
 ## 合并 global memory 的访存 {#coalescing}
 
@@ -32,33 +32,33 @@
 | cache line | 128 字节 | L1 与 L2 的缓存行，也是缓存查找的单位 |
 | **sector** | **32 字节** | 一条 cache line 由 4 个 sector 组成，L1 与 L2 之间按 sector 传输 |
 
-缓存查找时以 cache line 为单位，搬运数据时以 sector 为单位：某个 sector 未命中，L1 就只向 L2 请求这一个 sector，不必把整条 cache line 都拉过来。由此得到的结论是**取 1 个字节和取满 32 个字节的代价相同**。于是一条访存指令的好坏由 **sector 利用率**衡量：`真正用到的字节 / (覆盖的 sector 数 × 32)`。
+缓存查找时以 cache line 为单位，搬运数据时以 sector 为单位：某个 sector 未命中，L1 就只向 L2 请求这一个 sector，不必把整条 cache line 都拉过来。因此**取 1 个字节和取满 32 个字节的代价相同**，一条访存指令的效率由 **sector 利用率**衡量：`真正用到的字节 / (覆盖的 sector 数 × 32)`。
 
-硬件把一个 warp 的 32 个访问合并成尽可能少的 32 字节事务。事务数最少要同时满足三个因素：
+硬件把一个 warp 的 32 个访问合并成尽可能少的 32 字节事务。事务数降到最少需要同时满足三个条件：
 
 1. **地址连续** —— 同一条指令里 32 个线程的地址首尾相接，不留空洞；
 2. **按 32 字节对齐** —— 起始地址是 32 的倍数，一段数据不会多占一个 sector；
 3. **每个线程一次取满 16 字节** —— 一条指令覆盖 $32 \times 16 = 512$ 个连续字节，即 16 个满载的 sector。
 
-三个因素同时成立时，这条访存指令对硬件最友好。
+三个条件同时成立时，这条访存指令对硬件最友好。
 
 一个线程要读 $V$ 个元素时（$V$ = 一行的元素数 / 线程数），有四种 access pattern。
 
-**blocked** —— 每个线程负责一段连续的元素。固定 `c` 时相邻线程的地址相隔 $V$ 个元素，违反第一个因素，sector 利用率是 $1/V$：
+**blocked** —— 每个线程负责一段连续的元素。固定 `c` 时相邻线程的地址相隔 $V$ 个元素，违反第一个条件，sector 利用率是 $1/V$：
 
 ```python
 for c in T.serial(V):
     acc[0] = acc[0] * X[row, tx * V + c]
 ```
 
-**striped** —— 相邻线程取相邻元素。地址连续了，但每个线程一次只取一个元素，违反第三个因素，$V$ 个元素要发 $V$ 条指令：
+**striped** —— 相邻线程取相邻元素。地址连续，但每个线程一次只取一个元素，违反第三个条件，$V$ 个元素需要 $V$ 条指令：
 
 ```python
 for c in T.serial(V):
     acc[0] = acc[0] * X[row, c * threads + tx]
 ```
 
-**blocked + 向量化** —— 仍是每线程一段连续的，但改用 `T.vectorized` 一次读满 16 字节，三个因素全部满足：
+**blocked + 向量化** —— 每个线程仍负责一段连续的元素，但改用 `T.vectorized` 一次读满 16 字节，三个条件全部满足：
 
 ```python
 buf = T.alloc_local((V,), dtype)
@@ -69,7 +69,7 @@ for c in T.serial(V):
     acc[0] = acc[0] * buf[c]
 ```
 
-**staged** —— 搬运交给 `T.Parallel`，消费改从 shared memory 读，同样满足三个因素：
+**staged** —— 由 `T.Parallel` 完成搬运，消费阶段改从 shared memory 读取，同样满足三个条件：
 
 ```python
 sh = T.alloc_shared((threads, V + pad), dtype)
@@ -83,15 +83,21 @@ for c in T.serial(V):
 
 四种 access pattern 的差别在于：**「哪个线程读哪些元素、一次读多宽」这个映射由谁决定。**
 
-`T.serial` 的语义是循环体由单个线程顺序执行，索引表达式被逐字翻译成访存指令，不做合并也不做向量化 —— 编程者写出的模式就是硬件看到的模式。
+`T.serial` 的语义是循环体由单个线程顺序执行，索引表达式被逐字翻译成访存指令，不做合并，也不做向量化，因此编程者写出的模式就是硬件看到的模式。
 
-`T.vectorized`、`T.Parallel`、`T.copy` 则由 TileLang 的 **layout inference** 决定，三者的差别在于编程者还需要写明多少：`T.vectorized` 要写明每线程一次访问的宽度，线程映射由 layout inference 推导；`T.Parallel` 连宽度也不必写，循环维度怎么分给线程、一次读多宽都由它决定；`T.copy` 只写源和目标两个区域，整段搬运由它生成（需要接管推导结果时，另有 `coalesced_width` 与 `loop_layout` 两个参数）。剩下的向量化、地址对齐、以及在 shared memory 一侧避开 bank 冲突，都由 layout inference 负责 —— 这些正是对硬件友好但手写容易出错的部分。
+`T.vectorized`、`T.Parallel`、`T.copy` 的映射则由 TileLang 的 **layout inference** 决定。三者的差别在于编程者需要写明的内容：
 
-**用 `T.serial` 手写下标时，上面三个因素要自己逐一保证；交给 layout inference 时，只需写明搬运的范围。** 三者之间怎么选、各自能跑到多少带宽，见下面的实测。
+- `T.vectorized` 写明每个线程一次访问的宽度，线程映射由 layout inference 推导；
+- `T.Parallel` 不必写宽度，循环维度如何分给线程、一次读多宽都由 layout inference 决定；
+- `T.copy` 只写源区域与目标区域，整段搬运由它生成；需要自行指定推导结果时，另有 `coalesced_width` 与 `loop_layout` 两个参数。
+
+其余的向量化、地址对齐，以及在 shared memory 一侧避开 bank 冲突，都由 layout inference 负责。这些正是对硬件友好、但手写容易出错的部分。
+
+**用 `T.serial` 手写下标时，三个条件由编程者逐一保证；交给 layout inference 时，只需写明搬运的范围。** 各种写法的选择与各自达到的带宽见下文的实测。
 
 <figure class="access-patterns" markdown="1">
 
-<svg class="tf-access" viewBox="0 0 520 352" role="img" aria-label="三种访存模式下，一个 warp 的一条读取指令触及的元素，以及硬件因此取回的 sector。blocked 覆盖 4 个 sector，每个只用到 2 个元素；向量化后的 blocked 与 striped 都完全合并；staged 的搬运阶段与 striped 一样合并，消费阶段在 shared memory 上，不存在 sector。">
+<svg class="tf-access" viewBox="0 0 520 352" role="img" aria-label="四种访存模式下，一个 warp 的一条读取指令触及的元素，以及硬件因此取回的 sector。blocked 覆盖 4 个 sector，每个只用到 2 个元素；向量化后的 blocked 与 striped 都完全合并；staged 的搬运阶段与 striped 一样合并，消费阶段在 shared memory 上，不存在 sector。">
 <text class="ap-title" x="0" y="38.0">blocked</text>
 <text class="ap-sub" x="0" y="52.0">tx * V + c</text>
 <rect class="ap-sector ap-sector--fetched" x="136.0" y="28.0" width="88.0" height="22.0" rx="2"/>
@@ -431,7 +437,7 @@ for c in T.serial(V):
 
 ## 实测对比
 
-我们对两个 workload 在 H200 上进行实测，比较上面四种 access pattern 各自能跑到多少**访存带宽**（搬运的字节数除以 kernel 耗时，单位 TB/s），这两个 workload 的计算对元素的处理顺序有不同要求 —— 这个要求会决定哪几种 access pattern 可用。
+本节在 H200 上实测两个 workload，比较四种 access pattern 各自达到的**访存带宽**（搬运的字节数除以 kernel 耗时，单位 TB/s）。两个 workload 的计算对元素处理顺序的要求不同，这一要求决定了哪几种 access pattern 可用。
 
 测试中 SM 时钟锁在 1830 MHz；输入 bf16 的 $65536 \times 4096$（512 MB，**必须大于 L2 的 60 MiB**，否则测到的是 L2 带宽）；每个配置跑三次，三次的结果一致到 ±0.5%。staged 在表里占两列：一列不加 pad（此时 stride 恰好是 $V$ 个 word，产生 bank 冲突，见[优化 shared memory 访问](shared-memory-access.md)），一列是在若干个 pad 取值中测到的最优值。
 
@@ -457,15 +463,15 @@ for c in T.serial(V):
 
 ## access pattern 的取舍
 
-1. **逐元素的 blocked 在 $V > 1$ 时总是最差的 access pattern。** 固定 `c` 时相邻线程的地址相隔 $V$ 个元素，sector 利用率是 $1/V$，所以 $V$ 越大越差 —— workload 1 的表里从 $V = 8$ 的 3.02 掉到 $V = 64$ 的 0.48。这个关系由访存合并的规则决定，不随形状改变。
+1. **逐元素的 blocked 在 $V > 1$ 时总是最差的 access pattern。** 固定 `c` 时相邻线程的地址相隔 $V$ 个元素，sector 利用率是 $1/V$，所以 $V$ 越大越差：workload 1 的表中从 $V = 8$ 的 3.02 掉到 $V = 64$ 的 0.48。这个关系由访存合并的规则决定，不随形状改变。
 
-2. **$V$ 小时用向量化的 blocked；$V$ 大到寄存器压力压低占用率时，改用加了 pad 的 staged。** 向量化把整段留在寄存器里（bf16 是每线程 $V/2$ 个），staged 把它放进 shared memory，用一次同步换回寄存器。翻转点取决于 kernel 里其余部分还剩多少寄存器预算，不是一个固定的 $V$：上面两个 workload 在同一个行宽下就分别落在 $V = 64$ 与 $V = 32$。**这个翻转点要在自己的 kernel 上测。**
+2. **$V$ 小时用向量化的 blocked；$V$ 大到寄存器压力压低占用率时，改用加了 pad 的 staged。** 向量化把整段留在寄存器里（bf16 是每线程 $V/2$ 个），staged 把它放进 shared memory，以一次同步为代价节省寄存器。翻转点取决于 kernel 其余部分剩下的寄存器预算，没有固定的 $V$：上面两个 workload 在同一个行宽下分别落在 $V = 64$ 与 $V = 32$。**翻转点需要在具体的 kernel 上实测。**
 
 3. **staged 的 shared 缓冲要避开 bank 冲突。** 声明成 `(threads, V)` 时 stride 恰好是 $V$ 个 word，$V$ 为 2 的幂就一定产生冲突；pad 的算法与候选见[优化 shared memory 访问](shared-memory-access.md#pad-per-chunk)。workload 2 的表里，同一个配置不加 pad 是 0.46，加 pad 是 3.69。
 
-4. **striped 完全合并，但每个元素要发一条指令。** 所以它好于逐元素的 blocked、差于向量化的 blocked（$V = 16$ 上 3.31 对 1.83 与 3.81），适合改动量比最后一点带宽更重要的场合。它让线程持有的元素不连续，因此要求线程持有连续一段的计算（例如串行前缀）用不了它。
+4. **striped 完全合并，但每个元素需要一条指令。** 因此它好于逐元素的 blocked、差于向量化的 blocked（$V = 16$ 上 3.31 对 1.83 与 3.81），适合改动量比最后一点带宽更重要的场合。它使每个线程持有的元素不连续，因此不能用于要求线程持有连续一段元素的计算，例如串行前缀积。
 
-下面两段是推荐 access pattern 的完整模板，`M`、`N`、`V`、`threads`、`pad`、`dtype` 都是编译期常量。本页开头的四段代码里，逐元素的 blocked 是反例，不要照抄；striped 可用但不是最快的一种（见上面取舍的第 4 条）。
+下面两段是推荐 access pattern 的完整模板，`M`、`N`、`V`、`threads`、`pad`、`dtype` 都是编译期常量。「合并 global memory 的访存」一节的四段代码中，逐元素的 blocked 是反例；striped 可用，但不是最快的一种（见取舍的第 4 条）。
 
 **推荐的 access pattern，小 $V$** —— 向量化的 blocked：
 
@@ -487,7 +493,7 @@ def main(X: T.Tensor((M, N), dtype), Out: T.Tensor((M, threads), "float32")):
         Out[row, tx] = acc[0]
 ```
 
-**推荐的 access pattern，大 $V$** —— 加了 pad 的 staged（翻转点见上面取舍的第 2 条）：
+**推荐的 access pattern，大 $V$** —— 加了 pad 的 staged（翻转点见取舍的第 2 条）：
 
 ```python
 @T.prim_func

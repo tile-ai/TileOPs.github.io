@@ -1,0 +1,91 @@
+@startuml call
+skinparam defaultFontName "Noto Sans SC"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #6B5FA0
+skinparam TitleFontColor #4A2C8F
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 150
+skinparam BoxPadding 6
+skinparam sequence {
+  LifeLineBorderColor #CFC6E6
+  ParticipantBorderColor #8E6CCF
+  ActorBorderColor #6B5FA0
+  ActorBackgroundColor #EFE9FA
+  DividerBackgroundColor #F8F5FD
+  DividerBorderColor #CFC6E6
+  GroupBorderColor #8E6CCF
+  GroupHeaderFontColor #4A2C8F
+}
+hide stereotype
+skinparam participant<<sys>> {
+  BackgroundColor #E2F6F8
+  BorderColor #3AA9B8
+}
+skinparam participant<<dev>> {
+  BackgroundColor #EFE9FA
+  BorderColor #8E6CCF
+}
+skinparam participant<<ext>> {
+  BackgroundColor #F4F4F6
+  BorderColor #9A98A8
+}
+title 一次 op 调用的执行路径
+
+actor "调用方" as caller
+box "系统生成" #F3FBFC
+  participant "生成的\n检查" as chk <<sys>>
+  participant "Op 基类" as base <<sys>>
+end box
+box "开发者编写" #F8F5FD
+  participant "Op 类" as op <<dev>>
+  participant "Kernel 实现" as kern <<dev>>
+end box
+participant "target" as tgt <<ext>>
+
+== 构造 ==
+caller -> chk : Op(参数)
+activate chk
+chk -> chk : 按 type 检查参数；检查 invariant；完成构造时可以求值的检查
+chk --> caller : op 实例
+deactivate chk
+
+== 调用 ==
+caller -> chk : op(张量, ...)
+activate chk
+chk -> chk : 1. 确定可选张量是否传入\n2. 检查定义域限制\n3. 选择 type family 分支\n4. 推断 index，\n    检查 refinement\n5. 检查输出缓冲
+alt 所有写入的张量都为空
+  chk -> chk : 按签名构造输出，不执行实现
+else target 为 op 注册了 builder
+  chk -> tgt : 以 forward 的输入调用
+  tgt --> chk : 输出
+else in-tree 实现
+  chk -> op : 6. forward(张量, ...)
+  activate op
+  op -> base : kernel_for(interface, call spec)
+  activate base
+  opt call spec 首次出现
+    base -> base : 选择实现：可用性 → 适用性→ 优先级
+    base -> kern : entry_for(call)
+    kern --> base : build identity 与构建函数
+    opt build identity 首次出现
+      base -> kern : 构造 entry
+    end
+  end
+  base --> op : entry
+  deactivate base
+  op -> kern : entry(张量)
+  kern --> op : 结果
+  op --> chk : 输出
+  deactivate op
+end
+chk -> chk : 7. 检查输出的数量、\n    形状、dtype、设备\n    与内存布局
+chk --> caller : 输出
+deactivate chk
+
+note over chk, kern #FBFAFE
+  声明了 compile boundary 的 op：forward 只调用 _call_boundary，
+  同样的步骤在生成的 torch.library operator 内执行，
+  in-tree 实现写在 _eager_forward 中；fake/meta 由同一份签名生成
+end note
+@enduml

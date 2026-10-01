@@ -2,7 +2,7 @@
 
 ## 什么是访存受限
 
-在 GPU 上，一个 kernel 跑多快，取决于算力与带宽哪一个先成为瓶颈。TileOPs 用 [macro benchmark](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/hardware) 测算出一个**[校准系数](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/perf/profiles/h200.yaml)**：硬件 spec 给出的理论峰值乘以校准系数，得到实际可达的有效值，以此作为性能优化的指导标准。我们在 H200 上实测出 [fp32 FMA 的算力为 **57.27** TFLOP/s，访存带宽为 **4.50** TB/s](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/perf/profiles/h200.yaml)。roofline 的**拐点**（ridge point）是带宽斜线与算力上限这两段的交点，两者相除给出它的横坐标，也就是拐点处的算术强度 **12.72 flop/byte** —— 算力与带宽同时用满时，每搬运一个字节对应的浮点运算次数：
+在 GPU 上，一个 kernel 的速度取决于算力与带宽哪一个先成为瓶颈。TileOPs 用 [macro benchmark](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/hardware) 测算出一个**[校准系数](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/perf/profiles/h200.yaml)**：硬件 spec 给出的理论峰值乘以校准系数，得到实际可达的有效值，作为性能优化的参照。在 H200 上实测得到的 [fp32 FMA 的算力为 **57.27** TFLOP/s，访存带宽为 **4.50** TB/s](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/perf/profiles/h200.yaml)。roofline 的**拐点**（ridge point）是带宽斜线与算力上限这两段的交点，算力除以带宽得到它的横坐标，即拐点处的算术强度 **12.72 flop/byte**，也就是算力与带宽同时用满时每搬运一个字节对应的浮点运算次数。H200 的 roofline 如下图所示：
 
 <figure class="roofline" markdown="1">
 
@@ -52,7 +52,7 @@
 <text class="tf-rl-roof-label" x="492.0" y="54.1" text-anchor="end">算力上限 57.3 TFLOP/s</text>
 </svg>
 
-<figcaption>图上这条折线就是 roofline，任何 kernel 的性能点都落在它以下。拐点以左，上限是「算术强度 × 带宽」，可达算力随算术强度线性上升；拐点以右，上限就是算力峰值，不再随算术强度变化。<code>silu</code> 每搬运 4 个字节做 5 次运算，算术强度 1.25 flop/byte，只有拐点的 1/10，所以即便带宽完全用满，也只能达到算力上限的 10%。</figcaption>
+<figcaption>图中的折线是 roofline，任何 kernel 的性能点都落在它以下。拐点以左，上限是「算术强度 × 带宽」，可达算力随算术强度线性上升；拐点以右，上限就是算力峰值，不再随算术强度变化。<code>silu</code> 每搬运 4 个字节做 5 次运算，算术强度 1.25 flop/byte，只有拐点的 1/10，所以即便带宽完全用满，也只能达到算力上限的 10%。</figcaption>
 
 </figure>
 
