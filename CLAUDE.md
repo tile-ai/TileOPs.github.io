@@ -78,9 +78,10 @@ implementation of the same op on that workload.
 English at the site root, Chinese under `/zh/`. A Chinese page is a
 `<name>.zh.md` beside the English `<name>.md`, full prose, never an
 `include-markdown` shell. `backends.md`, `torch-compile.md`, everything under
-`performance-guides/memory-bound/` and the two guides under `user-guide/manifest/`
-and `user-guide/dispatch/` were authored in Chinese: edit the `.zh.md` first, then
-bring the English page in line. Everything else goes the other way.
+`performance-guides/memory-bound/` and `blog/`, and the two guides under
+`user-guide/manifest/` and `user-guide/dispatch/` were authored in Chinese: edit
+the `.zh.md` first, then bring the English page in line. Everything else goes
+the other way.
 
 | Rule | Detail |
 |------|--------|
@@ -99,8 +100,8 @@ bring the English page in line. Everything else goes the other way.
 
 ## Nav
 
-`nav` in `mkdocs.yml` is the page list; its six sections run in the reader's
-order, Design last as contributor-facing.
+`nav` in `mkdocs.yml` is the page list: Home, then Blog, then the remaining
+sections in the reader's order, Design last as contributor-facing.
 
 - Add a new page to `nav`, and its label to `nav_translations`.
 - Put a user-facing topic under User Guide.
@@ -111,11 +112,25 @@ order, Design last as contributor-facing.
 - Leave `toc.integrate` off: the page TOC renders in the right column, and it is
   incompatible with `navigation.indexes`.
 
+## Blog
+
+`docs/blog/`: plain pages, not Material's `blog` plugin. Why: the plugin
+renders no post under `mkdocs-static-i18n` and warns on its archive pages.
+
+- One post is `blog/<slug>.zh.md` and `blog/<slug>.md`, listed in `nav` under
+  Blog and as one link on `blog/index.md`, newest first.
+- A post opens with a short H1 and a one-line subtitle paragraph. `hooks.py`
+  gives that paragraph the `post-subtitle` class that `extra.css` styles; keep
+  classes and attribute lists out of the post's Markdown.
+- No date line, no in-page TOC: the right column carries the TOC.
+
 ## Conventions
 
 - Measure every number and state its conditions. Say when a count will drift.
 - Admonitions (`!!! note`, `!!! warning`) for callouts; relative Markdown links
   for internal cross-references.
+- Write links as plain Markdown. `extra.css` gives every link in running text an
+  arrow, east within the site and north-east off it, and a teal wash on hover.
 - Link to the TileOPs repo rather than duplicating it. A page authored here that
   mirrors upstream content will drift.
 - Gitignored: `site/`, `__pycache__/`, `.cache/`, `TileOPs/`, and

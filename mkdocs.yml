@@ -29,6 +29,8 @@ theme:
 
 nav:
   - Home: index.md
+  - Blog:
+    - blog/index.md
   - User Guide:
     - user-guide/index.md
     - Reading and Writing Specs:
@@ -160,6 +162,7 @@ plugins:
           build: true
           nav_translations:
             Home: 首页
+            Blog: 博客
             Design: 设计文档
             User Guide: 使用指南
             Reading and Writing Specs: 读写 manifest

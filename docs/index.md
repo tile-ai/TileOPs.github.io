@@ -1,25 +1,23 @@
 # TileOPs
 
-TileOPs is an operator library for large-model inference, built on
-[TileLang](https://github.com/tile-ai/tilelang). One set of op interfaces can be
-implemented by different backends on different hardware.
+TileOPs is an exploratory operator library for large-model inference, built on
+[TileLang](https://github.com/tile-ai/tilelang). TileOPs is designed for agents,
+and agents build the whole project. Such a project has to meet concrete
+code-quality requirements: its structure stays consistent, it does not diverge or
+bloat as ops are added, and its code stays maintainable. The design of TileOPs
+serves three goals:
 
-TileOPs differs from a hand-written operator library in how it is organised: every
-op is first declared as a spec, and an agent then generates the implementation from
-that spec. The spec is the only input to code generation and the standard the result
-is accepted against:
-
-- correctness is judged against the reference implementation the spec names;
-- performance is judged against the bound the roofline model gives.
-
-Neither check depends on human judgement. An implementation can therefore be
-regenerated from its spec at any time, while a spec cannot be derived from an
-implementation.
-
-To a caller, TileOPs is a set of ops that can be called directly. Shapes and dtype
-are fixed at call time; the specialized kernel is built and cached on first use and
-can then be used with CUDA graphs. Each op declares whether it supports
-`torch.compile(fullgraph=True)`.
+- **Maintainable.** Each op is declared by a spec, and an agent generates the
+  implementation from it. The ops in a family share one set of interfaces and
+  rules, and every new op and kernel follows them.
+- **Verifiable.** The spec names the reference implementation correctness is
+  judged against. Tests compare a kernel's output with that reference, and
+  performance measurements compare its measured speed with the bound the roofline
+  model gives. The acceptance criteria are fixed in advance, and the checks run
+  automatically.
+- **Tunable.** The roofline model gives the gap between each kernel and its
+  performance bound. The [nightly benchmarks](benchmarks/index.md) compare each
+  kernel with the fastest other implementation on the same hardware.
 
 ## Installation
 
@@ -46,6 +44,7 @@ flops, nbytes = op.eval_roofline()   # what the call had to do and move
 
 ## Where to go next
 
+- [Blog](blog/index.md): technical explorations from building TileOPs.
 - [User Guide](user-guide/index.md): reading and writing the manifest, bringing an op
   into `torch.compile`, how a benchmark is timed, and adding a hardware backend.
 - [API Reference](api/index.md): the constructor parameters and call signatures of

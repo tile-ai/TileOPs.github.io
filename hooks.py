@@ -10,6 +10,8 @@ untranslated-page notice.
 * mkdocs-static-i18n serves the default-language page where a locale has no
   translation; `on_page_markdown` prepends a notice, so a fallback page reads as
   a translation still to come rather than a broken one.
+* A blog post's first paragraph is its subtitle; `on_page_content` marks it for
+  extra.css, so the post's Markdown carries no styling.
 """
 from __future__ import annotations
 
@@ -89,3 +91,15 @@ def on_config(config):
         if isinstance(section, dict) and "Benchmarks" in section:
             section["Benchmarks"] = entries
     return config
+
+
+_FIRST_PARAGRAPH = re.compile(r"(</h1>\s*)<p>")
+
+
+def on_page_content(html, page, config, files):
+    """Mark a blog post's subtitle."""
+    src = page.file.src_path.replace("\\", "/")
+    name = src.split("/")[-1]
+    if not src.startswith("blog/") or name.startswith("index."):
+        return html
+    return _FIRST_PARAGRAPH.sub(r'\1<p class="post-subtitle">', html, count=1)

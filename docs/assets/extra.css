@@ -438,6 +438,54 @@ body,
   color: var(--tf-teal);
 }
 
+/* Every link in running text carries an arrow, so it reads as a link before it
+ * is hovered: east for a page on this site, north-east for one that leaves it.
+ * Hover lifts a teal wash from the underline and nudges the arrow. Scoped to
+ * prose — paragraphs, list items, table cells — so headings' permalinks, the
+ * nav, buttons, badges and the Home card keep their own look, and no page's
+ * Markdown has to mark a link for it.
+ */
+.md-typeset :is(p, li, td, dd) a:not(:has(img)) {
+  padding: 0 0.08em;
+  margin: 0 -0.08em;
+  border-radius: 0.15em;
+  background: linear-gradient(var(--tf-teal-tint), var(--tf-teal-tint)) 0 100% / 100% 0 no-repeat;
+  transition: background-size 160ms ease, text-decoration-color 160ms ease;
+}
+
+.md-typeset :is(p, li, td, dd) a:not(:has(img)):is(:hover, :focus-visible) {
+  background-size: 100% 100%;
+}
+
+.md-typeset :is(p, li, td, dd) a:not(:has(img))::after {
+  content: "";
+  display: inline-block;
+  width: 0.62em;
+  height: 0.62em;
+  margin-left: 0.18em;
+  vertical-align: 0.06em;
+  background-color: currentcolor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2012%2012'%3E%3Cpath%20d='M2%206h8M6.5%202.5%2010%206l-3.5%203.5'%20fill='none'%20stroke='%23000'%20stroke-width='1.6'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2012%2012'%3E%3Cpath%20d='M2%206h8M6.5%202.5%2010%206l-3.5%203.5'%20fill='none'%20stroke='%23000'%20stroke-width='1.6'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  opacity: 0.7;
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.md-typeset :is(p, li, td, dd) a[href^="http"]:not(:has(img))::after {
+  vertical-align: 0.12em;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2012%2012'%3E%3Cpath%20d='M4%202h6v6M10%202%202.5%209.5'%20fill='none'%20stroke='%23000'%20stroke-width='1.6'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2012%2012'%3E%3Cpath%20d='M4%202h6v6M10%202%202.5%209.5'%20fill='none'%20stroke='%23000'%20stroke-width='1.6'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.md-typeset :is(p, li, td, dd) a:not(:has(img)):is(:hover, :focus-visible)::after {
+  opacity: 1;
+  transform: translateX(0.1em);
+}
+
+.md-typeset :is(p, li, td, dd) a[href^="http"]:not(:has(img)):is(:hover, :focus-visible)::after {
+  transform: translate(0.08em, -0.08em);
+}
+
 /* A rule between sections, drawn as light rather than as a line. */
 .md-typeset hr {
   height: 1px;
@@ -1669,4 +1717,16 @@ html[lang="zh"] .md-nav__title {
   font-size: 0.7rem;
   line-height: 1.7;
   text-align: left;
+}
+
+/* A blog post's subtitle: the line under the H1 that says what the post is
+ * about, so the H1 itself stays one short line.
+ */
+.md-typeset .post-subtitle {
+  margin: -0.6rem 0 1.6rem;
+  color: var(--tf-muted);
+  font-family: var(--tf-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.35;
 }
