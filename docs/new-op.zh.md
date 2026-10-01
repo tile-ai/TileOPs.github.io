@@ -101,8 +101,8 @@ class GemmFwdOp(Op):
 | 2 | `kernel_types` | 能服务这个算子的 Kernel 类，各起一个 key；`kernel_map=` 按这个 key 替换其中一个 |
 | 3 | `interfaces` | 算子调用 kernel 的每一处各占一条：`kernel_for` 用的名字 → 这一处的各实现所继承的 `KernelInterface` 类 |
 | 4 | `forward` | `signature.inputs` 的顺序，可选输入排在最后、默认 `None` |
-| 5 | `_eager_forward` | 连续化、构造 call spec、取 kernel、launch kernel |
-| 6 | `compute_roof` | 可选：给算子 FLOPs 定价的 GPU profile 单元，不是 CUDA core fp32 时才写 |
+| 5 | `_eager_forward` | 把输入变成连续的，构造 call spec，取出 kernel，再调用它 |
+| 6 | `compute_roof` | 可选。算子的 FLOPs 按哪个硬件单元的峰值定价，默认是 CUDA core 上的 fp32，用别的单元时才写 |
 
 `_infer_output_shapes`、`_validate_dtypes` 与 `eval_roofline` 都照 spec 生成，不用写。
 
@@ -112,12 +112,12 @@ class GemmFwdOp(Op):
 
 kernel 是编译产物，构造一次要几百毫秒到几秒，而一个算子实例会被反复调用，形状与 dtype 各不相同。算子层因此维护一张记忆表：本次调用要的 kernel 已经构造过就取回来，没有才构造并存进去。`kernel_for` 是自带实现走到这张表的唯一入口；[target](backends.md) 服务的是整个算子，不经过它。
 
-两个参数：
+`kernel_for` 接受两个参数：
 
-- **`interface`**：`interfaces` 的一个 key，指算子调用 kernel 的一处。`GemmFwdOp` 只在一处调用 kernel，因此只声明一个 `"gemm"`。只有语义或调用契约改变时才新开一个接口：`BatchNormFwdOp` 的 `batch_norm_fwd_train` 与 `batch_norm_fwd_infer` 返回的东西不同。某个形状范围或某个架构上更快的 kernel 不是新接口，而是已有接口的另一个实现。
-- **`call`**：一个冻结的 `CallSpec` 子类，带着这次调用中选择与构建会读取的事实：形状、dtype、算子的语义参数与设备。它必须是这个接口 `request` 指定的类型。设备事实（`arch`、`sm_count`、`calibration`、`smem_budget`）不由调用方传入，未命中时派发机制从 `call.device` 推出。
+- **`interface`**：`interfaces` 的一个 key，指算子调用 kernel 的一处。`GemmFwdOp` 只在一处调用 kernel，因此只声明一个 `"gemm"`。只有语义或调用契约改变时才新开一个接口：`BatchNormFwdOp` 的 `batch_norm_fwd_train` 与 `batch_norm_fwd_infer` 返回的东西不同。某个形状范围或某个架构上更快的 kernel 是已有接口的另一个实现。
+- **`call`**：一个冻结的 `CallSpec` 子类，带着这次调用中选择与构建会读取的事实：形状、dtype、算子的语义参数与设备。它必须是这个接口 `request` 指定的类型。设备事实（`arch`、`sm_count`、`calibration`、`smem_budget`）由派发机制在未命中时从 `call.device` 推出，调用方不填。
 
-取回的 kernel 按接口抽象 `forward` 的参数表、按同样的顺序调用。
+算子用接口抽象 `forward` 声明的参数、按同样的顺序调用取回的 kernel。
 
 接口是写在 [`src/tileops/kernels/<family>/call_spec.py`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 里的一个类，与它在 `request` 中指名的 call spec 放在一起；只有一个 kernel 文件的 family 把两者都写在那个文件里。名字是 `{Name}{Fwd|Bwd}Interface`，变体词写在方向之前，由 `interface-names-lint` 检查。它的抽象 `forward` 是各实现（自带的与后端提供的）唯一依据的契约，docstring 因此写明每个张量的形状、dtype、内存布局、设备，以及是否被原地写入：
 
@@ -143,26 +143,26 @@ class GemmFwdInterface(KernelInterface):
         """
 ```
 
-实现是同时继承 `Kernel` 与某一个接口的类，以一个 key 列在 `kernel_types` 中。由哪个实现服务一次调用，由各实现自己决定，不由算子决定，依据以下四项声明：
+实现是同时继承 `Kernel` 与某一个接口的类，以一个 key 列在 `kernel_types` 中。一次调用由哪个实现服务，取决于各实现自己的四项声明，算子不参与：
 
-| # | 声明 | 说明什么 | 不声明时 |
+| # | 声明 | 说明什么 | 未声明时的默认 |
 | --- | --- | --- | --- |
 | 1 | `devices`、`supported_archs` | 实现能在哪些设备上运行 | CUDA 设备，全部架构 |
 | 2 | `applies(call)`、`refusal(call)` | 实现服务哪些调用，正面写出 | 服务全部调用 |
 | 3 | `general`、`preferred_over` | 两个实现都服务同一次调用时谁胜出 | 不胜过任何实现 |
 | 4 | `entry_for(call)` | build identity，以及每个 identity 只跑一次的构造方法 | 以整个 call spec 为 identity，用 `cls(call)` 构造 |
 
-可用性先过滤。在剩下的、且适用的实现中，`general` 低于其他所有实现，`preferred_over` 列出本类胜过的 key。一个不剩时报 `no implementation serves this call`，没有任何 key 能在这次调用的设备类型上运行时报 `OpNotAvailableError`；剩下两个互相没有优先关系时报 `dispatch is ambiguous`。声明顺序不起作用。一个实现不在自己的 `applies` 里排除另一个实现的范围，应当胜出的一方声明 `preferred_over`。
+派发机制先按可用性过滤，再在剩下的、且适用的实现中选出唯一的胜者：`general` 的实现低于其他所有实现，其余按各自 `preferred_over` 列出的 key 比较。一个实现都不剩时报 `no implementation serves this call`；没有任何 key 能在这次调用的设备类型上运行时报 `OpNotAvailableError`；剩下的实现之间互相没有优先关系时报 `dispatch is ambiguous`。实现的声明顺序不影响选择结果。需要让出一段范围时，由应当胜出的一方声明 `preferred_over`，而不是让另一方在自己的 `applies` 里把这段范围排除掉。
 
 `GemmFwdOp` 的三个实现这样分割 `"gemm"` 接口：
 
 | # | key | 服务 | 声明 |
 | --- | --- | --- | --- |
 | 1 | `gemm_tma` | 操作数能被 TMA 寻址的 SM90 形状 | `supported_archs = [90]`，以及给出未对齐原因的 `refusal` |
-| 2 | `gemv` | 沿 K 规约、最多两行，在 CUDA core 上规约更快的形状 | `supported_archs = [90]`、经 `band_for` 实现的 `applies`、`preferred_over = frozenset({"gemm_tma"})` |
-| 3 | `gemm_cp_async` | 其余两个都不认领的全部形状，下限是一行 K 至少占满一次 4 字节读取 | `supported_archs = [80, 86, 89, 90]`、`general = True`，以及拒绝更窄 K 行的 `refusal` |
+| 2 | `gemv` | 沿 K 规约且最多两行的形状，这种形状在 CUDA core 上规约更快 | `supported_archs = [90]`、经 `band_for` 实现的 `applies`、`preferred_over = frozenset({"gemm_tma"})` |
+| 3 | `gemm_cp_async` | 其余两个都不认领的全部形状，前提是一行 K 至少占满一次 4 字节读取 | `supported_archs = [80, 86, 89, 90]`、`general = True`，以及拒绝更窄 K 行的 `refusal` |
 
-`entry_for(call)` 返回两样东西：两次调用要共享什么才算同一个 kernel 的 **build identity**，以及每个 identity 只跑一次的**构造方法**。identity 带少了，第二种 dtype 会复用第一种 dtype 的 kernel；kernel 只依赖其中几个量却把整个形状带上，就变成一个形状编译一次。
+`entry_for(call)` 返回两样东西：两次调用共享它才算同一个 kernel 的 **build identity**，以及每个 identity 只运行一次的**构建函数**。identity 少带一个量，第二种 dtype 就会复用第一种 dtype 的 kernel；kernel 只依赖其中几个量却把整个形状都带上，就变成每个形状各编译一次。
 
 只有一个实现的接口，除继承接口外不需要别的声明。`RMSNormKernel` 就是 `RMSNormFwdOp` 派发的全部内容（[`src/tileops/kernels/norm/rms_norm.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/norm/rms_norm.py)）：
 

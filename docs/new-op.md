@@ -134,12 +134,12 @@ Its two arguments:
   called. `GemmFwdOp` calls a kernel in one place, so it declares one, `"gemm"`. A second
   interface is opened only where the semantics or the call contract changes:
   `BatchNormFwdOp` has `batch_norm_fwd_train` and `batch_norm_fwd_infer`, which return
-  different things. A faster kernel for some shape range or some architecture is not a
-  new interface — it is another implementation of the one that is there.
+  different things. A faster kernel for some shape range or some architecture is another
+  implementation of the interface already there.
 - **`call`** — a frozen `CallSpec` subclass carrying the facts of this call that selection
   and building read: shapes, the dtype, the op's semantic parameters, and the device. It
-  has to be the interface's `request` type. Device facts (`arch`, `sm_count`,
-  `calibration`, `smem_budget`) are not passed in; the dispatcher derives them from
+  has to be the interface's `request` type. The dispatcher derives the device facts (`arch`,
+  `sm_count`, `calibration`, `smem_budget`) itself, from
   `call.device` on a miss.
 
 The kernel that comes back is called with the parameters of the interface's abstract
@@ -176,8 +176,8 @@ class GemmFwdInterface(KernelInterface):
 ```
 
 An implementation is a class inheriting both `Kernel` and one interface, listed in
-`kernel_types` under a key. Which implementation serves a call is decided by the
-implementations, not by the op, from four declarations:
+`kernel_types` under a key. Which implementation serves a call follows from four
+declarations the implementations make about themselves; the op makes none of them:
 
 | # | Declaration | States | Left undeclared |
 | --- | --- | --- | --- |
@@ -186,21 +186,22 @@ implementations, not by the op, from four declarations:
 | 3 | `general`, `preferred_over` | which implementation wins where two of them serve one call | wins over none |
 | 4 | `entry_for(call)` | the build identity, and the builder that runs once per identity | the whole call spec, built by `cls(call)` |
 
-Availability filters first. Among the implementations that are left and that apply,
-`general` loses to every other one and `preferred_over` names the keys its class wins
-over. Nothing left raises `no implementation serves this call`, or `OpNotAvailableError` where
-no key runs on the call's device type at all; two with no relation between them raise
-`dispatch is ambiguous`; declaration order decides nothing. An
-implementation never excludes a sibling in its own `applies` — the one that should win
-declares `preferred_over`.
+The dispatcher filters by availability first, then picks the single winner among the
+implementations that are left and that apply: `general` loses to every other one, and the
+rest are compared by the keys each names in `preferred_over`. Nothing left raises
+`no implementation serves this call`, or `OpNotAvailableError` where no key runs on the
+call's device type at all; two with no relation between them raise `dispatch is
+ambiguous`. Declaration order decides nothing. Where one implementation should give up a
+range to another, the one that should win declares `preferred_over`, rather than the
+other one excluding that range in its own `applies`.
 
 `GemmFwdOp`'s three implementations divide the `"gemm"` interface like this:
 
 | # | Key | Serves | Declares |
 | --- | --- | --- | --- |
 | 1 | `gemm_tma` | SM90 shapes whose operands TMA can address | `supported_archs = [90]`, and a `refusal` naming the misalignment |
-| 2 | `gemv` | at most two rows contracted over K, where reducing on CUDA cores wins | `supported_archs = [90]`, `applies` through `band_for`, `preferred_over = frozenset({"gemm_tma"})` |
-| 3 | `gemm_cp_async` | every shape the other two do not claim, down to a K row spanning one four-byte load | `supported_archs = [80, 86, 89, 90]`, `general = True`, and a `refusal` for a narrower K row |
+| 2 | `gemv` | shapes of at most two rows contracted over K, where reducing on CUDA cores wins | `supported_archs = [90]`, `applies` through `band_for`, `preferred_over = frozenset({"gemm_tma"})` |
+| 3 | `gemm_cp_async` | every shape the other two do not claim, provided a K row spans at least one four-byte load | `supported_archs = [80, 86, 89, 90]`, `general = True`, and a `refusal` for a narrower K row |
 
 `entry_for(call)` returns the **identity** two calls must share to reuse one kernel, and
 the **builder** that runs once per identity. Carry too little in the identity and a second
