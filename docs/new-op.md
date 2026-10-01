@@ -108,7 +108,7 @@ class GemmFwdOp(Op):
 | --- | --- | --- |
 | 1 | `__init__` | the names, order and defaults in `signature.params`, then `target`, `kernel_map` and `tune`, closing with `self.dispatch_kernel(kernel_map)` |
 | 2 | `kernel_types` | the Kernel classes that can serve the op, each under a key; a `kernel_map=` override replaces one by that key |
-| 3 | `interfaces` | one entry per kernel call the op makes: the name `kernel_for` uses → the `KernelInterface` class every implementation of that call inherits |
+| 3 | `interfaces` | one entry per kernel call the op makes: the name `kernel_for` uses → the `KernelInterface` class whose implementations serve that call |
 | 4 | `forward` | `signature.inputs` — its order, optional inputs last with default `None` |
 | 5 | `_eager_forward` | contiguity, the call spec, fetching the kernel and launching it |
 | 6 | `compute_roof` | optional: the GPU-profile unit that prices the op's FLOPs, where it is not CUDA-core fp32 |
@@ -208,7 +208,7 @@ dtype reuses the first dtype's kernel; carry the whole shape where the kernel de
 fewer quantities and it compiles once per distinct shape.
 
 An interface with one implementation needs nothing beyond inheriting it. `RMSNormKernel`
-is the whole of `RMSNormFwdOp`'s dispatch
+is the only implementation `RMSNormFwdOp` has
 ([`src/tileops/kernels/norm/rms_norm.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/norm/rms_norm.py)):
 
 ```python

@@ -99,7 +99,7 @@ class GemmFwdOp(Op):
 | --- | --- | --- |
 | 1 | `__init__` | `signature.params` 的名字、顺序与默认值，再加 `target`、`kernel_map`、`tune`；结尾调用 `self.dispatch_kernel(kernel_map)` |
 | 2 | `kernel_types` | 能服务这个算子的 Kernel 类，各起一个 key；`kernel_map=` 按这个 key 替换其中一个 |
-| 3 | `interfaces` | 算子发出的每一个 kernel 调用各占一条：`kernel_for` 用的名字 → 这个调用的各实现所继承的 `KernelInterface` 类 |
+| 3 | `interfaces` | 算子发出的每一个 kernel 调用各占一条：`kernel_for` 用的名字 → 服务这个调用的各实现所继承的 `KernelInterface` 类 |
 | 4 | `forward` | `signature.inputs` 的顺序，可选输入排在最后、默认 `None` |
 | 5 | `_eager_forward` | 把输入变成连续的，构造 call spec，取出 kernel，再调用它 |
 | 6 | `compute_roof` | 可选。算子的 FLOPs 按哪个硬件单元的峰值定价，默认是 CUDA core 上的 fp32，用别的单元时才写 |

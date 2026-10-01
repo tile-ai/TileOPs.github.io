@@ -11,8 +11,8 @@ devices run your kernels.
 **A backend supplies one thing: something callable that computes this call.**
 Everything else is the op layer's.
 
-This page is about a target, the one of the three extension mechanisms that covers the
-whole op. The first half is the
+This page is about a target, the extension mechanism that covers a whole op. The first
+half is the
 work, in the order it is done: the four things to write, the protocol's four functions,
 how one call reaches them, a backend that installs and runs as it stands, how to turn the
 template into a backend for real hardware, the four rules for writing a kernel, what each
