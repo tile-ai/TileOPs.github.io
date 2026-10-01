@@ -64,14 +64,17 @@ spec 不写文件路径，也不写 kernel：由哪些 kernel 服务这个算子
 class GemmFwdOp(Op):
     compile_boundary: ClassVar[bool] = True           # optional: claims fullgraph=True
     kernel_types: ClassVar[Mapping[str, type[Kernel]]] = {
-        "gemm_tma_kernel": GemmTmaKernel,
-        "gemm_cp_async_kernel": GemmCpAsyncKernel,
-        "gemv_kernel": GemvKernel,
+        "gemm_tma": GemmTmaKernel,
+        "gemm_cp_async": GemmCpAsyncKernel,
+        "gemv": GemvKernel,
     }
+    interfaces: ClassVar[Mapping[str, type[KernelInterface]]] = {"gemm": GemmFwdInterface}
 
     def __init__(self, trans_a=False, trans_b=True, *, target=None, kernel_map=None, tune=False):
-        self.trans_a, self.trans_b = trans_a, trans_b
-        self.target, self.tune = target, tune
+        self.trans_a = trans_a
+        self.trans_b = trans_b
+        self.target = target
+        self.tune = tune
         self.dispatch_kernel(kernel_map)              # installs this instance's kernel map
 
     def forward(self, a, b):
@@ -80,49 +83,104 @@ class GemmFwdOp(Op):
     def _eager_forward(self, a, b):                   # the generated checks have run
         a, b = a.contiguous(), b.contiguous()         # handed over as the spec declares it
         m, k = (a.shape[1], a.shape[0]) if self.trans_a else a.shape
-        n = b.shape[0] if self.trans_b else b.shape[1]
-        kernel = self.kernel_for(
-            "gemm",                                   # the memoization bucket
-            (a, b),                                   # the tensors the kernel gets
-            self._call_spec(m, n, k, a.dtype, a.device),  # what this call is
+        call = GemmCall(                              # what this call is
+            m=m,
+            n=b.shape[0] if self.trans_b else b.shape[1],
+            k=k,
+            dtype=a.dtype,
+            trans_a=self.trans_a,
+            trans_b=self.trans_b,
+            device=a.device,
         )
-        return kernel(a, b)
+        return self.kernel_for("gemm", call)(a, b)
 ```
 
 | # | 成员 | 照什么写 |
 | --- | --- | --- |
 | 1 | `__init__` | `signature.params` 的名字、顺序与默认值，再加 `target`、`kernel_map`、`tune`；结尾调用 `self.dispatch_kernel(kernel_map)` |
-| 2 | `kernel_types` | 能服务这个算子的 Kernel 类，各起一个名字；`kernel_map=` 按这个名字替换其中一个 |
-| 3 | `forward` | `signature.inputs` 的顺序，可选输入排在最后、默认 `None` |
-| 4 | `_eager_forward` | 连续化、调用记录、取 kernel、launch kernel |
-| 5 | `compute_roof` | 可选：给算子 FLOPs 定价的 GPU profile 单元，不是 CUDA core fp32 时才写 |
+| 2 | `kernel_types` | 能服务这个算子的 Kernel 类，各起一个 key；`kernel_map=` 按这个 key 替换其中一个 |
+| 3 | `interfaces` | 算子调用 kernel 的每一处各占一条：`kernel_for` 用的名字 → 这一处的各实现所继承的 `KernelInterface` 类 |
+| 4 | `forward` | `signature.inputs` 的顺序，可选输入排在最后、默认 `None` |
+| 5 | `_eager_forward` | 连续化、构造 call spec、取 kernel、launch kernel |
+| 6 | `compute_roof` | 可选：给算子 FLOPs 定价的 GPU profile 单元，不是 CUDA core fp32 时才写 |
 
 `_infer_output_shapes`、`_validate_dtypes` 与 `eval_roofline` 都照 spec 生成，不用写。
 
 不声明编译边界的算子，把 `_eager_forward` 的内容直接写在 `forward` 里；声明了边界，这些内容挪到生成的 operator 后面。做法见[接入 torch.compile](torch-compile.md)。
 
-### `kernel_for` 与 kernel 的选择
+### `kernel_for` 与 kernel 的选择 {#kernel-selection}
 
 kernel 是编译产物，构造一次要几百毫秒到几秒，而一个算子实例会被反复调用，形状与 dtype 各不相同。算子层因此维护一张记忆表：本次调用要的 kernel 已经构造过就取回来，没有才构造并存进去。`kernel_for` 是自带实现走到这张表的唯一入口；[target](backends.md) 服务的是整个算子，不经过它。
 
-三个参数：
+两个参数：
 
-- **`role`**：记忆表的桶，算子一次调用跑几个 kernel 就有几个。`GemmFwdOp` 只跑一个，所以只有一个 role，不论三个类中哪一个服务这次调用。
-- **`inputs`**：即将传给 kernel 的张量，顺序照 `signature.inputs`，一个输入占一个位置。没传的可选输入留下位置，值为 `None`。
-- **`call`**：本次调用是什么。`GemmCall` 带着 GEMM 各 kernel 要读的全部事实：`m`、`n`、`k`、dtype、布局、设备。
+- **`interface`**：`interfaces` 的一个 key，指算子调用 kernel 的一处。`GemmFwdOp` 只在一处调用 kernel，因此只声明一个 `"gemm"`。只有语义或调用契约改变时才新开一个接口：`BatchNormFwdOp` 的 `batch_norm_fwd_train` 与 `batch_norm_fwd_infer` 返回的东西不同。某个形状范围或某个架构上更快的 kernel 不是新接口，而是已有接口的另一个实现。
+- **`call`**：一个冻结的 `CallSpec` 子类，带着这次调用中选择与构建会读取的事实：形状、dtype、算子的语义参数与设备。它必须是这个接口 `request` 指定的类型。设备事实（`arch`、`sm_count`、`calibration`、`smem_budget`）不由调用方传入，未命中时派发机制从 `call.device` 推出。
 
-由哪个类服务一次调用，由这些类自己决定，不由算子决定。每个类声明自己服务的范围（`applies`、`refusal`），其中一个标为 `general`，负责其余情形；两个专用类同时认领一次调用会报错，不会静默挑一个。选中的类用 `entry_for(call)` 返回两样东西：两次调用要共享什么才算同一个 kernel 的**身份**，以及每个身份只跑一次的**构造方法**。身份带少了，第二种 dtype 会复用第一种 dtype 的 kernel；kernel 只依赖其中几个量却把整个形状带上，就变成一个形状编译一次。
+取回的 kernel 按接口抽象 `forward` 的参数表、按同样的顺序调用。
 
-只有一个 kernel、也没有调用记录的算子，在算子类上自己写 `entry_for(role, call)`，在那里给出身份与构造方法，`RMSNormFwdOp` 就是这样：
+接口是写在 [`src/tileops/kernels/<family>/call_spec.py`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 里的一个类，与它在 `request` 中指名的 call spec 放在一起。它的抽象 `forward` 是各实现（自带的与后端提供的）唯一依据的契约，docstring 因此写明每个张量的形状、dtype、内存布局、设备，以及是否被原地写入：
 
 ```python
-def entry_for(self, role, call):                    # call is the input dtype
-    n = math.prod(self.normalized_shape)
-    eps = torch.finfo(torch.float32).eps if self.eps is None else float(self.eps)
-    return call, lambda: self.kernel_map["rms_norm"](n, eps, call, tune=self.tune)
+class GemmFwdInterface(KernelInterface):
+    """Dense matmul under the ``(trans_a, trans_b)`` layout the call states."""
+
+    request = GemmCall
+
+    @abstractmethod
+    def forward(self, a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+        """Multiply the two matrices; nothing is written in place.
+
+        Both operands are contiguous on ``call.device`` in ``call.dtype``, which is
+        ``float16`` or ``bfloat16``; the contraction accumulates in ``float32``.
+
+        Args:
+            a: ``(call.m, call.k)``, or ``(call.k, call.m)`` when ``call.trans_a``.
+            b: ``(call.n, call.k)`` when ``call.trans_b``, else ``(call.k, call.n)``.
+
+        Returns:
+            A new ``(call.m, call.n)`` tensor in ``call.dtype``.
+        """
 ```
 
-完全没有自带实现、只依赖外部后端的算子，`kernel_types` 与 `entry_for` 都不写；在没有 target 认领设备时，调用会抛 `OpNotAvailableError`。
+实现是同时继承 `Kernel` 与某一个接口的类，以一个 key 列在 `kernel_types` 中。由哪个实现服务一次调用，由各实现自己决定，不由算子决定，依据以下四项声明：
+
+| # | 声明 | 说明什么 | 不声明时 |
+| --- | --- | --- | --- |
+| 1 | `devices`、`supported_archs` | 实现能在哪些设备上运行 | CUDA 设备，全部架构 |
+| 2 | `applies(call)`、`refusal(call)` | 实现服务哪些调用，正面写出 | 服务全部调用 |
+| 3 | `general`、`preferred_over` | 两个实现都服务同一次调用时谁胜出 | 不胜过任何实现 |
+| 4 | `entry_for(call)` | build identity，以及每个 identity 只跑一次的构造方法 | 以整个 call spec 为 identity，用 `cls(call)` 构造 |
+
+可用性先过滤。在剩下的、且适用的实现中，`general` 低于其他所有实现，`preferred_over` 列出本类胜过的 key。一个不剩时报 `no implementation serves this call`，没有任何 key 能在这次调用的设备类型上运行时报 `OpNotAvailableError`；剩下两个互相没有优先关系时报 `dispatch is ambiguous`。声明顺序不起作用。一个实现不在自己的 `applies` 里排除另一个实现的范围，应当胜出的一方声明 `preferred_over`。
+
+`GemmFwdOp` 的三个实现这样分割 `"gemm"` 接口：
+
+| # | key | 服务 | 声明 |
+| --- | --- | --- | --- |
+| 1 | `gemm_tma` | 操作数能被 TMA 寻址的 SM90 形状 | `supported_archs = [90]`，以及给出未对齐原因的 `refusal` |
+| 2 | `gemv` | 沿 K 规约、最多两行，在 CUDA core 上规约更快的形状 | `supported_archs = [90]`、经 `band_for` 实现的 `applies`、`preferred_over = frozenset({"gemm_tma"})` |
+| 3 | `gemm_cp_async` | 其余两个都不认领的全部形状，下限是一行 K 至少占满一次 4 字节读取 | `supported_archs = [80, 86, 89, 90]`、`general = True`，以及拒绝更窄 K 行的 `refusal` |
+
+`entry_for(call)` 返回两样东西：两次调用要共享什么才算同一个 kernel 的 **build identity**，以及每个 identity 只跑一次的**构造方法**。identity 带少了，第二种 dtype 会复用第一种 dtype 的 kernel；kernel 只依赖其中几个量却把整个形状带上，就变成一个形状编译一次。
+
+只有一个实现的接口，除继承接口外不需要别的声明。`RMSNormKernel` 就是 `RMSNormFwdOp` 派发的全部内容（[`src/tileops/kernels/norm/rms_norm.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/norm/rms_norm.py)）：
+
+```python
+class RMSNormKernel(Kernel, RMSNormFwdInterface):
+    supported_archs: list[int] = [80, 86, 89, 90]
+
+    @classmethod
+    def entry_for(cls, call: LayerNormCall) -> Entry:
+        identity = (call.n, call.eps, call.dtype)
+        return identity, lambda: cls(*identity)
+```
+
+算子自己不写 `entry_for`，也不自建 kernel 缓存：没有缓存字典，也不以某个属性是否已赋值来决定要不要构造。把 `kernel_for` 的返回值存进 `self.kernel` 不算自建缓存。
+
+完全没有自带实现、只依赖外部后端的算子，`kernel_types` 与 `interfaces` 都不写；在没有 target 认领设备时，调用会抛 `OpNotAvailableError`。
+
+后端可以为一个接口新增实现，也可以替换一个 key 背后的类，这两件事都不改动 TileOPs，见[接入一类新硬件](backends.md)。
 
 ### 注册
 
@@ -130,14 +188,14 @@ def entry_for(self, role, call):                    # call is the input dtype
 
 ## 第三步：写 kernel
 
-kernel 类继承 [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py)，放在 [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 下，用 TileLang 编写，在构造时编译。它实现 `forward`，基类的 `__call__` 会调用它。构造函数由它的 `entry_for` 构造方法调用，调用签名就是第二步里的 `kernel(a, b)`。
+kernel 类继承 [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py) 与它实现的那个接口，放在 [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 下，用 TileLang 编写，在构造时编译。它实现 `forward`，基类的 `__call__` 会调用它。构造函数由本类 `entry_for` 给出的构造方法调用，`forward` 接受接口规定的参数，就是第二步里的 `kernel(a, b)`。
 
 它是这六处里唯一不受 spec 约束的一处：kernel 不读 spec，也不对照 spec 检查。
 
 构造参数与调用参数的划分有一条硬性要求：**只有会被编译进生成代码的值才进构造函数。** `GemmTmaKernel` 是这样分的：
 
 ```python
-class GemmTmaKernel(Kernel):
+class GemmTmaKernel(Kernel, GemmFwdInterface):
     def __init__(self, m, n, k, dtype, config=None, tune=False, trans_a=False, trans_b=False, ...):
         self.kernel = _gemm_kernel(m, n, k, trans_a, trans_b, self.dtype_str, ...)  # compiles
         self.init_config(config, tune)      # tile sizes and pipeline depth
@@ -159,7 +217,7 @@ kernel = AttnKernel(num_heads, head_dim, dtype)
 out = kernel(q, k, v)                       # seq_len 从张量形状里读
 ```
 
-上一种写法下，`entry_for` 返回的身份里带着 `seq_len`，每步都未命中、每步都编译一次，decode 直接跑不动。
+上一种写法下，`entry_for` 返回的 build identity 里带着 `seq_len`，每步都未命中、每步都编译一次，decode 直接跑不动。
 
 ## 第四步：写测试
 

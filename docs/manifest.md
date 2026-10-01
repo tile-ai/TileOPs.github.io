@@ -48,7 +48,7 @@ required once the other direction also has an entry — and the validator requir
 | `signature` | yes | the op's type, below |
 | `workloads` | yes | the calls tests and benchmarks run |
 | `roofline` | yes | the cost of one call, specified in [Roofline](design/roofline.md) |
-| `composition` | no | for a composite op, its stages in order: the sub-op classes it may hold and its own kernel roles |
+| `composition` | no | for a composite op, its stages in order: the sub-op classes it may hold and its own kernel keys |
 
 The signature is a function type over named type indices:
 

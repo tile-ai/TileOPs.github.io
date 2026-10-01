@@ -73,14 +73,17 @@ What it writes is how a call reaches a kernel.
 class GemmFwdOp(Op):
     compile_boundary: ClassVar[bool] = True           # optional: claims fullgraph=True
     kernel_types: ClassVar[Mapping[str, type[Kernel]]] = {
-        "gemm_tma_kernel": GemmTmaKernel,
-        "gemm_cp_async_kernel": GemmCpAsyncKernel,
-        "gemv_kernel": GemvKernel,
+        "gemm_tma": GemmTmaKernel,
+        "gemm_cp_async": GemmCpAsyncKernel,
+        "gemv": GemvKernel,
     }
+    interfaces: ClassVar[Mapping[str, type[KernelInterface]]] = {"gemm": GemmFwdInterface}
 
     def __init__(self, trans_a=False, trans_b=True, *, target=None, kernel_map=None, tune=False):
-        self.trans_a, self.trans_b = trans_a, trans_b
-        self.target, self.tune = target, tune
+        self.trans_a = trans_a
+        self.trans_b = trans_b
+        self.target = target
+        self.tune = tune
         self.dispatch_kernel(kernel_map)              # installs this instance's kernel map
 
     def forward(self, a, b):
@@ -89,22 +92,26 @@ class GemmFwdOp(Op):
     def _eager_forward(self, a, b):                   # the generated checks have run
         a, b = a.contiguous(), b.contiguous()         # handed over as the spec declares it
         m, k = (a.shape[1], a.shape[0]) if self.trans_a else a.shape
-        n = b.shape[0] if self.trans_b else b.shape[1]
-        kernel = self.kernel_for(
-            "gemm",                                   # the memoization bucket
-            (a, b),                                   # the tensors the kernel gets
-            self._call_spec(m, n, k, a.dtype, a.device),  # what this call is
+        call = GemmCall(                              # what this call is
+            m=m,
+            n=b.shape[0] if self.trans_b else b.shape[1],
+            k=k,
+            dtype=a.dtype,
+            trans_a=self.trans_a,
+            trans_b=self.trans_b,
+            device=a.device,
         )
-        return kernel(a, b)
+        return self.kernel_for("gemm", call)(a, b)
 ```
 
 | # | Member | Written from |
 | --- | --- | --- |
 | 1 | `__init__` | the names, order and defaults in `signature.params`, then `target`, `kernel_map` and `tune`, closing with `self.dispatch_kernel(kernel_map)` |
-| 2 | `kernel_types` | the Kernel classes that can serve the op, each under a name; a `kernel_map=` override replaces one by that name |
-| 3 | `forward` | `signature.inputs` — its order, optional inputs last with default `None` |
-| 4 | `_eager_forward` | contiguity, the call record, fetching the kernel and launching it |
-| 5 | `compute_roof` | optional: the GPU-profile unit that prices the op's FLOPs, where it is not CUDA-core fp32 |
+| 2 | `kernel_types` | the Kernel classes that can serve the op, each under a key; a `kernel_map=` override replaces one by that key |
+| 3 | `interfaces` | one entry per place the op calls a kernel: the name `kernel_for` uses → the `KernelInterface` class the implementations of that place inherit |
+| 4 | `forward` | `signature.inputs` — its order, optional inputs last with default `None` |
+| 5 | `_eager_forward` | contiguity, the call spec, fetching the kernel and launching it |
+| 6 | `compute_roof` | optional: the GPU-profile unit that prices the op's FLOPs, where it is not CUDA-core fp32 |
 
 `_infer_output_shapes`, `_validate_dtypes` and `eval_roofline` are generated from the spec
 and are not written.
@@ -113,7 +120,7 @@ An op without a compile boundary writes the body of `_eager_forward` in `forward
 declaring the boundary moves it behind the generated operator. How that works is in
 [bringing an op into torch.compile](torch-compile.md).
 
-### `kernel_for`, and choosing among kernels
+### `kernel_for`, and choosing among kernels {#kernel-selection}
 
 A kernel is a compiled artefact, hundreds of milliseconds to seconds to build, while an op
 instance is called over and over at different shapes and dtypes. The op layer therefore
@@ -121,37 +128,107 @@ keeps a memo table: a kernel this call needs and has built before comes straight
 and only otherwise is one built and stored. `kernel_for` is that table's only entrance on
 the in-tree path; a [target](backends.md) serves the whole op instead and never reaches it.
 
-Its three arguments:
+Its two arguments:
 
-- **`role`** — the memoization bucket, one per kernel the op runs per call. `GemmFwdOp`
-  runs one, so it has one role, whichever of its three classes serves the call.
-- **`inputs`** — the tensors the kernel is about to be handed, in `signature.inputs`
-  order, one slot per input. An optional input that was not passed keeps its slot as
-  `None`.
-- **`call`** — what this call is. `GemmCall` carries every fact the GEMM kernels read:
-  `m`, `n`, `k`, the dtype, the layout, the device.
+- **`interface`** — a key of `interfaces`, naming one place in the op where a kernel is
+  called. `GemmFwdOp` calls a kernel in one place, so it declares one, `"gemm"`. A second
+  interface is opened only where the semantics or the call contract changes:
+  `BatchNormFwdOp` has `batch_norm_fwd_train` and `batch_norm_fwd_infer`, which return
+  different things. A faster kernel for some shape range or some architecture is not a
+  new interface — it is another implementation of the one that is there.
+- **`call`** — a frozen `CallSpec` subclass carrying the facts of this call that selection
+  and building read: shapes, the dtype, the op's semantic parameters, and the device. It
+  has to be the interface's `request` type. Device facts (`arch`, `sm_count`,
+  `calibration`, `smem_budget`) are not passed in; the dispatcher derives them from
+  `call.device` on a miss.
 
-Which class serves a call is decided by the classes, not the op. Each states the region
-it serves (`applies`, `refusal`), one is marked `general` for everything else, and two
-specialised classes claiming one call is an error, never a silent preference. The chosen
-class's `entry_for(call)` returns the **identity** two calls must share to reuse one
-kernel, and the **builder** that runs once per identity. Carry too little in the identity
-and a second dtype reuses the first dtype's kernel; carry the whole shape where the kernel
-depends on fewer quantities and it compiles once per distinct shape.
+The kernel that comes back is called with the parameters of the interface's abstract
+`forward`, in that order.
 
-An op with a single kernel and no call record writes `entry_for(role, call)` on the op
-itself and states the identity and builder there, as `RMSNormFwdOp` does:
+An interface is a class in
+[`src/tileops/kernels/<family>/call_spec.py`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels),
+beside the call spec it names in `request`. Its abstract `forward` is the whole contract
+an implementation — in-tree or from a backend — is written against, so its docstring
+states each tensor's shape, dtype, layout, device and whether it is written in place:
 
 ```python
-def entry_for(self, role, call):                    # call is the input dtype
-    n = math.prod(self.normalized_shape)
-    eps = torch.finfo(torch.float32).eps if self.eps is None else float(self.eps)
-    return call, lambda: self.kernel_map["rms_norm"](n, eps, call, tune=self.tune)
+class GemmFwdInterface(KernelInterface):
+    """Dense matmul under the ``(trans_a, trans_b)`` layout the call states."""
+
+    request = GemmCall
+
+    @abstractmethod
+    def forward(self, a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+        """Multiply the two matrices; nothing is written in place.
+
+        Both operands are contiguous on ``call.device`` in ``call.dtype``, which is
+        ``float16`` or ``bfloat16``; the contraction accumulates in ``float32``.
+
+        Args:
+            a: ``(call.m, call.k)``, or ``(call.k, call.m)`` when ``call.trans_a``.
+            b: ``(call.n, call.k)`` when ``call.trans_b``, else ``(call.k, call.n)``.
+
+        Returns:
+            A new ``(call.m, call.n)`` tensor in ``call.dtype``.
+        """
 ```
 
-An op with no in-tree implementation, written to depend on a backend, leaves out both
-`kernel_types` and `entry_for`; a call on a device no target claims then raises
+An implementation is a class inheriting both `Kernel` and one interface, listed in
+`kernel_types` under a key. Which implementation serves a call is decided by the
+implementations, not by the op, from four declarations:
+
+| # | Declaration | States | Left undeclared |
+| --- | --- | --- | --- |
+| 1 | `devices`, `supported_archs` | where the implementation runs | CUDA devices, every architecture |
+| 2 | `applies(call)`, `refusal(call)` | which calls it serves, stated positively | every call |
+| 3 | `general`, `preferred_over` | which implementation wins where two of them serve one call | wins over none |
+| 4 | `entry_for(call)` | the build identity, and the builder that runs once per identity | the whole call spec, built by `cls(call)` |
+
+Availability filters first. Among the implementations that are left and that apply,
+`general` loses to every other one and `preferred_over` names the keys its class wins
+over. Nothing left raises `no implementation serves this call`, or `OpNotAvailableError` where
+no key runs on the call's device type at all; two with no relation between them raise
+`dispatch is ambiguous`; declaration order decides nothing. An
+implementation never excludes a sibling in its own `applies` — the one that should win
+declares `preferred_over`.
+
+`GemmFwdOp`'s three implementations divide the `"gemm"` interface like this:
+
+| # | Key | Serves | Declares |
+| --- | --- | --- | --- |
+| 1 | `gemm_tma` | SM90 shapes whose operands TMA can address | `supported_archs = [90]`, and a `refusal` naming the misalignment |
+| 2 | `gemv` | at most two rows contracted over K, where reducing on CUDA cores wins | `supported_archs = [90]`, `applies` through `band_for`, `preferred_over = frozenset({"gemm_tma"})` |
+| 3 | `gemm_cp_async` | every shape the other two do not claim, down to a K row spanning one four-byte load | `supported_archs = [80, 86, 89, 90]`, `general = True`, and a `refusal` for a narrower K row |
+
+`entry_for(call)` returns the **identity** two calls must share to reuse one kernel, and
+the **builder** that runs once per identity. Carry too little in the identity and a second
+dtype reuses the first dtype's kernel; carry the whole shape where the kernel depends on
+fewer quantities and it compiles once per distinct shape.
+
+An interface with one implementation needs nothing beyond inheriting it. `RMSNormKernel`
+is the whole of `RMSNormFwdOp`'s dispatch
+([`src/tileops/kernels/norm/rms_norm.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/norm/rms_norm.py)):
+
+```python
+class RMSNormKernel(Kernel, RMSNormFwdInterface):
+    supported_archs: list[int] = [80, 86, 89, 90]
+
+    @classmethod
+    def entry_for(cls, call: LayerNormCall) -> Entry:
+        identity = (call.n, call.eps, call.dtype)
+        return identity, lambda: cls(*identity)
+```
+
+An op defines no `entry_for` of its own and keeps no kernel cache of its own — no dict, no
+build guarded on an attribute being unset. Holding what `kernel_for` returned in
+`self.kernel` is not one.
+
+An op with no in-tree implementation, written to depend on a backend, declares neither
+`kernel_types` nor `interfaces`; a call on a device no target claims then raises
 `OpNotAvailableError`.
+
+A backend adds an implementation to an interface, or replaces the class behind one key,
+without changing TileOPs; both are in [adding a hardware backend](backends.md).
 
 ### Registering
 
@@ -164,10 +241,10 @@ reference cannot collect it.
 
 ## Step 3: write the kernel
 
-A kernel class subclasses [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py), lives under [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels), is written in
+A kernel class subclasses [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py) and the interface it implements, lives under [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels), is written in
 TileLang, compiles at construction and implements `forward`, which the base class's
-`__call__` runs. Its constructor is what its
-`entry_for` builder calls, and its call signature is the `kernel(a, b)` of step 2.
+`__call__` runs. Its constructor is what its own `entry_for` builder calls, and its
+`forward` takes the interface's parameters, the `kernel(a, b)` of step 2.
 
 This is the one place of the six the spec does not constrain: a kernel neither reads the
 spec nor is checked against it.
@@ -177,7 +254,7 @@ values compiled into the generated code go in the constructor.** `GemmTmaKernel`
 them like this:
 
 ```python
-class GemmTmaKernel(Kernel):
+class GemmTmaKernel(Kernel, GemmFwdInterface):
     def __init__(self, m, n, k, dtype, config=None, tune=False, trans_a=False, trans_b=False, ...):
         self.kernel = _gemm_kernel(m, n, k, trans_a, trans_b, self.dtype_str, ...)  # compiles
         self.init_config(config, tune)      # tile sizes and pipeline depth

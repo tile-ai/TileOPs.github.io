@@ -33,7 +33,7 @@ TileOPs 的组织方式相反：算子的规格先声明，实现由规格推导
 | `signature` | 是 | 算子的类型，见下表 |
 | `workloads` | 是 | 测试与 benchmark 执行的调用 |
 | `roofline` | 是 | 一次调用的开销，规范见 [Roofline](design/roofline.md) |
-| `composition` | 否 | 复合算子按顺序列出的各阶段：可能持有的子算子类，以及它自己的 kernel 角色 |
+| `composition` | 否 | 复合算子按顺序列出的各阶段：可能持有的子算子类，以及它自己的 kernel key |
 
 签名是一个以具名类型变量为参数的函数类型：
 

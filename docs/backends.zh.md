@@ -6,9 +6,67 @@ TileLang 是多后端 DSL，每种硬件各有一套独立的 kernel，由各自
 
 **后端只提供一件事：一个能算这次调用的可调用对象。** 其余都由算子层负责。
 
-前半按动手顺序列出要做的事：要写的四样东西、协议中的四个函数、一次调用怎么走到它们、一个可直接安装运行的后端、怎么从模板改造为面向真实硬件的后端、编写 kernel 的四条规则、各阶段允许做什么，以及装好之后每个算子处于哪种状态、各条错误信息对应什么原因。
+本页讲的是 target，三种接入方式中范围最大的一种。前半按动手顺序列出要做的事：要写的四样东西、协议中的四个函数、一次调用怎么走到它们、一个可直接安装运行的后端、怎么从模板改造为面向真实硬件的后端、编写 kernel 的四条规则、各阶段允许做什么，以及装好之后每个算子处于哪种状态、各条错误信息对应什么原因。
 
 后半说明协议何以如此设计：两层选择、算子层的契约、kernel 的重建条件、调用方可用的接口，以及刻意不支持的情形。
+
+## 三种接入方式 {#three-ways}
+
+仓外的包要接管一个算子的多少调用，决定用三种方式中的哪一种。范围较小的两种，写出的 kernel 类依据的是 [kernel 接口](new-op.md#kernel-selection)，与自带实现依据的是同一份契约；target 依据的则是算子在 manifest 中的签名，写一个 `build_kernel`。
+
+| # | | `kernel_map=` | `register_implementation` | target |
+| --- | --- | --- | --- | --- |
+| 1 | 改变什么 | 一个 key 背后运行的类；这个 key 服务哪些调用不变 | 新增一个 key，带有它自己的适用范围与优先关系 | 算子的全部调用 |
+| 2 | 作用于 | 调用方构造的那一个算子实例 | 注册之后构造的所有该算子实例 | 选中该 target 的算子实例 |
+| 3 | 依据的契约 | kernel 接口 | kernel 接口 | 算子在 manifest 中的签名 |
+| 4 | 新类不服务的调用 | 该 key 被选中时报错 | 仍由自带实现服务 | 不存在，target 服务全部调用 |
+
+**`kernel_map=`** 是每个算子构造函数的参数，值是从 key 到类的映射。它只替换这个实例中该 key 背后运行的类：这个 key 仍按原来登记的实现声明的 `applies`、`general` 与 `preferred_over` 参与选择，替换者与其他实现一样继承这个 key 所属的接口，由它自己的 `entry_for` 构造。该 key 被选中而替换者不服务这次调用时报错，不退回被替换的实现。下例取自 [`tests/test_kernel_dispatch.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/test_kernel_dispatch.py)：
+
+```python
+class _TorchLayerNorm(Kernel, LayerNormFwdInterface):
+    """A replacement written against ``LayerNormFwdInterface`` alone."""
+
+    devices = frozenset({torch.device(run_device()).type})
+
+    def __init__(self, n: int, eps: float) -> None:
+        super().__init__()
+        self.n, self.eps = n, eps
+
+    @classmethod
+    def entry_for(cls, call: LayerNormCall):
+        return (call.n, call.eps), lambda: cls(call.n, call.eps)
+
+    def forward(self, x, weight, bias):
+        return F.layer_norm(x.float(), (self.n,), weight.float(), bias.float(), self.eps).to(
+            x.dtype
+        )
+
+
+op = LayerNormFwdOp((32,), kernel_map={"layer_norm": _TorchLayerNorm}, target=BUILTIN)
+```
+
+`kernel_map=` 中本算子没有、而其他算子有的 key 被忽略，复合算子由此把一份映射传给各个子算子；任何算子都没有的 key 在构造时报 `was given kernel_map keys no op has`。
+
+**`register_implementation(op, key, implementation)`** 不是替换，而是新增一个实现。`op` 是算子在 manifest 中的 key，`key` 是新实现的名字，它加入哪个接口由这个类继承了哪个接口决定。新实现自己声明适用范围，与某个不是 `general` 的自带实现重叠时要声明 `preferred_over`：
+
+```python
+class _NarrowTorchLayerNorm(_TorchLayerNorm):
+    """An added implementation for short rows, which wins over the in-tree one there."""
+
+    preferred_over = frozenset({"layer_norm"})
+
+    @classmethod
+    def applies(cls, call: LayerNormCall) -> bool:
+        return call.n <= 64
+
+
+register_implementation("LayerNormFwdOp", "torch_short_rows", _NarrowTorchLayerNorm)
+```
+
+这里 `n <= 64` 由 `_NarrowTorchLayerNorm` 服务，`n = 1024` 仍由自带的 `LayerNormKernel` 服务。新增只进入注册之后构造的算子实例。同一个算子下重复注册同一个 key 报 `BackendError`；key 与自带实现的 key 相同时，构造实例时报 `reuse keys it has`。
+
+`register_implementation` 在后端模块被导入时执行，入口与 target 用的是同一条 entry point；`kernel_map=` 不注册任何东西，由调用方在构造算子时传入。以下各节讲 target。
 
 ## 写一个后端要做的四件事
 
@@ -184,10 +242,10 @@ register_kernel_builder(op="GemmFwdOp", target="acme", build_kernel=build_gemm)
 
 四点对应关系值得记住：
 
-- **`kernel_for` 与 `entry_for` 由算子作者写，与后端无关。** 它们只服务自带实现：取哪个自带 kernel、按什么查表、又怎么构造。target 选中后端时整个算子由 target 服务，这几处都不会执行。
+- **`kernel_for` 与各实现的 `entry_for` 只服务自带实现。** 它们决定取哪个自带 kernel、按什么查表、又怎么构造。target 选中后端时整个算子由 target 服务，这几处都不会执行。
 - **张量按位置传，参数按名字传。** `build_kernel(*inputs, **params)`：位置实参是 `TensorSpec`（没传的可选输入是 `None`），关键字实参是 manifest 里 `params` 的名字与本次调用的确定值。
 - **一个 `(算子, target)` 只注册一个 builder。** 自带实现内部分几种 kernel（GEMM 的 `kernel_types` 里有三个）不会传进来，`build_kernel` 从 `TensorSpec` 自行判断该返回哪个 kernel。
-- **不必自己做记忆。** 同一个设备与输入签名，算子层不会再调第二次；要更细的区分或更少的重建，在 `build_kernel` 内部另加一层缓存。算子完全没有自带实现时 `entry_for` 可以不写，那时没有 target 认领设备，调用直接抛 `OpNotAvailableError`。
+- **不必自己做记忆。** 同一个设备与输入签名，算子层不会再调第二次；要更细的区分或更少的重建，在 `build_kernel` 内部另加一层缓存。写来依赖外部后端的算子，`kernel_types` 与 `interfaces` 都不声明，那时没有 target 认领设备，调用直接抛 `OpNotAvailableError`。
 
 ## 实现一个可运行的后端 {#runnable}
 
@@ -443,7 +501,7 @@ print(load_failures())
 | **`detect`** | 后端写的一个函数，一个 target 一个 | 第一层怎么选：接收一块 `torch.device`，回答这类设备是不是自己这套 kernel 的目标设备；不是则返回 `False` |
 | **`build_kernel`** | 后端为某个算子写的一个函数，一组 `(算子, target)` 一个 | 第二层：接收本次调用的描述，即各输入张量的 device、dtype、shape 与算子参数，在自己这套 kernel 中选定一个、构造好并返回 |
 
-**选择分两层：TileOPs 选 target，target 在自己那套 kernel 里选一个。** 第二层发生在 `build_kernel` 内部，协议不参与，也不存在 kernel 一级的概念、能力协商与候选筛选。
+**选择分两层：TileOPs 选 target，target 在自己那套 kernel 里选一个。** 第二层发生在 `build_kernel` 内部，协议不参与：这条路径上不存在 kernel 一级的概念、能力协商与候选筛选。TileOPs 确实执行的候选筛选 —— 可用性、适用范围、优先关系 —— 属于自带实现与范围较小的两种接入方式（[三种接入方式](#three-ways)），target 绕过它们。
 
 `detect` 只回答设备的归属，粒度到此为止。**本次调用是否受支持 —— 涉及 dtype、形状与参数组合 —— 由 `build_kernel` 回答**，因为只有它看得到完整的输入描述与参数；不支持时在那里报错。这些判断交给 `detect` 是做不到的，它只拿到一块 `torch.device`。
 
@@ -471,7 +529,7 @@ TileOPs 不解析 `torch.device`，而是把它原样传给 `detect`。这样做
 
 TileOPs 自带的 kernel（[`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)）是**默认实现**：它没有 target 名，也不进注册表。
 
-**默认状态是不替换。** 没有后端认领某块设备时，这台设备上的调用走自带实现；装上一个后端、并且它认领了这块设备，该算子的 kernel 才换成后端的那一套。协议里因此不存在「默认 target」这个概念。
+**默认状态是不替换。** 没有装后端、没有指名 `target=`、也没有设置进程默认值时，调用走自带实现。协议不预置任何替换：装上一个后端之后，它的 `detect` 认领了这块设备，或者被 `target=` 与 `set_default_target` 指名，该算子的 kernel 才换成后端的那一套。
 
 ## kernel 的重建条件 {#memo}
 

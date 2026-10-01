@@ -11,15 +11,94 @@ devices run your kernels.
 **A backend supplies one thing: something callable that computes this call.**
 Everything else is the op layer's.
 
-The first half is the work, in the order it is done: the four things to write, the
-protocol's four functions, how one call reaches them, a backend that installs and runs as
-it stands, how to turn the template into a backend for real hardware, the four rules for
-writing a kernel, what each phase may do, and — after install — which state each op is in
-and what each error means.
+This page is about a target, the largest of the three ways in. The first half is the
+work, in the order it is done: the four things to write, the protocol's four functions,
+how one call reaches them, a backend that installs and runs as it stands, how to turn the
+template into a backend for real hardware, the four rules for writing a kernel, what each
+phase may do, and — after install — which state each op is in and what each error means.
 
 The second half is why the protocol looks like this: the two layers of selection, the op
 layer's contract, when a kernel is rebuilt, what a caller can reach for, and what the
 protocol deliberately leaves out.
+
+## Three ways in {#three-ways}
+
+How much of an op a package outside TileOPs takes over decides which of three it uses.
+The two smaller ones write a kernel class against a [kernel
+interface](new-op.md#kernel-selection), the same contract the in-tree
+implementations are written against; a target writes a `build_kernel` against the op's
+manifest signature instead.
+
+| # | | `kernel_map=` | `register_implementation` | target |
+| --- | --- | --- | --- | --- |
+| 1 | Changes | the class running behind one key; which calls that key serves does not change | adds a key, with its own applicability and precedence | every call of the op |
+| 2 | Applies to | the one op instance the caller constructed it on | every instance of that op constructed afterwards | every instance that settles on the target |
+| 3 | Written against | the kernel interface | the kernel interface | the op's manifest signature |
+| 4 | Calls the new class does not serve | an error when that key is selected | still served by the in-tree implementations | none: a target serves them all |
+
+**`kernel_map=`** is a constructor argument of every op, a mapping from key to class. It
+swaps the class behind that key in this instance; the key keeps the registered
+implementation's `applies`, `general` and `preferred_over`, and the replacement, like
+every implementation, inherits the key's interface and is built through its own
+`entry_for`. A selected key whose replacement cannot serve the call is an error, never a
+fall back to what it replaced. From
+[`tests/test_kernel_dispatch.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/test_kernel_dispatch.py):
+
+```python
+class _TorchLayerNorm(Kernel, LayerNormFwdInterface):
+    """A replacement written against ``LayerNormFwdInterface`` alone."""
+
+    devices = frozenset({torch.device(run_device()).type})
+
+    def __init__(self, n: int, eps: float) -> None:
+        super().__init__()
+        self.n, self.eps = n, eps
+
+    @classmethod
+    def entry_for(cls, call: LayerNormCall):
+        return (call.n, call.eps), lambda: cls(call.n, call.eps)
+
+    def forward(self, x, weight, bias):
+        return F.layer_norm(x.float(), (self.n,), weight.float(), bias.float(), self.eps).to(
+            x.dtype
+        )
+
+
+op = LayerNormFwdOp((32,), kernel_map={"layer_norm": _TorchLayerNorm}, target=BUILTIN)
+```
+
+A key the op does not have, but another op does, is ignored, which is how a composite op
+passes one mapping down to its sub-ops; a key no op has raises
+`was given kernel_map keys no op has` at construction.
+
+**`register_implementation(op, key, implementation)`** adds an implementation instead of
+replacing one. `op` is the op's manifest key, `key` the new implementation's dispatch key,
+and the interface it joins is the one the class inherits. It declares its own region, so
+it needs `preferred_over` where it overlaps an in-tree implementation that is not
+`general`:
+
+```python
+class _NarrowTorchLayerNorm(_TorchLayerNorm):
+    """An added implementation for short rows, which wins over the in-tree one there."""
+
+    preferred_over = frozenset({"layer_norm"})
+
+    @classmethod
+    def applies(cls, call: LayerNormCall) -> bool:
+        return call.n <= 64
+
+
+register_implementation("LayerNormFwdOp", "torch_short_rows", _NarrowTorchLayerNorm)
+```
+
+Here `n <= 64` goes to `_NarrowTorchLayerNorm` and `n = 1024` stays with the in-tree
+`LayerNormKernel`. The addition reaches only op instances constructed after the call.
+Registering the same key twice under one op raises `BackendError`; a key an in-tree
+implementation already uses raises `reuse keys it has` when an instance is constructed.
+
+`register_implementation` runs when the backend module is imported, through the same
+entry point a target uses; `kernel_map=` registers nothing and is passed by the caller at
+construction. What follows is the target.
 
 ## Four things to write
 
@@ -222,9 +301,9 @@ signature. Whatever it returns, the op layer stores and launches.
 
 Four things follow from that:
 
-- **`kernel_for` and `entry_for` are the op author's, not a backend's.** They serve the
-  in-tree path only: which in-tree kernel to fetch, what it is looked up on and how it is
-  built. Once a target serves the op, it serves the whole op, and none of them runs.
+- **`kernel_for` and the implementations' `entry_for` serve the in-tree path only.** They
+  decide which in-tree kernel is fetched, what it is looked up on and how it is built.
+  Once a target serves the op, it serves the whole op, and none of them runs.
 - **Tensors arrive positionally, params by name.** `build_kernel(*inputs, **params)`: the
   positional arguments are `TensorSpec`s (`None` for an optional input the call omitted),
   the keywords the manifest's `params` names with the values this call settled on.
@@ -233,8 +312,9 @@ Four things follow from that:
   `TensorSpec`s which kernel to return.
 - **No memoisation of its own is needed.** For the same device and input signature the op
   layer does not call again; for a finer split, or fewer rebuilds, add a cache inside
-  `build_kernel`. An op with no in-tree implementation may leave `entry_for` out, and then
-  a call with no target claiming the device raises `OpNotAvailableError`.
+  `build_kernel`. An op written to depend on a backend declares neither `kernel_types` nor
+  `interfaces`, and a call on it with no target claiming the device raises
+  `OpNotAvailableError`.
 
 ## Writing a backend that runs {#runnable}
 
@@ -553,9 +633,11 @@ print(load_failures())
 | **`build_kernel`** | A function a backend writes per op, one per `(op, target)` | The second layer: it receives a description of this call — each input's device, dtype and shape, plus the op's parameters — and picks, builds and returns a kernel from its own set |
 
 **Selection has two layers: TileOPs picks the target, the target picks the
-kernel.** The second happens inside `build_kernel`, with no protocol involvement;
-there is no kernel-level concept, no capability negotiation and no candidate
-filtering.
+kernel.** The second happens inside `build_kernel`, with no protocol involvement: on this
+path there is no kernel-level concept, no capability negotiation and no candidate
+filtering. The candidate filtering TileOPs does run — availability, applicability,
+precedence — belongs to the in-tree path and to the two smaller ways in
+([three ways in](#three-ways)), which a target bypasses.
 
 `detect` answers only which devices belong to the backend, and that is as fine as
 it gets. **Whether this call is supported — dtype, shape, parameter combination —
@@ -592,10 +674,10 @@ third-party backend neither bypasses one nor substitutes its own.
 The kernels TileOPs ships ([`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)) are the **default
 implementation**: they have no target name and are not in the registry.
 
-**The default state is no substitution.** With no backend claiming a device, calls on
-it run the shipped implementation; only once a backend is installed and has claimed
-that device does the op's kernel become the backend's. The protocol has no notion of a
-"default target".
+**The default state is no substitution.** With no backend installed, no `target=` named
+and no process default set, calls run the shipped implementation. Nothing is preconfigured
+to substitute: a backend serves an op only once it is installed and either claims the
+device through its `detect`, or is named by `target=` or `set_default_target`.
 
 ## When a kernel is rebuilt {#memo}
 

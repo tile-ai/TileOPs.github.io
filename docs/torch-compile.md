@@ -70,8 +70,8 @@ compiled path behave differently from the eager one.
   that follows it. See [what each phase may do](backends.md#phase-limits).
 - **A second card may need its own build.** For a call a target serves, the device is
   part of the kernel's memo key, so the same instance builds again on a second card. An
-  in-tree kernel is keyed by what its `entry_for` returns, which includes the device only
-  when the build depends on it. A `target=` named in the constructor
+  in-tree kernel is keyed by the build identity the selected implementation's `entry_for`
+  returns, which includes the device only when the build depends on it. A `target=` named in the constructor
   is honoured on the first compiled call too, and a failed build pins the op to no
   target.
 
@@ -93,7 +93,7 @@ The code bringing one op in takes: how the boundary is declared, how the fake is
 written, and why the target is resolved again inside the node. For the tracing, graph
 breaks and guards below, see [how dynamo works](#how-dynamo-works).
 
-`RMSNormFwdOp` was the first op brought in. Its skeleton, method bodies elided — the full
+`RMSNormFwdOp` was the first op brought in. Its skeleton, docstrings elided — the full
 file is
 [`src/tileops/ops/norm/rms_norm.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops/norm/rms_norm.py):
 
@@ -102,15 +102,22 @@ class RMSNormFwdOp(Op):
     # the operators, their fakes and compile_op_names are generated from the manifest entry
     compile_boundary: ClassVar[bool] = True
     kernel_types: ClassVar[Mapping[str, type[Kernel]]] = {"rms_norm": RMSNormKernel}
+    interfaces: ClassVar[Mapping[str, type[KernelInterface]]] = {"rms_norm": RMSNormFwdInterface}
 
     def forward(self, x, weight=None):
         # the only line: call the generated operator
         return self._call_boundary(x, weight)
 
     def _eager_forward(self, x, weight=None):
-        ...                                        # the generated checks have run; make contiguous
-        kernel = self.kernel_for("rms_norm", (x, weight), x.dtype)
-        return kernel(x, weight)
+        weight = None if weight is None else weight.contiguous()
+        x = x.contiguous()                         # the generated checks have run
+        call = LayerNormCall(
+            device=x.device,
+            n=math.prod(self.normalized_shape),
+            eps=torch.finfo(torch.float32).eps if self.eps is None else float(self.eps),
+            dtype=x.dtype,
+        )
+        return self.kernel_for("rms_norm", call)(x, weight)
 ```
 
 That is the whole declaration. The operators and their fakes are generated from the
