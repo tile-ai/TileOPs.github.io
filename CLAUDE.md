@@ -138,5 +138,8 @@ renders no post under `mkdocs-static-i18n` and warns on its archive pages.
   arrow, east within the site and north-east off it, and a teal wash on hover.
 - Link to the TileOPs repo rather than duplicating it. A page authored here that
   mirrors upstream content will drift.
+- `hooks.py` appends a content hash to each local `extra_css` URL, so a changed
+  stylesheet reaches readers whose browser cached the old one. Do not add a
+  `?v=` by hand.
 - Gitignored: `site/`, `__pycache__/`, `.cache/`, `TileOPs/`, and
   `docs/benchmarks/` except `index.md`.

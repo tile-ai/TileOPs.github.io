@@ -16,9 +16,12 @@ untranslated-page notice.
   marks those lists for extra.css, which draws each item as a card.
 * A page merged into another leaves its old URL behind; `on_post_build` writes
   a redirect there, so published links keep working.
+* The stylesheet's URL carries a hash of its content, set in `on_config`, so a
+  browser holding an older copy fetches the new one as soon as it changes.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 
@@ -81,8 +84,23 @@ _BENCH_ORDER = [
 ]
 
 
+def _bust_css_cache(config):
+    """Append `?v=<content hash>` to each local stylesheet in `extra_css`."""
+    out = []
+    for entry in config["extra_css"]:
+        path = os.path.join(config["docs_dir"], str(entry))
+        if "?" in str(entry) or not os.path.isfile(path):
+            out.append(entry)
+            continue
+        with open(path, "rb") as f:
+            digest = hashlib.sha256(f.read()).hexdigest()[:10]
+        out.append(f"{entry}?v={digest}")
+    config["extra_css"] = out
+
+
 def on_config(config):
-    """Expand the Benchmarks nav entry to the generated pages."""
+    """Version the stylesheet URL; expand the Benchmarks nav entry."""
+    _bust_css_cache(config)
     bench_dir = os.path.join(config["docs_dir"], "benchmarks")
     if not os.path.isdir(bench_dir):
         return config
