@@ -1,4 +1,4 @@
-# Quantization Operators
+# Quantization and Dequantization Operators
 
 Every op on this page is used the same way: construct it once, then call it. The
 constructor takes what the kernel is compiled with; the call takes the tensors.

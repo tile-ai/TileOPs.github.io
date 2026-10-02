@@ -4,7 +4,7 @@
 
 ## 确认 DRAM 带宽是否为当前的瓶颈 {#regime}
 
-[Elementwise](https://tile-ai.github.io/TileOPs.github.io/api/elementwise/) 与 [Reduction](https://tile-ai.github.io/TileOPs.github.io/api/reduction/) 是典型的访存受限 kernel。本页每条建议都写明触发条件、成因，以及反例与正例代码。
+[Elementwise](../../api/elementwise.md) 与 [Reduction](../../api/reduction.md) 是典型的访存受限 kernel。本页每条建议都写明触发条件、成因，以及反例与正例代码。
 
 本页的实测都在同一组条件下取得：**输入大于 L2 的 60 MiB，且 block 数足以填满整卡**（H200 有 132 个 SM）。此时 DRAM 带宽是主要瓶颈，访存模式的差别直接反映在性能上。
 

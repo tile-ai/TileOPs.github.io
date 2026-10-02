@@ -32,7 +32,10 @@ nav:
   - Blog:
     - blog/index.md
   - User Guide:
+    # In the order the index groups them: getting started, specs and ops,
+    # kernels and hardware, integration and performance.
     - user-guide/index.md
+    - Development Guide: user-guide/development.md
     - Reading and Writing Specs:
       - user-guide/manifest/index.md
       - Concepts: user-guide/manifest/concepts.md
@@ -40,39 +43,40 @@ nav:
       - Extensions: user-guide/manifest/extensions.md
       - Calls and Validation: user-guide/manifest/calls.md
       - Examples: user-guide/manifest/examples.md
+    - Adding an Op: new-op.md
     - Kernel Dispatch:
       - user-guide/dispatch/index.md
       - Adding a Kernel: user-guide/dispatch/writing.md
       - Backend Integration: user-guide/dispatch/backends.md
-    - Adding an Op: new-op.md
-    - Timing Benchmarks: timing.md
-    - Using torch.compile: torch-compile.md
     - Adding a Backend: backends.md
-  # In `tileops._FAMILIES` order — simple to composite: the pointwise transforms,
-  # then the axis reductions and the normalizations built on them, then the matmul
-  # and the expert routing over it, then the windowed and spectral transforms, then
-  # the sequence-model kernels built on all of the above. Pages are not one per
-  # family. The FP8 lightning indexer is a section of the Attention page, where its
-  # single op is used, and the sequence-modeling family is two pages, mHC and Engram,
-  # being two unrelated algorithms. Top-k keeps its page before GEMM though its op is
-  # exported from `tileops.attention`. Trace comes last — a tool rather than an op.
+    - Using torch.compile: torch-compile.md
+    - Timing Benchmarks: timing.md
+  # In the Benchmarks pages' order: the pointwise transforms with the positional
+  # rotation beside them, the axis reductions and the normalizations built on
+  # them, the windowed kernels, the matmul and the quantization around it, then
+  # attention, the expert routing after it and sampling at the end of a decode
+  # step, then the sequence-mixing kernels. The pages Benchmarks folds into Other
+  # follow: FFT, mHC and Engram. Top-k shares the Sampling page, though its op is
+  # exported from `tileops.attention` and its benchmark sits on Attention. Pages are not one per family. The FP8
+  # lightning indexer is a section of the Attention page, where its single op is
+  # used, and the sequence-modeling family is two pages, mHC and Engram, being two
+  # unrelated algorithms. Trace comes last — a tool rather than an op.
   - API Reference:
     - api/index.md
     - Elementwise: api/elementwise.md
+    - RoPE: api/rope.md
     - Reduction: api/reduction.md
     - Normalization: api/normalization.md
-    - Quantization: api/quantization.md
-    - Top-k: api/topk.md
-    - GEMM: api/linear-algebra.md
     - Pooling: api/pool.md
     - Convolution: api/convolution.md
-    - FFT: api/fft.md
-    - MoE: api/moe.md
-    - Sampling: api/sampling.md
-    - RoPE: api/rope.md
+    - GEMM: api/linear-algebra.md
+    - Quantization & Dequantization: api/quantization.md
     - Attention: api/attention.md
+    - MoE: api/moe.md
+    - Top-k & Sampling: api/sampling.md
     - Linear Attention: api/linear-attention.md
     - Mamba: api/mamba.md
+    - FFT: api/fft.md
     - mHC: api/mhc.md
     - Engram: api/engram.md
     - Trace: api/trace.md
@@ -85,16 +89,18 @@ nav:
       - performance-guides/memory-bound/index.md
       - Global Memory Access: performance-guides/memory-bound/global-memory-access.md
       - Shared Memory Access: performance-guides/memory-bound/shared-memory-access.md
+  # In the order the index groups them: the system's structure, the spec, building
+  # an op against it, then how an op is accepted.
   - Design:
     - design/index.md
     - Architecture: design/architecture.md
+    - Layer Boundaries: design/layer-boundaries.md
     - Manifest: design/manifest.md
     - Op Interfaces: design/ops-design.md
     - Op Interface Reference: design/ops-design-reference.md
     - Slot Rules: design/op-slot-rules.md
-    - Roofline: design/roofline.md
     - Testing: design/testing.md
-    - Layer Boundaries: design/layer-boundaries.md
+    - Roofline: design/roofline.md
 
 markdown_extensions:
   # Docstrings and design docs carry formulas. `generic: true` emits the plain
@@ -164,7 +170,8 @@ plugins:
             Home: 首页
             Blog: 博客
             Design: 设计文档
-            User Guide: 使用指南
+            User Guide: 用户指南
+            Development Guide: 开发指南
             Reading and Writing Specs: 读写 manifest
             Concepts: 概念
             Spec Fields: 写一个 spec
@@ -181,6 +188,7 @@ plugins:
             Architecture: 架构
             Manifest: manifest 规范
             Op Interfaces: op 接口
+            Op Interface Reference: op 接口参考
             Slot Rules: Slot 规则
             Roofline: Roofline
             Testing: 测试
@@ -191,6 +199,7 @@ plugins:
             Normalization: Normalization
             GEMM: GEMM
             Quantization: Quantization
+            Quantization & Dequantization: Quantization & Dequantization
             Attention: Attention
             RoPE: RoPE
             Convolution: Convolution
@@ -202,7 +211,7 @@ plugins:
             MoE: MoE
             Sampling: Sampling
             Engram: Engram
-            Top-k: Top-k
+            Top-k & Sampling: Top-k & Sampling
             Trace: Trace
             Conv & Pool: Conv & Pool
             SSM: SSM

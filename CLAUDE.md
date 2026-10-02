@@ -68,7 +68,7 @@ implementation of the same op on that workload.
 | Device time | Compare `device_busy_ms`, never wall-clock span |
 | Two questions | `Ratio`: is another kernel faster. `SOL`: how much faster the hardware allows anyone to go, its binding resource (`mem`/`comp`/`lat`) in a `Bound` column. Import the SOL arithmetic and thresholds from the checkout's roofline tool (M5); never re-derive them here |
 | Which page an op lands on | The manifest entry's `family:`, through `_MANIFEST_FAMILY` — an op TileOPs adds needs no change here. One the manifest does not declare falls back to its package, then to keywords |
-| Page order | `DATA_PAGES` follows the API nav's order over the same families: one page per family except `Conv & Pool` (two) and `Other` (Top-k, FFT, mHC, Engram, the rest). `_BENCH_ORDER` in `hooks.py` repeats it — change one, change the other |
+| Page order | `DATA_PAGES`: Elementwise, RoPE, Reduction, Normalization, Conv & Pool, GEMM, Quantization & Dequantization, Attention, MoE, Sampling, Linear Attention, SSM, Other. One page per family except `Conv & Pool` (two) and `Other` (FFT, mHC, Engram, the rest). `TopkSelectorFwdOp` declares `family: attention`, so its row is on Attention, while the API Reference documents it on the Sampling page. The API Reference nav follows it, with FFT, mHC and Engram after SSM and Top-k on the Sampling page. `_BENCH_ORDER` in `hooks.py` repeats it — change all three together |
 | Op order within a page | The order `docs/api/` names them, read by `api_op_order()`. An op no API page names comes last, ranked by verdict |
 | Rows follow the manifest | One row group per manifest label, one row per dtype under it in a `dtype` column. Labels keep the snapshot's order, which is the manifest's; the key above the table repeats it. A row no manifest describes takes its id, trailing dtype names split off, as its label |
 | Workload shapes | The snapshot names a workload but carries no shapes. `scripts/workload_shape.py` reads them from the spec manifest at the commit the benchmark ran on, joined by the `<label>-<dtype>` the benchmark id is built from. A workload the manifest does not declare keeps its id and gets no shapes — never a guessed one |
@@ -78,15 +78,16 @@ implementation of the same op on that workload.
 English at the site root, Chinese under `/zh/`. A Chinese page is a
 `<name>.zh.md` beside the English `<name>.md`, full prose, never an
 `include-markdown` shell. `backends.md`, `torch-compile.md`, everything under
-`performance-guides/memory-bound/` and `blog/`, and the two guides under
-`user-guide/manifest/` and `user-guide/dispatch/` were authored in Chinese: edit
-the `.zh.md` first, then bring the English page in line. Everything else goes
-the other way.
+`performance-guides/memory-bound/`, `blog/`, `user-guide/development.md` and the
+two guides under `user-guide/manifest/` and `user-guide/dispatch/` were authored
+in Chinese: edit the `.zh.md` first, then bring the English page in line.
+Everything else goes the other way.
 
 | Rule | Detail |
 |------|--------|
 | Coverage | Whichever pages have a `.zh.md` — `ls docs/**/*.zh.md` |
 | Never translate | `api/` and `benchmarks/`, both generated; `design/`, mirrored English |
+| Mirrored, translated | `performance-guides/trace-timeline.md` mirrors TileOPs `docs/perf/trace-timeline.md`; its `.zh.md` is a full translation. When upstream changes that file, update the translation in step |
 | Missing translation | Falls back to English at the same URL, and `hooks.py` prepends a "本页暂无中文版" notice. The fallback runs zh → en only: a page that exists only as `.zh.md` leaves its `nav` entry on a missing file and the English sidebar renders a dead link |
 | Figures | A figure with text needs one SVG per language: `img/<name>.svg` for English and `img/<name>.zh.svg` beside it, which the `zh` build picks up for the same reference. Translate the `<text>` nodes and the `aria-label`, keep the geometry. English runs longer than Chinese — grow the `viewBox` rather than let text overflow. The user-guide figures are drawn from sources under `figures/user-guide/` (`<name>.zh.puml`, `<name>.en.puml`, `manifest/overview.py`): edit the source, then run `figures/user-guide/render.sh` |
 | Nav labels | `nav_translations` in the `i18n` plugin block; keep an entry for every `nav` title |
@@ -104,9 +105,13 @@ the other way.
 sections in the reader's order, Design last as contributor-facing.
 
 - Add a new page to `nav`, and its label to `nav_translations`.
-- Put a user-facing topic under User Guide.
+- Put a user-facing topic under User Guide, in the group its index lists it in,
+  and keep the nav in the index's order. The index is a plain list per group;
+  `hooks.py` marks it and `extra.css` draws each item as a card.
 - Keep a label short enough for one line in the sidebar; the page's H1 carries
   the full title.
+- Merging a page into another: delete it, and add its old URL to `_REDIRECTS`
+  in `hooks.py` so published links redirect.
 - List a section's `<dir>/index.md` as a bare path with no title. Given a title
   it is promoted anyway and its sidebar row disappears.
 - Leave `toc.integrate` off: the page TOC renders in the right column, and it is

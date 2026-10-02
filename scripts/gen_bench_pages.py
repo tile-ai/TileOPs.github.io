@@ -2,8 +2,8 @@
 """Render the Benchmarks section from a nightly benchmark XML snapshot.
 
 Output is one overview page, one page explaining the numbers, and the data
-pages of `DATA_PAGES`, in the order the API Reference nav lists the same
-families. `hooks.py` puts them into the site nav in that order.
+pages of `DATA_PAGES`, in the order that list gives. `hooks.py` puts them into
+the site nav in that order.
 
 These pages answer one question per workload: **how does TileOPs compare to the
 fastest other implementation of the same op on that workload?**
@@ -96,7 +96,7 @@ FAMILY_TITLE = {
     "ssm": "SSM", "scan": "Scan", "normalization": "Normalization",
     "moe": "MoE", "linear_algebra": "GEMM", "reduction": "Reduction",
     "elementwise": "Elementwise", "convolution": "Convolution", "pool": "Pooling",
-    "quantization": "Quantization", "sampling": "Sampling", "positional": "RoPE",
+    "quantization": "Quantization & Dequantization", "sampling": "Sampling", "positional": "RoPE",
     "fft": "FFT", "mhc": "mHC", "engram": "Engram", "topk": "Top-k",
     "other": "Other",
 }
@@ -142,24 +142,24 @@ def api_op_order(api_dir: str = API_DIR,
         print(f"warning: no op order read from {api_dir}; every Benchmarks page "
               f"ranks its ops by verdict instead", file=sys.stderr)
     return order
-# (slug, page title, families in display order), in the order the API Reference
-# nav lists the same families — pointwise, then the reductions and the
-# normalizations built on them, then quantization, then the matrix multiply and
-# the expert routing over it, then the sampling, then the positional rotation,
-# then the sequence-mixing kernels built on all of the above. A page is one
-# family except where too few ops carry one: `Conv & Pool` is two, `Other` the
-# rest.
+# (slug, page title, families in display order). Pointwise first, with the
+# positional rotation beside it, then the reductions and the normalizations
+# built on them, the windowed kernels, the matrix multiply and the quantization
+# around it, then attention and the expert routing that follows it in a
+# transformer layer, sampling at the end of a decode step, then the
+# sequence-mixing kernels. A page is one family except where too few ops carry
+# one: `Conv & Pool` is two, `Other` the rest.
 DATA_PAGES = [
     ("elementwise", "Elementwise", ["elementwise"]),
+    ("rope", "RoPE", ["positional"]),
     ("reduction", "Reduction", ["reduction"]),
     ("normalization", "Normalization", ["normalization"]),
-    ("quantization", "Quantization", ["quantization"]),
-    ("gemm", "GEMM", ["linear_algebra"]),
     ("conv-pool", "Conv & Pool", ["pool", "convolution"]),
+    ("gemm", "GEMM", ["linear_algebra"]),
+    ("quantization", "Quantization & Dequantization", ["quantization"]),
+    ("attention", "Attention", ["attention"]),
     ("moe", "MoE", ["moe"]),
     ("sampling", "Sampling", ["sampling"]),
-    ("rope", "RoPE", ["positional"]),
-    ("attention", "Attention", ["attention"]),
     ("linear-attention", "Linear Attention", ["linear_attention"]),
     ("ssm", "SSM", ["ssm"]),
     ("other", "Other", ["topk", "fft", "mhc", "engram", "scan", "other"]),

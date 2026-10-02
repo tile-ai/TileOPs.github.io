@@ -440,12 +440,12 @@ body,
 
 /* Every link in running text carries an arrow, so it reads as a link before it
  * is hovered: east for a page on this site, north-east for one that leaves it.
- * Hover lifts a teal wash from the underline and nudges the arrow. Scoped to
+ * An absolute link back to this site counts as one on it. Hover lifts a teal wash from the underline and nudges the arrow. Scoped to
  * prose — paragraphs, list items, table cells — so headings' permalinks, the
- * nav, buttons, badges and the Home card keep their own look, and no page's
+ * nav, buttons, badges and the page cards keep their own look, and no page's
  * Markdown has to mark a link for it.
  */
-.md-typeset :is(p, li, td, dd) a:not(:has(img)) {
+.md-typeset :is(p, li, td, dd):not(.page-cards > li) a:not(.md-button, :has(img)) {
   padding: 0 0.08em;
   margin: 0 -0.08em;
   border-radius: 0.15em;
@@ -453,11 +453,11 @@ body,
   transition: background-size 160ms ease, text-decoration-color 160ms ease;
 }
 
-.md-typeset :is(p, li, td, dd) a:not(:has(img)):is(:hover, :focus-visible) {
+.md-typeset :is(p, li, td, dd):not(.page-cards > li) a:not(.md-button, :has(img)):is(:hover, :focus-visible) {
   background-size: 100% 100%;
 }
 
-.md-typeset :is(p, li, td, dd) a:not(:has(img))::after {
+.md-typeset :is(p, li, td, dd):not(.page-cards > li) a:not(.md-button, :has(img))::after {
   content: "";
   display: inline-block;
   width: 0.62em;
@@ -471,18 +471,18 @@ body,
   transition: transform 160ms ease, opacity 160ms ease;
 }
 
-.md-typeset :is(p, li, td, dd) a[href^="http"]:not(:has(img))::after {
+.md-typeset :is(p, li, td, dd):not(.page-cards > li) a[href^="http"]:not([href^="https://tile-ai.github.io/TileOPs.github.io/"], .md-button, :has(img))::after {
   vertical-align: 0.12em;
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2012%2012'%3E%3Cpath%20d='M4%202h6v6M10%202%202.5%209.5'%20fill='none'%20stroke='%23000'%20stroke-width='1.6'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2012%2012'%3E%3Cpath%20d='M4%202h6v6M10%202%202.5%209.5'%20fill='none'%20stroke='%23000'%20stroke-width='1.6'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
-.md-typeset :is(p, li, td, dd) a:not(:has(img)):is(:hover, :focus-visible)::after {
+.md-typeset :is(p, li, td, dd):not(.page-cards > li) a:not(.md-button, :has(img)):is(:hover, :focus-visible)::after {
   opacity: 1;
   transform: translateX(0.1em);
 }
 
-.md-typeset :is(p, li, td, dd) a[href^="http"]:not(:has(img)):is(:hover, :focus-visible)::after {
+.md-typeset :is(p, li, td, dd):not(.page-cards > li) a[href^="http"]:not([href^="https://tile-ai.github.io/TileOPs.github.io/"], .md-button, :has(img)):is(:hover, :focus-visible)::after {
   transform: translate(0.08em, -0.08em);
 }
 
@@ -1345,13 +1345,14 @@ html[lang="zh"] .md-nav__title {
   }
 }
 
-/* Labels in one column, what varies in the next. A label past the column's
- * width wraps at its hyphens, so a long one never pushes the values off.
+/* One column: each label on its own line, what it ran on under it. Two columns
+ * put a label and its shapes side by side, and the eye then reads across a gap
+ * that changes width from one key to the next.
  */
 .md-typeset .wl-key ul.wl-rows {
   display: grid;
-  grid-template-columns: fit-content(24em) minmax(0, 1fr);
-  gap: 0.1em 0.9em;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
   align-items: baseline;
   margin: 0;
   padding: 0;
@@ -1362,11 +1363,12 @@ html[lang="zh"] .md-nav__title {
   display: contents;
 }
 
-/* No width for two columns: each label on its own line, what varies under it. */
-@media (max-width: 50rem) {
-  .md-typeset .wl-key ul.wl-rows {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.md-typeset .wl-key ul.wl-rows .wl-id {
+  margin-top: 0.4em;
+}
+
+.md-typeset .wl-key ul.wl-rows li:first-child .wl-id {
+  margin-top: 0;
 }
 
 /* A hairline between the label and what it ran on — the same rule the table
@@ -1387,20 +1389,6 @@ html[lang="zh"] .md-nav__title {
 
 .md-typeset .wl-key .wl-part {
   min-width: 0;
-}
-
-/* Labels too long for the label column: each on its own line, values under it. */
-.md-typeset .wl-key ul.wl-rows.wl-long {
-  grid-template-columns: minmax(0, 1fr);
-  row-gap: 0;
-}
-
-.md-typeset .wl-key ul.wl-rows.wl-long .wl-id {
-  margin-top: 0.4em;
-}
-
-.md-typeset .wl-key ul.wl-rows.wl-long li:first-child .wl-id {
-  margin-top: 0;
 }
 
 .md-typeset .wl-key .wl-delta:empty {
@@ -1729,4 +1717,132 @@ html[lang="zh"] .md-nav__title {
   font-size: 1.15rem;
   font-weight: 600;
   line-height: 1.35;
+}
+
+/* A section index's page list, drawn as cards by topic. `hooks.py` marks the
+ * lists; each item is a link, which becomes the card's title, and a line of
+ * description under it. Groups alternate violet and teal: a faint fill of that
+ * colour, a rule along the card's top, a numbered kicker, and a small corner of
+ * tiles that fills in on hover. Two columns where the page
+ * has the width, one below.
+ */
+.md-typeset:has(> ul.page-cards) {
+  counter-reset: page-card;
+}
+
+.md-typeset ul.page-cards {
+  --card-accent: var(--tf-violet);
+  --card-tint: rgba(90, 62, 133, 0.08);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 1rem;
+  margin: 0.9rem 0 1.8rem;
+  padding: 0;
+  list-style: none;
+}
+
+.md-typeset ul.page-cards:nth-of-type(even) {
+  --card-accent: var(--tf-teal);
+  --card-tint: rgba(22, 112, 107, 0.08);
+}
+
+.md-typeset ul.page-cards > li {
+  position: relative;
+  overflow: hidden;
+  min-height: 7.2rem;
+  margin: 0;
+  padding: 1.05rem 1.2rem 1.9rem;
+  border: 1px solid var(--tf-line);
+  border-top: 3px solid var(--card-accent);
+  border-radius: 0.6rem;
+  background: var(--card-tint);
+  box-shadow: 0 1px 2px rgba(27, 19, 39, 0.05);
+  color: var(--tf-muted);
+  font-size: 0.74rem;
+  line-height: 1.6;
+  counter-increment: page-card;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+/* The kicker: the card's number in the index, in the group's accent. */
+.md-typeset ul.page-cards > li::before {
+  content: counter(page-card, decimal-leading-zero);
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--card-accent);
+  font-family: var(--tf-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+/* A corner of tiles, faint until the card is hovered. */
+.md-typeset ul.page-cards > li::after {
+  content: "";
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  width: 46px;
+  height: 46px;
+  background-color: var(--card-accent);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='46'%20height='46'%3E%3Crect%20x='0'%20y='0'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.9'/%3E%3Crect%20x='12'%20y='0'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.5'/%3E%3Crect%20x='0'%20y='12'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.5'/%3E%3Crect%20x='24'%20y='0'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.25'/%3E%3Crect%20x='12'%20y='12'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.3'/%3E%3Crect%20x='0'%20y='24'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.25'/%3E%3Crect%20x='36'%20y='0'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.12'/%3E%3Crect%20x='24'%20y='12'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.15'/%3E%3Crect%20x='12'%20y='24'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.15'/%3E%3Crect%20x='0'%20y='36'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.12'/%3E%3C/svg%3E") right top / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='46'%20height='46'%3E%3Crect%20x='0'%20y='0'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.9'/%3E%3Crect%20x='12'%20y='0'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.5'/%3E%3Crect%20x='0'%20y='12'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.5'/%3E%3Crect%20x='24'%20y='0'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.25'/%3E%3Crect%20x='12'%20y='12'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.3'/%3E%3Crect%20x='0'%20y='24'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.25'/%3E%3Crect%20x='36'%20y='0'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.12'/%3E%3Crect%20x='24'%20y='12'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.15'/%3E%3Crect%20x='12'%20y='24'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.15'/%3E%3Crect%20x='0'%20y='36'%20width='10'%20height='10'%20rx='1.5'%20fill='%23000'%20fill-opacity='0.12'/%3E%3C/svg%3E") right top / contain no-repeat;
+  opacity: 0.18;
+  transition: opacity 180ms ease, transform 180ms ease;
+  pointer-events: none;
+}
+
+.md-typeset ul.page-cards > li:hover,
+.md-typeset ul.page-cards > li:focus-within {
+  border-color: var(--card-accent);
+  box-shadow: 0 14px 30px -18px rgba(27, 19, 39, 0.45);
+  transform: translateY(-3px);
+}
+
+.md-typeset ul.page-cards > li:hover::after,
+.md-typeset ul.page-cards > li:focus-within::after {
+  opacity: 0.6;
+  transform: scale(1.06);
+}
+
+/* The title's link covers the whole card, so the card is one click target. */
+.md-typeset ul.page-cards > li > a:first-child {
+  display: block;
+  max-width: calc(100% - 3.2rem);
+  margin-bottom: 0.35rem;
+  color: var(--md-default-fg-color);
+  font-family: var(--tf-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-decoration: none;
+}
+
+.md-typeset ul.page-cards > li > a:first-child::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+/* The arrow sits in the card's bottom-right corner, so a title that wraps never
+ * leaves it alone on a line.
+ */
+.md-typeset ul.page-cards > li > a:first-child::after {
+  content: "→";
+  position: absolute;
+  right: 1.2rem;
+  bottom: 0.9rem;
+  color: var(--card-accent);
+  font-size: 1rem;
+  transition: transform 180ms ease;
+}
+
+.md-typeset ul.page-cards > li:hover > a:first-child::after {
+  transform: translateX(0.25em);
+}
+
+html[lang="zh"] .md-typeset ul.page-cards > li > a:first-child {
+  font-weight: 700;
 }

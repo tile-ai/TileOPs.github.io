@@ -13,30 +13,29 @@ op = GemmFwdOp()                        # construct once, reuse
 d = op(a, b)                         # the specialized kernel is built on first call
 ```
 
-The pages are ordered by how much an op composes: the pointwise transforms first, then
-the axis reductions and the normalizations built on them, then the matmul and the
-expert routing over it, then the windowed and spectral transforms, then the
-sequence-model kernels built on all of the above. It is the order `tileops` declares
-its op families in. The exception is Top-k, whose one op is exported from
-`tileops.attention`.
+The pages run in the order a reader meets the ops in a model: the pointwise
+transforms and the positional rotation, then the axis reductions and the
+normalizations built on them, the windowed kernels, the matmul and the
+quantization around it, then attention, the expert routing after it and sampling,
+then the sequence-model kernels. FFT, mHC and Engram follow, and Trace,
+a tool rather than an op, comes last. The Benchmarks pages use the same order.
 
 | Page | What it covers |
 | --- | --- |
 | [Elementwise](elementwise.md) | unary and binary maps, activations, dropout, and the in-place forms |
+| [RoPE](rope.md) | rotary position embedding — NeoX and interleaved layouts, Llama 3.1, YaRN, LongRoPE |
 | [Reduction](reduction.md) | sums, extrema, arg-reductions, cumulative scans, softmax |
 | [Normalization](normalization.md) | RMSNorm, LayerNorm, GroupNorm, BatchNorm and the fused variants |
-| [Quantization](quantization.md) | INT8, FP8 and INT4 quantization, and INT8 dequantization |
-| [Top-k](topk.md) | top-k selection |
-| [GEMM](linear-algebra.md) | dense matmul — plain, batched, and the fp8 variants |
 | [Pooling](pool.md) | average, max and adaptive pooling, with and without indices, plus the chunked sequence mean |
 | [Convolution](convolution.md) | forward convolution over 1D, 2D and 3D inputs |
-| [FFT](fft.md) | the discrete transform |
-| [MoE](moe.md) | the routed mixture-of-experts FFN and its separately callable stages |
-| [Sampling](sampling.md) | logits masks (top-k, top-p, min-p) and sampling, including chain speculative sampling |
-| [RoPE](rope.md) | rotary position embedding — NeoX and interleaved layouts, Llama 3.1, YaRN, LongRoPE |
+| [GEMM](linear-algebra.md) | dense matmul — plain, batched, and the fp8 variants |
+| [Quantization & Dequantization](quantization.md) | INT8, FP8 and INT4 quantization, and INT8 dequantization |
 | [Attention](attention.md) | forward and backward attention, including the paged and decode kernels |
+| [MoE](moe.md) | the routed mixture-of-experts FFN and its separately callable stages |
+| [Top-k & Sampling](sampling.md) | top-k selection, logits masks (top-k, top-p, min-p) and sampling, including chain speculative sampling |
 | [Linear Attention](linear-attention.md) | DeltaNet, Gated DeltaNet and gated linear attention |
 | [Mamba](mamba.md) | the SSD scan, its decode step, and the chunked forms |
+| [FFT](fft.md) | the discrete transform |
 | [mHC](mhc.md) | Manifold-Constrained Hyper-Connections — the pre/post pair around a layer |
 | [Engram](engram.md) | the Engram GateConv pair and its decode step |
 | [Trace](trace.md) | the in-kernel timeline tracer, a tool rather than an op |

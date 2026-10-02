@@ -12,6 +12,10 @@ untranslated-page notice.
   a translation still to come rather than a broken one.
 * A blog post's first paragraph is its subtitle; `on_page_content` marks it for
   extra.css, so the post's Markdown carries no styling.
+* A section index lists its pages as a plain Markdown list; `on_page_content`
+  marks those lists for extra.css, which draws each item as a card.
+* A page merged into another leaves its old URL behind; `on_post_build` writes
+  a redirect there, so published links keep working.
 """
 from __future__ import annotations
 
@@ -71,9 +75,9 @@ def on_page_markdown(markdown, page, config, files):
 # not produce is left out; one it produced that is not listed here is appended.
 _BENCH_ORDER = [
     "index.md", "reading.md",
-    "elementwise.md", "reduction.md", "normalization.md", "quantization.md",
-    "gemm.md", "conv-pool.md", "moe.md", "sampling.md", "rope.md",
-    "attention.md", "linear-attention.md", "ssm.md", "other.md",
+    "elementwise.md", "rope.md", "reduction.md", "normalization.md",
+    "conv-pool.md", "gemm.md", "quantization.md", "attention.md", "moe.md",
+    "sampling.md", "linear-attention.md", "ssm.md", "other.md",
 ]
 
 
@@ -95,11 +99,59 @@ def on_config(config):
 
 _FIRST_PARAGRAPH = re.compile(r"(</h1>\s*)<p>")
 
+# Section indexes whose page lists render as cards. Each item is a link followed
+# by a one-line description on the next line.
+_CARD_INDEXES = {
+    "user-guide/index.md", "user-guide/index.zh.md", "design/index.md",
+}
+
 
 def on_page_content(html, page, config, files):
-    """Mark a blog post's subtitle."""
+    """Mark a blog post's subtitle, and the page lists on a section index."""
     src = page.file.src_path.replace("\\", "/")
     name = src.split("/")[-1]
+    if src in _CARD_INDEXES:
+        return html.replace("<ul>", '<ul class="page-cards">')
     if not src.startswith("blog/") or name.startswith("index."):
         return html
     return _FIRST_PARAGRAPH.sub(r'\1<p class="post-subtitle">', html, count=1)
+
+
+# Old page URL -> where its content lives now, relative to the old URL. The
+# redirect is written into each locale's build.
+_REDIRECTS = {
+    "api/topk/": "../sampling/#top-k-selection",
+}
+
+_REDIRECT_PAGE = (
+    '<!doctype html><html><head><meta charset="utf-8">'
+    '<meta http-equiv="refresh" content="0; url={to}">'
+    '<link rel="canonical" href="{to}"><title>Redirecting</title></head>'
+    '<body><a href="{to}">{to}</a></body></html>\n'
+)
+
+
+def _locale_dirs(config):
+    """The site root, then one subdirectory per other locale i18n builds.
+
+    This hook runs before i18n builds the other locales, so their directories
+    are named from the plugin's config rather than found on disk.
+    """
+    dirs = [""]
+    i18n = config["plugins"].get("i18n")
+    for lang in getattr(i18n, "config", {}).get("languages", []):
+        if lang.build and not lang.default:
+            dirs.append(lang.locale)
+    return dirs
+
+
+def on_post_build(config):
+    """Write a redirect page at each old URL `_REDIRECTS` lists, per locale."""
+    for locale in _locale_dirs(config):
+        for old, to in _REDIRECTS.items():
+            path = os.path.join(config["site_dir"], locale, old, "index.html")
+            if os.path.exists(path):
+                continue
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(_REDIRECT_PAGE.format(to=to))

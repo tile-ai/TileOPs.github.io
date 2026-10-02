@@ -31,7 +31,7 @@ flops, nbytes = op.eval_roofline()   # 本次调用所需的计算量与访存�
 ## 后续阅读
 
 - [博客](blog/index.md)：TileOPs 开发中的技术探索。
-- [使用指南](user-guide/index.md)：读写 manifest、接入 `torch.compile`、benchmark 的计时方法、接入新硬件 backend。
+- [用户指南](user-guide/index.md)：读写 manifest、接入 `torch.compile`、benchmark 的计时方法、接入新硬件 backend。
 - [API 参考](api/index.md)：各 op family 的构造参数与调用方式。
 - [性能数据](benchmarks/index.md)：每晚在 H200 上实测，逐个 workload 与其他实现对比。
 

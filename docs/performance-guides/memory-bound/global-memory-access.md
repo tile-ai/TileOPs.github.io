@@ -6,8 +6,8 @@ choosing one.
 
 ## Checking whether DRAM bandwidth is the current limit {#regime}
 
-[Elementwise](https://tile-ai.github.io/TileOPs.github.io/api/elementwise/) and
-[Reduction](https://tile-ai.github.io/TileOPs.github.io/api/reduction/) are the
+[Elementwise](../../api/elementwise.md) and
+[Reduction](../../api/reduction.md) are the
 typical memory-bound kernels. Each recommendation on this page states when it
 applies, why it applies, and what the wrong and right code look like.
 
