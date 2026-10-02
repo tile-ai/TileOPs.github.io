@@ -129,6 +129,13 @@ renders no post under `mkdocs-static-i18n` and warns on its archive pages.
   gives that paragraph the `post-subtitle` class that `extra.css` styles; keep
   classes and attribute lists out of the post's Markdown.
 - No date line, no in-page TOC: the right column carries the TOC.
+- Home opens with a card for the first post `blog/index.md` lists. `hooks.py`
+  writes it from that post's H1 and subtitle, and from the optional `kicker` and
+  `description` in its front matter; Home's Markdown carries none of it.
+- A post announced before it is written carries `status: coming-soon` and is
+  listed in `draft_docs`: the build leaves it out, Blog's index and `nav` do not
+  list it, and Home's card reads "Coming soon" and links nowhere. To publish it,
+  drop both and add it to `nav` and `blog/index.md`.
 
 ## Conventions
 

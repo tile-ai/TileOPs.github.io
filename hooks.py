@@ -18,10 +18,13 @@ untranslated-page notice.
   a redirect there, so published links keep working.
 * The stylesheet's URL carries a hash of its content, set in `on_config`, so a
   browser holding an older copy fetches the new one as soon as it changes.
+* Home opens with a card for the newest blog post, which `on_page_content`
+  writes from the first entry on the Blog page.
 """
 from __future__ import annotations
 
 import hashlib
+import html as htmllib
 import os
 import re
 
@@ -124,12 +127,101 @@ _CARD_INDEXES = {
 }
 
 
+_POST_LINK = re.compile(r"\]\(([\w-]+)\.md\)")
+
+_HOME_POST_LABELS = {
+    "en": ("From the blog", "Read the post"),
+    "zh": ("博客", "阅读全文"),
+}
+
+
+def _read_md(docs_dir, stem, locale):
+    """The `<stem>.<locale>.md` source, else `<stem>.md`."""
+    for name in (f"{stem}.{locale}.md", f"{stem}.md"):
+        path = os.path.join(docs_dir, name)
+        if os.path.isfile(path):
+            with open(path, encoding="utf-8") as f:
+                return f.read()
+    return ""
+
+
+def _front_matter(lines):
+    """`key: value` pairs of a page's YAML front matter; flat values only."""
+    if not lines or lines[0].strip() != "---":
+        return {}
+    meta = {}
+    for ln in lines[1:]:
+        if ln.strip() == "---":
+            break
+        key, sep, value = ln.partition(":")
+        if sep:
+            meta[key.strip()] = value.strip()
+    return meta
+
+
+def _coming_soon_slug(docs_dir):
+    """The slug of a post whose front matter says `status: coming-soon`, or None."""
+    blog = os.path.join(docs_dir, "blog")
+    if not os.path.isdir(blog):
+        return None
+    for name in sorted(os.listdir(blog)):
+        stem = name.split(".")[0]
+        if not name.endswith(".md") or stem == "index":
+            continue
+        with open(os.path.join(blog, name), encoding="utf-8") as f:
+            meta = _front_matter(f.read().splitlines())
+        if meta.get("status") == "coming-soon":
+            return stem
+    return None
+
+
+def _home_post_card(docs_dir, locale):
+    """Card HTML for the first post the Blog page lists, else for a post marked
+    `status: coming-soon`, or "" when there is neither."""
+    link = _POST_LINK.search(_read_md(docs_dir, "blog/index", locale))
+    slug = link.group(1) if link else _coming_soon_slug(docs_dir)
+    if not slug:
+        return ""
+    lines = _read_md(docs_dir, f"blog/{slug}", locale).splitlines()
+    meta = _front_matter(lines)
+    h1 = next((i for i, ln in enumerate(lines) if ln.startswith("# ")), None)
+    if h1 is None:
+        return ""
+    title = lines[h1][2:].strip()
+    subtitle = next((ln.strip() for ln in lines[h1 + 1:] if ln.strip()), "")
+    kicker, more = _HOME_POST_LABELS.get(locale, _HOME_POST_LABELS["en"])
+    kicker = meta.get("kicker", kicker)
+    esc = htmllib.escape
+    desc = meta.get("description", "")
+    soon = meta.get("status") == "coming-soon"
+    if soon:
+        # Not published yet: the card announces the post and links nowhere.
+        kicker = more = "Coming soon"
+        open_tag, close_tag = '<div class="home-post home-post--soon">', "</div>"
+    else:
+        open_tag, close_tag = f'<a class="home-post" href="blog/{slug}/">', "</a>"
+    return (
+        open_tag
+        + f'<span class="home-post__kicker">{esc(kicker)}</span>'
+        f'<span class="home-post__title">{esc(title)}</span>'
+        f'<span class="home-post__subtitle">{esc(subtitle)}</span>'
+        + (f'<span class="home-post__desc">{esc(desc)}</span>' if desc else "")
+        + f'<span class="home-post__more">{esc(more)}</span>'
+        + close_tag
+    )
+
+
 def on_page_content(html, page, config, files):
-    """Mark a blog post's subtitle, and the page lists on a section index."""
+    """Mark a blog post's subtitle and a section index's page lists; put the
+    newest post's card on Home."""
     src = page.file.src_path.replace("\\", "/")
     name = src.split("/")[-1]
     if src in _CARD_INDEXES:
         return html.replace("<ul>", '<ul class="page-cards">')
+    if "/" not in src and name.startswith("index."):
+        locale = getattr(page.file, "locale", None) or "en"
+        card = _home_post_card(config["docs_dir"], locale)
+        return html.replace("</h1>", "</h1>\n" + card, 1) if card else html
     if not src.startswith("blog/") or name.startswith("index."):
         return html
     return _FIRST_PARAGRAPH.sub(r'\1<p class="post-subtitle">', html, count=1)
