@@ -1846,3 +1846,179 @@ html[lang="zh"] .md-nav__title {
 html[lang="zh"] .md-typeset ul.page-cards > li > a:first-child {
   font-weight: 700;
 }
+
+/* The blog post card at the top of Home. `hooks.py` writes it from the first
+ * post the Blog page lists, or from the one post announced as coming soon, so
+ * Home's Markdown carries none of it. A dark
+ * panel lit violet from one corner and teal from the other: the one dark block on
+ * a light site. On the right, one tile grows into a 2 × 2, a 4 × 4 and an 8 × 8
+ * block: a kernel becoming a library.
+ */
+.md-typeset .home-post {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  min-height: 15rem;
+  margin: 0.6rem 0 2.6rem;
+  padding: 2.2rem 2.4rem 2rem;
+  border-radius: 0.75rem;
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(22, 112, 107, 0.6), transparent 55%),
+    radial-gradient(100% 120% at 0% 100%, rgba(124, 92, 174, 0.65), transparent 60%),
+    #17111f;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 18px 40px -18px rgba(27, 19, 39, 0.7);
+  color: #f5f3f8;
+  text-decoration: none;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.md-typeset .home-post::after {
+  content: "";
+  position: absolute;
+  right: 2.2rem;
+  bottom: 2rem;
+  width: 288px;
+  height: 128px;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='288'%20height='128'%20viewBox='0%200%20288%20128'%3E%3Crect%20x='0'%20y='56'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.95'/%3E%3Crect%20x='32'%20y='48'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.8'/%3E%3Crect%20x='32'%20y='64'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.8'/%3E%3Crect%20x='48'%20y='48'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.8'/%3E%3Crect%20x='48'%20y='64'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.8'/%3E%3Crect%20x='80'%20y='32'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.6'/%3E%3Crect%20x='80'%20y='48'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.6'/%3E%3Crect%20x='80'%20y='64'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.6'/%3E%3Crect%20x='80'%20y='80'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.6'/%3E%3Crect%20x='96'%20y='32'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.6'/%3E%3Crect%20x='96'%20y='48'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.6'/%3E%3Crect%20x='96'%20y='64'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.6'/%3E%3Crect%20x='96'%20y='80'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.6'/%3E%3Crect%20x='112'%20y='32'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.6'/%3E%3Crect%20x='112'%20y='48'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.6'/%3E%3Crect%20x='112'%20y='64'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.6'/%3E%3Crect%20x='112'%20y='80'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.6'/%3E%3Crect%20x='128'%20y='32'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.6'/%3E%3Crect%20x='128'%20y='48'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.6'/%3E%3Crect%20x='128'%20y='64'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.6'/%3E%3Crect%20x='128'%20y='80'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.6'/%3E%3Crect%20x='160'%20y='0'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.32'/%3E%3Crect%20x='160'%20y='16'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.22'/%3E%3Crect%20x='160'%20y='32'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.53'/%3E%3Crect%20x='160'%20y='48'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.17'/%3E%3Crect%20x='160'%20y='64'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.46'/%3E%3Crect%20x='160'%20y='80'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.35'/%3E%3Crect%20x='160'%20y='96'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.16'/%3E%3Crect%20x='160'%20y='112'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.44'/%3E%3Crect%20x='176'%20y='0'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.14'/%3E%3Crect%20x='176'%20y='16'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.39'/%3E%3Crect%20x='176'%20y='32'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.16'/%3E%3Crect%20x='176'%20y='48'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.18'/%3E%3Crect%20x='176'%20y='64'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.39'/%3E%3Crect%20x='176'%20y='80'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.64'/%3E%3Crect%20x='176'%20y='96'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.2'/%3E%3Crect%20x='176'%20y='112'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.26'/%3E%3Crect%20x='192'%20y='0'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.52'/%3E%3Crect%20x='192'%20y='16'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.72'/%3E%3Crect%20x='192'%20y='32'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.48'/%3E%3Crect%20x='192'%20y='48'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.37'/%3E%3Crect%20x='192'%20y='64'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.74'/%3E%3Crect%20x='192'%20y='80'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.15'/%3E%3Crect%20x='192'%20y='96'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.66'/%3E%3Crect%20x='192'%20y='112'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.3'/%3E%3Crect%20x='208'%20y='0'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.21'/%3E%3Crect%20x='208'%20y='16'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.19'/%3E%3Crect%20x='208'%20y='32'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.31'/%3E%3Crect%20x='208'%20y='48'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.63'/%3E%3Crect%20x='208'%20y='64'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.23'/%3E%3Crect%20x='208'%20y='80'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.49'/%3E%3Crect%20x='208'%20y='96'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.52'/%3E%3Crect%20x='208'%20y='112'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.35'/%3E%3Crect%20x='224'%20y='0'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.47'/%3E%3Crect%20x='224'%20y='16'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.16'/%3E%3Crect%20x='224'%20y='32'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.16'/%3E%3Crect%20x='224'%20y='48'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.25'/%3E%3Crect%20x='224'%20y='64'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.55'/%3E%3Crect%20x='224'%20y='80'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.39'/%3E%3Crect%20x='224'%20y='96'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.32'/%3E%3Crect%20x='224'%20y='112'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.49'/%3E%3Crect%20x='240'%20y='0'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.41'/%3E%3Crect%20x='240'%20y='16'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.31'/%3E%3Crect%20x='240'%20y='32'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.62'/%3E%3Crect%20x='240'%20y='48'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.56'/%3E%3Crect%20x='240'%20y='64'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.27'/%3E%3Crect%20x='240'%20y='80'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.48'/%3E%3Crect%20x='240'%20y='96'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.45'/%3E%3Crect%20x='240'%20y='112'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.67'/%3E%3Crect%20x='256'%20y='0'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.58'/%3E%3Crect%20x='256'%20y='16'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.3'/%3E%3Crect%20x='256'%20y='32'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.74'/%3E%3Crect%20x='256'%20y='48'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.19'/%3E%3Crect%20x='256'%20y='64'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.38'/%3E%3Crect%20x='256'%20y='80'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.6'/%3E%3Crect%20x='256'%20y='96'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.22'/%3E%3Crect%20x='256'%20y='112'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.43'/%3E%3Crect%20x='272'%20y='0'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.14'/%3E%3Crect%20x='272'%20y='16'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.54'/%3E%3Crect%20x='272'%20y='32'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.6'/%3E%3Crect%20x='272'%20y='48'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.48'/%3E%3Crect%20x='272'%20y='64'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.67'/%3E%3Crect%20x='272'%20y='80'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.32'/%3E%3Crect%20x='272'%20y='96'%20width='14'%20height='14'%20rx='2'%20fill='%23b096dc'%20fill-opacity='0.56'/%3E%3Crect%20x='272'%20y='112'%20width='14'%20height='14'%20rx='2'%20fill='%237fd3cb'%20fill-opacity='0.49'/%3E%3C/svg%3E") center / contain no-repeat;
+  pointer-events: none;
+  transition: transform 180ms ease;
+}
+
+.md-typeset .home-post:hover,
+.md-typeset .home-post:focus-visible {
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset,
+    0 24px 48px -18px rgba(27, 19, 39, 0.75);
+  color: #f5f3f8;
+}
+
+.md-typeset .home-post:is(:hover, :focus-visible)::after {
+  transform: translateX(-4px);
+}
+
+.md-typeset .home-post > span {
+  position: relative;
+  z-index: 1;
+  display: block;
+  max-width: 30rem;
+}
+
+.md-typeset .home-post .home-post__kicker {
+  color: #7fd3cb;
+  font-family: var(--tf-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.md-typeset .home-post .home-post__title {
+  margin-top: 0.9rem;
+  font-family: var(--tf-display);
+  font-size: 2.3rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.02;
+}
+
+.md-typeset .home-post .home-post__subtitle {
+  margin-top: 0.6rem;
+  color: rgba(245, 243, 248, 0.9);
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.md-typeset .home-post .home-post__desc {
+  max-width: 24rem;
+  margin-top: 0.7rem;
+  color: rgba(245, 243, 248, 0.62);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.md-typeset .home-post .home-post__more {
+  display: inline-block;
+  margin-top: 1.5rem;
+  padding: 0.45rem 1rem;
+  border: 1px solid rgba(245, 243, 248, 0.35);
+  border-radius: 999px;
+  color: #f5f3f8;
+  font-family: var(--tf-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.md-typeset .home-post:is(:hover, :focus-visible) .home-post__more {
+  border-color: #7fd3cb;
+  background-color: rgba(127, 211, 203, 0.14);
+}
+
+.md-typeset .home-post .home-post__more::after {
+  content: "→";
+  display: inline-block;
+  margin-left: 0.5em;
+  transition: transform 180ms ease;
+}
+
+.md-typeset .home-post:is(:hover, :focus-visible) .home-post__more::after {
+  transform: translateX(4px);
+}
+
+/* At 800 a CJK fallback face closes up the strokes, as on the headings. */
+html[lang="zh"] .md-typeset .home-post .home-post__title {
+  font-weight: 700;
+}
+
+/* Below this width the art no longer fits beside the text: it shrinks to half
+ * size and sits at the bottom right, beside the button.
+ */
+@media screen and (max-width: 60em) {
+  .md-typeset .home-post {
+    padding: 1.6rem 1.4rem 1.5rem;
+  }
+
+  .md-typeset .home-post::after {
+    right: 1.2rem;
+    bottom: 1.6rem;
+    width: 144px;
+    height: 64px;
+  }
+
+  .md-typeset .home-post .home-post__title {
+    font-size: 1.7rem;
+  }
+}
+
+/* A post not yet published: the card announces it and links nowhere, so it
+ * neither lifts on hover nor carries the arrow, and its button is a dashed
+ * outline rather than a call to click.
+ */
+.md-typeset .home-post.home-post--soon:hover {
+  transform: none;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 18px 40px -18px rgba(27, 19, 39, 0.7);
+}
+
+.md-typeset .home-post.home-post--soon:hover::after {
+  transform: none;
+}
+
+.md-typeset .home-post.home-post--soon .home-post__more {
+  border-style: dashed;
+  color: rgba(245, 243, 248, 0.75);
+}
+
+.md-typeset .home-post.home-post--soon:hover .home-post__more {
+  border-color: rgba(245, 243, 248, 0.35);
+  background-color: transparent;
+}
+
+.md-typeset .home-post.home-post--soon .home-post__more::after {
+  content: none;
+}

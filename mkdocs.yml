@@ -4,6 +4,11 @@ site_description: High-performance LLM operator library built on TileLang
 repo_url: https://github.com/tile-ai/TileOPs
 repo_name: tile-ai/TileOPs
 
+# A post marked `status: coming-soon` is a draft: `mkdocs serve` shows it, the
+# build leaves it out, and Home's card announces it without linking to it.
+draft_docs: |
+  blog/tilefoundry-x-tileops*.md
+
 theme:
   name: material
   palette:
