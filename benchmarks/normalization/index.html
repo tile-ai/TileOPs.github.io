@@ -1,0 +1,3394 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="High-performance LLM operator library built on TileLang">
+      
+      
+      
+        <link rel="canonical" href="https://tile-ai.github.io/TileOPs.github.io/benchmarks/normalization/">
+      
+      
+        <link rel="prev" href="../reduction/">
+      
+      
+        <link rel="next" href="../conv-pool/">
+      
+      
+        
+          <link rel="alternate" href="./" hreflang="en">
+        
+          <link rel="alternate" href="../../zh/benchmarks/normalization/" hreflang="zh">
+        
+      
+      
+      <link rel="icon" href="../../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Normalization - TileOPs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Hanken+Grotesk:300,300i,400,400i,700,700i%7CSpace+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Hanken Grotesk";--md-code-font:"Space Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../assets/extra.css?v=93090c7963">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#normalization" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="TileOPs" class="md-header__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            TileOPs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Normalization
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Select language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="../../zh/benchmarks/normalization/" hreflang="zh" class="md-select__link">
+              简体中文
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="TileOPs" class="md-nav__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    TileOPs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/tile-ai/TileOPs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../blog/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Blog
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Blog
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../user-guide/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../user-guide/manifest/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reading and Writing Specs
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reading and Writing Specs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/manifest/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/manifest/writing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Spec Fields
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/manifest/extensions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/manifest/calls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calls and Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/manifest/examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../new-op/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding an Op
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../user-guide/dispatch/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kernel Dispatch
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Kernel Dispatch
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/dispatch/writing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a Kernel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/dispatch/backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../torch-compile/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using torch.compile
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../timing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timing Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../api/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pooling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/convolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Convolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/linear-algebra/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization & Dequantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Top-k & Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/mamba/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mamba
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/fft/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/transform/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/mhc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    mHC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/engram/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Engram
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Benchmarks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How these numbers are taken
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#layernormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LayerNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fusedaddlayernormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FusedAddLayerNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rmsnormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RMSNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fusedaddrmsnormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FusedAddRMSNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adalayernormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AdaLayerNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adalayernormzerofwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AdaLayerNormZeroFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#batchnormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BatchNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#batchnormbwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BatchNormBwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#groupnormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GroupNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#instancenormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        InstanceNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../conv-pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conv &amp; Pool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gemm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization &amp; Dequantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../other/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Other
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../performance-guides/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Guides
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Performance Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/trace-timeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Timeline Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../performance-guides/memory-bound/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory-Bound Kernels
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Memory-Bound Kernels
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/memory-bound/global-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Global Memory Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance-guides/memory-bound/shared-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared Memory Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../design/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/layer-boundaries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Layer Boundaries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Manifest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/ops-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Op Interfaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/ops-design-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Op Interface Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/op-slot-rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slot Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/roofline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roofline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#layernormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LayerNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fusedaddlayernormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FusedAddLayerNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rmsnormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RMSNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fusedaddrmsnormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FusedAddRMSNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adalayernormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AdaLayerNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adalayernormzerofwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AdaLayerNormZeroFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#batchnormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BatchNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#batchnormbwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BatchNormBwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#groupnormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GroupNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#instancenormfwd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        InstanceNormFwd
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="normalization">Normalization<a class="headerlink" href="#normalization" title="Permanent link">&para;</a></h1>
+<p><strong>10 ops, 89 workloads.</strong></p>
+<p>One table per op, one row per workload. <code>Ratio</code> is the fastest other implementation's device time divided by ours, so <span class="perf-ahead">green</span> is faster than it, <span class="perf-par">plain</span> is level with it, <span class="perf-behind">red</span> is slower. Times are in ms. <a href="../reading/">How these numbers are taken</a>.</p>
+<h2 id="layernormfwd"><a href="https://github.com/tile-ai/TileOPs/blob/0b1d6247bf11f907878996f9986c914ceba794a2/src/tileops/ops/norm/layer_norm.py">LayerNormFwd</a><a class="headerlink" href="#layernormfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [*B, *normalized_shape]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [*normalized_shape]</span></p><ul class="wl-rows"><li><code class="wl-id">llama-<wbr>8b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [4096]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>8b-<wbr>decode</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [1, 4096]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [4096]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>70b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 8192]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [8192]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>70b-<wbr>decode</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [1, 8192]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [8192]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>405b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 16384]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [16384]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>405b-<wbr>decode</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [1, 16384]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [16384]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li></ul></div>
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [*B, *normalized_shape]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [*normalized_shape]</span></p><ul class="wl-rows"><li><code class="wl-id">llama-<wbr>13b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 5120]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [5120]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f32</span></span></span></span></span></li></ul></div>
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [*B, *normalized_shape]</span></p><ul class="wl-rows"><li><code class="wl-id">dit-<wbr>xl-<wbr>2</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [1024, 1152]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2">Workload</th>
+<th rowspan="2" class="colsep">dtype</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="wl-name" rowspan="2"><code>llama-<wbr>8b-<wbr>prefill</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.06×</span></td><td>0.0123</td><td><code>flaggems</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.0131<br><span class="alt-slow">0.0212</span><br><span class="alt-slow">0.0213</span><br><span class="alt-slow">0.0231</span></td><td>4.78</td><td>61%</td><td>mem</td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-ahead">1.09×</span></td><td>0.0126</td><td><code>flaggems</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.0137<br><span class="alt-slow">0.0213</span><br><span class="alt-slow">0.0214</span><br><span class="alt-slow">0.0245</span></td><td>4.67</td><td>59%</td><td>mem</td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>8b-<wbr>decode</code></td><td class="colsep">bf16</td><td><span class="perf-ahead">1.21×</span></td><td>0.00234</td><td><code>flaggems</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00282<br><span class="alt-slow">0.00301</span><br><span class="alt-slow">0.00307</span><br><span class="alt-slow">0.0109</span></td><td>0.0123</td><td><span class="perf-unrated">0%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>llama-<wbr>70b-<wbr>prefill</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.09×</span></td><td>0.0237</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flashinfer</code></span></td><td>0.0259<br><span class="alt-slow">0.0307</span><br><span class="alt-slow">0.0402</span><br><span class="alt-slow">0.0465</span></td><td>4.95</td><td>63%</td><td>mem</td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-ahead">1.13×</span></td><td>0.0247</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flashinfer</code></span></td><td>0.0278<br><span class="alt-slow">0.0334</span><br><span class="alt-slow">0.0403</span><br><span class="alt-slow">0.0466</span></td><td>4.75</td><td>60%</td><td>mem</td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>70b-<wbr>decode</code></td><td class="colsep">bf16</td><td><span class="perf-ahead">1.24×</span></td><td>0.00294</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00365<br><span class="alt-slow">0.0041</span><br><span class="alt-slow">0.00426</span><br><span class="alt-slow">0.0202</span></td><td>0.0195</td><td><span class="perf-unrated">0%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>llama-<wbr>405b-<wbr>prefill</code></td><td class="colsep">f16</td><td><span class="perf-par">1.04×</span></td><td>0.0453</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flashinfer</code></span></td><td>0.0471<br><span class="alt-slow">0.0483</span><br><span class="alt-slow">0.0740</span><br><span class="alt-slow">0.0784</span></td><td>5.19</td><td>66%</td><td>mem</td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-ahead">1.10×</span></td><td>0.0457</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span><br><span class="alt-slow"><code>flashinfer</code></span></td><td>0.0504<br><span class="alt-slow">0.0508</span><br><span class="alt-slow">0.0744</span><br><span class="alt-slow">0.0783</span></td><td>5.14</td><td>65%</td><td>mem</td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>405b-<wbr>decode</code></td><td class="colsep">bf16</td><td><span class="perf-ahead">1.42×</span></td><td>0.00397</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00563<br><span class="alt-slow">0.00605</span><br><span class="alt-slow">0.00611</span><br><span class="alt-slow">0.0373</span></td><td>0.0289</td><td><span class="perf-unrated">1%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>13b-<wbr>prefill</code></td><td class="colsep">f32</td><td><span class="perf-par">1.04×</span></td><td>0.0254</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.0263<br><span class="alt-slow">0.0385</span></td><td>2.48</td><td>73%</td><td>mem</td></tr>
+<tr><td class="wl-name"><code>dit-<wbr>xl-<wbr>2</code></td><td class="colsep">bf16</td><td><span class="perf-par">0.98×</span></td><td>0.00624</td><td><code>torch</code><br><span class="alt-slow"><code>torch-compile</code></span></td><td>0.00614<br><span class="alt-slow">0.0065</span></td><td>0.945</td><td><span class="perf-unrated">17%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="fusedaddlayernormfwd"><a href="https://github.com/tile-ai/TileOPs/blob/0b1d6247bf11f907878996f9986c914ceba794a2/src/tileops/ops/norm/fused_add_layer_norm.py">FusedAddLayerNormFwd</a><a class="headerlink" href="#fusedaddlayernormfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x, residual</span>: [*B, N]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [N]</span></p><ul class="wl-rows"><li><code class="wl-id">llama-<wbr>8b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, residual</span>: [2048, 4096]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [4096]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>8b-<wbr>decode</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, residual</span>: [1, 4096]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [4096]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>70b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, residual</span>: [2048, 8192]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [8192]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>70b-<wbr>decode</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, residual</span>: [1, 8192]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [8192]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>13b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, residual</span>: [2048, 5120]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [5120]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f32</span></span></span></span></span></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2">Workload</th>
+<th rowspan="2" class="colsep">dtype</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="wl-name" rowspan="2"><code>llama-<wbr>8b-<wbr>prefill</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.37×</span></td><td>0.0200</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0274<br><span class="alt-slow">0.1165</span></td><td>3.35</td><td>74%</td><td>mem</td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-ahead">1.39×</span></td><td>0.0207</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0288<br><span class="alt-slow">0.1176</span></td><td>3.24</td><td>72%</td><td>mem</td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>8b-<wbr>decode</code></td><td class="colsep">bf16</td><td><span class="perf-ahead">1.40×</span></td><td>0.00262</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00368<br><span class="alt-slow">0.0187</span></td><td>0.0125</td><td><span class="perf-unrated">0%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>llama-<wbr>70b-<wbr>prefill</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.13×</span></td><td>0.0399</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0449<br><span class="alt-slow">0.2277</span></td><td>3.37</td><td>75%</td><td>mem</td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-ahead">1.12×</span></td><td>0.0412</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0461<br><span class="alt-slow">0.2292</span></td><td>3.26</td><td>72%</td><td>mem</td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>70b-<wbr>decode</code></td><td class="colsep">bf16</td><td><span class="perf-ahead">1.55×</span></td><td>0.00358</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00557<br><span class="alt-slow">0.0254</span></td><td>0.0183</td><td><span class="perf-unrated">1%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>13b-<wbr>prefill</code></td><td class="colsep">f32</td><td><span class="perf-ahead">1.06×</span></td><td>0.0443</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0472<br><span class="alt-slow">0.0735</span></td><td>1.89</td><td><span class="perf-ahead">84%</span></td><td>mem</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="rmsnormfwd"><a href="https://github.com/tile-ai/TileOPs/blob/0b1d6247bf11f907878996f9986c914ceba794a2/src/tileops/ops/norm/rms_norm.py">RMSNormFwd</a><a class="headerlink" href="#rmsnormfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [*B, *normalized_shape]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [*normalized_shape]</span></p><ul class="wl-rows"><li><code class="wl-id">llama-<wbr>8b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 4096]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [4096]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">eps</span>=<span class="wl-v">1e-06</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>8b-<wbr>decode</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [1, 4096]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [4096]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">eps</span>=<span class="wl-v">1e-06</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>70b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 8192]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [8192]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">eps</span>=<span class="wl-v">1e-06</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>70b-<wbr>decode</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [1, 8192]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [8192]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">eps</span>=<span class="wl-v">1e-06</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>405b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 16384]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [16384]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">eps</span>=<span class="wl-v">1e-06</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>405b-<wbr>decode</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [1, 16384]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [16384]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">eps</span>=<span class="wl-v">1e-06</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>13b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [2048, 5120]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [5120]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li></ul></div>
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [*B, *normalized_shape]</span></p><ul class="wl-rows"><li><code class="wl-id">qk-<wbr>norm-<wbr>head</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 2048, 128]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2">Workload</th>
+<th rowspan="2" class="colsep">dtype</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="wl-name" rowspan="2"><code>llama-<wbr>8b-<wbr>prefill</code></td><td class="colsep">f16</td><td><span class="perf-par">1.00×</span></td><td>0.0108</td><td><code>flashinfer</code><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0108<br><span class="alt-slow">0.0124</span><br><span class="alt-slow">0.0125</span><br><span class="alt-slow">0.0130</span><br><span class="alt-slow">0.0651</span></td><td>3.1</td><td>69%</td><td>mem</td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-par">1.00×</span></td><td>0.0109</td><td><code>flashinfer</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0109<br><span class="alt-slow">0.0123</span><br><span class="alt-slow">0.0126</span><br><span class="alt-slow">0.0136</span><br><span class="alt-slow">0.0656</span></td><td>3.09</td><td>69%</td><td>mem</td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>8b-<wbr>decode</code></td><td class="colsep">bf16</td><td><span class="perf-ahead">1.12×</span></td><td>0.00192</td><td><code>flashinfer</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00215<br><span class="alt-slow">0.00262</span><br><span class="alt-slow">0.00266</span><br><span class="alt-slow">0.00334</span><br><span class="alt-slow">0.0123</span></td><td>0.00853</td><td><span class="perf-unrated">0%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>llama-<wbr>70b-<wbr>prefill</code></td><td class="colsep">f16</td><td><span class="perf-par">0.98×</span></td><td>0.0200</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0195<br><span class="alt-slow">0.0200</span><br><span class="alt-slow">0.0207</span><br><span class="alt-slow">0.0217</span><br><span class="alt-slow">0.1332</span></td><td>3.35</td><td>74%</td><td>mem</td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-par">0.98×</span></td><td>0.0200</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0196<br><span class="alt-slow">0.0200</span><br><span class="alt-slow">0.0212</span><br><span class="alt-slow">0.0221</span><br><span class="alt-slow">0.1340</span></td><td>3.36</td><td>75%</td><td>mem</td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>70b-<wbr>decode</code></td><td class="colsep">bf16</td><td><span class="perf-ahead">1.05×</span></td><td>0.00237</td><td><code>flashinfer</code><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0025<br><span class="alt-slow">0.0031</span><br><span class="alt-slow">0.00352</span><br><span class="alt-slow">0.0041</span><br><span class="alt-slow">0.0151</span></td><td>0.0138</td><td><span class="perf-unrated">0%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>llama-<wbr>405b-<wbr>prefill</code></td><td class="colsep">f16</td><td><span class="perf-par">1.00×</span></td><td>0.0369</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0368<br><span class="alt-slow">0.0369</span><br><span class="alt-slow">0.0399</span><br><span class="alt-slow">0.0488</span><br><span class="alt-slow">0.2656</span></td><td>3.64</td><td><span class="perf-ahead">81%</span></td><td>mem</td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-par">1.00×</span></td><td>0.0369</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0370<br><span class="alt-slow">0.0378</span><br><span class="alt-slow">0.0408</span><br><span class="alt-slow">0.0489</span><br><span class="alt-slow">0.2670</span></td><td>3.64</td><td><span class="perf-ahead">81%</span></td><td>mem</td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>405b-<wbr>decode</code></td><td class="colsep">bf16</td><td><span class="perf-ahead">1.11×</span></td><td>0.00314</td><td><code>flashinfer</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00349<br><span class="alt-slow">0.00419</span><br><span class="alt-slow">0.00442</span><br><span class="alt-slow">0.00477</span><br><span class="alt-slow">0.0207</span></td><td>0.0209</td><td><span class="perf-unrated">1%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>13b-<wbr>prefill</code></td><td class="colsep">bf16</td><td><span class="perf-par">0.99×</span></td><td>0.0135</td><td><code>flashinfer</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0134<br><span class="alt-slow">0.0142</span><br><span class="alt-slow">0.0154</span><br><span class="alt-slow">0.0158</span><br><span class="alt-slow">0.0817</span></td><td>3.11</td><td>69%</td><td>mem</td></tr>
+<tr><td class="wl-name"><code>qk-<wbr>norm-<wbr>head</code></td><td class="colsep">bf16</td><td><span class="perf-ahead">1.30×</span></td><td>0.00285</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00371<br><span class="alt-slow">0.0178</span></td><td>1.1</td><td><span class="perf-unrated">33%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="fusedaddrmsnormfwd"><a href="https://github.com/tile-ai/TileOPs/blob/0b1d6247bf11f907878996f9986c914ceba794a2/src/tileops/ops/norm/fused_add_rms_norm.py">FusedAddRMSNormFwd</a><a class="headerlink" href="#fusedaddrmsnormfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x, residual</span>: [*B, N]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [N]</span></p><ul class="wl-rows"><li><code class="wl-id">llama-<wbr>8b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, residual</span>: [2048, 4096]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [4096]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>8b-<wbr>decode</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, residual</span>: [1, 4096]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [4096]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>70b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, residual</span>: [2048, 8192]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [8192]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>70b-<wbr>decode</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, residual</span>: [1, 8192]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [8192]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>405b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, residual</span>: [2048, 16384]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [16384]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>405b-<wbr>decode</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, residual</span>: [1, 16384]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [16384]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>13b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, residual</span>: [2048, 5120]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight</span>: [5120]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2">Workload</th>
+<th rowspan="2" class="colsep">dtype</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="wl-name" rowspan="2"><code>llama-<wbr>8b-<wbr>prefill</code></td><td class="colsep">f16</td><td><span class="perf-par">1.02×</span></td><td>0.0184</td><td><code>vllm</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0187<br><span class="alt-slow">0.0193</span><br><span class="alt-slow">0.0195</span><br><span class="alt-slow">0.2672</span></td><td>2.28</td><td><span class="perf-ahead">81%</span></td><td>mem</td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-par">1.04×</span></td><td>0.0184</td><td><code>vllm</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0191<br><span class="alt-slow">0.0193</span><br><span class="alt-slow">0.0196</span><br><span class="alt-slow">0.2692</span></td><td>2.27</td><td><span class="perf-ahead">81%</span></td><td>mem</td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>8b-<wbr>decode</code></td><td class="colsep">bf16</td><td><span class="perf-ahead">1.22×</span></td><td>0.00192</td><td><code>flashinfer</code><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00234<br><span class="alt-slow">0.00294</span><br><span class="alt-slow">0.00323</span><br><span class="alt-slow">0.0285</span></td><td>0.0107</td><td><span class="perf-unrated">0%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>llama-<wbr>70b-<wbr>prefill</code></td><td class="colsep">f16</td><td><span class="perf-par">1.03×</span></td><td>0.0349</td><td><code>vllm</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0358<br><span class="alt-slow">0.0359</span><br><span class="alt-slow">0.0362</span><br><span class="alt-slow">0.5139</span></td><td>2.41</td><td><span class="perf-ahead">86%</span></td><td>mem</td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-par">1.03×</span></td><td>0.0352</td><td><code>flashinfer</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0361<br><span class="alt-slow">0.0362</span><br><span class="alt-slow">0.0364</span><br><span class="alt-slow">0.5181</span></td><td>2.39</td><td><span class="perf-ahead">85%</span></td><td>mem</td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>70b-<wbr>decode</code></td><td class="colsep">bf16</td><td><span class="perf-ahead">1.33×</span></td><td>0.00211</td><td><code>flashinfer</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00282<br><span class="alt-slow">0.00298</span><br><span class="alt-slow">0.00346</span><br><span class="alt-slow">0.0297</span></td><td>0.0194</td><td><span class="perf-unrated">1%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>llama-<wbr>405b-<wbr>prefill</code></td><td class="colsep">f16</td><td><span class="perf-par">1.05×</span></td><td>0.0680</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0711<br><span class="alt-slow">0.0718</span><br><span class="alt-slow">0.0777</span><br><span class="alt-slow">0.9834</span></td><td>2.47</td><td><span class="perf-ahead">88%</span></td><td>mem</td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-ahead">1.06×</span></td><td>0.0680</td><td><code>flashinfer</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0721<br><span class="alt-slow">0.0722</span><br><span class="alt-slow">0.0782</span><br><span class="alt-slow">0.9917</span></td><td>2.47</td><td><span class="perf-ahead">88%</span></td><td>mem</td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>405b-<wbr>decode</code></td><td class="colsep">bf16</td><td><span class="perf-ahead">1.48×</span></td><td>0.00282</td><td><code>flashinfer</code><br><span class="alt-slow"><code>vllm</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00416<br><span class="alt-slow">0.00496</span><br><span class="alt-slow">0.00634</span><br><span class="alt-slow">0.0314</span></td><td>0.0291</td><td><span class="perf-unrated">1%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>13b-<wbr>prefill</code></td><td class="colsep">bf16</td><td><span class="perf-ahead">1.06×</span></td><td>0.0224</td><td><code>vllm</code><br><span class="alt-slow"><code>flashinfer</code></span><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0238<br><span class="alt-slow">0.0240</span><br><span class="alt-slow">0.0250</span><br><span class="alt-slow">0.3384</span></td><td>2.34</td><td><span class="perf-ahead">83%</span></td><td>mem</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="adalayernormfwd"><a href="https://github.com/tile-ai/TileOPs/blob/0b1d6247bf11f907878996f9986c914ceba794a2/src/tileops/ops/norm/ada_layer_norm.py">AdaLayerNormFwd</a><a class="headerlink" href="#adalayernormfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x, scale, shift</span>: [*B, N]</span></p><ul class="wl-rows"><li><code class="wl-id">dit-<wbr>xl-<wbr>2</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, scale, shift</span>: [1024, 1152]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16, f32</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>8b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, scale, shift</span>: [2048, 4096]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>8b-<wbr>decode</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, scale, shift</span>: [1, 4096]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2">Workload</th>
+<th rowspan="2" class="colsep">dtype</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="wl-name" rowspan="3"><code>dit-<wbr>xl-<wbr>2</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.45×</span></td><td>0.00522</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00758<br><span class="alt-slow">0.0369</span></td><td>1.58</td><td><span class="perf-unrated">40%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-ahead">1.47×</span></td><td>0.00531</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00781<br><span class="alt-slow">0.0372</span></td><td>1.55</td><td><span class="perf-unrated">39%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep">f32</td><td><span class="perf-ahead">1.25×</span></td><td>0.00739</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00922<br><span class="alt-slow">0.0158</span></td><td>1.12</td><td>57%</td><td>mem</td></tr>
+<tr><td class="wl-name" rowspan="2"><code>llama-<wbr>8b-<wbr>prefill</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.30×</span></td><td>0.0197</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0256<br><span class="alt-slow">0.1759</span></td><td>2.98</td><td>76%</td><td>mem</td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-ahead">1.35×</span></td><td>0.0197</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0266<br><span class="alt-slow">0.1768</span></td><td>2.97</td><td>75%</td><td>mem</td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>8b-<wbr>decode</code></td><td class="colsep">bf16</td><td><span class="perf-par">0.99×</span></td><td>0.0027</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00269<br><span class="alt-slow">0.0200</span></td><td>0.0106</td><td><span class="perf-unrated">0%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="adalayernormzerofwd"><a href="https://github.com/tile-ai/TileOPs/blob/0b1d6247bf11f907878996f9986c914ceba794a2/src/tileops/ops/norm/ada_layer_norm_zero.py">AdaLayerNormZeroFwd</a><a class="headerlink" href="#adalayernormzerofwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x, scale, shift, gate</span>: [*B, N]</span></p><ul class="wl-rows"><li><code class="wl-id">dit-<wbr>xl-<wbr>2</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, scale, shift, gate</span>: [1024, 1152]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16, f32</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>8b-<wbr>prefill</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, scale, shift, gate</span>: [2048, 4096]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">llama-<wbr>8b-<wbr>decode</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x, scale, shift, gate</span>: [1, 4096]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2">Workload</th>
+<th rowspan="2" class="colsep">dtype</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="wl-name" rowspan="3"><code>dit-<wbr>xl-<wbr>2</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.28×</span></td><td>0.00611</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00784<br><span class="alt-slow">0.0472</span></td><td>1.54</td><td><span class="perf-unrated">43%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-ahead">1.34×</span></td><td>0.00611</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00819<br><span class="alt-slow">0.0476</span></td><td>1.54</td><td><span class="perf-unrated">43%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep">f32</td><td><span class="perf-ahead">1.06×</span></td><td>0.00931</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00989<br><span class="alt-slow">0.0197</span></td><td>1.01</td><td>56%</td><td>mem</td></tr>
+<tr><td class="wl-name" rowspan="2"><code>llama-<wbr>8b-<wbr>prefill</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.12×</span></td><td>0.0245</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0275<br><span class="alt-slow">0.2296</span></td><td>2.74</td><td>76%</td><td>mem</td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-ahead">1.15×</span></td><td>0.0244</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.0281<br><span class="alt-slow">0.2309</span></td><td>2.74</td><td>76%</td><td>mem</td></tr>
+<tr><td class="wl-name"><code>llama-<wbr>8b-<wbr>decode</code></td><td class="colsep">bf16</td><td><span class="perf-ahead">1.12×</span></td><td>0.00285</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-ref</code></span></td><td>0.00318<br><span class="alt-slow">0.0249</span></td><td>0.0115</td><td><span class="perf-unrated">0%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="batchnormfwd"><a href="https://github.com/tile-ai/TileOPs/blob/0b1d6247bf11f907878996f9986c914ceba794a2/src/tileops/ops/norm/batch_norm.py">BatchNormFwd</a><a class="headerlink" href="#batchnormfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [B, C, *L]</span><span class="wl-cell wl-tensor"><span class="wl-k">running_mean, running_var, weight, bias</span>: [C], <span class="wl-dt">f32</span></span></p><ul class="wl-rows"><li><code class="wl-id">resnet-<wbr>fc</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [32, 64]</span><span class="wl-cell wl-tensor"><span class="wl-k">running_mean, running_var, weight, bias</span>: [64], <span class="wl-dt">f32</span></span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">training</span>=<span class="wl-v">true</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span></span></span></li><li><code class="wl-id">resnet-<wbr>stage1</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [8, 64, 32, 32]</span><span class="wl-cell wl-tensor"><span class="wl-k">running_mean, running_var, weight, bias</span>: [64], <span class="wl-dt">f32</span></span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">training</span>=<span class="wl-v">true</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">resnet-<wbr>stage2</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 32, 32]</span><span class="wl-cell wl-tensor"><span class="wl-k">running_mean, running_var, weight, bias</span>: [128], <span class="wl-dt">f32</span></span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">training</span>=<span class="wl-v">true</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span></span></span></li><li><code class="wl-id">resnet-<wbr>stage3</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 256, 28, 28]</span><span class="wl-cell wl-tensor"><span class="wl-k">running_mean, running_var, weight, bias</span>: [256], <span class="wl-dt">f32</span></span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">training</span>=<span class="wl-v">true</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, f32</span></span></span></span></span></li><li><code class="wl-id">large-<wbr>spatial</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 1024, 1024]</span><span class="wl-cell wl-tensor"><span class="wl-k">running_mean, running_var, weight, bias</span>: [128], <span class="wl-dt">f32</span></span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">training</span>=<span class="wl-v">true</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span></span></span></li><li><code class="wl-id">resnet-<wbr>stage3-<wbr>eval</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 256, 28, 28]</span><span class="wl-cell wl-tensor"><span class="wl-k">running_mean, running_var, weight, bias</span>: [256], <span class="wl-dt">f32</span></span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span></span></span></li></ul></div>
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [B, C, *L]</span></p><ul class="wl-rows"><li><code class="wl-id">resnet-<wbr>stem</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [8, 64, 56, 56]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">training</span>=<span class="wl-v">true</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">bf16</span></span></span></span></span></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2">Workload</th>
+<th rowspan="2" class="colsep">dtype</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="wl-name"><code>resnet-<wbr>fc</code></td><td class="colsep">f16</td><td><span class="perf-par">1.03×</span></td><td>0.00179</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-cudnn</code></span></td><td>0.00184<br><span class="alt-slow">0.00714</span><br><span class="alt-slow">0.0127</span></td><td>0.008</td><td><span class="perf-unrated">0%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>resnet-<wbr>stage1</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.39×</span></td><td>0.00282</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-cudnn</code></span></td><td>0.0039<br><span class="alt-slow">0.0122</span><br><span class="alt-slow">0.0131</span></td><td>1.3</td><td><span class="perf-unrated">17%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-ahead">1.43×</span></td><td>0.00275</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-cudnn</code></span></td><td>0.00394<br><span class="alt-slow">0.0122</span><br><span class="alt-slow">0.0132</span></td><td>1.33</td><td><span class="perf-unrated">17%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name"><code>resnet-<wbr>stage2</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.22×</span></td><td>0.00259</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-cudnn</code></span></td><td>0.00317<br><span class="alt-slow">0.0120</span><br><span class="alt-slow">0.0121</span></td><td>1.42</td><td><span class="perf-unrated">18%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>resnet-<wbr>stage3</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.29×</span></td><td>0.00346</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-cudnn</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00445<br><span class="alt-slow">0.0131</span><br><span class="alt-slow">0.0137</span></td><td>1.63</td><td><span class="perf-unrated">21%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep">f32</td><td><span class="perf-ahead">1.14×</span></td><td>0.00442</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-cudnn</code></span><br><span class="alt-slow"><code>flaggems</code></span></td><td>0.00506<br><span class="alt-slow">0.00717</span><br><span class="alt-slow">0.00842</span></td><td>1.27</td><td><span class="perf-unrated">32%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name"><code>large-<wbr>spatial</code></td><td class="colsep">f16</td><td><span class="perf-behind">0.87×</span></td><td>0.8699</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-cudnn</code></span></td><td>0.7530<br><span class="alt-slow">4.6423</span><br><span class="alt-slow">5.2729</span></td><td>4.32</td><td>55%</td><td>mem</td></tr>
+<tr><td class="wl-name"><code>resnet-<wbr>stage3-<wbr>eval</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.26×</span></td><td>0.00291</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch-cudnn</code></span></td><td>0.00368<br><span class="alt-slow">0.00982</span><br><span class="alt-slow">0.0107</span></td><td>1.1</td><td><span class="perf-unrated">25%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name"><code>resnet-<wbr>stem</code></td><td class="colsep">bf16</td><td><span class="perf-behind">0.89×</span></td><td>0.00998</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch-cudnn</code></span></td><td>0.00886<br><span class="alt-slow">0.0359</span></td><td>0.804</td><td><span class="perf-unrated">14%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="batchnormbwd"><a href="https://github.com/tile-ai/TileOPs/blob/0b1d6247bf11f907878996f9986c914ceba794a2/src/tileops/ops/norm/batch_norm.py">BatchNormBwd</a><a class="headerlink" href="#batchnormbwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">grad_out, x</span>: [B, C, *L]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, mean, rstd</span>: [C], <span class="wl-dt">f32</span></span></p><ul class="wl-rows"><li><code class="wl-id">resnet-<wbr>fc</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">grad_out, x</span>: [32, 64]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, mean, rstd</span>: [64], <span class="wl-dt">f32</span></span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span></span></span></li><li><code class="wl-id">resnet-<wbr>stage1</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">grad_out, x</span>: [8, 64, 32, 32]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, mean, rstd</span>: [64], <span class="wl-dt">f32</span></span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">resnet-<wbr>stage2</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">grad_out, x</span>: [4, 128, 32, 32]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, mean, rstd</span>: [128], <span class="wl-dt">f32</span></span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span></span></span></li><li><code class="wl-id">resnet-<wbr>stage3</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">grad_out, x</span>: [4, 256, 28, 28]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, mean, rstd</span>: [256], <span class="wl-dt">f32</span></span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, f32</span></span></span></span></span></li><li><code class="wl-id">large-<wbr>spatial</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">grad_out, x</span>: [4, 128, 1024, 1024]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, mean, rstd</span>: [128], <span class="wl-dt">f32</span></span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span></span></span></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2">Workload</th>
+<th rowspan="2" class="colsep">dtype</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="wl-name"><code>resnet-<wbr>fc</code></td><td class="colsep">f16</td><td><span class="perf-ahead">6.62×</span></td><td>0.00192</td><td><code>torch-native-batch-norm</code><br><span class="alt-slow"><code>torch-autograd</code></span></td><td>0.0127<br><span class="alt-slow">0.0234</span></td><td>0.0096</td><td><span class="perf-unrated">0%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>resnet-<wbr>stage1</code></td><td class="colsep">f16</td><td><span class="perf-ahead">5.69×</span></td><td>0.00336</td><td><code>torch-native-batch-norm</code><br><span class="alt-slow"><code>torch-autograd</code></span></td><td>0.0191<br><span class="alt-slow">0.0274</span></td><td>1.4</td><td><span class="perf-unrated">21%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-ahead">5.76×</span></td><td>0.00333</td><td><code>torch-native-batch-norm</code><br><span class="alt-slow"><code>torch-autograd</code></span></td><td>0.0192<br><span class="alt-slow">0.0276</span></td><td>1.42</td><td><span class="perf-unrated">21%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name"><code>resnet-<wbr>stage2</code></td><td class="colsep">f16</td><td><span class="perf-ahead">5.26×</span></td><td>0.00294</td><td><code>torch-native-batch-norm</code><br><span class="alt-slow"><code>torch-autograd</code></span></td><td>0.0155<br><span class="alt-slow">0.0238</span></td><td>1.6</td><td><span class="perf-unrated">24%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>resnet-<wbr>stage3</code></td><td class="colsep">f16</td><td><span class="perf-ahead">4.15×</span></td><td>0.00416</td><td><code>torch-native-batch-norm</code><br><span class="alt-slow"><code>torch-autograd</code></span></td><td>0.0173<br><span class="alt-slow">0.0255</span></td><td>1.74</td><td><span class="perf-unrated">26%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep">f32</td><td><span class="perf-ahead">1.86×</span></td><td>0.00541</td><td><code>torch-native-batch-norm</code><br><span class="alt-slow"><code>torch-autograd</code></span></td><td>0.0100<br><span class="alt-slow">0.0182</span></td><td>1.34</td><td><span class="perf-unrated">40%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name"><code>large-<wbr>spatial</code></td><td class="colsep">f16</td><td><span class="perf-ahead">7.60×</span></td><td>1.5107</td><td><code>torch-native-batch-norm</code><br><span class="alt-slow"><code>torch-autograd</code></span></td><td>11.4876<br><span class="alt-slow">13.1421</span></td><td>3.2</td><td>47%</td><td>mem</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="groupnormfwd"><a href="https://github.com/tile-ai/TileOPs/blob/0b1d6247bf11f907878996f9986c914ceba794a2/src/tileops/ops/norm/group_norm.py">GroupNormFwd</a><a class="headerlink" href="#groupnormfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [B, C, *L]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [C]</span></p><ul class="wl-rows"><li><code class="wl-id">image-<wbr>affine</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [8, 128, 32, 32]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [128]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">num_groups</span>=<span class="wl-v">32</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">wider-<wbr>channel-<wbr>affine</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 256, 28, 28]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [256]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">num_groups</span>=<span class="wl-v">32</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, f32</span></span></span></span></span></li><li><code class="wl-id">tail-<wbr>spatial-<wbr>affine</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 30, 30]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [128]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">num_groups</span>=<span class="wl-v">16</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span></span></span></li></ul></div>
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [B, C, *L]</span></p><ul class="wl-rows"><li><code class="wl-id">image</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [8, 128, 32, 32]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">num_groups</span>=<span class="wl-v">32</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">wider-<wbr>channel</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 256, 28, 28]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">num_groups</span>=<span class="wl-v">32</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, f32</span></span></span></span></span></li><li><code class="wl-id">tail-<wbr>spatial</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 128, 30, 30]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">num_groups</span>=<span class="wl-v">16</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span></span></span></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2">Workload</th>
+<th rowspan="2" class="colsep">dtype</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="wl-name" rowspan="2"><code>image-<wbr>affine</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.21×</span></td><td>0.00326</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00394<br><span class="alt-slow">0.00518</span><br><span class="alt-slow">0.0153</span></td><td>2.25</td><td><span class="perf-unrated">29%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-ahead">1.19×</span></td><td>0.0033</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00394<br><span class="alt-slow">0.00506</span><br><span class="alt-slow">0.0154</span></td><td>2.23</td><td><span class="perf-unrated">28%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>wider-<wbr>channel-<wbr>affine</code></td><td class="colsep">f16</td><td><span class="perf-par">1.03×</span></td><td>0.00381</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00394<br><span class="alt-slow">0.00454</span><br><span class="alt-slow">0.0164</span></td><td>1.48</td><td><span class="perf-unrated">19%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep">f32</td><td><span class="perf-par">1.03×</span></td><td>0.00467</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00483<br><span class="alt-slow">0.00506</span><br><span class="alt-slow">0.0162</span></td><td>1.2</td><td><span class="perf-unrated">31%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name"><code>tail-<wbr>spatial-<wbr>affine</code></td><td class="colsep">f16</td><td><span class="perf-par">1.05×</span></td><td>0.00394</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00413<br><span class="alt-slow">0.00448</span><br><span class="alt-slow">0.0154</span></td><td>0.82</td><td><span class="perf-unrated">10%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>image</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.17×</span></td><td>0.00314</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00368<br><span class="alt-slow">0.00437</span><br><span class="alt-slow">0.0132</span></td><td>1.67</td><td><span class="perf-unrated">30%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-ahead">1.18×</span></td><td>0.00314</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00371<br><span class="alt-slow">0.00422</span><br><span class="alt-slow">0.0132</span></td><td>1.67</td><td><span class="perf-unrated">30%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>wider-<wbr>channel</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.06×</span></td><td>0.00339</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00358<br><span class="alt-slow">0.00368</span><br><span class="alt-slow">0.0141</span></td><td>1.18</td><td><span class="perf-unrated">21%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep">f32</td><td><span class="perf-par">1.03×</span></td><td>0.00429</td><td><code>flaggems</code><br><span class="alt-slow"><code>torch-compile</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00442<br><span class="alt-slow">0.00522</span><br><span class="alt-slow">0.0140</span></td><td>0.936</td><td><span class="perf-unrated">33%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name"><code>tail-<wbr>spatial</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.15×</span></td><td>0.00307</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00352<br><span class="alt-slow">0.00365</span><br><span class="alt-slow">0.0136</span></td><td>0.75</td><td><span class="perf-unrated">13%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="instancenormfwd"><a href="https://github.com/tile-ai/TileOPs/blob/0b1d6247bf11f907878996f9986c914ceba794a2/src/tileops/ops/norm/instance_norm.py">InstanceNormFwd</a><a class="headerlink" href="#instancenormfwd" title="Permanent link">&para;</a></h2>
+<div class="wl-key">
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [B, C, *L]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [C]</span></p><ul class="wl-rows"><li><code class="wl-id">image-<wbr>affine</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [8, 128, 32, 32]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [128]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">wider-<wbr>channel-<wbr>affine</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 256, 28, 28]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [256]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, f32</span></span></span></span></span></li><li><code class="wl-id">tail-<wbr>spatial-<wbr>affine</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 64, 30, 30]</span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [64]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span></span></span></li></ul></div>
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [B, C, *L]</span></p><ul class="wl-rows"><li><code class="wl-id">image</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [8, 128, 32, 32]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, bf16</span></span></span></span></span></li><li><code class="wl-id">wider-<wbr>channel</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 256, 28, 28]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16, f32</span></span></span></span></span></li><li><code class="wl-id">tail-<wbr>spatial</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [4, 64, 30, 30]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span></span></span></li></ul></div>
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [B, C, *L]</span><span class="wl-cell wl-tensor"><span class="wl-k">running_mean, running_var</span>: [C], <span class="wl-dt">f32</span></span></p><ul class="wl-rows"><li><code class="wl-id">image-<wbr>track-<wbr>stats</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [8, 128, 32, 32]</span><span class="wl-cell wl-tensor"><span class="wl-k">running_mean, running_var</span>: [128], <span class="wl-dt">f32</span></span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span></span></span></li></ul></div>
+<div class="wl-group"><p class="wl-shared"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [B, C, *L]</span><span class="wl-cell wl-tensor"><span class="wl-k">running_mean, running_var</span>: [C], <span class="wl-dt">f32</span></span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [C]</span></p><ul class="wl-rows"><li><code class="wl-id">image-<wbr>eval</code><span class="wl-delta"><span class="wl-flow"><span class="wl-part"><span class="wl-cell wl-tensor"><span class="wl-k">x</span>: [8, 128, 32, 32]</span><span class="wl-cell wl-tensor"><span class="wl-k">running_mean, running_var</span>: [128], <span class="wl-dt">f32</span></span><span class="wl-cell wl-tensor"><span class="wl-k">weight, bias</span>: [128]</span></span><span class="wl-part"><span class="wl-cell wl-scalar"><span class="wl-dim"><span class="wl-k">use_input_stats</span>=<span class="wl-v">false</span></span></span><span class="wl-cell wl-scalar"><span class="wl-k">dtype</span>=<span class="wl-v">f16</span></span></span></span></span></li></ul></div>
+</div>
+
+<div class="datatable">
+<table>
+<thead>
+<tr>
+<th rowspan="2">Workload</th>
+<th rowspan="2" class="colsep">dtype</th>
+<th>Ratio</th>
+<th>Device time</th>
+<th colspan="2">Alternatives</th>
+<th>Throughput</th>
+<th>SOL</th>
+<th>Bound</th>
+</tr>
+<tr>
+<th class="subhead">alt / ours</th>
+<th class="subhead">ms</th>
+<th class="subhead">name</th>
+<th class="subhead">ms</th>
+<th class="subhead">TFLOP/s</th>
+<th class="subhead">of ceiling</th>
+<th class="subhead">by</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="wl-name" rowspan="2"><code>image-<wbr>affine</code></td><td class="colsep">f16</td><td><span class="perf-par">1.04×</span></td><td>0.00294</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00307<br><span class="alt-slow">0.00375</span><br><span class="alt-slow">0.0208</span></td><td>2.49</td><td><span class="perf-unrated">32%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-par">1.01×</span></td><td>0.00301</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00304<br><span class="alt-slow">0.00375</span><br><span class="alt-slow">0.0207</span></td><td>2.44</td><td><span class="perf-unrated">31%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>wider-<wbr>channel-<wbr>affine</code></td><td class="colsep">f16</td><td><span class="perf-par">0.99×</span></td><td>0.00291</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00288<br><span class="alt-slow">0.00355</span><br><span class="alt-slow">0.0206</span></td><td>1.93</td><td><span class="perf-unrated">25%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep">f32</td><td><span class="perf-par">1.03×</span></td><td>0.00365</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00374<br><span class="alt-slow">0.00438</span><br><span class="alt-slow">0.0192</span></td><td>1.54</td><td><span class="perf-unrated">39%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name"><code>tail-<wbr>spatial-<wbr>affine</code></td><td class="colsep">f16</td><td><span class="perf-par">1.03×</span></td><td>0.00234</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0024<br><span class="alt-slow">0.00282</span><br><span class="alt-slow">0.0114</span></td><td>0.69</td><td><span class="perf-unrated">9%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>image</code></td><td class="colsep">f16</td><td><span class="perf-par">1.01×</span></td><td>0.00291</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00294<br><span class="alt-slow">0.00352</span><br><span class="alt-slow">0.0170</span></td><td>1.8</td><td><span class="perf-unrated">32%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep">bf16</td><td><span class="perf-par">0.99×</span></td><td>0.00298</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00294<br><span class="alt-slow">0.00352</span><br><span class="alt-slow">0.0171</span></td><td>1.76</td><td><span class="perf-unrated">31%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name" rowspan="2"><code>wider-<wbr>channel</code></td><td class="colsep">f16</td><td><span class="perf-par">0.99×</span></td><td>0.00282</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00278<br><span class="alt-slow">0.0033</span><br><span class="alt-slow">0.0162</span></td><td>1.43</td><td><span class="perf-unrated">25%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="colsep">f32</td><td><span class="perf-par">0.98×</span></td><td>0.00365</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.00358<br><span class="alt-slow">0.004</span><br><span class="alt-slow">0.0162</span></td><td>1.1</td><td><span class="perf-unrated">39%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name"><code>tail-<wbr>spatial</code></td><td class="colsep">f16</td><td><span class="perf-par">1.03×</span></td><td>0.00224</td><td><code>torch-compile</code><br><span class="alt-slow"><code>flaggems</code></span><br><span class="alt-slow"><code>torch</code></span></td><td>0.0023<br><span class="alt-slow">0.00262</span><br><span class="alt-slow">0.00826</span></td><td>0.514</td><td><span class="perf-unrated">9%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name"><code>image-<wbr>track-<wbr>stats</code></td><td class="colsep">f16</td><td><span class="perf-par">1.00×</span></td><td>0.00295</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.00294<br><span class="alt-slow">0.0341</span></td><td>1.78</td><td><span class="perf-unrated">32%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+<tr><td class="wl-name"><code>image-<wbr>eval</code></td><td class="colsep">f16</td><td><span class="perf-ahead">1.51×</span></td><td>0.00285</td><td><code>torch-compile</code><br><span class="alt-slow"><code>torch</code></span></td><td>0.00429<br><span class="alt-slow">0.0178</span></td><td>1.47</td><td><span class="perf-unrated">33%</span></td><td><span class="perf-unrated">lat</span></td></tr>
+</tbody>
+</table>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 tile-ai
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/tile-ai/TileOPs" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
