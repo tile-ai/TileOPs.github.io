@@ -61,7 +61,7 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.elementwise.LerpFwdOp
+::: tileops.elementwise.LerpScalarFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -397,7 +397,7 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.elementwise.ClampFwdOp
+::: tileops.elementwise.ClampTensorFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -409,7 +409,7 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.elementwise.MaskedFillFwdOp
+::: tileops.elementwise.MaskedFillTensorFwdOp
     options:
       show_root_heading: true
       heading_level: 3

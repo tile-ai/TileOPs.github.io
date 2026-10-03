@@ -196,6 +196,9 @@ _MANIFEST_FAMILY = {
     "quantization": "quantization", "sampling": "sampling", "mamba": "ssm",
     "rope": "positional", "gemm": "linear_algebra",
     "convolution": "convolution", "fft": "fft",
+    # One op so far, and a rotation is not a quantization step: it publishes on
+    # Other rather than carrying a page of its own.
+    "transform": "other",
 }
 # For an op the manifest does not declare: its package, then the keywords above.
 # Every package that maps to a family belongs here — `linear_attention` left out

@@ -5,23 +5,19 @@ constructor takes what the kernel is compiled with; the call takes the tensors.
 Both are documented under each op — `__init__` and `forward`, where `forward` is
 what runs when you call `op(...)`.
 
-## NeoX layout
+## Base frequencies
 
-::: tileops.rope.RopeNeoxFwdOp
+One op serves both rotation conventions: pass `rope_layout` as `"neox"` to
+rotate the two halves of a head against each other, or `"interleaved"` to rotate
+each adjacent pair.
+
+::: tileops.rope.RopeFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
 ::: tileops.rope.RopeNeoxPositionIdsFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-## Interleaved layout
-
-::: tileops.rope.RopeNonNeoxFwdOp
     options:
       show_root_heading: true
       heading_level: 3

@@ -15,7 +15,7 @@ what runs when you call `op(...)`.
       merge_init_into_class: false
       show_signature_annotations: false
 
-::: tileops.gemm.GemmFp8FwdOp
+::: tileops.gemm.GemmFP8FwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -41,7 +41,7 @@ what runs when you call `op(...)`.
       merge_init_into_class: false
       show_signature_annotations: false
 
-::: tileops.gemm.BmmFp8FwdOp
+::: tileops.gemm.BmmFP8FwdOp
     options:
       show_root_heading: true
       heading_level: 3

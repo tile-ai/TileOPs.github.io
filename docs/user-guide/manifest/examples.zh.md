@@ -48,13 +48,13 @@ GemmFwdOp:
 | 4 | workload 行给出参数与 index 的取值；第一行展开为两个 case，id 分别是 `square-1k-float16` 与 `square-1k-bfloat16` | [写一个 spec 8](writing.md#workloads) |
 | 5 | `roofline` 只给出 `flops`；`bytes` 由签名推导，等于 `(M*K + K*N + M*N)` 乘以每个元素的字节数 | [写一个 spec 9](writing.md#roofline) |
 
-## 2. MoePrePermuteFwdOp：ADT、let 与 generator {#moe}
+## 2. MoEPrePermuteFwdOp：ADT、let 与 generator {#moe}
 
 `layout` 参数的类型是 `spec/types.yaml` 中定义的 ADT `MGroupedLayout`，定义见[扩展写法 3](extensions.md#adt)。
 
 ```yaml
 # src/tileops/manifest/spec/moe.yaml
-MoePrePermuteFwdOp:
+MoEPrePermuteFwdOp:
   family: moe
   status: implemented
   signature:
@@ -90,7 +90,7 @@ MoePrePermuteFwdOp:
     flops: "0"
 ```
 
-**表 2** `MoePrePermuteFwdOp` 中各处写法的说明
+**表 2** `MoEPrePermuteFwdOp` 中各处写法的说明
 
 | No. | spec 中的写法 | 说明所在 |
 | --- | --- | --- |

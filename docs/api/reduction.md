@@ -93,19 +93,10 @@ what runs when you call `op(...)`.
 
 ## Vector norms
 
-::: tileops.reduction.L1NormFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
+One op serves every order `torch.linalg.vector_norm` is called at here: pass
+`ord` as 1, 2 or `inf`.
 
-::: tileops.reduction.L2NormFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-::: tileops.reduction.InfNormFwdOp
+::: tileops.reduction.VectorNormFwdOp
     options:
       show_root_heading: true
       heading_level: 3

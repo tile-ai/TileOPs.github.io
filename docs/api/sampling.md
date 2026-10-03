@@ -12,7 +12,7 @@ and offset as tensors so a draw is reproducible.
 
 ## Top-k selection
 
-::: tileops.attention.TopkSelectorFwdOp
+::: tileops.attention.TopKSelectFwdOp
     options:
       show_root_heading: true
       heading_level: 3

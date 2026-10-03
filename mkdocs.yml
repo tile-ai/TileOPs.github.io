@@ -77,6 +77,7 @@ nav:
     - Linear Attention: api/linear-attention.md
     - Mamba: api/mamba.md
     - FFT: api/fft.md
+    - Transform: api/transform.md
     - mHC: api/mhc.md
     - Engram: api/engram.md
     - Trace: api/trace.md

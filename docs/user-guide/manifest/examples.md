@@ -48,13 +48,13 @@ GemmFwdOp:
 | 4 | workload rows give the values of parameters and indices; the first row expands into two cases, with ids `square-1k-float16` and `square-1k-bfloat16` | [Spec fields § 8](writing.md#workloads) |
 | 5 | `roofline` gives only `flops`; `bytes` is derived from the signature and equals `(M*K + K*N + M*N)` times the bytes per element | [Spec fields § 9](writing.md#roofline) |
 
-## 2. MoePrePermuteFwdOp: ADT, let and generator {#moe}
+## 2. MoEPrePermuteFwdOp: ADT, let and generator {#moe}
 
 The type of the `layout` parameter is the ADT `MGroupedLayout` defined in `spec/types.yaml`; its definition is in [Extensions § 3](extensions.md#adt).
 
 ```yaml
 # src/tileops/manifest/spec/moe.yaml
-MoePrePermuteFwdOp:
+MoEPrePermuteFwdOp:
   family: moe
   status: implemented
   signature:
@@ -90,7 +90,7 @@ MoePrePermuteFwdOp:
     flops: "0"
 ```
 
-**Table 2** The forms used in `MoePrePermuteFwdOp`
+**Table 2** The forms used in `MoEPrePermuteFwdOp`
 
 | No. | Form in the spec | Described in |
 | --- | --- | --- |

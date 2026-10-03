@@ -15,13 +15,13 @@ what runs when you call `op(...)`.
 
 ## SSD stages
 
-::: tileops.mamba.DaCumsumFwdOp
+::: tileops.mamba.SSDChunkCumsumFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.mamba.CBProducerFwdOp
+::: tileops.mamba.SSDChunkCouplingFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -47,7 +47,7 @@ what runs when you call `op(...)`.
 
 ## Decode
 
-::: tileops.mamba.SSDDecodeFwdOp
+::: tileops.mamba.SSDRecurrentFwdOp
     options:
       show_root_heading: true
       heading_level: 3
