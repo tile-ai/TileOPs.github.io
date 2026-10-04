@@ -75,7 +75,7 @@ them. What the class writes is how a call reaches a kernel.
 class GemmFwdOp(Op):
     compile_boundary: ClassVar[bool] = True           # optional: claims fullgraph=True
     kernel_types: ClassVar[Mapping[str, type[Kernel]]] = {
-        "gemm_tma": GemmTmaKernel,
+        "gemm_tma": GemmTMAKernel,
         "gemm_cp_async": GemmCpAsyncKernel,
         "gemv": GemvKernel,
     }
@@ -216,11 +216,11 @@ The kernel is the only one of the six places the spec does not constrain: a kern
 neither reads the spec nor is checked against it.
 
 The split of arguments between the constructor and the call is a hard requirement:
-**only values compiled into the generated code go in the constructor.** `GemmTmaKernel`
+**only values compiled into the generated code go in the constructor.** `GemmTMAKernel`
 splits them like this:
 
 ```python
-class GemmTmaKernel(Kernel, GemmFwdInterface):
+class GemmTMAKernel(Kernel, GemmFwdInterface):
     def __init__(self, m, n, k, dtype, config=None, tune=False, trans_a=False, trans_b=False, ...):
         self.kernel = _gemm_kernel(m, n, k, trans_a, trans_b, self.dtype_str, ...)  # compiles
         self.init_config(config, tune)      # tile sizes and pipeline depth

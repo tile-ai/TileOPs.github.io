@@ -4,7 +4,7 @@ This page describes forms that only some specs use. Each section covers one case
 
 ## 1. Optional inputs, nullable outputs and omittable parameters {#presence}
 
-Whether a tensor exists is expressed with `present`. FusedMoeSharedExpert is an example:
+Whether a tensor exists is expressed with `present`. FusedMoESharedExpert is an example:
 
 ```yaml
 inputs:
@@ -138,7 +138,7 @@ An op without effect declarations only reads its inputs and allocates new tensor
 
 | No. | Declaration | Meaning | Example |
 | --- | --- | --- | --- |
-| 1 | `buffer: out` on an output | `forward` gets a parameter `out` after all inputs. When the caller passes `out`, the op writes the result into it and returns it; otherwise the op allocates a new tensor. `out` has the same shape and dtype as that output | `output` of MoeGroupedGemm |
+| 1 | `buffer: out` on an output | `forward` gets a parameter `out` after all inputs. When the caller passes `out`, the op writes the result into it and returns it; otherwise the op allocates a new tensor. `out` has the same shape and dtype as that output | `output` of MoEGroupedGemm |
 | 2 | `mutated: true` on an input | the op may write this input, and its contents before the call take part in the computation | |
 | 3 | `mutated: true` and `write_only: true` on an input | a result buffer that must be passed: the op overwrites it, and the result depends only on the other inputs; if the op returns `None`, `outputs` is empty | `output` of FusedMoEExperts |
 | 4 | `mutated: "<discriminant expression>"` on an input | the op writes this input only when the expression is true | `mutated: inplace` of activation functions |
@@ -234,7 +234,7 @@ The generated call checks apply the same rule to TileOPs in-tree implementations
 
 ## 10. Composite ops: composition {#composition}
 
-A composite op uses `composition` to record the sub-ops its in-tree implementation may hold, and the positions of its own kernels. FusedMoeSharedExpert is an example:
+A composite op uses `composition` to record the sub-ops its in-tree implementation may hold, and the positions of its own kernels. FusedMoESharedExpert is an example:
 
 ```yaml
 composition:

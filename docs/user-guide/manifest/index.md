@@ -135,7 +135,7 @@ The following belong to the implementation, are decided by code, and do not appe
 - Each file is a non-empty mapping from op name to spec, and the `family` of every spec in a file equals the family the file name denotes.
 - At load time all files are merged into one manifest. A duplicated op name, or a file that does not follow the naming rules above, is an error.
 - ADTs shared by several specs are defined in `spec/types.yaml`, see [Extensions § 3](extensions.md#adt).
-- The key of a spec is the op's Python class name, and the validator requires `cls.__name__` to equal the key exactly. Keys end in `FwdOp` or `BwdOp`, and words that name a variant go before the direction suffix, for example `GroupedQueryAttentionPagedFwdOp`.
+- The key of a spec is the op's Python class name, and the validator requires `cls.__name__` to equal the key exactly. Keys end in `FwdOp` or `BwdOp`, and words that name a variant go before the direction suffix, for example `GQAPagedFwdOp`.
 
 ## 7. Pages of this guide {#pages}
 

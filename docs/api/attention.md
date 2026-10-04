@@ -7,7 +7,7 @@ what runs when you call `op(...)`.
 
 ## Multi-head attention
 
-::: tileops.attention.MultiHeadAttentionDecodePagedWithKVCacheFwdOp
+::: tileops.attention.MHADecodePagedWithKVCacheFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -15,31 +15,31 @@ what runs when you call `op(...)`.
 
 ## Grouped-query attention
 
-::: tileops.attention.GroupedQueryAttentionBwdOp
+::: tileops.attention.GQABwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.attention.GroupedQueryAttentionDenseFwdOp
+::: tileops.attention.GQADenseFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.attention.GroupedQueryAttentionPagedFwdOp
+::: tileops.attention.GQAPagedFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.attention.GroupedQueryAttentionPrefillPagedWithKVCacheFwdOp
+::: tileops.attention.GQAPrefillPagedWithKVCacheFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.attention.GroupedQueryAttentionVarlenFwdOp
+::: tileops.attention.GQAVarlenFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -47,7 +47,7 @@ what runs when you call `op(...)`.
 
 ## Multi-head latent attention
 
-::: tileops.attention.MultiHeadLatentAttentionDecodeWithKVCacheFwdOp
+::: tileops.attention.MLADecodeWithKVCacheFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -75,7 +75,7 @@ what runs when you call `op(...)`.
 
 ## DeepSeek sparse attention
 
-::: tileops.attention.DeepSeekSparseAttentionDecodeWithKVCacheFwdOp
+::: tileops.attention.DSADecodeWithKVCacheFwdOp
     options:
       show_root_heading: true
       heading_level: 3

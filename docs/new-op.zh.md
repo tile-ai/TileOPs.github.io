@@ -64,7 +64,7 @@ op 类继承 [`Op`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops
 class GemmFwdOp(Op):
     compile_boundary: ClassVar[bool] = True           # optional: claims fullgraph=True
     kernel_types: ClassVar[Mapping[str, type[Kernel]]] = {
-        "gemm_tma": GemmTmaKernel,
+        "gemm_tma": GemmTMAKernel,
         "gemm_cp_async": GemmCpAsyncKernel,
         "gemv": GemvKernel,
     }
@@ -162,10 +162,10 @@ kernel 类继承 [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/til
 
 kernel 是这六处中唯一不受 spec 约束的一处：kernel 不读取 spec，也不对照 spec 检查。
 
-构造参数与调用参数的划分有一条硬性要求：**只有会被编译进生成代码的值才作为构造参数。** `GemmTmaKernel` 的划分如下：
+构造参数与调用参数的划分有一条硬性要求：**只有会被编译进生成代码的值才作为构造参数。** `GemmTMAKernel` 的划分如下：
 
 ```python
-class GemmTmaKernel(Kernel, GemmFwdInterface):
+class GemmTMAKernel(Kernel, GemmFwdInterface):
     def __init__(self, m, n, k, dtype, config=None, tune=False, trans_a=False, trans_b=False, ...):
         self.kernel = _gemm_kernel(m, n, k, trans_a, trans_b, self.dtype_str, ...)  # compiles
         self.init_config(config, tune)      # tile sizes and pipeline depth

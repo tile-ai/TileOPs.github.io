@@ -135,7 +135,7 @@ spec 描述 op 的外部契约，其内容分为五组字段：
 - 每个文件是从 op 名到 spec 的非空映射，文件中每个 spec 的 `family` 都与文件名所表示的 family 相同。
 - 加载时所有文件合并为一份 manifest。同一个 op 名重复出现，或者文件不符合上述命名规则，都会报错。
 - 多个 spec 共用的 ADT 定义在 `spec/types.yaml` 中，见[扩展写法 3](extensions.md#adt)。
-- spec 的键是 op 的 Python 类名，validator 要求 `cls.__name__` 与键完全相同。键以 `FwdOp` 或 `BwdOp` 结尾，表示变体的词写在方向后缀之前，例如 `GroupedQueryAttentionPagedFwdOp`。
+- spec 的键是 op 的 Python 类名，validator 要求 `cls.__name__` 与键完全相同。键以 `FwdOp` 或 `BwdOp` 结尾，表示变体的词写在方向后缀之前，例如 `GQAPagedFwdOp`。
 
 ## 7. 本指南的内容 {#pages}
 

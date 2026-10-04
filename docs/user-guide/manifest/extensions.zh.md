@@ -4,7 +4,7 @@
 
 ## 1. 可选输入、可空输出与可缺省参数 {#presence}
 
-张量是否存在通过 `present` 表达。以 FusedMoeSharedExpert 为例：
+张量是否存在通过 `present` 表达。以 FusedMoESharedExpert 为例：
 
 ```yaml
 inputs:
@@ -138,7 +138,7 @@ primitive 是表达式中可以调用的内建函数，例如 `broadcast`、`red
 
 | No. | 声明 | 含义 | 例子 |
 | --- | --- | --- | --- |
-| 1 | 输出上的 `buffer: out` | `forward` 在所有输入之后增加参数 `out`。调用方传入 `out` 时，op 将结果写入并返回它；未传入时，op 分配新张量。`out` 与该输出的形状和 dtype 相同 | MoeGroupedGemm 的 `output` |
+| 1 | 输出上的 `buffer: out` | `forward` 在所有输入之后增加参数 `out`。调用方传入 `out` 时，op 将结果写入并返回它；未传入时，op 分配新张量。`out` 与该输出的形状和 dtype 相同 | MoEGroupedGemm 的 `output` |
 | 2 | 输入上的 `mutated: true` | op 可能写入这个输入，它在调用前的内容参与计算 | |
 | 3 | 输入上的 `mutated: true` 与 `write_only: true` | 必须传入的结果缓冲：op 覆盖写入，结果只取决于其他输入；如果 op 返回 `None`，`outputs` 为空 | FusedMoEExperts 的 `output` |
 | 4 | 输入上的 `mutated: "<discriminant 表达式>"` | 仅当表达式为 true 时，op 才写入这个输入 | 激活函数的 `mutated: inplace` |
@@ -234,7 +234,7 @@ shape_rules:
 
 ## 10. 复合 op：composition {#composition}
 
-复合 op 用 `composition` 记录其 in-tree 实现可能持有的子 op，以及它自身 kernel 的位置。以 FusedMoeSharedExpert 为例：
+复合 op 用 `composition` 记录其 in-tree 实现可能持有的子 op，以及它自身 kernel 的位置。以 FusedMoESharedExpert 为例：
 
 ```yaml
 composition:

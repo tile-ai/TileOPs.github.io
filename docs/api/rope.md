@@ -11,13 +11,13 @@ One op serves both rotation conventions: pass `rope_layout` as `"neox"` to
 rotate the two halves of a head against each other, or `"interleaved"` to rotate
 each adjacent pair.
 
-::: tileops.rope.RopeFwdOp
+::: tileops.rope.RoPEFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.rope.RopeNeoxPositionIdsFwdOp
+::: tileops.rope.RoPENeoxPositionIdsFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -25,19 +25,19 @@ each adjacent pair.
 
 ## Scaled frequencies
 
-::: tileops.rope.RopeLlama31FwdOp
+::: tileops.rope.RoPELlama31FwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.rope.RopeYarnFwdOp
+::: tileops.rope.YaRNFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.rope.RopeLongRopeFwdOp
+::: tileops.rope.LongRoPEFwdOp
     options:
       show_root_heading: true
       heading_level: 3
