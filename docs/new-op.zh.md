@@ -199,7 +199,7 @@ out = kernel(q, k, v)                       # seq_len 从张量形状里读
 
 workload 行不属于单元测试的覆盖范围，因为契约测试已经用 op 运行过每一行。
 
-测试骨架使用 [`tests/test_base.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/test_base.py) 中的 `TestBase` 与 `FixtureBase`，用例写在 `PARAMS` 中。
+测试骨架使用 [`tests/workload_test_base.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/workload_test_base.py) 中的 `TestBase`，用例写在 `PARAMS` 中。
 
 op 有可选输入时，传入与不传入各至少需要一条用例，因为两种情况通常走不同的 kernel。
 

@@ -263,8 +263,8 @@ shapes to cover the kernel's branches. Cases fall into three groups by when they
 The workload rows are not part of unit-test coverage, because the contract tests
 already run each row through the op.
 
-The test scaffolding is `TestBase` and `FixtureBase` from
-[`tests/test_base.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/test_base.py), with the cases in `PARAMS`.
+The test scaffolding is `TestBase` from
+[`tests/workload_test_base.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/workload_test_base.py), with the cases in `PARAMS`.
 
 When the op has an optional input, it needs at least one case with the input passed
 and one without, because the two often run different kernels.

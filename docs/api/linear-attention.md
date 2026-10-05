@@ -39,6 +39,14 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
+## Kimi Delta Attention
+
+::: tileops.linear_attention.KDAFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
 ## Gated linear attention
 
 ::: tileops.linear_attention.GLAChunkFwdOp
