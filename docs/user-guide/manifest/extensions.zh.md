@@ -127,7 +127,7 @@ primitive 是表达式中可以调用的内建函数，例如 `broadcast`、`red
   ```
 
 - 要求内存连续的张量声明 `contiguous: true`，例如 MoE staged 系列 op 的输入与输出。没有这项声明的张量可以有任意 stride。
-- 必须位于 CPU 上的张量声明 `device: cpu`，例如 GatedDeltaNet 的 `cu_seqlens_cpu`。
+- 必须位于 CPU 上的张量声明 `device: cpu`，例如 `GDNFwdOp` 的 `cu_seqlens_cpu`。
 - 没有调用期张量输入的 op 声明 `device` 参数，例如 Alibi。调用设备的确定方式见[调用与校验 4](calls.md#device)。
 
 ## 6. 对参数的写入：effect {#effects}

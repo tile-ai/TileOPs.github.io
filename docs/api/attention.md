@@ -5,7 +5,7 @@ constructor takes what the kernel is compiled with; the call takes the tensors.
 Both are documented under each op — `__init__` and `forward`, where `forward` is
 what runs when you call `op(...)`.
 
-## Multi-head attention
+## Multi-Head Attention
 
 ::: tileops.attention.MHADecodePagedWithKVCacheFwdOp
     options:
@@ -13,7 +13,7 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-## Grouped-query attention
+## Grouped-Query Attention
 
 ::: tileops.attention.GQABwdOp
     options:
@@ -45,7 +45,7 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-## Multi-head latent attention
+## Multi-Head Latent Attention
 
 ::: tileops.attention.MLADecodeWithKVCacheFwdOp
     options:
@@ -53,7 +53,7 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-## Native sparse attention
+## Native Sparse Attention
 
 ::: tileops.attention.NSACompressedVarlenFwdOp
     options:
@@ -73,7 +73,7 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-## DeepSeek sparse attention
+## DeepSeek Sparse Attention
 
 ::: tileops.attention.DSADecodeWithKVCacheFwdOp
     options:

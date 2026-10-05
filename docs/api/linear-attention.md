@@ -33,7 +33,7 @@ what runs when you call `op(...)`.
 
 ## Gated DeltaNet
 
-::: tileops.linear_attention.GatedDeltaNetFwdOp
+::: tileops.linear_attention.GDNFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -47,7 +47,7 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-## Gated linear attention
+## Gated Linear Attention
 
 ::: tileops.linear_attention.GLAChunkFwdOp
     options:

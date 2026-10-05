@@ -33,7 +33,7 @@ a tool rather than an op, comes last. The Benchmarks pages use the same order.
 | [Attention](attention.md) | forward and backward attention, including the paged and decode kernels |
 | [MoE](moe.md) | the routed mixture-of-experts FFN and its separately callable stages |
 | [Top-k & Sampling](sampling.md) | top-k selection, logits masks (top-k, top-p, min-p) and sampling, including chain speculative sampling |
-| [Linear Attention](linear-attention.md) | DeltaNet, Gated DeltaNet, Kimi Delta Attention and gated linear attention |
+| [Linear Attention](linear-attention.md) | DeltaNet, Gated DeltaNet, Kimi Delta Attention and Gated Linear Attention |
 | [Mamba](mamba.md) | the SSD scan, its decode step, and the chunked forms |
 | [FFT](fft.md) | the discrete transform |
 | [mHC](mhc.md) | Manifold-Constrained Hyper-Connections — the pre/post pair around a layer |

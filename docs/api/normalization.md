@@ -5,7 +5,7 @@ constructor takes what the kernel is compiled with; the call takes the tensors.
 Both are documented under each op — `__init__` and `forward`, where `forward` is
 what runs when you call `op(...)`.
 
-## Layer norm
+## LayerNorm
 
 ::: tileops.norm.LayerNormFwdOp
     options:
@@ -19,7 +19,7 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-## RMS norm
+## RMSNorm
 
 ::: tileops.norm.RMSNormFwdOp
     options:
@@ -33,7 +33,7 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-## Adaptive layer norm
+## Adaptive LayerNorm
 
 ::: tileops.norm.AdaLayerNormFwdOp
     options:
@@ -47,7 +47,7 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-## Batch norm
+## BatchNorm
 
 ::: tileops.norm.BatchNormFwdOp
     options:
@@ -61,7 +61,7 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-## Group and instance norm
+## GroupNorm and InstanceNorm
 
 ::: tileops.norm.GroupNormFwdOp
     options:

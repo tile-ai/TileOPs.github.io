@@ -127,7 +127,7 @@ A primitive is a built-in function callable in expressions, such as `broadcast`,
   ```
 
 - A tensor that must be contiguous in memory declares `contiguous: true`, for example the inputs and outputs of the MoE staged ops. A tensor without this declaration can have any strides.
-- A tensor that must be on the CPU declares `device: cpu`, for example `cu_seqlens_cpu` in GatedDeltaNet.
+- A tensor that must be on the CPU declares `device: cpu`, for example `cu_seqlens_cpu` in `GDNFwdOp`.
 - An op without call-time tensor inputs declares a `device` parameter, for example Alibi. How the call device is determined is in [Calls and validation § 4](calls.md#device).
 
 ## 6. Writes to arguments: effect {#effects}
