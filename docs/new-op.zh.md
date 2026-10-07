@@ -11,7 +11,7 @@ spec 最先编写，因为后面五个文件的内容都由 spec 决定，最后
 | 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/__init__.py` 与 [`src/tileops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops)`<family>.py` | 校验器：family 的 `__all__` 与 manifest 一致 | op 名，由所属 family 导出，并出现在公开路径 `tileops.<family>.<Op>` 上 |
 | 3 | [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)`<family>/…` | —— | kernel 类，继承 `Kernel` |
 | 4 | [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)`test_<名字>.py` | 契约测试，逐个运行每个 workload 行 | 与参考实现 `ref_program` 的数值比对 |
-| 5 | [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)`bench_<名字>.py` | 校验器的 `bench` 级 | benchmark |
+| 5 | [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)`bench_<名字>.py` | 校验器的 `bench` 级 | benchmark，以及该 op 在 `benchmarks/_cases/` 中的 case 注册项 |
 
 下文以最简单的矩阵乘 `GemmFwdOp` 为例，依次说明这六处。
 
@@ -205,24 +205,24 @@ op 有可选输入时，传入与不传入各至少需要一条用例，因为�
 
 ## 第五步：写 benchmark
 
-benchmark 放在 [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops) 中。每个调用由一个基于 op 与该调用的 workload 构造的 `ManifestBenchmark` 计时。调用不手写：`manifest_calls(<Op>)` 为每个 workload 行的每个 dtype case 各实例化一个调用，并以 case id 命名。手写调用的 benchmark 无法通过校验器的 `bench` 级：
+benchmark 放在 [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops) 中。用例不需要手写：`bench.cases(<Op>)` 为每个 workload 行的每个 dtype case 各生成一个 `bench.Case`，并以 case id 命名；`bench.Runner(op, case).compare()` 先用 case 的 reference 校验 op 与各个对比实现，再为它们计时并记录结果。校验器的 `bench` 级会检查每个 benchmark 文件都调用了这两个接口：
 
 ```python
-from benchmarks.benchmark_base import ManifestBenchmark, manifest_calls
+import pytest
+
+from benchmarks import api as bench
 from tileops.ops import GemmFwdOp
-from workloads.gemm import GemmWorkload
 
 
-@pytest.mark.parametrize("call", manifest_calls(GemmFwdOp))
-def test_gemm_bench(call) -> None:
-    workload = GemmWorkload.from_call(call)
-    a, b = workload.gen_inputs()
-    op = GemmFwdOp(**call.arguments({}))
-    bm = ManifestBenchmark(op, workload)
-    bm.compare({"tileops": op, "torch-cublas": workload.ref_program}, a, b)
+@pytest.mark.parametrize("case", bench.cases(GemmFwdOp), ids=lambda case: case.id)
+def test_gemm_bench(case) -> None:
+    op = GemmFwdOp(**case.arguments)
+    bench.Runner(op, case).compare({"torch-cublas": case.reference})
 ```
 
-benchmark 至少还需要记录一个非 TileOPs 的基线，否则这一行没有比较对象。基线需要转换输入时，转换代码保留在基线自己的计时区间内。报出的各个数字的含义见 [benchmark 的计时方法](timing.md)。
+`bench.cases()` 依靠该 op 在 [`benchmarks/_cases/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/_cases) 中的注册项构造 case，注册项说明如何由 manifest 调用构造 workload。新 op 需要在所属 family 的模块里添加一项，否则 pytest 在收集用例时就会报错。
+
+benchmark 至少还需要记录一个非 TileOPs 的实现，否则这一行没有比较对象。对比实现需要转换输入时，转换代码保留在它自己的计时区间内。需要私有参数的对比实现如何传入、各实现按什么顺序校验和计时，见[编写 benchmark](user-guide/benchmark/writing.md)；报出的各个数字的含义见 [benchmark 的计时方法](timing.md)。
 
 ## 第六步：反转实现状态，让 op 进入 CI 校验
 

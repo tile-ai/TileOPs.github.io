@@ -161,11 +161,11 @@ def draw() -> str:
     q3 = q2 + 82
     s.box("ref", 0, q1, L("参考实现", "Reference"), [L("workloads/ 的 ref_program", "ref_program in workloads/")], fill=DEV)
     s.box("val", 1, q1, "validator", ["validate_manifest.py"])
-    s.box("inst", 2, q1, L("workload 实例化", "Workload instantiation"), ["manifest_calls"])
+    s.box("inst", 2, q1, L("workload 实例化", "Workload instantiation"), ["instantiate"])
     s.box("test", 0, q2, L("正确性测试", "Correctness tests"), ["tests/ops/"], fill=DEV)
     s.box("bench", 1, q2, L("benchmark 函数", "Benchmark function"), ["benchmarks/ops/"], fill=DEV)
     s.box("mtest", 2, q2, L("manifest 测试", "Manifest tests"), [L("meta 调用、target conformance", "meta calls, target conformance")])
-    s.box("mb", 1, q3, "ManifestBenchmark", [L("计时、FLOPs 与字节数", "timing, FLOPs and bytes")])
+    s.box("mb", 1, q3, "bench.Runner", [L("校验、计时、FLOPs 与字节数", "checks, timing, FLOPs, bytes")])
 
     # 发布层。
     y3 = y2 + 294 + 40
@@ -237,7 +237,7 @@ def draw() -> str:
         dx=6,
         dy=-4,
     )
-    s.edge([s.bottom("bench"), s.top("mb")], L("对比基线", "baselines"))
+    s.edge([s.bottom("bench"), s.top("mb")], L("对比实现", "implementations"))
 
     # 验证与测量层到发布层。
     mbx, mbb = s.bottom("mb")

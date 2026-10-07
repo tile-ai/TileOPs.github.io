@@ -1,0 +1,101 @@
+@startuml interfaces
+top to bottom direction
+skinparam defaultFontName "Noto Sans SC"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam linetype ortho
+skinparam ArrowColor #5965C7
+skinparam ArrowThickness 1.2
+skinparam classAttributeIconSize 0
+skinparam nodesep 40
+skinparam ranksep 44
+skinparam class {
+  BorderColor #4050B5
+  BackgroundColor #F0F2FF
+  HeaderBackgroundColor #AEB9EE
+  FontColor #1F2A66
+  AttributeFontColor #1F2A66
+}
+skinparam class<<internal>> {
+  BorderColor #7381A6
+  BackgroundColor #F5F7FB
+  HeaderBackgroundColor #E2E7F1
+  FontColor #29334A
+  AttributeFontColor #29334A
+}
+skinparam class<<domain>> {
+  BorderColor #4D8793
+  BackgroundColor #F2FAFB
+  HeaderBackgroundColor #D9EEF2
+  FontColor #24464D
+  AttributeFontColor #24464D
+}
+skinparam note {
+  BorderColor #7381A6
+  BackgroundColor #FFFFFF
+  FontColor #242A52
+}
+hide empty members
+hide stereotype
+title Benchmark 公开接口及其关系
+
+class "bench.cases()" as CASES << (F,#AEB9EE) >> {
+  + <color:#B4232C>cases</color>(op): list[bench.Case]
+}
+
+class "manifest Call" as Call <<internal>> {
+  + tensors: 形状与 dtype
+  + params: manifest 参数
+  + signature
+}
+
+class "case 注册项" as Entry <<internal>> {
+  + workload(call)
+  + inputs(workload)
+  + count_copies: bool
+  + binder(op, case): Implementation
+}
+
+class "bench.Case" as Case {
+  + <color:#B4232C>id</color>: str
+  + <color:#B4232C>inputs</color>: tuple
+  + <color:#B4232C>arguments</color>: dict
+  + params: dict
+  + <color:#B4232C>reference</color>: Callable
+  + verification
+  + count_copies: bool
+  + workload
+}
+
+class "bench.Runner" as Runner {
+  + <color:#B4232C>Runner</color>(op, case)
+  + <color:#B4232C>compare</color>(implementations): dict
+}
+
+class "bench.Implementation" as Implementation {
+  + run: Callable
+  + args: tuple | None
+  + reset: Callable | None
+  + noncomparable_reason: str | None
+}
+
+class Op <<domain>> {
+  + __call__(*inputs)
+  + eval_roofline()
+}
+
+CASES ..> Case : 生成
+Case o-left- Call
+Case o-right- Entry
+Runner o-up- Case
+Runner o-left- Op
+Runner ..right.> Implementation
+
+note as LEGEND
+  |<#AEB9EE> 公开 benchmark API |
+  |<#E2E7F1> 框架内部类型 |
+  |<#D9EEF2> TileOps op |
+  | <color:#B4232C>member</color> benchmark 文件直接使用 |
+end note
+CASES -[hidden]right- LEGEND
+@enduml

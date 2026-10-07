@@ -25,3 +25,5 @@
   op 在编译图中的形态，以及调用时的约定。
 - [benchmark 的计时方法](../timing.md)
   性能数据页上的数字如何测得。
+- [编写 benchmark](benchmark/writing.md)
+  用 manifest case 校验并计时 op 与对比实现。

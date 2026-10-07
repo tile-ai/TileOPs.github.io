@@ -33,8 +33,9 @@ from benchmarks.timing import bench_kernel
 samples = bench_kernel(op, args=(x, weight))   # one Sample per iteration
 ```
 
-A benchmark rarely calls `bench_kernel` directly. It calls `ManifestBenchmark.profile()`
-or `.compare()`, which take medians over these samples and compute the derived columns.
+A benchmark rarely calls `bench_kernel` directly. It goes through
+`bench.Runner(op, case).compare()`, which takes medians over these samples and computes
+the derived columns; [Writing benchmarks](user-guide/benchmark/writing.md) shows how.
 
 Inside, `bench_kernel` has three stages: collect, attribute and measure.
 
@@ -77,7 +78,8 @@ The five choices, and the reason for each:
 3. **Clear L2 before every iteration, and drain the device.** Without the clear, the
    first iteration reads from HBM and every later one from L2, so the median reports the
    best case of a full cache hit. Draining keeps the previous iteration from overlapping
-   this one.
+   this one. An implementation that restores overwritten inputs does so in its `reset`,
+   which runs before the clear, so the data it writes does not stay in L2.
 4. **Collect and attribute.** Each iteration pushes its iteration number as CUPTI's
    external correlation id, so every launch issued inside it carries that id; the
    correlation id in a kernel record maps back to the iteration number.
@@ -141,9 +143,9 @@ reason TileOPs times with CUPTI**, and it is why a row that fell back to CUDA ev
 cannot be compared with the other rows: in that row `device_busy_ms` and `latency_ms`
 hold the same number, and the `timing` field records `cuda-events`.
 
-## Comparing several implementations
+## Comparing several implementations {#comparing}
 
-To compare implementations within one case, `compare()` times each implementation
+To compare implementations within one case, `bench.Runner.compare()` times each implementation
 twice, in the order A B C C B A, and takes the median over the samples of both passes.
 
 In a fixed order, the implementation that runs first and the one that runs last see
@@ -164,13 +166,14 @@ details:
 
 The default case needs no change: one kernel per call, called through the Op
 interface, timed by `bench_kernel`, with no other thread using the GPU. Most ops are in
-this case today. Seven cases need separate handling:
+this case today. Eight cases need separate handling:
 
 | Your case | If you ignore it | What to do |
 | --- | --- | --- |
 | The timed closure contains `Tensor.backward` or `torch.autograd.grad` | the backward kernels come from the autograd engine's own thread, carry no iteration number, and the case raises instead of producing a figure | Drive a single fused node with `backward_of(out)`; for a chain, set `torch.autograd.set_multithreading_enabled(False)` |
 | Another thread in the process uses the GPU, or the timed closure uses CUPTI's `CUSTOM0` external id | those kernels carry no iteration number, or the closure overwrites the one the timer set, and it raises either way | Have the timed call launch its own work; use `CUSTOM1` / `CUSTOM2` instead |
-| The op produces its result through `copy_`, as in-place elementwise ops and MoE's write-back do | the timer collects the copy but by default leaves it out of `device_busy_ms` and reports it as `uncounted_copy_ms`, so the reading is too low | Pass `count_copies=True` for the case; every tag's reading then includes the copies |
+| The op produces its result through `copy_`, as in-place elementwise ops and MoE's write-back do | the timer collects the copy but by default leaves it out of `device_busy_ms` and reports it as `uncounted_copy_ms`, so the reading is too low | Set `count_copies=True` in the op's case entry under `benchmarks/_cases/`; every implementation's reading for that case then includes the copies |
+| An implementation writes into one of its inputs in place, or keeps state between calls | later iterations start from different data, and `compare()` raises before timing because the shared `case.inputs` changed | Give that implementation a private copy of the argument and restore it in `reset`, as in [`bench.Implementation`](user-guide/benchmark/writing.md#implementation); `reset` runs before the L2 flush and stays out of the reading |
 | One call launches several kernels | the gaps between kernels land in `latency_ms`, so a comparison by it against a fused implementation charges the gaps to the multi-kernel side | Draw conclusions from `device_busy_ms` only; `latency_ms` is comparable only between rows with equal `n_kernels` |
 | One call takes more than 10 ms | the iteration count hits the floor of 10, the wall-clock time far exceeds the 100 ms budget, and p10/p90 over 10 samples are coarse | Accept the longer wall-clock time, or state an iteration count and the sample size |
 | You want a kernel-level benchmark | the op has no spec, so shapes and roofline have to be written by hand and the spec validator cannot see them | Measure through the Op interface and write a [spec](user-guide/manifest/index.md) |

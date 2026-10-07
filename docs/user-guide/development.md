@@ -133,7 +133,10 @@ python -m pytest -q <bench-file>
   them at build time too; a baseline that fails to install there does not stop the
   build, and `sgl-kernel` is not in the image. A baseline missing from the
   container is installed at the version the repository declares.
-- How the numbers are timed: [How a benchmark is timed](../timing.md).
+- With `--tileops-verify`, a benchmark only checks correctness and times nothing, which
+  is a quick way to confirm the numerics after changing a kernel.
+- How to write a benchmark file is in [Writing benchmarks](benchmark/writing.md); how the
+  numbers are timed is in [How a benchmark is timed](../timing.md).
 
 ## Opening a PR { #pr }
 

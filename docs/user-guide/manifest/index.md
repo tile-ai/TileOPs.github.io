@@ -40,7 +40,7 @@ In the figure below, purple components are written by the developer, cyan compon
 | 3 | Op class | `src/tileops/ops/`, exported by `tileops.<family>` | an `__init__` that matches `params`; `kernel_types` (key to implementation class) and `interfaces` (call site to kernel interface); in the in-tree implementation (usually `_eager_forward`, see compile boundary below), constructing the call spec and obtaining the entry to call through `kernel_for`; a Google-style docstring, from which the docs site generates the API reference |
 | 4 | reference implementation | `workloads/` | `ref_program` on the workload class named after the op, or on a parameterized workload class shared by the family, plus the input construction that the workload rows cannot determine |
 | 5 | correctness tests | `tests/ops/` | numerical tolerances, and the shapes needed to cover every branch of the kernel |
-| 6 | benchmark function | the benchmark file in `benchmarks/ops/` for the module the op belongs to; a new file is added only when no suitable one exists | a test function parameterized with `manifest_calls(Op)`, and the choice of comparison baselines, such as the torch reference implementation and kernels from other libraries |
+| 6 | benchmark function | the benchmark file in `benchmarks/ops/` for the module the op belongs to; a new file is added only when no suitable one exists | a test function parameterized with `bench.cases(Op)`, and the choice of implementations to compare against, such as the torch reference implementation and kernels from other libraries; the op also needs a case entry in `benchmarks/_cases/` |
 
 The following are written only when needed:
 
@@ -58,7 +58,7 @@ The following are written only when needed:
 | 1 | code generation | signature, `roofline` | construction checks, call checks wrapped around `forward`, `_infer_output_shapes`, `_validate_dtypes` and `eval_roofline()`; a class that declares a compile boundary also gets a `torch.library` operator and fake/meta functions |
 | 2 | Op base class | `kernel_types`, `interfaces`, call spec | at construction, checking that every implementation conforms to its kernel interface; at call time, selecting the implementation and constructing and caching the entry; holding sub-ops (`delegate_for`), target dispatch and autotune |
 | 3 | workload instantiation | workload rows | expanding each row into calls according to `dtype_cases`, and generating input tensors that fit the call, including the values of shapes, dtypes, parameters and metadata |
-| 4 | `ManifestBenchmark` | calls and the op | timing, generating the case id, taking FLOPs and byte count from `eval_roofline()`, and recording results under the op name |
+| 4 | `bench.Runner` | the case and the op | checking every implementation against the reference, timing, taking FLOPs and byte count from `eval_roofline()`, and recording results under the op name; see [Writing benchmarks](../benchmark/writing.md) |
 | 5 | manifest tests | all specs | running every call on meta tensors; checking target conformance; checking that the public API agrees with the manifest; checking that the roofline byte count agrees with what the signature derives |
 | 6 | validator | all fields | static checks of the signature; for `implemented` ops, checking `__init__`, `forward` and `composition` |
 | 7 | nightly | benchmarks | running every benchmark each night, checking that every call is measured, and recording history by case id |

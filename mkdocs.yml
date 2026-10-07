@@ -51,6 +51,7 @@ nav:
     - Adding a Backend: backends.md
     - Using torch.compile: torch-compile.md
     - Timing Benchmarks: timing.md
+    - Writing Benchmarks: user-guide/benchmark/writing.md
   # In the Benchmarks pages' order: the pointwise transforms with the positional
   # rotation beside them, the axis reductions and the normalizations built on
   # them, the windowed kernels, the matmul and the quantization around it, then
@@ -184,6 +185,7 @@ plugins:
             Backend Integration: backend 如何接入
             Adding an Op: 添加新 op
             Timing Benchmarks: benchmark 的计时方法
+            Writing Benchmarks: 编写 benchmark
             Using torch.compile: 接入 torch.compile
             Adding a Backend: 接入新硬件 backend
             Architecture: 架构

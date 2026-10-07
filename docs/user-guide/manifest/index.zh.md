@@ -40,7 +40,7 @@ TileOPs 的组件分为四层：
 | 3 | Op 类 | `src/tileops/ops/`，并由 `tileops.<family>` 导出 | 与 `params` 一致的 `__init__`；`kernel_types`（键到实现类）与 `interfaces`（调用位置到 kernel 接口）；在 in-tree 实现中（通常是 `_eager_forward`，见下文 compile boundary）构造 call spec，并通过 `kernel_for` 取得要调用的 entry；Google 风格的 docstring，文档站的 API 参考由它生成 |
 | 4 | 参考实现 | `workloads/` | 以该 op 命名的 workload 类，或 family 共用的参数化 workload 类上的 `ref_program`，以及 workload 行无法确定的输入构造 |
 | 5 | 正确性测试 | `tests/ops/` | 数值容差，以及覆盖 kernel 各分支所需的形状 |
-| 6 | benchmark 函数 | `benchmarks/ops/` 中该 op 所属模块的 benchmark 文件，没有合适的文件时再新增 | 以 `manifest_calls(Op)` 参数化测试函数，并选择对比基线，例如 torch 参考实现与其他库的 kernel |
+| 6 | benchmark 函数 | `benchmarks/ops/` 中该 op 所属模块的 benchmark 文件，没有合适的文件时再新增 | 以 `bench.cases(Op)` 参数化测试函数，并选择对比实现，例如 torch 参考实现与其他库的 kernel；该 op 还需要在 `benchmarks/_cases/` 中有一个 case 注册项 |
 
 以下几项只在需要时编写：
 
@@ -58,7 +58,7 @@ TileOPs 的组件分为四层：
 | 1 | 代码生成 | 签名、`roofline` | 构造检查、包裹 `forward` 的调用检查、`_infer_output_shapes`、`_validate_dtypes` 与 `eval_roofline()`；声明了 compile boundary 的类还会得到 `torch.library` operator 与 fake/meta 函数 |
 | 2 | Op 基类 | `kernel_types`、`interfaces`、call spec | 构造时检查每个实现是否符合其 kernel 接口；调用时选择实现，构造并缓存 entry；子 op 的持有（`delegate_for`）、target 派发与 autotune |
 | 3 | workload 实例化 | workload 行 | 将每条行按 `dtype_cases` 展开为调用，并生成符合调用的输入张量，包括形状、dtype、参数与 metadata 的取值 |
-| 4 | `ManifestBenchmark` | 调用与 op | 计时、生成 case id、从 `eval_roofline()` 取得 FLOPs 与字节数，并以 op 名记录结果 |
+| 4 | `bench.Runner` | case 与 op | 用 reference 校验各实现、计时、从 `eval_roofline()` 取得 FLOPs 与字节数，并以 op 名记录结果，见[编写 benchmark](../benchmark/writing.md) |
 | 5 | manifest 测试 | 全部 spec | 在 meta 张量上执行每个调用；检查 target conformance；检查公开 API 与 manifest 一致；检查 roofline 字节数与签名的推导一致 |
 | 6 | validator | 全部字段 | 静态检查签名；对 `implemented` 的 op 核对 `__init__`、`forward` 与 `composition` |
 | 7 | nightly | benchmark | 每晚运行全部 benchmark，检查每个调用都被测到，并按 case id 记录历史数据 |

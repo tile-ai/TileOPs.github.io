@@ -14,7 +14,7 @@ the other five places are written from it.**{ .keystone }
 | 2 | [`src/tileops/ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/ops)`<family>/__init__.py` and [`src/tileops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops)`<family>.py` | the validator: the family's `__all__` agrees with the manifest | the op's name, exported by its family and on the public path `tileops.<family>.<Op>` |
 | 3 | [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)`<family>/…` | — | the kernel classes, subclassing `Kernel` |
 | 4 | [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)`test_<name>.py` | the contract tests, which run every workload row | the numerical comparison against the reference `ref_program` |
-| 5 | [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)`bench_<name>.py` | the validator's `bench` level | the benchmark |
+| 5 | [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)`bench_<name>.py` | the validator's `bench` level | the benchmark, and the op's case entry in `benchmarks/_cases/` |
 
 The steps below take `GemmFwdOp`, the simplest matmul, through all six places.
 
@@ -271,31 +271,37 @@ and one without, because the two often run different kernels.
 
 ## Step 5: write the benchmark
 
-Benchmarks live in [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops). Each call is timed by a `ManifestBenchmark`
-built from the op and the call's workload. The calls are not written by hand:
-`manifest_calls(<Op>)` instantiates each workload row with each of its dtype cases and
-names each case by its case id. A benchmark that writes its own calls fails the
-validator's `bench` level:
+Benchmarks live in [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops). The cases are not written by hand:
+`bench.cases(<Op>)` turns each workload row, with each of its dtype cases, into one
+`bench.Case` named by its case id, and `bench.Runner(op, case).compare()` checks the op
+and every implementation it is compared with against the case's reference, then times
+them and records the results. The validator's `bench` level checks that every benchmark
+file calls both:
 
 ```python
-from benchmarks.benchmark_base import ManifestBenchmark, manifest_calls
+import pytest
+
+from benchmarks import api as bench
 from tileops.ops import GemmFwdOp
-from workloads.gemm import GemmWorkload
 
 
-@pytest.mark.parametrize("call", manifest_calls(GemmFwdOp))
-def test_gemm_bench(call) -> None:
-    workload = GemmWorkload.from_call(call)
-    a, b = workload.gen_inputs()
-    op = GemmFwdOp(**call.arguments({}))
-    bm = ManifestBenchmark(op, workload)
-    bm.compare({"tileops": op, "torch-cublas": workload.ref_program}, a, b)
+@pytest.mark.parametrize("case", bench.cases(GemmFwdOp), ids=lambda case: case.id)
+def test_gemm_bench(case) -> None:
+    op = GemmFwdOp(**case.arguments)
+    bench.Runner(op, case).compare({"torch-cublas": case.reference})
 ```
 
-A benchmark also records at least one non-TileOPs baseline; without one, the row has
-nothing to compare against. Where a baseline needs its input converted, the conversion
-stays inside that baseline's own timed region. What the reported numbers mean is in
-[How a benchmark is timed](timing.md).
+`bench.cases()` builds a case through the op's entry in
+[`benchmarks/_cases/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/_cases),
+which says how a manifest call becomes a workload. A new op adds its entry to its
+family's module there; without one, pytest fails while collecting the cases.
+
+A benchmark also records at least one non-TileOPs implementation; without one, the row
+has nothing to compare against. Where an implementation needs its input converted, the
+conversion stays inside its own timed region. How to pass implementations that need
+private arguments, and the order in which they are checked and timed, are in
+[Writing benchmarks](user-guide/benchmark/writing.md); what the reported numbers mean
+is in [How a benchmark is timed](timing.md).
 
 ## Step 6: flip the status, and let CI take over
 

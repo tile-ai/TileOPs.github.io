@@ -43,7 +43,8 @@ compile boundary 类另有 operator 与 fake/meta;
 run_device()，按需标记 in_tree_kernels
 或 cuda_only;
 :在 benchmarks/ops/ 写 benchmark 函数，
-用 manifest_calls 取得调用，选择对比基线;
+用 bench.cases 取得 case，选择对比实现，
+在 benchmarks/_cases/ 添加 case 注册项;
 :status 改为 implemented;
 |系统|
 :CI：validator 核对代码与 spec，

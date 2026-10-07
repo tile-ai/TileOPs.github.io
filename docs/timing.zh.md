@@ -21,7 +21,7 @@ from benchmarks.timing import bench_kernel
 samples = bench_kernel(op, args=(x, weight))   # 每次迭代一个 Sample
 ```
 
-编写 benchmark 时一般不直接调用 `bench_kernel`，而是调用 `ManifestBenchmark.profile()` 或 `.compare()`。这一层在样本上取中位数，并计算派生列。
+编写 benchmark 时一般不直接调用 `bench_kernel`，而是通过 `bench.Runner(op, case).compare()` 计时；这一层在样本上取中位数，并计算派生列，写法见[编写 benchmark](user-guide/benchmark/writing.md)。
 
 `bench_kernel` 内部分为采集、归属与计量三段：
 
@@ -58,7 +58,7 @@ for i in range(n_repeat):
 
 1. **校准。** 先运行 3 次，估计单次调用的耗时。
 2. **换算迭代次数。** 用预热 25 ms、测量 100 ms 的预算除以单次耗时，结果限制在 `[10, 200]` 之内。耗时短的 op 因此采样更多，耗时长的 op 不必运行满 200 次。
-3. **每次迭代之前清空 L2，并等待设备排空。** 不清空 L2 时，第一次迭代从 HBM 读取，之后的迭代都从 L2 读取，中位数反映的是缓存全部命中的最好情况。等待排空使上一次迭代不与这一次重叠。
+3. **每次迭代之前清空 L2，并等待设备排空。** 不清空 L2 时，第一次迭代从 HBM 读取，之后的迭代都从 L2 读取，中位数反映的是缓存全部命中的最好情况。等待排空使上一次迭代不与这一次重叠。实现需要恢复被改写的输入时，恢复在它的 `reset` 中完成；`reset` 在清空 L2 之前执行，写入的数据因此不会留在 L2 中。
 4. **采集与归属。** 每次迭代把迭代号标记为 CUPTI 的 external correlation id，区间内发出的每次 launch 都带上这个 id；kernel 记录中的 correlation id 再经这层映射对应回迭代号。**归属不依据时间戳**：一个 kernel 属于哪次迭代写在记录里，与它何时执行无关。因此比主机开销还短的 kernel 同样能被可靠归属，一次调用的 kernel 数在迭代之间变化时也能测出。
 5. **失败即停。** 三种归属失败各报一种错误，不产出数字。
 
@@ -95,9 +95,9 @@ for i in range(n_repeat):
 
 设备上的实际执行时间是 1.95 us，event 方案读出的 6 us 是 CPU 发起下一次调用的间隔。**这是 TileOPs 用 CUPTI 计时的唯一理由**，也是退回 CUDA events 的那一行不能与其余行比较的原因：这一行的 `device_busy_ms` 与 `latency_ms` 记录同一个数，`timing` 字段记为 `cuda-events`。
 
-## 比较多个实现
+## 比较多个实现 {#comparing}
 
-在同一个用例中比较多个实现时，`compare()` 按 A B C C B A 的顺序让每个实现各运行两段，两段样本合并后取中位数。
+在同一个用例中比较多个实现时，`bench.Runner.compare()` 按 A B C C B A 的顺序让每个实现各运行两段，两段样本合并后取中位数。
 
 在固定顺序下，先运行和后运行的实现处在不同的时钟与温度状态，这个差别会被误读为实现之间的差别。对称顺序让每个实现的两段分别位于全程的前半和后半，单调漂移在一阶上相互抵消。有两个细节：
 
@@ -106,13 +106,14 @@ for i in range(n_repeat):
 
 ## 什么时候要改测法 {#when-to-change}
 
-默认情形下不需要任何处理：一次调用只发出一个 kernel，经由 Op 接口，使用 `bench_kernel`，并且进程中没有其他线程使用 GPU。当前多数 op 属于这种情形。以下七种情形需要单独处理：
+默认情形下不需要任何处理：一次调用只发出一个 kernel，经由 Op 接口，使用 `bench_kernel`，并且进程中没有其他线程使用 GPU。当前多数 op 属于这种情形。以下八种情形需要单独处理：
 
 | 情形 | 不处理的后果 | 处理方法 |
 | --- | --- | --- |
 | 被测闭包中包含 `Tensor.backward` 或 `torch.autograd.grad` | 反向的 kernel 由 autograd 引擎的线程发出，无法对应到迭代号，整个用例报错，不产出数字 | 单个融合节点用 `backward_of(out)` 直接驱动；多节点链改用 `torch.autograd.set_multithreading_enabled(False)` |
 | 进程中有其他线程在使用 GPU，或被测闭包自身使用了 CUPTI 的 `CUSTOM0` external id | 那些 kernel 无法对应到迭代号，或迭代号被闭包覆盖，同样报错 | 由被计时的调用自己启动它的工作；external id 改用 `CUSTOM1` / `CUSTOM2` |
-| op 依靠 `copy_` 回写才产出结果，例如原地 elementwise 与 MoE 的写回 | 计时会采集这次拷贝，但默认不计入 `device_busy_ms`，而是另记在 `uncounted_copy_ms` 中，读数因此偏小 | 为这个用例传入 `count_copies=True`，所有 tag 的读数都会计入拷贝 |
+| op 依靠 `copy_` 回写才产出结果，例如原地 elementwise 与 MoE 的写回 | 计时会采集这次拷贝，但默认不计入 `device_busy_ms`，而是另记在 `uncounted_copy_ms` 中，读数因此偏小 | 在该 op 位于 `benchmarks/_cases/` 的 case 注册项中设置 `count_copies=True`，这个用例中所有实现的读数都会计入拷贝 |
+| 某个实现原地写入自己的输入，或在调用之间保留状态 | 之后的迭代从不同的数据开始；共享的 `case.inputs` 被改写时，`compare()` 在计时前报错 | 为被改写的参数准备私有副本，并在 `reset` 中恢复，写法见 [`bench.Implementation`](user-guide/benchmark/writing.md#implementation)；`reset` 在清空 L2 之前执行，不计入读数 |
 | 一次调用发出多个 kernel | kernel 之间的空隙计入 `latency_ms`，用它与融合实现比较时，空隙算在多 kernel 的一方 | 结论只依据 `device_busy_ms`；`latency_ms` 只在两行的 `n_kernels` 相同时可比 |
 | 单次调用超过 10 ms | 迭代次数停在下限 10，墙钟时间远超 100 ms 的预算，10 个样本给出的 p10/p90 很粗 | 接受更长的墙钟时间，或显式指定迭代次数并写明样本量 |
 | 需要新增一个 kernel 级的 benchmark | 这个 op 没有 spec，形状与 roofline 只能手写，spec 校验器也检查不到它 | 经由 Op 接口测量，并补一份 [spec](user-guide/manifest/index.md) |

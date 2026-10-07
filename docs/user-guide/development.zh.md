@@ -108,7 +108,8 @@ python -m pytest -q <bench-file>
 
 - 改动 kernel 或 op 的 PR 需附上 benchmark 结果，对比对象是 TileOPs 以外的实现。
 - benchmark 的对比库通过 `bench` extra 安装。dev 镜像在构建时也会安装这些库，其中个别库安装失败不会中止构建，`sgl-kernel` 则不在镜像中；容器内缺少的库按仓库声明的版本另行安装。
-- 计时方式见 [benchmark 的计时方法](../timing.md)。
+- 加上 `--tileops-verify` 时，benchmark 只做正确性校验，不计时，适合在改动 kernel 后先确认数值。
+- benchmark 文件的写法见[编写 benchmark](benchmark/writing.md)，计时方式见 [benchmark 的计时方法](../timing.md)。
 
 ## 提交 PR { #pr }
 

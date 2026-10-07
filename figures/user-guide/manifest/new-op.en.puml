@@ -46,8 +46,9 @@ BUILTIN target by default, device from
 run_device(), marked in_tree_kernels
 or cuda_only where needed;
 :Write the benchmark function in
-benchmarks/ops/: calls from manifest_calls,
-and the baselines to compare;
+benchmarks/ops/: cases from bench.cases,
+and the implementations to compare,
+add a case entry in benchmarks/_cases/;
 :Set status to implemented;
 |System|
 :CI: the validator checks code against

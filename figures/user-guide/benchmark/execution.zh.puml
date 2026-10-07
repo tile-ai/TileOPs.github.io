@@ -1,0 +1,55 @@
+@startuml execution
+!pragma teoz true
+skinparam defaultFontName "Noto Sans SC"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam ArrowColor #5965C7
+skinparam ArrowThickness 1.2
+skinparam ParticipantBorderColor #4050B5
+skinparam ParticipantBackgroundColor #AEB9EE
+skinparam ParticipantFontColor #1F2A66
+skinparam LifeLineBorderColor #7381A6
+skinparam LifeLineBackgroundColor #F5F7FB
+skinparam SequenceGroupBorderColor #7381A6
+skinparam SequenceGroupBackgroundColor #F5F7FB
+skinparam SequenceGroupHeaderFontColor #29334A
+skinparam NoteBorderColor #7381A6
+skinparam NoteBackgroundColor #FFFFFF
+skinparam NoteFontColor #242A52
+hide footbox
+title bench.Runner.compare() 的执行顺序
+
+participant "runner : bench.Runner" as Runner
+participant "workloads.numerics\n.verify()" as Verify <<function>>
+participant "benchmarks.timing\n.bench_kernel()" as BenchKernel <<function>>
+
+[-> Runner: compare({name: implementation})
+Runner -> Runner: 绑定主实现 tileops\n把对比对象转换为 Implementation
+Runner -> Runner: 跳过 reference 自比较\n记录 noncomparable 原因
+
+group 正确性校验
+  Runner -> Verify: verify(reference, inputs, evidence,\n{name: (run, args, reset)})
+  Verify -> Verify: expected = reference(*inputs)\n复制为稳定的期望结果
+  loop 每个待校验的实现
+    Verify -> Verify: reset()（若有）
+    Verify -> Verify: run(*args)
+    Verify -> Verify: 与 expected 比较\n检查共享输入未被改写
+  end
+  Verify -> Verify: 释放 expected
+  Verify --> Runner: dict[name, CheckResult]\n任一失败即抛出
+end
+
+group 性能测量：按 A B C C B A 顺序，两趟平分预算
+  Runner -> BenchKernel: bench_kernel(run, args, reset,\ncount_copies=case.count_copies)
+  loop 每次迭代
+    BenchKernel -> BenchKernel: reset()（若有）
+    BenchKernel -> BenchKernel: flush L2
+    BenchKernel -> BenchKernel: 计时 run(*args)
+    BenchKernel -> BenchKernel: 归属本次迭代的 CUPTI 记录
+  end
+  BenchKernel --> Runner: list[Sample]
+end
+
+Runner -> Runner: 聚合样本，计算 roofline，写入报告
+Runner -->[: {name: result}
+@enduml

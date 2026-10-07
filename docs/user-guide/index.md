@@ -28,3 +28,5 @@
   follows.
 - [How a benchmark is timed](../timing.md)
   How the numbers on the Benchmarks pages are measured.
+- [Writing benchmarks](benchmark/writing.md)
+  Checking and timing an op against other implementations over its manifest cases.
