@@ -25,7 +25,7 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.linear_attention.DeltaNetInferenceFwdOp
+::: tileops.linear_attention.DeltaNetFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -67,7 +67,7 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.linear_attention.GLAInferenceFwdOp
+::: tileops.linear_attention.GLAFwdOp
     options:
       show_root_heading: true
       heading_level: 3
