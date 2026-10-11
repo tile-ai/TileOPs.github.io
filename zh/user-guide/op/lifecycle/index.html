@@ -1,0 +1,3597 @@
+
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="High-performance LLM operator library built on TileLang">
+      
+      
+      
+        <link rel="canonical" href="https://tile-ai.github.io/TileOPs.github.io/zh/user-guide/op/lifecycle/">
+      
+      
+        <link rel="prev" href="../">
+      
+      
+        <link rel="next" href="../composite/">
+      
+      
+        
+          <link rel="alternate" href="../../../../user-guide/op/lifecycle/" hreflang="en">
+        
+          <link rel="alternate" href="./" hreflang="zh">
+        
+      
+      
+      <link rel="icon" href="../../../../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>构造与调用 - TileOPs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Hanken+Grotesk:300,300i,400,400i,700,700i%7CSpace+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Hanken Grotesk";--md-code-font:"Space Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../../../assets/extra.css?v=93090c7963">
+    
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#_1" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href="../../../" title="TileOPs" class="md-header__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../../../../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            TileOPs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              构造与调用
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="选择当前语言">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="../../../../user-guide/op/lifecycle/" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="zh" class="md-select__link">
+              简体中文
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/tile-ai/TileOPs" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../" title="TileOPs" class="md-nav__button md-logo" aria-label="TileOPs" data-md-component="logo">
+      
+  <img src="../../../../assets/logo.png" alt="logo">
+
+    </a>
+    TileOPs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/tile-ai/TileOPs" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tile-ai/TileOPs
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../blog/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    博客
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    博客
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    用户指南
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    用户指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发指南
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../manifest/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    读写 manifest
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    读写 manifest
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概念
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/writing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    写一个 spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/extensions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    扩展写法
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/calls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    调用与校验
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../manifest/examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    示例
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../new-op/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    添加新 op
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Op 基类
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Op 基类
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构造与调用
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    构造与调用
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#construct" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 构造：Op.__init__
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 调用入口
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#serve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 一次调用的七步
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#target" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. target 与实现表
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. target 与实现表">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#select-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        选择 target
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        安装实现表
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. kernel 缓存
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#failure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 失败与撤销
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../composite/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    组合 op
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../records/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    调用记录与调优
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    类结构与实例状态
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../dispatch/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    op 如何选择 kernel
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_6" id="__nav_3_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    op 如何选择 kernel
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dispatch/writing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    如何为 op 新增 kernel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dispatch/backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    backend 如何接入
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接入新硬件 backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../torch-compile/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接入 torch.compile
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../timing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    benchmark 的计时方法
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmark/writing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    编写 benchmark
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../api/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API 参考
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API 参考
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pooling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/convolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Convolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/linear-algebra/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization & Dequantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Top-k & Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/mamba/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mamba
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/fft/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/transform/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/mhc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    mHC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/engram/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Engram
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../benchmarks/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    性能数据
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    性能数据
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/reading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How these numbers are taken
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/elementwise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elementwise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/rope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RoPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Normalization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/conv-pool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conv &amp; Pool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/gemm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GEMM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/quantization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quantization &amp; Dequantization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/moe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MoE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sampling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/linear-attention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Linear Attention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/ssm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/other/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Other
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../performance-guides/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    性能指南
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    性能指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../performance-guides/trace-timeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    时间线追踪
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../performance-guides/memory-bound/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    访存受限 kernel
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    访存受限 kernel
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../performance-guides/memory-bound/global-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    优化 global memory 访问
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../performance-guides/memory-bound/shared-memory-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    优化 shared memory 访问
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../design/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    设计文档
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    设计文档
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../design/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../design/layer-boundaries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    层间边界
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../design/manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    manifest 规范
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../design/ops-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    op 接口
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../design/ops-design-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    op 接口参考
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../design/op-slot-rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slot 规则
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../design/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    测试
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../design/roofline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roofline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#construct" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 构造：Op.__init__
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 调用入口
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#serve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 一次调用的七步
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#target" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. target 与实现表
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. target 与实现表">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#select-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        选择 target
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        安装实现表
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. kernel 缓存
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#failure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 失败与撤销
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="_1">构造与调用<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<p>本页说明一个 op 实例从构造到每次调用，在 <code>Op</code> 基类内部经过的步骤：</p>
+<ul>
+<li><code>Op.__init__</code> 做什么；</li>
+<li>调用从哪个入口进入基类；</li>
+<li>一次调用的七步；</li>
+<li>基类如何选择 target、安装实现表、缓存 kernel；</li>
+<li>调用失败时撤销什么。</li>
+</ul>
+<h2 id="construct">1. 构造：<code>Op.__init__</code><a class="headerlink" href="#construct" title="Permanent link">&para;</a></h2>
+<p>子类的构造函数按直接父类分两种写法：</p>
+<ul>
+<li><strong>直接继承 <code>Op</code>：</strong> 先把 manifest 参数赋给同名属性，再调用 <code>super().__init__(target=target)</code>。</li>
+<li><strong>经过 family 基类：</strong> 按 family 基类的签名传递参数，例如 RoPE 叶子类传 <code>input_layout</code>、<code>base</code>，归约类传 <code>dim</code>、<code>keepdim</code>；由 family 基类赋值这些参数，最终调用 <code>Op.__init__</code>。</li>
+</ul>
+<p>两种写法都要在 <code>Op.__init__</code> 运行之前确定 manifest 参数的取值。</p>
+<p><code>Op.__init__</code> 保存 <code>target</code>，然后依次完成以下五步。每一步放在构造时各有原因；它不选择、也不构造任何 kernel。</p>
+<p><strong>表 1</strong> <code>Op.__init__</code> 的步骤</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>步骤</th>
+<th>为什么在构造时</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>加载 backend 注册表</td>
+<td>• 必须在任何被 trace 的代码之前完成<br>• 实例的第一次调用可能已在 <code>torch.compile</code> 中，dynamo 无法 trace 模块导入与注册<br>• 构造按约定在编译之外进行</td>
+</tr>
+<tr>
+<td>2</td>
+<td>按 manifest 检查参数取值，把求出的值保存为 <code>_construction_indices</code></td>
+<td>• 参数在构造时确定，错误在构造时报出<br>• 求出的值每次调用都要用，只求一次</td>
+</tr>
+<tr>
+<td>3</td>
+<td>安装实现表并检查契约，见<a href="#target">第 4 节</a>；同时建立两个 entry 缓存 <code>_entries_by_call</code> 与 <code>_built_entries</code>，均为空</td>
+<td>• 结果由 op 类的 <code>kernel_types</code> 与注册表决定，对一个实例不变<br>• 只解析类，不需要设备</td>
+</tr>
+<tr>
+<td>4</td>
+<td>登记实例，得到实例 key</td>
+<td>• 编译边界的 custom op 按这个字符串 key 找回实例<br>• key 必须在 trace 之前存在，作为编译期常量，且不复用</td>
+</tr>
+<tr>
+<td>5</td>
+<td>建立绑定组的 <code>_target_kernels</code>，以及运行组的 <code>_delegates</code>、<code>_delegate_stages</code>、<code>_effect_branches</code>，全部为空，见<a href="../structure/#state">类结构与实例状态 § 实例状态</a></td>
+<td>基类读写这些字段时不判断字段是否存在</td>
+</tr>
+</tbody>
+</table>
+<p>选择实现与构造 kernel 要等到调用时张量的 dtype、shape 与设备都已知：运行 in-tree kernel 时由 <code>kernel_for</code> 选择实现并取得 entry，见<a href="#kernel">第 5 节</a>；由 target 服务时由基类调用 target 的 builder 构造 kernel，见<a href="#target">第 4 节</a>。</p>
+<p><strong>构造的顺序要求：</strong></p>
+<ul>
+<li><strong>manifest 参数的最终值要在调用 <code>super().__init__</code> 之前确定。</strong> <code>Op.__init__</code> 检查的是调用它时 manifest 参数的取值。<ul>
+<li>例如 <code>FusedMoEFwdOp</code> 与 <code>FusedMoESharedExpertFwdOp</code> 的 <code>activation</code> 可以由注入的 <code>experts</code> 决定。</li>
+<li>这两个 op 先按注入对象确定 <code>activation</code>，再调用 <code>super().__init__</code>。</li>
+</ul>
+</li>
+<li><strong>不属于 manifest 参数的派生属性，可以在 <code>super().__init__</code> 之后赋值。</strong> 例如池化 op 按维度展开的 kernel 大小。</li>
+<li><strong>组合 op 在 <code>super().__init__</code> 之后，通过 <code>delegate_for</code> 构造子 op。</strong></li>
+</ul>
+<p><strong>构造参数：</strong> 构造接收 manifest 参数、执行策略 <code>target</code>，以及 <code>injected_parameters</code> 列出的额外参数。调优不是构造参数，构造后用 <code>request_tune()</code> 请求。调用张量携带的以下两类事实不作为构造参数：</p>
+<ol>
+<li><strong>张量的 shape。</strong> 张量携带的维度随调用到达。构造时再接收一次，实例就可能与传入的张量不一致。</li>
+<li><strong>输入张量的 dtype。</strong><ul>
+<li>基类从本次调用的输入张量读取 dtype，用于签名检查；子类把它写进 call spec。</li>
+<li>选中哪个实现、是否复用已构造的 entry，由实现的选择规则与 <code>entry_for</code> 返回的 identity 决定，见<a href="#kernel">第 5 节</a>。</li>
+<li>输出 dtype 由签名中的 dtype 表达式给出，见<a href="../../manifest/calls/#inference">调用与校验 § type inference</a>。</li>
+</ul>
+</li>
+</ol>
+<p>例外与补充：</p>
+<ul>
+<li><strong>manifest 把一个维度或 dtype 声明为参数时，它是构造参数。</strong><ul>
+<li>没有张量输入的 <code>AlibiFwdOp</code> 在构造时接收 <code>seq_len</code> 与 <code>out_dtype</code>。</li>
+<li><code>ProdFwdOp</code> 在构造时接收累加使用的 <code>dtype</code>，覆盖基类上默认为 <code>None</code> 的 <code>dtype</code>。</li>
+</ul>
+</li>
+<li><strong>额外参数：</strong> 类属性 <code>injected_parameters</code> 列出构造函数在 manifest 参数与执行策略之外允许的参数名，例如 <code>FusedMoEFwdOp</code> 的 <code>prepare_finalize</code> 与 <code>experts</code>。它只是 manifest validator 的白名单；参数由 family 自己定义和使用，不是基类的扩展机制。</li>
+</ul>
+<p><strong>构造不探测设备：</strong></p>
+<ul>
+<li>安装实现表只解析类，不读取设备属性。</li>
+<li>调用期张量在构造之后才到达，可能位于进程还没有使用过的设备上。</li>
+<li>不能运行 op 的设备，在第一次选择、构造或调用 kernel 时才被拒绝。</li>
+<li>manifest 声明的构造期张量（例如 <code>LongRoPEFwdOp</code> 的 <code>rescale_factors</code>）在构造时传入，构造检查读取它的 shape 与 dtype。</li>
+</ul>
+<h2 id="entry">2. 调用入口<a class="headerlink" href="#entry" title="Permanent link">&para;</a></h2>
+<p>需要运行实现的 eager 调用都经过 <code>Op._run_call(inputs, body)</code>：</p>
+<ul>
+<li><code>body</code> 是子类的计算本体 <code>forward</code>，每个 op 只写这一个方法；</li>
+<li>进入 <code>_run_call</code> 的方式，取决于子类是否有编译边界。</li>
+</ul>
+<p><strong>表 2</strong> 调用入口</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>入口</th>
+<th>适用的 op</th>
+<th>进入 <code>_run_call</code> 的方式</th>
+<th><code>body</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>op(...)</code></td>
+<td>有编译边界</td>
+<td><code>__call__</code> 调用生成的 <code>_call_boundary</code>，经 custom op 进入 <code>_run_call</code></td>
+<td><code>forward</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>op(...)</code></td>
+<td>没有编译边界</td>
+<td><code>__call__</code> 按 <code>forward</code> 的签名绑定参数，再调用 <code>_run_call</code></td>
+<td><code>forward</code>，按参数名传入</td>
+</tr>
+<tr>
+<td>3</td>
+<td>以 meta 张量 eager 调用 <code>op(...)</code></td>
+<td>有编译边界</td>
+<td>• 不进入<br>• 生成的 fake 运行签名检查并保存调用记录，按签名构造结果</td>
+<td>—</td>
+</tr>
+<tr>
+<td>4</td>
+<td>被 trace 的 <code>op(...)</code></td>
+<td>没有编译边界</td>
+<td>• 不进入，也不运行签名检查<br>• 实例已由 target 服务时调用 target 的 kernel，否则调用 <code>forward</code><br>• 组合 op 的子 op 的 custom op 成为图中的节点：trace 时运行各自的 fake，执行图中的节点时才进入 <code>_run_call</code></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>表 2 的说明：</p>
+<ul>
+<li><strong>哪些 op 有编译边界：</strong> 类定义时，基类为同时满足以下三条的 op 类生成编译边界，由 <code>_CompileBoundary</code> 注册 custom op，并把它们的名字写入类属性 <code>compile_op_names</code>：<ol>
+<li>有 manifest 条目；</li>
+<li>条目有调用期张量输入；</li>
+<li>条目没有 composition，即不是组合 op。</li>
+</ol>
+</li>
+<li><strong>这是要求，不是选项：</strong> 满足三条的 implemented op 都必须支持 <code>torch.compile(op, fullgraph=True)</code>，没有逐个 op 的豁免。validator 检查每个 implemented 条目：类的 <code>compile_op_names</code> 非空，当且仅当条目满足三条；测试另外要求每个这样的 op 都登记了 <code>fullgraph=True</code> 的冷编译测试，作为可编译的证据。</li>
+<li><strong>前两行的选择：</strong> <code>__call__</code> 按 <code>compile_op_names</code> 是否为空，选择表 2 的前两行。</li>
+<li><strong>编译边界的细节</strong>（custom op 如何生成、如何找回实例；被 trace 的路径受哪些限制：有编译边界时 trace 的是生成的 <code>_call_boundary</code>，没有编译边界的组合 op trace 的是 <code>forward</code>）见<a href="../../../torch-compile/">接入 torch.compile</a>。</li>
+<li><strong>只有一份实现：</strong> 运行实现的调用只有一个入口，所以检查、记录和失败处理只有一份实现。</li>
+</ul>
+<h2 id="serve">3. 一次调用的七步<a class="headerlink" href="#serve" title="Permanent link">&para;</a></h2>
+<p>七步在时序中的位置见<a href="../#lifecycle">索引页 § op 的生命周期</a>图 1。</p>
+<p><strong>表 3</strong> 一次调用的步骤</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>步骤</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>开启调用</td>
+<td>• 压入当前线程的调用栈<br>• 收集本次调用期间子 op 完成的调用</td>
+</tr>
+<tr>
+<td>2</td>
+<td>检查签名</td>
+<td>运行 <code>_SignaturePlan</code> 生成的检查，得到这次调用的记录 <code>SignatureCall</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>判断空写</td>
+<td>至少有一个写入、且所有写入都没有元素时，不运行任何实现，按签名构造结果</td>
+</tr>
+<tr>
+<td>4</td>
+<td>选择 target</td>
+<td>实例尚未选定 target、且这次调用需要运行实现时选择，见<a href="#target">第 4 节</a></td>
+</tr>
+<tr>
+<td>5</td>
+<td>执行</td>
+<td>运行空写结果、target 的 kernel 或 <code>body</code>，三者取一</td>
+</tr>
+<tr>
+<td>6</td>
+<td>检查结果</td>
+<td>按签名检查返回值</td>
+</tr>
+<tr>
+<td>7</td>
+<td>记录</td>
+<td>1. 把子 op 的调用按 stage 写入记录的 <code>stages</code><br>2. 弹出调用栈<br>3. 保存为 <code>last_call</code><br>4. 报告给外层调用</td>
+</tr>
+</tbody>
+</table>
+<p>签名检查与 dtype：</p>
+<ul>
+<li>签名检查判断调用是否满足 manifest，dtype 在内。</li>
+<li>调用期输入张量的 dtype 由这次调用决定，构造时无从比较；签名检查也会用到构造时已求出的 dtype index，例如构造期张量的 dtype。</li>
+<li>通过检查的调用仍可能在选择 kernel 时被拒绝，例如没有实现支持这个 dtype，见 <a href="../../dispatch/#call-path">op 如何选择 kernel § 一次调用如何找到 kernel</a>。</li>
+</ul>
+<h2 id="target">4. target 与实现表<a class="headerlink" href="#target" title="Permanent link">&para;</a></h2>
+<p>backend 接入 TileOPs 有两种方式，接入方法见 <a href="../../dispatch/backends/#choose">backend 如何接入 TileOPs</a>。本节说明基类如何处理它们。</p>
+<p><strong>表 4</strong> backend 接入的两种方式</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>方式</th>
+<th>接管的范围</th>
+<th>基类何时处理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>target</code></td>
+<td>整个 op</td>
+<td>调用的第 4 步选定，之后不再改变</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>register_kernel_type</code></td>
+<td>为一个 kernel 接口新增一个实现，按它自己声明的适用范围与优先关系参与选择</td>
+<td>构造时由 <code>Op.__init__</code> 并入实现表</td>
+</tr>
+</tbody>
+</table>
+<h3 id="select-target">选择 target<a class="headerlink" href="#select-target" title="Permanent link">&para;</a></h3>
+<p>第一次需要运行实现的调用，按以下顺序选定 target：</p>
+<ol>
+<li>构造时传入的 <code>target</code>；</li>
+<li>为 <code>None</code> 时，取进程默认 target（<code>set_default_target</code> 设置）；</li>
+<li>仍为 <code>None</code> 时，按调用设备检测。</li>
+</ol>
+<p>选定之后：</p>
+<ul>
+<li><strong>没有 backend 认领这个设备：</strong> 运行 in-tree kernel，<code>serving_target</code> 为 <code>BUILTIN</code>。</li>
+<li><strong>有 backend 认领：</strong> 运行这个 target 为 op 注册的 builder 构造的 kernel，子类的 <code>body</code> 不运行。<ul>
+<li>基类调用 builder 时，按 <code>signature.inputs</code> 的顺序传入参数：出现的输入传 <code>TensorSpec</code>，未传入的可选输入传 <code>None</code>。</li>
+<li>实例上的 manifest 参数以关键字传入，见 <a href="../../dispatch/backends/#target">backend 如何接入 TileOPs § 替换整个 op</a>。</li>
+</ul>
+</li>
+<li><strong>选定的 target 没有为 op 注册 builder：</strong><ul>
+<li>声明了自己 kernel 的 op 报 <code>OpNotAvailableError</code>，不退回 in-tree 实现；</li>
+<li>不声明 kernel 的组合 op 运行自己的组合。</li>
+</ul>
+</li>
+<li><code>serving_target</code> 返回选定的结果，选定之前为 <code>None</code>。</li>
+</ul>
+<p>调用设备由签名检查确定，依次取：</p>
+<ol>
+<li>调用期张量所在的设备；</li>
+<li>声明的 <code>device</code> 参数；</li>
+<li>构造期张量所在的设备；</li>
+<li>三者都没有时，取当前 CUDA 设备。</li>
+</ol>
+<p>CUDA 也不可用、且没有构造参数或进程默认 target 时，基类无从选择：</p>
+<ul>
+<li>这次调用运行 in-tree 本体；</li>
+<li>实例仍未选定 target，下一次调用再选择。</li>
+</ul>
+<p>target 构造的 kernel 的缓存：</p>
+<ul>
+<li>缓存键是调用设备，加上每个输入的 dtype 与 shape；</li>
+<li>未传入的可选输入单独占位；</li>
+<li>输出缓冲不进入缓存键。</li>
+</ul>
+<p>target 被调用前，生成的检查已经运行，基类保证以下三点：</p>
+<ol>
+<li>除声明 <code>device: cpu</code> 的张量外，所有张量都在调用设备上；</li>
+<li>这次调用不写入的输入都是连续的，写入的输入在声明 <code>contiguous: true</code> 时是连续的；</li>
+<li>调用，包括调用方提供的输出缓冲，满足签名。</li>
+</ol>
+<p>没有调用期张量输入的 op，按<a href="../../manifest/calls/#device">调用与校验 § 调用设备</a>的规则决定设备。</p>
+<h3 id="install">安装实现表<a class="headerlink" href="#install" title="Permanent link">&para;</a></h3>
+<p>实现表 <code>_installed_kernel_types</code> 记录每个 key 对应的实现类。<code>Op.__init__</code> 依次：</p>
+<ol>
+<li>合并 <code>kernel_types</code> 与 backend 为这个 op 注册的 kernel type，key 不能重复；</li>
+<li>检查实现符合 kernel 接口的契约，不合要求时在构造时抛出 <code>TypeError</code> 或 <code>ValueError</code>：<ul>
+<li>同时继承 <code>Kernel</code> 与所在 key 的 kernel 接口；</li>
+<li><code>entry_for</code> 是类方法；</li>
+<li><code>forward</code> 接受接口的参数；</li>
+<li>每个 key 属于某个接口；</li>
+<li>每个接口至多一个 <code>general</code> 实现；</li>
+<li><code>preferred_over</code> 只列同一接口的其他实现，<code>general</code> 实现不声明它；</li>
+<li><code>preferred_over</code> 不成环。</li>
+</ul>
+</li>
+</ol>
+<p>不声明自己 kernel 的组合 op，实现表为空；它的子 op 各自安装自己的实现表。</p>
+<h2 id="kernel">5. kernel 缓存<a class="headerlink" href="#kernel" title="Permanent link">&para;</a></h2>
+<p>本节区分三个词：</p>
+<ul>
+<li><strong>kernel type</strong> 是 <code>Kernel</code> 的子类，即 <a href="../../dispatch/#terms">op 如何选择 kernel § 术语</a>中的「实现」。它声明自己能在哪些设备上运行、适用于哪些调用，以及如何构造。</li>
+<li><strong>entry</strong> 是 kernel type 的 <code>entry_for</code> 按一次调用构造出的对象，<code>kernel_for</code> 返回它，子类调用它完成计算。</li>
+<li><strong>kernel</strong> 是可调用的对象：entry 中的 <code>Kernel</code> 实例，一个 entry 包含一个或多个；或 target 的 builder 返回的可调用对象。持有 TileLang 程序的 <code>Kernel</code> 实例，其程序可能在第一次启动时才构建。</li>
+</ul>
+<p>一个 kernel type 按 identity 构造出多个 entry。以 <code>RMSNormOnChipKernel</code> 为例：</p>
+<p><strong>表 5</strong> kernel type 与 entry</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th></th>
+<th>kernel type</th>
+<th>entry</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>例子</td>
+<td><code>RMSNormOnChipKernel</code> 这个类</td>
+<td>按 <code>n=4096</code>、fp16 等参数构造出的对象</td>
+</tr>
+<tr>
+<td>2</td>
+<td>何时存在</td>
+<td>导入模块时</td>
+<td>第一次需要它的调用到来时构造</td>
+</tr>
+<tr>
+<td>3</td>
+<td>携带什么</td>
+<td>可用性与适用范围的声明（<code>supported_archs</code>、<code>refusal</code>、<code>preferred_over</code>）和 <code>entry_for</code></td>
+<td>构造参数（由 identity 确定）与一个或多个 kernel</td>
+</tr>
+<tr>
+<td>4</td>
+<td>数量</td>
+<td>每个 key 一个</td>
+<td>每个接口下，每个 <code>(kernel type, identity)</code> 至多一个，例如 <code>n=4096</code>、fp16 一个，<code>n=8192</code>、bf16 又一个</td>
+</tr>
+<tr>
+<td>5</td>
+<td>保存在</td>
+<td><code>kernel_types</code>、<code>_installed_kernel_types</code></td>
+<td><code>_built_entries</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>用途</td>
+<td>基类据此选择这次调用的实现</td>
+<td>子类调用它：<code>entry(x, weight)</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>register_kernel_type</code> 向候选中加入一个 kernel type，不构造任何 entry；<code>register_kernel_builder</code> 登记的 builder 直接构造 target 的 kernel，不经过 kernel type 的选择，见<a href="#target">第 4 节</a>。</p>
+<p>子类通过 <code>self.kernel_for(interface, call)</code> 取得 kernel：</p>
+<ul>
+<li>参数的写法见<a href="../../../new-op/#kernel-selection">添加一个新 op § kernel_for</a>；</li>
+<li>kernel 接口、实现、call spec 与 entry 的定义见 <a href="../../dispatch/#terms">op 如何选择 kernel § 术语</a>。</li>
+</ul>
+<p><code>kernel_for</code> 依次完成：</p>
+<ol>
+<li><strong>确认接口。</strong><ul>
+<li><code>interface</code> 不在 <code>interfaces</code> 中时，抛出 <code>OpNotAvailableError</code>。</li>
+<li>call spec 没有给出设备且 CUDA 可用时，基类填入当前 CUDA 设备，使缓存键带有设备。</li>
+</ul>
+</li>
+<li><strong>按调用查找。</strong><ul>
+<li><code>_entries_by_call</code> 以 <code>(interface, call)</code> 为键。</li>
+<li>相等的 call spec 表示同一种调用，命中只需一次查表，不读取设备属性。</li>
+</ul>
+</li>
+<li><strong>检查 call spec。</strong> 未命中时，以下任一不满足就抛出 <code>TypeError</code>：<ul>
+<li>call spec 是接口 <code>request</code> 声明的类型；</li>
+<li>每个字段都能作为缓存键；</li>
+<li>不自行给出设备事实。</li>
+</ul>
+</li>
+<li><strong>按构造查找。</strong><ul>
+<li>派发机制选出一个实现，见 <a href="../../dispatch/#call-path">op 如何选择 kernel § 一次调用如何找到 kernel</a>；<code>key_for(interface, call)</code> 返回这一步选中的 key。</li>
+<li>实现的 <code>entry_for(call)</code> 给出 identity 与构造函数。</li>
+<li><code>_built_entries</code> 按接口分开，在每个接口下以 <code>(实现类, identity)</code> 为键：identity 相同的调用共用一个 entry，不同则构造新的 entry 并保存。</li>
+<li>call spec 的设备是 CUDA 设备时，构造 entry 与处理调优请求都在 <code>torch.cuda.device(call.device)</code> 下进行。</li>
+</ul>
+</li>
+</ol>
+<p>补充说明：</p>
+<ul>
+<li><strong>dtype 与 entry：</strong> 不同 dtype 的 call spec 分别派发；是否复用已构造的 entry，由选中实现的 <code>entry_for</code> 返回的 identity 决定。</li>
+<li><strong>identity 只有实现知道：</strong> 子类不定义 identity，也不维护自己的缓存。</li>
+<li><strong>entry 只由基类持有：</strong> 子类在本体中用局部变量接收 <code>kernel_for</code> 返回的 entry，不保存到实例上；第二次调用再经 <code>kernel_for</code> 取得，命中缓存只需一次查表。</li>
+</ul>
+<h2 id="failure">6. 失败与撤销<a class="headerlink" href="#failure" title="Permanent link">&para;</a></h2>
+<p>调用中抛出 <code>Exception</code> 时：</p>
+<ul>
+<li>调用栈弹出；</li>
+<li>这次调用不成为 <code>last_call</code>，上一次的记录保持不变。</li>
+</ul>
+<p>如果 target 是在这次调用的第 4 步选定的：</p>
+<ul>
+<li><code>_reset_binding</code> 把绑定组重置为 <code>Op.__init__</code> 建立时的初值；</li>
+<li>这次调用构造的 kernel 一并丢弃；</li>
+<li>对持有的子 op 递归执行同样的处理。</li>
+</ul>
+<p>处理之后，绑定组回到尚未选定 target 的状态；已完成调用的记录和持有的子 op 保留。下一次调用重新选择 target。</p>
+<p><strong>表 6</strong> 失败后的实例状态</p>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>情况</th>
+<th>target</th>
+<th>已构造的 kernel</th>
+<th><code>last_call</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>target 在这次调用中选定</td>
+<td>撤销</td>
+<td>丢弃</td>
+<td>不变</td>
+</tr>
+<tr>
+<td>2</td>
+<td>target 在之前的调用中选定</td>
+<td>保留</td>
+<td>保留</td>
+<td>不变</td>
+</tr>
+</tbody>
+</table>
+<p>另外：</p>
+<ul>
+<li>已经写入张量的内容不会撤销；</li>
+<li><code>KeyboardInterrupt</code> 等不继承 <code>Exception</code> 的异常不经过上述处理。</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  回到页面顶部
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 tile-ai
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/tile-ai/TileOPs" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
