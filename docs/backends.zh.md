@@ -25,15 +25,14 @@ TileLang 是支持多种 backend 的 DSL，每种硬件各有一套独立的 ker
 - 调用方可用的接口；
 - 刻意不支持的情形。
 
-## 三种接入方式 {#three-ways}
+## 两种接入方式 {#two-ways}
 
-一个仓库之外的包按自己接管的范围，从三种方式中选一种：
+一个仓库之外的包按自己接管的范围，从两种方式中选一种：
 
-1. `kernel_map=`：调用方构造 op 时，替换某个 key 背后运行的类；
-2. `register_implementation`：为一个 kernel 接口新增一个实现，与 in-tree 实现一起参与选择；
-3. target：接管 op 的全部调用。
+1. `register_kernel_type`：为一个 kernel 接口新增一个实现，与 in-tree 实现一起参与选择；
+2. target：接管 op 的全部调用。
 
-前两种方式写出的 kernel 类遵守 kernel 接口，与 in-tree 实现遵守同一份契约，写法见 [backend 如何接入](user-guide/dispatch/backends.md)。target 遵守的是 op 在 manifest 中的签名，backend 为它写一个 `build_kernel`。本页以下各节只讲 target。
+第一种方式写出的 kernel 类遵守 kernel 接口，与 in-tree 实现遵守同一份契约，写法见 [backend 如何接入](user-guide/dispatch/backends.md)。target 遵守的是 op 在 manifest 中的签名，backend 为它写一个 `build_kernel`。本页以下各节只讲 target。
 
 ## 写一个 backend 要做的四件事
 
@@ -177,7 +176,7 @@ d = op(a, b)                     # 所有输入必须在同一设备上：a.devi
 #   两个以上返回 True    → 抛 AmbiguousTargetError，要求显式写 target=
 
 # ── op 层：先跑由 manifest 签名生成的检查，再把整个 op交给 target ──
-#   GemmFwdOp 自己的 _eager_forward 与 kernel_for 只服务in-tree 实现，这次不走
+#   GemmFwdOp 自己的 forward 与 kernel_for 只服务in-tree 实现，这次不走
 #   传给 target 的张量顺序照 signature.inputs，不写入的输入先转成连续
 
 # ── op 层：按设备与输入签名查外部记忆表 ─────────────────────────────
@@ -472,7 +471,7 @@ print(load_failures())
 | **`detect`** | backend 编写的一个函数，每个 target 一个 | 第一层的选择依据：接收一个 `torch.device`，回答这类设备是否是自己这套 kernel 的目标设备；不是则返回 `False` |
 | **`build_kernel`** | backend 为某个 op 编写的一个函数，每组 `(op, target)` 一个 | 第二层：接收本次调用的描述，即各输入张量的 device、dtype、shape 与 op 参数，从自己这套 kernel 中选定一个，构造好并返回 |
 
-**选择分两层：TileOPs 选 target，target 在自己那套 kernel 中选一个。** 第二层发生在 `build_kernel` 内部，协议不参与，这条路径上没有 kernel 一级的概念、能力协商与候选筛选。TileOPs 实际执行的候选筛选（可用性、适用范围、优先关系）属于 in-tree 实现与范围较小的两种接入方式（见[三种接入方式](#three-ways)），target 绕过这些筛选。
+**选择分两层：TileOPs 选 target，target 在自己那套 kernel 中选一个。** 第二层发生在 `build_kernel` 内部，协议不参与，这条路径上没有 kernel 一级的概念、能力协商与候选筛选。TileOPs 实际执行的候选筛选（可用性、适用范围、优先关系）属于 in-tree 实现与范围较小的 `register_kernel_type`（见[两种接入方式](#two-ways)），target 绕过这些筛选。
 
 `detect` 只回答设备的归属，不回答更细的问题。**本次调用是否受支持（涉及 dtype、形状与参数组合）由 `build_kernel` 回答**，因为只有它看得到完整的输入描述与参数，不支持时也在那里报错。`detect` 只拿到一个 `torch.device`，无法作出这些判断。
 

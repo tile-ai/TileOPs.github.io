@@ -87,7 +87,7 @@ SiluAndMulFwdOp:
 `signature.params` 与 `__init__` 的参数表一一对应。普通的构造参数声明 `type`，以及可选的 `default` 与 `kw_only`（表示只能以关键字方式传入）；构造时传入的张量改为声明 `dtype` 与 `shape`，见[扩展写法 5](extensions.md#placement)。
 
 - 以 spec 为准。对于 `implemented` 的 op，validator 逐项比较 `params` 与 `__init__`，要求参数集合、顺序、`default` 与 `kw_only` 都相同。
-- 代码中可以额外出现的只有执行策略参数：所有 op 共有的 `kernel_map`、`tune`、`target`，由调用方注入的实现对象，以及只传给 kernel 的保留参数 `config`。
+- 代码中可以额外出现的只有两类参数：所有 op 共有的执行策略参数 `target`，以 `*, target=None` 写在 manifest 参数之后；以及类属性 `injected_parameters` 列出的、由调用方注入的实现对象。
 - 签名中的调用期输入与输出缓冲，按顺序构成 `forward` 参数表的开头部分。`forward` 可以在其后追加由代码定义的执行参数，这些参数不属于签名。
 
 构造参数可以直接出现在类型中，不需要额外标注：
@@ -204,11 +204,11 @@ roofline:
 
   | No. | 接口 | 内容 |
   | --- | --- | --- |
-  | 1 | `call.ix` | 参数、本次调用求得的 index 与 dtype index、用到的 `let`，即内联公式可以引用的名字 |
+  | 1 | `call.indices` | 参数、本次调用求得的 index 与 dtype index、用到的 `let`，即内联公式可以引用的名字 |
   | 2 | `call.present(t)` | 张量 `t` 是否传入、持有或返回；`call.present("out")` 表示调用方是否传入了 `out` |
   | 3 | `call.tensors[t]` | 张量 `t` 的 `(形状, dtype 名)` |
   | 4 | `call.bytes(t)` | 张量 `t` 的字节数 |
-  | 5 | `call.values(t)` | metadata 张量 `t` 的内容；在 meta 张量上调用时报错，因为 meta 张量没有取值 |
+  | 5 | `call.metadata_values(t)` | metadata 张量 `t` 的内容；在 meta 张量上调用时报错，因为 meta 张量没有取值 |
   | 6 | `call.stages` | 复合 op 的各子 op 在本次调用中完成的调用，按 stage 名索引 |
 
 - 每个 spec 都会生成一个 `eval_roofline()` 方法，它基于 op 最近一次完成的调用计算 FLOPs 与字节数。benchmark 通过这个方法取得数值并写入结果，roofline 工具读取 benchmark 的结果，不直接调用 op。

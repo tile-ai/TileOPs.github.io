@@ -263,7 +263,7 @@ _METRIC_SUFFIXES = (
     "device_busy_p10_ms", "device_busy_p90_ms", "device_busy_ms",
     "latency_p10_ms", "latency_p90_ms", "latency_ms", "gap_ms",
     "uncounted_copy_ms", "bandwidth_tbs", "tflops", "ratio", "n_kernels",
-    "n_samples", "flops", "bytes", "compute_roof", "dtype", "timing",
+    "n_samples", "flops", "bytes", "roof_key", "dtype", "timing",
     "variant",
 )
 _NUMERIC_METRICS = {

@@ -27,7 +27,7 @@ start
 |开发者|
 :写 call spec、kernel 接口与实现；
 按需覆写 entry_for，并声明 devices、
-supported_archs、applies、preferred_over
+supported_archs、refusal、preferred_over
 或 general;
 :写 Op 类：~__init~__、kernel_types、
 interfaces、forward 与 docstring，
@@ -35,7 +35,8 @@ interfaces、forward 与 docstring，
 |系统|
 :由签名生成调用检查、形状推导、
 dtype 检查与 eval_roofline；
-compile boundary 类另有 operator 与 fake/meta;
+有调用期张量输入、没有 composition 的类
+另有编译边界的 operator 与 fake/meta;
 |开发者|
 :在 workloads/ 写 ref_program;
 :在 tests/ops/ 写正确性测试：

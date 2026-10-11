@@ -79,8 +79,8 @@ English at the site root, Chinese under `/zh/`. A Chinese page is a
 `<name>.zh.md` beside the English `<name>.md`, full prose, never an
 `include-markdown` shell. `backends.md`, `torch-compile.md`, everything under
 `performance-guides/memory-bound/`, `blog/`, `user-guide/development.md` and the
-two guides under `user-guide/manifest/` and `user-guide/dispatch/` were authored
-in Chinese: edit the `.zh.md` first, then bring the English page in line.
+guides under `user-guide/manifest/`, `user-guide/dispatch/` and `user-guide/op/` were
+authored in Chinese: edit the `.zh.md` first, then bring the English page in line.
 Everything else goes the other way.
 
 | Rule | Detail |

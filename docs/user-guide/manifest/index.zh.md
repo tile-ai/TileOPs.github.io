@@ -37,7 +37,7 @@ TileOPs 的组件分为四层：
 | --- | --- | --- | --- |
 | 1 | spec | `src/tileops/manifest/spec/<family>.yaml` | 签名、workload 行、roofline 公式 |
 | 2 | kernel 接口与实现 | `src/tileops/kernels/`；kernel 接口与 call spec 通常放在 family 的 `call_spec.py` 中，只有一个 kernel 文件的 family 写在该文件里 | kernel 接口规定 call spec 的类型与 `forward` 的参数；实现是 `Kernel` 的子类，并继承相应的 kernel 接口。默认的 `entry_for(call)` 直接用 call spec 构造实现，不能准确表示构造参数时再覆写它 |
-| 3 | Op 类 | `src/tileops/ops/`，并由 `tileops.<family>` 导出 | 与 `params` 一致的 `__init__`；`kernel_types`（键到实现类）与 `interfaces`（调用位置到 kernel 接口）；在 in-tree 实现中（通常是 `_eager_forward`，见下文 compile boundary）构造 call spec，并通过 `kernel_for` 取得要调用的 entry；Google 风格的 docstring，文档站的 API 参考由它生成 |
+| 3 | Op 类 | `src/tileops/ops/`，并由 `tileops.<family>` 导出 | 与 `params` 一致的 `__init__`，赋值 manifest 参数后调用 `super().__init__(target=target)`；`kernel_types`（键到实现类）与 `interfaces`（调用位置到 kernel 接口）；计算本体 `forward`，在其中构造 call spec，并通过 `kernel_for` 取得要调用的 entry；Google 风格的 docstring，文档站的 API 参考由它生成 |
 | 4 | 参考实现 | `workloads/` | 以该 op 命名的 workload 类，或 family 共用的参数化 workload 类上的 `ref_program`，以及 workload 行无法确定的输入构造 |
 | 5 | 正确性测试 | `tests/ops/` | 数值容差，以及覆盖 kernel 各分支所需的形状 |
 | 6 | benchmark 函数 | `benchmarks/ops/` 中该 op 所属模块的 benchmark 文件，没有合适的文件时再新增 | 以 `bench.cases(Op)` 参数化测试函数，并选择对比实现，例如 torch 参考实现与其他库的 kernel；该 op 还需要在 `benchmarks/_cases/` 中有一个 case 注册项 |
@@ -45,18 +45,18 @@ TileOPs 的组件分为四层：
 以下几项只在需要时编写：
 
 - 内联公式无法表达代价时，在 `tileops.perf.formulas` 中编写 roofline `func`；
-- op 的 FLOPs 属于矩阵乘收缩、最优实现应使用 tensor core 时，覆写 `compute_roof()`。它表示最优实现应当使用的计算单元，与当前 kernel 实际使用的单元无关；
-- 同一个 kernel 接口有多个实现时，在各实现上声明它服务哪些调用（`applies`）与能在哪些设备上运行（`devices`、`supported_archs`）；实现之间的适用范围有重叠时，用 `preferred_over` 声明哪个优先，兜底的实现声明 `general = True`，见[如何为 op 新增 kernel](../dispatch/writing.md#rule)；
-- 外部 backend 不修改 op，而是在构造 op 实例之前调用 `tileops.backend.register_implementation("<Op 类名>", "<key>", 实现类)`，为某个 kernel 接口增加实现。第一个参数是 manifest 中的 op 名，`key` 必须是该 op 尚未使用的新键；新增的实现只进入之后构造的实例，并在实例构造时接受 kernel 接口检查，见 [backend 如何接入 TileOPs](../dispatch/backends.md#register)；
-- 复合 op 在类上声明 `delegate_types` 与 `kernel_types`，与 spec 的 `composition` 对应；
-- 支持 `fullgraph=True` 的 op 声明 `compile_boundary = True`：`forward` 只调用 `_call_boundary`，in-tree 实现写在 `_eager_forward` 中，并在 `tests/compile_contract.py` 中登记冷编译测试。
+- op 的 FLOPs 属于矩阵乘收缩、最优实现应使用 tensor core 时，覆写 `roof_key()`。它表示最优实现应当使用的计算单元，与当前 kernel 实际使用的单元无关；
+- 同一个 kernel 接口有多个实现时，在各实现上声明它服务哪些调用（`refusal`）与能在哪些设备上运行（`devices`、`supported_archs`）；实现之间的适用范围有重叠时，用 `preferred_over` 声明哪个优先，兜底的实现声明 `general = True`，见[如何为 op 新增 kernel](../dispatch/writing.md#rule)；
+- 外部 backend 不修改 op，而是在构造 op 实例之前调用 `tileops.backend.register_kernel_type("<Op 类名>", "<key>", 实现类)`，为某个 kernel 接口增加实现。第一个参数是 manifest 中的 op 名，`key` 必须是该 op 尚未使用的新键；新增的实现只进入之后构造的实例，并在实例构造时接受 kernel 接口检查，见 [backend 如何接入 TileOPs](../dispatch/backends.md#register)；
+- 复合 op 在类上声明 `delegate_types`，与 spec 的 `composition` 对应；复合 op 也运行自己的 kernel 时，才声明 `kernel_types` 与 `interfaces`；
+- spec 有调用期张量输入、且没有 `composition` 的 op 在类定义时自动生成编译边界，必须通过冷启动的 `fullgraph=True` 编译，并在 `tests/compile_contract.py` 中登记冷编译测试。
 
 **表 2** 系统提供的部分
 
 | No. | 组件 | 输入 | 为开发者完成的工作 |
 | --- | --- | --- | --- |
-| 1 | 代码生成 | 签名、`roofline` | 构造检查、包裹 `forward` 的调用检查、`_infer_output_shapes`、`_validate_dtypes` 与 `eval_roofline()`；声明了 compile boundary 的类还会得到 `torch.library` operator 与 fake/meta 函数 |
-| 2 | Op 基类 | `kernel_types`、`interfaces`、call spec | 构造时检查每个实现是否符合其 kernel 接口；调用时选择实现，构造并缓存 entry；子 op 的持有（`delegate_for`）、target 派发与 autotune |
+| 1 | 代码生成 | 签名、`roofline` | 构造检查、包裹 `forward` 的调用检查、`_infer_output_shapes` 与 `eval_roofline()`；有调用期张量输入、且没有 `composition` 的类还会得到编译边界，即 `torch.library` operator 与 fake/meta 函数 |
+| 2 | Op 基类 | `kernel_types`、`interfaces`、call spec | 构造时检查每个实现是否符合其 kernel 接口；调用时选择实现，构造并缓存 entry；子 op 的持有（`delegate_for`）、target 选择与调优（`request_tune()`） |
 | 3 | workload 实例化 | workload 行 | 将每条行按 `dtype_cases` 展开为调用，并生成符合调用的输入张量，包括形状、dtype、参数与 metadata 的取值 |
 | 4 | `bench.Runner` | case 与 op | 用 reference 校验各实现、计时、从 `eval_roofline()` 取得 FLOPs 与字节数，并以 op 名记录结果，见[编写 benchmark](../benchmark/writing.md) |
 | 5 | manifest 测试 | 全部 spec | 在 meta 张量上执行每个调用；检查 target conformance；检查公开 API 与 manifest 一致；检查 roofline 字节数与签名的推导一致 |
@@ -76,8 +76,8 @@ manifest 测试与 benchmark 所用的调用，包括形状、dtype 与输入张
 - 构造阶段，生成的检查按 `type` 检查参数，并完成构造时已经可以求值的检查。
 - 调用阶段，生成的检查先确定输入、选择分支并推断 index，然后才调用开发者编写的实现；实现返回之后，再检查输出的数量、形状、dtype、设备与内存布局，并核对 `out` 与 `alias` 输出是否就是对应的张量对象。因此实现中不需要重复 spec 已经声明的检查。
 - 实现通过 `kernel_for(interface, call)` 取得要调用的 entry，通常就是一个 kernel。同一个 call spec 再次出现时，Op 基类只做一次查找；首次出现时，Op 基类在该 kernel 接口的实现中选出唯一一个，由它的 `entry_for(call)` 返回 build identity 与构建函数，在同一个 kernel 接口内，同一实现类、相同 build identity 的 entry 只构造一次。选择规则见[调用与校验 2](calls.md#selection)。
-- 声明了 compile boundary 的 op，`forward` 只调用生成的 `_call_boundary`，in-tree 实现写在 `_eager_forward` 中。
-- 某个 target 通过 `register_kernel_builder` 为 op 注册了 builder 时，生成的检查之后调用 target 返回的 kernel，op 的 `forward` 不执行。通过 `register_implementation` 增加的实现属于 in-tree 路径，仍由 `forward` 经 `kernel_for` 选中。
+- 有编译边界的 op，`Op.__call__` 调用生成的 `_call_boundary`，经 operator 在节点内部运行 `forward`；没有编译边界的 op，`Op.__call__` 直接运行 `forward`。两种情况下计算本体都写在 `forward` 中。
+- 某个 target 通过 `register_kernel_builder` 为 op 注册了 builder 时，生成的检查之后调用 target 返回的 kernel，op 的 `forward` 不执行。通过 `register_kernel_type` 增加的实现属于 in-tree 路径，仍由 `forward` 经 `kernel_for` 选中。
 - 如果一次调用写入的所有张量（各输出与被写入的输入）都不含元素，in-tree 实现与 target 都不执行：新的输出按检查过的形状与 dtype 在调用设备上创建，`out` 与被写入的输入原样返回。输入为空而输出不为空时，照常执行实现。
 
 各检查的细节见[调用与校验 1](calls.md#call)。

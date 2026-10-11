@@ -32,13 +32,11 @@ package "target: replaces the whole op" {
 }
 
 package "The op instance's in-tree implementation" {
-  rectangle "The Op class's _eager_forward" as body <<dev>>
+  rectangle "The Op class's forward" as body <<dev>>
   package "Implementations of one kernel interface\n(installed at construction)" as snap {
     rectangle "Classes in kernel_types\ninheriting the interface" as intree <<dev>>
-    rectangle "kernel_map=\nreplaces the class behind a key,\nkeeping the key's rule\n(this instance only)" as repl <<ext>>
-    rectangle "register_implementation\nadds a key\n(every instance built afterwards)" as added <<ext>>
-    intree -[hidden]down- repl
-    repl -[hidden]down- added
+    rectangle "register_kernel_type\nadds a key\n(every instance built afterwards)" as added <<ext>>
+    intree -[hidden]down- added
   }
 }
 

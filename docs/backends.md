@@ -31,18 +31,16 @@ The second half explains why the protocol is designed this way:
 - the interfaces available to a caller;
 - what the protocol deliberately does not support.
 
-## Three ways to extend dispatch {#three-ways}
+## Two ways to extend dispatch {#two-ways}
 
-A package outside TileOPs picks one of three mechanisms, by how much of an op it takes
+A package outside TileOPs picks one of two mechanisms, by how much of an op it takes
 over:
 
-1. `kernel_map=`: the caller, when constructing an op, replaces the class that runs behind
-   one key;
-1. `register_implementation`: adds an implementation to a kernel interface, which takes
+1. `register_kernel_type`: adds an implementation to a kernel interface, which takes
    part in selection alongside the in-tree implementations;
 1. target: takes over every call of the op.
 
-In the first two, the kernel class follows the kernel interface, the same contract the
+In the first, the kernel class follows the kernel interface, the same contract the
 in-tree implementations follow; how to write one is in
 [How a backend joins TileOPs](user-guide/dispatch/backends.md). A target follows the op's
 manifest signature instead, and the backend writes a `build_kernel` for it. The rest of
@@ -214,7 +212,7 @@ d = op(a, b)                     # every input on one device: a.device == b.devi
 #   two or more True   → AmbiguousTargetError, asking for an explicit target=
 
 # ── op layer: run the checks generated from the manifest signature, then hand the whole op to the target ──
-#   GemmFwdOp's own _eager_forward and kernel_for serve the in-tree path only, and do not run
+#   GemmFwdOp's own forward and kernel_for serve the in-tree path only, and do not run
 #   the tensors go to the target in signature.inputs order, inputs it does not write made contiguous
 
 # ── op layer: look up the external memo table — device, then input signature ──
@@ -586,8 +584,8 @@ print(load_failures())
 from its own set.** The second layer happens inside `build_kernel`, without the protocol:
 this path has no kernel-level concept, no capability negotiation and no candidate
 filtering. The candidate filtering TileOPs does run (availability, applicability,
-precedence) belongs to the in-tree path and to the two smaller mechanisms (see
-[Three ways to extend dispatch](#three-ways)); a target bypasses it.
+precedence) belongs to the in-tree path and to the smaller mechanism, `register_kernel_type` (see
+[Two ways to extend dispatch](#two-ways)); a target bypasses it.
 
 `detect` answers only which devices belong to the backend, and nothing finer.
 **Whether this call is supported (dtype, shape, parameter combination) is answered by

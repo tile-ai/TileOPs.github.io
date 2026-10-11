@@ -1,33 +1,25 @@
 # How a backend joins TileOPs
 
-A third-party backend has three ways to join, ordered from the smallest range of calls taken over to the largest: replace the implementation behind one key, add an implementation to a kernel interface, or replace a whole op. In the first two, the backend's class and the in-tree implementations follow the same kernel interface; how to write one is in [Adding a kernel to an op](writing.md).
+A third-party backend has two ways to join, ordered from the smaller range of calls taken over to the larger: add an implementation to a kernel interface, or replace a whole op. In the first, the backend's class and the in-tree implementations follow the same kernel interface; how to write one is in [Adding a kernel to an op](writing.md).
 
 ## 1. Choose the way by the range of calls to take over {#choose}
 
-![The ranges taken over by the three ways of extending](img/extension.svg)
+![The ranges taken over by the two ways of extending](img/extension.svg)
 
-**Figure 1** The range each of the three ways of extending takes over. Teal marks the parts provided by the system, purple the parts written by TileOPs developers, and green the parts provided by the backend.
+**Figure 1** The range each of the two ways of extending takes over. Teal marks the parts provided by the system, purple the parts written by TileOPs developers, and green the parts provided by the backend.
 
-**Table 1** Comparison of the three ways
+**Table 1** Comparison of the two ways
 
-| No. | Item | `kernel_map=` | `register_implementation` | target |
-| --- | --- | --- | --- | --- |
-| 1 | What changes | the class that runs behind one key; which calls the key serves is unchanged | a new key, with its own applicability and precedence | every call of the op, except calls whose written tensors are all empty |
-| 2 | Applies to | the one op instance the caller constructs | every instance of the op constructed after registration | the op instances that select the target |
-| 3 | Contract followed | the kernel interface | the kernel interface | the op's signature in the manifest |
-| 4 | Calls the new class does not serve | raise an error when the key is selected | still served by the in-tree implementations | none; the target serves every call, except calls whose written tensors are all empty |
+| No. | Item | `register_kernel_type` | target |
+| --- | --- | --- | --- |
+| 1 | What changes | a new key, with its own applicability and precedence | every call of the op, except calls whose written tensors are all empty |
+| 2 | Applies to | every instance of the op constructed after registration | the op instances that select the target |
+| 3 | Contract followed | the kernel interface | the op's signature in the manifest |
+| 4 | Calls the new class does not serve | still served by the in-tree implementations | none; the target serves every call, except calls whose written tensors are all empty |
 
-## 2. Replace the implementation behind one key: kernel_map= {#kernel-map}
+## 2. Add an implementation: register_kernel_type {#register}
 
-`kernel_map=` is a parameter of every op constructor, and its value maps keys to classes. It replaces only the class that runs behind the key in this op instance:
-
-- Which calls the key serves and its precedence are still decided by the declarations of the originally registered implementation; the replacement's own `applies`, `general`, and `preferred_over` take no part in selection.
-- The key is available on devices where either the original implementation or the replacement can run. When the replacement can run on devices where the original cannot, the key also takes part in selection on those devices, and an overlap with other implementations raises an ambiguity error under the same rules.
-- When the key is selected, the call is served by the replacement. When the replacement cannot run on the call's device or refuses the call, the call raises an error and does not fall back to the original implementation.
-- Calls that select other keys do not consult the replacement.
-- The replacement follows the same rule as a registered implementation: it subclasses the kernel interface the key belongs to and is built by its own class method `entry_for(call)`. There is no other way to write it.
-
-To change which calls a kernel serves, use `register_implementation` in § 3.
+`tileops.backend.register_kernel_type(op, key, kernel_type)` adds an implementation to an op. It is the backend form of step 1 in [Adding a kernel to an op](writing.md). `op` is the op's class name, `key` is the new implementation's name, and `kernel_type` is a class that subclasses both `Kernel` and one of the op's kernel interfaces; the inheritance decides which interface it belongs to, and the class is built through its own class method `entry_for(call)`. Step 2 is the same as for in-tree implementations.
 
 ```python
 # tests/test_kernel_dispatch.py
@@ -49,33 +41,24 @@ class _TorchLayerNorm(Kernel, LayerNormFwdInterface):
             x.dtype
         )
 
-op = LayerNormFwdOp((32,), kernel_map={"layer_norm": _TorchLayerNorm}, target=BUILTIN)
-```
 
-Keys in `kernel_map=` that this op lacks but other ops have are ignored, so a composite op passes one map to all its sub-ops. A key that no op has raises `was given kernel_map keys no op has` at construction.
-
-## 3. Add an implementation: register_implementation {#register}
-
-`tileops.backend.register_implementation(op, key, implementation)` adds an implementation to an op. It is the backend form of step 1 in [Adding a kernel to an op](writing.md). `op` is the op's class name, `key` is the new implementation's name, and `implementation` subclasses one of the op's kernel interfaces; the inheritance decides which interface it belongs to. Step 2 is the same as for in-tree implementations.
-
-```python
-# tests/test_kernel_dispatch.py
 class _NarrowTorchLayerNorm(_TorchLayerNorm):
     """An added implementation for short rows, which wins over the in-tree one there."""
 
     preferred_over = frozenset({"layer_norm"})
 
     @classmethod
-    def applies(cls, call: LayerNormCall) -> bool:
-        return call.n <= 64
+    def refusal(cls, call: LayerNormCall) -> "str | None":
+        return None if call.n <= 256 else "serves rows of at most 256"
 
-register_implementation("LayerNormFwdOp", "torch_short_rows", _NarrowTorchLayerNorm)
+register_kernel_type("LayerNormFwdOp", "torch_short_rows", _NarrowTorchLayerNorm)
 ```
 
-- The new implementation overlaps `LayerNormKernel` on `n <= 64`, and `LayerNormKernel` is not general, so the new implementation declares `preferred_over`.
+- The new implementation overlaps `LayerNormKernel` on `n <= 256`, and `LayerNormKernel` is not general, so the new implementation declares `preferred_over`.
 - Calls the new implementation does not serve, such as `n = 1024`, are still served by the in-tree implementation.
 - The new implementation enters only op instances constructed after registration.
 - Registering the same key twice under one op raises `BackendError`. A key equal to an in-tree key raises `reuse keys it has` when the op is constructed.
+- When the new implementation inherits none of the op's kernel interfaces, states `entry_for` other than as a class method, or has a `forward` that does not take the interface's arguments, constructing the op raises; see [Adding a kernel to an op § 5](writing.md#tests).
 
 Registration happens when the backend module is imported. The backend declares an entry point in `pyproject.toml`, and TileOPs imports it when the first op is constructed:
 
@@ -86,9 +69,9 @@ acme = "tileops_acme"
 
 When the module fails to import, all its registrations are undone and TileOPs emits a `RuntimeWarning`. The failure records are available through `tileops.backend.load_failures()`.
 
-## 4. Replace a whole op: target {#target}
+## 3. Replace a whole op: target {#target}
 
-The full target protocol, a runnable template backend, and common errors are in [Adding a hardware backend](../../backends.md). This section only summarizes how a target differs from the other two ways.
+The full target protocol, a runnable template backend, and common errors are in [Adding a hardware backend](../../backends.md). This section only summarizes how a target differs from the other way.
 
 A target is a name a backend gives to a set of kernels. Once a target registers a builder for an op, every call of an op instance that selects the target is served by the target, and the op's own `forward` does not run. The exception is a call whose written tensors are all empty: then neither the target nor the in-tree implementation runs, and the outputs are constructed from the signature.
 

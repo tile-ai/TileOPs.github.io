@@ -91,7 +91,7 @@ def forward(self, a, b):
 from tileops.trace import trace
 
 trace.enable()  # (1)!
-c = op.forward(a, b)  # (2)!
+c = op(a, b)  # (2)!
 ```
 
 1. [`trace.enable(output="debug")`](../api/trace.md#tileops.trace.api._Trace.enable) 打开追踪，并指定输出目录，默认是 `debug/`（已被 gitignore）。这个开关只在当前进程内有效：不读取环境变量，也不对 `tilelang` 做 monkeypatch。相关的还有 [`trace.disable()`](../api/trace.md#tileops.trace.api._Trace.disable)、[`trace.enabled`](../api/trace.md#tileops.trace.api._Trace.enabled) 与 [`trace.output`](../api/trace.md#tileops.trace.api._Trace.output)。

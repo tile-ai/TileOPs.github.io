@@ -73,7 +73,6 @@ them. What the class writes is how a call reaches a kernel.
 
 ```python
 class GemmFwdOp(Op):
-    compile_boundary: ClassVar[bool] = True           # optional: claims fullgraph=True
     kernel_types: ClassVar[Mapping[str, type[Kernel]]] = {
         "gemm_tma": GemmTMAKernel,
         "gemm_cp_async": GemmCpAsyncKernel,
@@ -81,17 +80,12 @@ class GemmFwdOp(Op):
     }
     interfaces: ClassVar[Mapping[str, type[KernelInterface]]] = {"gemm": GemmFwdInterface}
 
-    def __init__(self, trans_a=False, trans_b=True, *, target=None, kernel_map=None, tune=False):
+    def __init__(self, trans_a=False, trans_b=True, *, target=None):
         self.trans_a = trans_a
         self.trans_b = trans_b
-        self.target = target
-        self.tune = tune
-        self.dispatch_kernel(kernel_map)              # installs this instance's kernel map
+        super().__init__(target=target)               # checks the params, installs kernel_types
 
-    def forward(self, a, b):
-        return self._call_boundary(a, b)              # the generated operator
-
-    def _eager_forward(self, a, b):                   # the generated checks have run
+    def forward(self, a, b):                          # the generated checks have run
         a, b = a.contiguous(), b.contiguous()         # handed over as the spec declares it
         m, k = (a.shape[1], a.shape[0]) if self.trans_a else a.shape
         call = GemmCall(                              # what this call is
@@ -104,23 +98,30 @@ class GemmFwdOp(Op):
             device=a.device,
         )
         return self.kernel_for("gemm", call)(a, b)
+
+    def roof_key(self):                               # FLOPs priced on tensor cores
+        return tensor_core_roof(self.last_call.indices["T"])
 ```
 
 | # | Member | Written from |
 | --- | --- | --- |
-| 1 | `__init__` | the names, order and defaults in `signature.params`, then `target`, `kernel_map` and `tune`, closing with `self.dispatch_kernel(kernel_map)` |
-| 2 | `kernel_types` | the Kernel classes that can serve the op, each under a key; a `kernel_map=` override replaces one by that key |
+| 1 | `__init__` | the names, order and defaults in `signature.params`, then the keyword-only `target`; it assigns each manifest parameter to the attribute of the same name, then calls `super().__init__(target=target)` |
+| 2 | `kernel_types` | the Kernel classes that can serve the op, each under a key |
 | 3 | `interfaces` | one entry per kernel call the op makes, mapping the name `kernel_for` uses to the `KernelInterface` class that the implementations serving that call inherit |
-| 4 | `forward` | the order of `signature.inputs`, with optional inputs last and defaulting to `None` |
-| 5 | `_eager_forward` | making the inputs contiguous, building the call spec, fetching the kernel and calling it |
-| 6 | `compute_roof` | optional: the hardware unit whose peak prices the op's FLOPs; the default is fp32 on CUDA cores, and the member is written only when the op uses another unit |
+| 4 | `forward` | the parameters: the order of `signature.inputs`, with optional inputs last and defaulting to `None`; the body: making the inputs contiguous, building the call spec, fetching the kernel and calling it |
+| 5 | `roof_key` | optional: the hardware unit whose peak prices the op's FLOPs; the default is fp32 on CUDA cores, and the member is written only when the op uses another unit |
 
-`_infer_output_shapes`, `_validate_dtypes` and `eval_roofline` are generated from the
-spec and are not written by hand.
+`_infer_output_shapes` and `eval_roofline` are generated from the spec and are not
+written by hand.
 
-An op without a compile boundary writes the body of `_eager_forward` in `forward`
-itself. An op that declares the boundary runs that body behind the generated operator.
-How that works is in [Bringing an op into torch.compile](torch-compile.md).
+`forward` is the op's computation and the only method that carries it. A caller writes
+`op(a, b)`, never `op.forward(a, b)`: `Op.__call__` runs the generated checks and then
+`forward`. An op whose spec has a call-time tensor input and no `composition` gets a
+compile boundary generated for it, and `__call__` runs `forward` behind the generated
+operator. How that works is in [Bringing an op into torch.compile](torch-compile.md).
+
+The constructor takes no tuning parameter. To tune, construct the op, then call
+`op.request_tune()`.
 
 ### `kernel_for`, and choosing among kernels {#kernel-selection}
 
@@ -191,8 +192,8 @@ write each declaration, and the common errors are in
 An op does not write `entry_for` and keeps no kernel cache of its own. An op with no
 in-tree implementation, which depends only on an external backend, declares neither
 `kernel_types` nor `interfaces`; when no target claims the call's device, the call
-raises `OpNotAvailableError`. How a backend adds an implementation or replaces the one
-under a key is in [How a backend joins TileOPs](user-guide/dispatch/backends.md).
+raises `OpNotAvailableError`. How a backend adds an implementation or serves the whole
+op is in [How a backend joins TileOPs](user-guide/dispatch/backends.md).
 
 ### Registering
 
@@ -207,7 +208,8 @@ API reference does not include it.
 ## Step 3: write the kernel
 
 A kernel class subclasses [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py) and the kernel interface it implements, lives under [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels), is written in
-TileLang, and compiles at construction. It implements `forward`, which the base
+TileLang. Construction obtains the TileLang builder; the program compiles the first
+time a call runs it with a given config. It implements `forward`, which the base
 class's `__call__` runs. Its constructor is called by the builder its own `entry_for`
 returns, and its `forward` takes the kernel interface's parameters, the `kernel(a, b)`
 of step 2.
@@ -221,9 +223,9 @@ splits them like this:
 
 ```python
 class GemmTMAKernel(Kernel, GemmFwdInterface):
-    def __init__(self, m, n, k, dtype, config=None, tune=False, trans_a=False, trans_b=False, ...):
-        self.kernel = _gemm_kernel(m, n, k, trans_a, trans_b, self.dtype_str, ...)  # compiles
-        self.init_config(config, tune)      # tile sizes and pipeline depth
+    def __init__(self, m, n, k, dtype, config=None, trans_a=False, trans_b=False, ...):
+        self.kernel = _gemm_kernel(m, n, k, trans_a, trans_b, self.dtype_str, ...)  # the TileLang builder
+        self.init_config(config)            # tile sizes and pipeline depth
 
     def forward(self, a, b):                # a call passes tensors, nothing else
         ...
@@ -268,6 +270,13 @@ The test scaffolding is `TestBase` from
 
 When the op has an optional input, it needs at least one case with the input passed
 and one without, because the two often run different kernels.
+
+An op with a compile boundary, that is, one whose spec has a call-time tensor input and
+no `composition`, also needs a cold `torch.compile(op, fullgraph=True)` test, registered
+through `register_compile_contract` in
+[`tests/compile_contract.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/compile_contract.py).
+A test compares the registered ops with the implemented ones that have a compile
+boundary, and fails on any difference.
 
 ## Step 5: write the benchmark
 
@@ -320,9 +329,6 @@ spec.
 
 ## Afterwards
 
-Once the op runs, two optional tasks remain:
-
-- letting the op into a user's compiled graph, see
-  [Bringing an op into torch.compile](torch-compile.md);
-- letting other kernels serve the op on other hardware, see
-  [Adding a hardware backend](backends.md).
+Once the op runs, letting other kernels serve it on other hardware is optional; see
+[Adding a hardware backend](backends.md). How the op behaves inside a user's compiled
+graph is in [Bringing an op into torch.compile](torch-compile.md).

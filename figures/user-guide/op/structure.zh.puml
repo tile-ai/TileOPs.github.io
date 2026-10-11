@@ -1,0 +1,198 @@
+@startuml structure
+title Op 类结构
+
+skinparam defaultFontName "Noto Sans SC"
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #1E293B
+skinparam titleFontColor #0F172A
+skinparam titleFontSize 20
+skinparam classBorderColor #64748B
+skinparam classFontColor #0F172A
+skinparam classFontStyle bold
+skinparam classAttributeFontColor #334155
+skinparam classStereotypeFontColor #64748B
+skinparam classBorderThickness 1.5
+skinparam arrowColor #64748B
+skinparam arrowFontColor #475569
+skinparam arrowThickness 1.3
+skinparam linetype ortho
+skinparam nodesep 50
+skinparam ranksep 45
+skinparam classFontSize 15
+skinparam classAttributeFontSize 14
+skinparam arrowFontSize 16
+hide empty members
+
+abstract class Op #E9EAF0 {
+    == <back:#CBD5E6> <b>类属性（每个 op 类一份）</b> </back> ==
+    kernel_types : key → 实现类
+    interfaces : interface → 接口类
+    delegate_types : stage → Op 类
+    injected_parameters
+    compile_op_names
+    _signature : _SignaturePlan（同类实例共享）
+    == <back:#CBD5E6> <b>实例状态</b> </back> ==
+    .. <i>构造</i> ..
+    manifest 参数（构造期张量除外）
+    target
+    _installed_kernel_types : key → 实现类
+    _preferred_over
+    _keys_by_interface
+    _construction_indices
+    _instance_key
+    .. <i>绑定</i> ..
+    _target_builder
+    _serving_target
+    _entries_by_call : (interface, call) → entry
+    _built_entries : interface → entries
+    _target_kernels : (设备, 各输入 dtype、shape) → kernel
+    .. <i>运行</i> ..
+    构造期张量
+    _tune_requested
+    _delegates : stage → identity → Op
+    _delegate_stages
+    _effect_branches
+    _last_call : SignatureCall
+    _tune_warned
+    == <back:#CBD5E6> <b>方法</b> </back> ==
+    .. <i>对外接口</i> ..
+    __call__(*args) —— 参数即 forward 的签名
+    serving_target «property»
+    last_call «property»
+    {abstract} <color:#2563EB>eval_roofline() «生成»</color>
+    request_tune()
+    kernel_config()
+    iter_kernels()
+    built_entries(interface)
+    held_delegates()
+    .. <i>对内接口</i> ..
+    __init__(*, target=None)
+    {abstract} <color:#DC2626>forward(...)</color>
+    kernel_for(interface, call)
+    key_for(interface, call)
+    delegate_for(stage, identity, given=None, /, **params)
+    roof_key()
+    .. <i>内部实现</i> ..
+    __init_subclass__() —— 类定义时运行，安装生成的方法
+    _run_call(inputs, body)
+    _bind_target()
+    _reset_binding()
+    _get_or_build_entry(interface, call)
+    _check_signature(tensors)
+    {abstract} <color:#2563EB>_infer_output_shapes(...) «生成»</color>
+}
+
+class RMSNormFwdOp #E9EAF0 {
+    kernel_types : 3 个实现
+    interfaces : rms_norm
+    --
+    forward(x, weight=None)
+}
+
+class MoEExpertMLPFwdOp #E9EAF0 {
+    delegate_types = {gate_up, down}
+    --
+    forward(expert_input, ...)
+}
+
+class _CompileBoundary #E7EEF6 {
+    plan : _SignaturePlan
+    branches : effect 分支 → custom op
+    --
+    call(op, inputs, writes, execution)
+    build_call_boundary(cls) : 子类的 _call_boundary()
+}
+
+class _SignaturePlan #E7EEF6 {
+    sig
+    constructions
+    checks
+    shapes
+    effects
+    roofs
+    --
+    check_construction(op) : indices
+    check(op, tensors) : SignatureCall
+    output_shapes(op, shapes, dtypes)
+    effect_branch(op, present)
+    eval_roofline(call)
+}
+
+class SignatureCall <<dataclass, frozen>> #F7EEDC {
+    indices
+    branch_key
+    device
+    tensors
+    traffic
+    written
+    has_out
+    metadata
+    stages : stage → SignatureCall*
+    --
+    metadata_values(name)
+}
+
+abstract class Kernel #EEF2E6 {
+    devices
+    supported_archs
+    general
+    preferred_over
+    --
+    refusal(call) [classmethod]
+    entry_for(call) [classmethod]
+    {abstract} <color:#DC2626>forward(...)</color>
+}
+
+abstract class KernelInterface #EEF2E6 {
+    request : CallSpec
+    --
+    {abstract} <color:#DC2626>forward(...)</color>
+}
+
+abstract class RMSNormFwdInterface #EEF2E6 {
+    request = LayerNormCall
+    --
+    {abstract} <color:#DC2626>forward(x, weight)</color>
+}
+
+object "entry" as Entry #EEF2E6 {
+    运行时对象：缓存未命中时，
+    由实现类 entry_for 返回的构造函数构造
+    一个 kernel 或多个 kernel 的组合
+    本例即一个 RMSNormOnChipKernel 实例
+}
+
+class MoEGroupedGemmFwdOp <<Op 子类>> #E9EAF0 {
+    forward(...)
+}
+
+class RMSNormOnChipKernel #EEF2E6 {
+    supported_archs = [90]
+    preferred_over = {rms_norm_streaming}
+    --
+    refusal(call) [classmethod]
+}
+
+' 子类在上
+RMSNormFwdOp -down-|> Op
+MoEExpertMLPFwdOp -down-|> Op
+MoEExpertMLPFwdOp o-right-> "2" MoEGroupedGemmFwdOp
+
+' 代码生成在下
+Op .left.> _CompileBoundary
+Op -down-> "0..1" _SignaturePlan
+Op -down-> "0..1" SignatureCall : last_call
+_CompileBoundary -right-> _SignaturePlan
+_SignaturePlan .right.> SignatureCall
+
+' kernel 在右
+Op -right-> RMSNormOnChipKernel : "实现表[key]"
+Op o-right-> "0..*" Entry
+RMSNormOnChipKernel .down.> Entry
+RMSNormOnChipKernel -up-|> Kernel
+RMSNormOnChipKernel -right-|> RMSNormFwdInterface
+RMSNormFwdInterface -up-|> KernelInterface
+
+@enduml

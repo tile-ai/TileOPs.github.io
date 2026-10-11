@@ -3,16 +3,18 @@
 A TileOPs op brought into `torch.compile` becomes one node in the user's compiled
 graph, and that node does not change with the backend serving it.
 
-Bringing an op in takes one piece of work: declaring a compile boundary at the op
-layer. Dynamo traces everything outside the boundary, and everything inside it is
-invisible to the compiler.
+An op is brought in through a compile boundary at the op layer. Dynamo traces
+everything outside the boundary, and everything inside it is invisible to the compiler.
+The base class generates this boundary when the class is defined, for every op whose
+manifest entry has a call-time tensor input and no composition; the op writes no code
+for the boundary.
 
 The body covers the work of bringing an op in:
 
 1. checking whether an op is already in;
 1. compiling code that calls it;
 1. the five calling conventions;
-1. the code an op that is not in yet needs to declare the boundary.
+1. how the boundary is generated, and the code the op writes.
 
 The appendix explains why the boundary can only be drawn this way: how dynamo works,
 where it and the op layer disagree, why the boundary sits at the op layer, and what the
@@ -22,10 +24,9 @@ boundary costs and does not provide.
 
 ### Checking whether an op is in {#supported}
 
-Read the class attribute `compile_op_names`. A non-empty value means the class
-declares a compile boundary (`compile_boundary = True`), so the boundary is at the op
-layer and `fullgraph=True` works. An empty tuple means the class declares no compile
-boundary.
+Read the class attribute `compile_op_names`. A non-empty value means the class has a
+compile boundary, so the boundary is at the op layer and `fullgraph=True` works. An
+empty tuple means the class has no compile boundary.
 
 ```python
 >>> from tileops.norm import RMSNormFwdOp
@@ -33,8 +34,21 @@ boundary.
 ('tileops::norm_rms_norm_fwd',)
 ```
 
-An op that has not migrated raises under `fullgraph=True` and breaks the graph under
-the default settings.
+An op class has a compile boundary exactly when its manifest entry meets both of:
+
+1. it has a call-time tensor input;
+1. it has no composition, that is, the op is not a composite.
+
+Every implemented op that meets both must pass a cold
+`torch.compile(op, fullgraph=True)`. The validator checks each implemented entry's
+`compile_op_names` against the two conditions, and a test further requires each such
+op to register a cold compile test in
+[`tests/compile_contract.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/compile_contract.py).
+
+Two kinds of op have no compile boundary: ops with no call-time tensor input
+(`AlibiFwdOp`, `SinusoidalFwdOp`) and composites. When a composite is traced, dynamo
+traces its `forward`, and each sub-op it calls that has a compile boundary becomes a
+node in the graph.
 
 ### Compiling code that calls it
 
@@ -71,7 +85,7 @@ the compiled path behave differently from the eager one.
   made contiguous inside the node, and an output the op allocates is always contiguous.
   When later work needs another layout, convert outside the op. An output that is a
   written input (`alias`) or a caller's `out` keeps that tensor's storage.
-- **Meta tensors cannot be used for warm-up.** Once an op declares the boundary, a call
+- **Meta tensors cannot be used for warm-up.** For an op with a compile boundary, a call
   with meta or fake tensors returns at the fake and never reaches kernel construction.
 - **Warm up before a CUDA graph capture.** Call the op at least once with real tensors
   at the same shape: building a kernel may compile, while a capture allows only a cache
@@ -91,34 +105,39 @@ With the boundary at the op layer, a caller can rely on three things:
 - **The graph does not change with the target.** The same code compiles to the same
   graph on another backend or another card, so the compiled artefact does not depend on
   the backend.
-- **`fullgraph=True` works** for an op that declares this contract; see
+- **`fullgraph=True` works** for an op with a compile boundary; see
   [Checking whether an op is in](#supported).
 - **Output shape, dtype and stride come from the manifest.** They do not depend on how a
   kernel tiles or pads internally. An output the op allocates is always contiguous.
 
-## Declaring the boundary on a new op: `RMSNormFwdOp`
+## How the boundary is generated: `RMSNormFwdOp`
 
-This section gives the code needed to bring one op in: how the boundary is declared,
-how the fake is written, and why the target is resolved again inside the node. The
+This section gives the code an op with a compile boundary writes, how the boundary and
+its fake are generated, and why the target is resolved inside the node. The
 tracing, graph breaks and guards it refers to are described in
 [How dynamo works](#dynamo).
 
-`RMSNormFwdOp` was the first op brought in. Its skeleton, with docstrings elided; the
+`RMSNormFwdOp`'s skeleton, with docstrings elided; the
 full file is
 [`src/tileops/ops/norm/rms_norm.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops/norm/rms_norm.py):
 
 ```python
 class RMSNormFwdOp(Op):
-    # the operators, their fakes and compile_op_names are generated from the manifest entry
-    compile_boundary: ClassVar[bool] = True
-    kernel_types: ClassVar[Mapping[str, type[Kernel]]] = {"rms_norm": RMSNormKernel}
+    # the operators, their fakes, _call_boundary and compile_op_names are generated
+    # from the manifest entry
+    kernel_types: ClassVar[Mapping[str, type[Kernel]]] = {
+        "rms_norm": RMSNormKernel,
+        "rms_norm_streaming": RMSNormStreamingKernel,
+        "rms_norm_on_chip": RMSNormOnChipKernel,
+    }
     interfaces: ClassVar[Mapping[str, type[KernelInterface]]] = {"rms_norm": RMSNormFwdInterface}
 
-    def forward(self, x, weight=None):
-        # the only line: call the generated operator
-        return self._call_boundary(x, weight)
+    def __init__(self, normalized_shape, eps=None, *, target=None):
+        self.normalized_shape = normalized_shape
+        self.eps = eps
+        super().__init__(target=target)
 
-    def _eager_forward(self, x, weight=None):
+    def forward(self, x, weight=None):
         weight = None if weight is None else weight.contiguous()
         x = x.contiguous()                         # the generated checks have run
         call = LayerNormCall(
@@ -130,8 +149,11 @@ class RMSNormFwdOp(Op):
         return self.kernel_for("rms_norm", call)(x, weight)
 ```
 
-That is the whole declaration. The operators and their fakes are generated from the
-manifest entry, one operator per effect branch:
+The op writes only its constructor and `forward`, its computation. `Op.__call__` calls
+the generated `_call_boundary`, which takes `forward`'s parameters and calls the
+operator of the call's effect branch; inside the node, the operator runs the call with
+`forward` as its body. The operators and their fakes are generated from the manifest
+entry, one operator per effect branch:
 
 - its tensor arguments are `signature.inputs`, in order;
 - its return value is given by `signature.outputs`;
@@ -148,20 +170,20 @@ omits an output, its operator's name gains `_writes_<input>`, `_out` and
 The layers one call passes through, and where the boundary falls:
 
 <figure class="callpath" markdown="0">
-  <div class="cp-step cp-traced"><code>Op.__call__</code><span>calls <code>forward</code>, resolves no target</span></div>
-  <div class="cp-step cp-traced"><code>forward</code><span>one line, calls the opaque operator</span></div>
+  <div class="cp-step cp-traced"><code>Op.__call__</code><span>calls the generated <code>_call_boundary</code>, resolves no target</span></div>
+  <div class="cp-step cp-traced"><code>_call_boundary</code><span>takes <code>forward</code>'s parameters, calls the opaque operator</span></div>
   <div class="cp-boundary"><span>compile boundary</span></div>
   <div class="cp-step cp-opaque"><code>the generated operator</code><span>recovers the instance, runs the generated checks, resolves the target, undoes the resolution on failure</span></div>
-  <div class="cp-step cp-opaque"><code>_eager_forward</code><span>makes the inputs contiguous, fetches the kernel, launches it</span></div>
-  <figcaption>The two violet layers are inside dynamo's trace, and the one line of <code>forward</code> is the last thing dynamo traces. Below the boundary the opaque operator runs, invisible to the compiler.</figcaption>
+  <div class="cp-step cp-opaque"><code>forward</code><span>makes the inputs contiguous, fetches the kernel, launches it</span></div>
+  <figcaption>The two violet layers are inside dynamo's trace, and <code>_call_boundary</code>'s call of the operator is the last thing dynamo traces. Below the boundary the opaque operator runs, invisible to the compiler.</figcaption>
 </figure>
 
-Three parts of this code are fixed.
+Three parts of the generated code are fixed.
 
 **First, the instance is recovered through a string key, not passed as an object.**
 The schema's types are a fixed set, such as `Tensor`, `int`, `float`, `bool` and
-`str`, with no "arbitrary Python object". What the operator body needs (`kernel_map`,
-the resolved target, and the cache table of built kernels) is stored on the instance and
+`str`, with no "arbitrary Python object". What the operator body needs (the resolved
+target and the cache table of built kernels) is stored on the instance and
 cannot be split into schema arguments. Two details of the key are also fixed:
 
 - **The key is a string, not an integer.** A string is a constant during tracing, while
@@ -267,8 +289,8 @@ provides two interfaces for this:
 - `register_fake` tells the compiler what the node outputs; it receives only the
   inputs' metadata and never touches real data.
 
-**Without the annotation, dynamo traces into the code and fails.** With the boundary
-undeclared, `RMSNormFwdOp` compiles in neither of its two states:
+**Without the annotation, dynamo traces into the code and fails.** If `RMSNormFwdOp`
+had no compile boundary, it would compile in neither of its two states:
 
 - An instance that has not built a kernel builds one during the call, and dynamo
   traces into the TileLang JIT inside the constructor.

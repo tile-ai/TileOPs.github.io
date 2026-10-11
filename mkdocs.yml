@@ -44,6 +44,12 @@ nav:
       - Calls and Validation: user-guide/manifest/calls.md
       - Examples: user-guide/manifest/examples.md
     - Adding an Op: new-op.md
+    - Op Base Class:
+      - user-guide/op/index.md
+      - Construction and Calls: user-guide/op/lifecycle.md
+      - Composite Ops: user-guide/op/composite.md
+      - Call Records and Tuning: user-guide/op/records.md
+      - Class Structure: user-guide/op/structure.md
     - Kernel Dispatch:
       - user-guide/dispatch/index.md
       - Adding a Kernel: user-guide/dispatch/writing.md
@@ -184,6 +190,11 @@ plugins:
             Adding a Kernel: 如何为 op 新增 kernel
             Backend Integration: backend 如何接入
             Adding an Op: 添加新 op
+            Op Base Class: Op 基类
+            Construction and Calls: 构造与调用
+            Composite Ops: 组合 op
+            Call Records and Tuning: 调用记录与调优
+            Class Structure: 类结构与实例状态
             Timing Benchmarks: benchmark 的计时方法
             Writing Benchmarks: 编写 benchmark
             Using torch.compile: 接入 torch.compile

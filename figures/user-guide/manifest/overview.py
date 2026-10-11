@@ -150,8 +150,8 @@ def draw() -> str:
     r1 = y1 + 48
     s.box("gen", 0, r1, L("代码生成", "Code generation"), [L("调用检查、形状推导", "call checks, shape inference"), L("dtype 检查、eval_roofline", "dtype checks, eval_roofline")])
     s.box("op", 1, r1, L("Op 类", "Op class"), [L("__init__、forward、docstring", "__init__, forward, docstring"), L("kernel_types、interfaces", "kernel_types, interfaces")], fill=DEV)
-    s.box("base", 2, r1, L("Op 基类", "Op base"), [L("kernel_for：选择实现", "kernel_for: selection"), L("entry 缓存、target 派发", "entry cache, target dispatch")])
-    s.box("kernel", 2, r1 + 104, L("Kernel 实现", "Kernel implementation"), [L("继承 kernel 接口", "inherits a kernel interface"), L("applies、entry_for 按需声明", "applies, entry_for as needed")], fill=DEV)
+    s.box("base", 2, r1, L("Op 基类", "Op base"), [L("kernel_for：选择实现", "kernel_for: selection"), L("entry 缓存、target 选择", "entry cache, target selection")])
+    s.box("kernel", 2, r1 + 104, L("Kernel 实现", "Kernel implementation"), [L("继承 kernel 接口", "inherits a kernel interface"), L("refusal、entry_for 按需声明", "refusal, entry_for as needed")], fill=DEV)
 
     # 验证与测量层。
     y2 = y1 + 228 + 40

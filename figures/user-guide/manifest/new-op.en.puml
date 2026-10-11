@@ -29,7 +29,7 @@ workload row;
 :Write the call spec, the kernel interface
 and its implementations: override entry_for
 where needed, and declare devices,
-supported_archs, applies, preferred_over
+supported_archs, refusal, preferred_over
 or general;
 :Write the Op class (~__init~__, kernel_types,
 interfaces, forward, docstring), and export it
@@ -37,8 +37,9 @@ from its package and tileops.<family>;
 |System|
 :Generate the call checks, shape inference,
 dtype checks and eval_roofline from the
-signature, and for a compile-boundary class
-the operator and fake/meta;
+signature, and for a class with a call-time
+tensor input and no composition, the
+compile-boundary operator and fake/meta;
 |Developer|
 :Write ref_program in workloads/;
 :Write correctness tests in tests/ops/:

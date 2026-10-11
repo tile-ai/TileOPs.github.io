@@ -11,6 +11,8 @@
   系统如何使用 spec，描述 spec 所用的概念，以及 spec 的写法。
 - [添加新 op](../new-op.md)
   从一份 spec 到 `status: implemented` 的六个步骤。
+- [Op 基类开发者指南](op/index.md)
+  `Op` 基类替每个 op 完成什么，子类向它声明什么，构造与调用在基类内部经过哪些步骤。
 
 ## kernel 与硬件
 

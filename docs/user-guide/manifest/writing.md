@@ -87,7 +87,7 @@ The following lists every top-level field a spec can contain. Each comment gives
 `signature.params` corresponds one to one with the parameter list of `__init__`. An ordinary construction parameter declares `type`, and optionally `default` and `kw_only` (keyword-only). A tensor passed at construction declares `dtype` and `shape` instead, see [Extensions § 5](extensions.md#placement).
 
 - The spec is the authority. For an `implemented` op, the validator compares `params` with `__init__` item by item, and requires the same set of parameters, order, `default` and `kw_only`.
-- The only extra parameters the code may have are execution-policy parameters: `kernel_map`, `tune` and `target`, which every op has; implementation objects injected by the caller; and the reserved parameter `config`, which is passed only to the kernel.
+- The code may have only two kinds of extra parameter: the execution-policy parameter `target`, which every op has, written as `*, target=None` after the manifest parameters; and the implementation objects injected by the caller that the class attribute `injected_parameters` lists.
 - The call-time inputs and output buffers in the signature form, in order, the leading part of the `forward` parameter list. `forward` may append code-defined execution parameters after them; those parameters are not part of the signature.
 
 Construction parameters can appear directly in types without extra annotation:
@@ -208,11 +208,11 @@ roofline:
 
   | No. | Interface | Contents |
   | --- | --- | --- |
-  | 1 | `call.ix` | the parameters, the indices and dtype indices solved for this call, and the `let` entries used, that is, the names an inline formula can refer to |
+  | 1 | `call.indices` | the parameters, the indices and dtype indices solved for this call, and the `let` entries used, that is, the names an inline formula can refer to |
   | 2 | `call.present(t)` | whether tensor `t` is passed, held or returned; `call.present("out")` says whether the caller passed `out` |
   | 3 | `call.tensors[t]` | the `(shape, dtype name)` of tensor `t` |
   | 4 | `call.bytes(t)` | the byte count of tensor `t` |
-  | 5 | `call.values(t)` | the contents of metadata tensor `t`; calling it on meta tensors raises an error, because meta tensors have no values |
+  | 5 | `call.metadata_values(t)` | the contents of metadata tensor `t`; calling it on meta tensors raises an error, because meta tensors have no values |
   | 6 | `call.stages` | the calls completed by each sub-op of a composite op in this call, indexed by stage name |
 
 - Every spec generates an `eval_roofline()` method, which computes FLOPs and byte count from the op's most recently completed call. The benchmarks obtain the numbers through this method and write them into the results; the roofline tools read the benchmark results and do not call the op directly.

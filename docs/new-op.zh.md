@@ -62,7 +62,6 @@ op 类继承 [`Op`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops
 
 ```python
 class GemmFwdOp(Op):
-    compile_boundary: ClassVar[bool] = True           # optional: claims fullgraph=True
     kernel_types: ClassVar[Mapping[str, type[Kernel]]] = {
         "gemm_tma": GemmTMAKernel,
         "gemm_cp_async": GemmCpAsyncKernel,
@@ -70,17 +69,12 @@ class GemmFwdOp(Op):
     }
     interfaces: ClassVar[Mapping[str, type[KernelInterface]]] = {"gemm": GemmFwdInterface}
 
-    def __init__(self, trans_a=False, trans_b=True, *, target=None, kernel_map=None, tune=False):
+    def __init__(self, trans_a=False, trans_b=True, *, target=None):
         self.trans_a = trans_a
         self.trans_b = trans_b
-        self.target = target
-        self.tune = tune
-        self.dispatch_kernel(kernel_map)              # installs this instance's kernel map
+        super().__init__(target=target)               # checks the params, installs kernel_types
 
-    def forward(self, a, b):
-        return self._call_boundary(a, b)              # the generated operator
-
-    def _eager_forward(self, a, b):                   # the generated checks have run
+    def forward(self, a, b):                          # the generated checks have run
         a, b = a.contiguous(), b.contiguous()         # handed over as the spec declares it
         m, k = (a.shape[1], a.shape[0]) if self.trans_a else a.shape
         call = GemmCall(                              # what this call is
@@ -93,20 +87,24 @@ class GemmFwdOp(Op):
             device=a.device,
         )
         return self.kernel_for("gemm", call)(a, b)
+
+    def roof_key(self):                               # FLOPs priced on tensor cores
+        return tensor_core_roof(self.last_call.indices["T"])
 ```
 
 | # | 成员 | 编写依据 |
 | --- | --- | --- |
-| 1 | `__init__` | `signature.params` 的名字、顺序与默认值，再加上 `target`、`kernel_map`、`tune`；末尾调用 `self.dispatch_kernel(kernel_map)` |
-| 2 | `kernel_types` | 能服务这个 op 的 Kernel 类，各对应一个 key；`kernel_map=` 按 key 替换其中一个 |
+| 1 | `__init__` | `signature.params` 的名字、顺序与默认值，再加上仅限关键字的 `target`；先把每个 manifest 参数赋给同名属性，再调用 `super().__init__(target=target)` |
+| 2 | `kernel_types` | 能服务这个 op 的 Kernel 类，各对应一个 key |
 | 3 | `interfaces` | op 发出的每一个 kernel 调用各占一条，从 `kernel_for` 使用的名字映射到服务这个调用的各实现所继承的 `KernelInterface` 类 |
-| 4 | `forward` | `signature.inputs` 的顺序，可选输入排在最后，默认值为 `None` |
-| 5 | `_eager_forward` | 把输入转为连续张量，构造 call spec，取得 kernel，再调用它 |
-| 6 | `compute_roof` | 可选。表示 op 的 FLOPs 按哪个硬件单元的峰值计算，默认是 CUDA core 上的 fp32，只在使用其他单元时编写 |
+| 4 | `forward` | 参数按 `signature.inputs` 的顺序，可选输入排在最后，默认值为 `None`；方法体把输入转为连续张量，构造 call spec，取得 kernel，再调用它 |
+| 5 | `roof_key` | 可选。表示 op 的 FLOPs 按哪个硬件单元的峰值计算，默认是 CUDA core 上的 fp32，只在使用其他单元时编写 |
 
-`_infer_output_shapes`、`_validate_dtypes` 与 `eval_roofline` 都依照 spec 生成，不需要编写。
+`_infer_output_shapes` 与 `eval_roofline` 都依照 spec 生成，不需要编写。
 
-不声明编译边界的 op 把 `_eager_forward` 的内容直接写在 `forward` 中。声明了编译边界的 op 把这些内容放在生成的 operator 之后执行。具体做法见[接入 torch.compile](torch-compile.md)。
+`forward` 是 op 的计算本体，也是唯一承载计算的方法。调用方写 `op(a, b)`，不直接调用 `op.forward(a, b)`：`Op.__call__` 先运行生成的检查，再运行 `forward`。spec 有调用期张量输入、且没有 `composition` 的 op，在类定义时生成编译边界，`__call__` 在生成的 operator 之内运行 `forward`。具体机制见[接入 torch.compile](torch-compile.md)。
+
+构造函数不接收调优参数。需要调优时，先构造 op，再调用 `op.request_tune()`。
 
 ### `kernel_for` 与 kernel 的选择 {#kernel-selection}
 
@@ -145,7 +143,7 @@ class GemmFwdInterface(KernelInterface):
 
 实现是同时继承 `Kernel` 与某一个 kernel 接口的类，以一个 key 列在 `kernel_types` 中。一次调用由哪个实现服务，取决于各实现自己声明的可用性、适用范围与优先关系，op 不参与选择。只有一个实现的 kernel 接口，除继承 kernel 接口外不需要其他声明。选择规则、各项声明的写法与常见报错见 [op 如何选择 kernel](user-guide/dispatch/index.md) 与[如何为 op 新增 kernel](user-guide/dispatch/writing.md)。
 
-op 不编写 `entry_for`，也不自行维护 kernel 缓存。完全没有 in-tree 实现、只依赖外部 backend 的 op 不写 `kernel_types` 与 `interfaces`；没有 target 认领调用设备时，调用抛出 `OpNotAvailableError`。backend 新增实现或替换某个 key 的方式见 [backend 如何接入](user-guide/dispatch/backends.md)。
+op 不编写 `entry_for`，也不自行维护 kernel 缓存。完全没有 in-tree 实现、只依赖外部 backend 的 op 不写 `kernel_types` 与 `interfaces`；没有 target 认领调用设备时，调用抛出 `OpNotAvailableError`。backend 新增实现或接管整个 op 的方式见 [backend 如何接入](user-guide/dispatch/backends.md)。
 
 ### 注册
 
@@ -158,7 +156,7 @@ op 名需要加入两处的导入与 `__all__`：
 
 ## 第三步：写 kernel
 
-kernel 类继承 [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py) 与它实现的 kernel 接口，放在 [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 下，用 TileLang 编写，在构造时编译。kernel 类实现 `forward`，由基类的 `__call__` 调用。构造函数由本类 `entry_for` 返回的 builder 调用；`forward` 接受 kernel 接口规定的参数，也就是第二步中的 `kernel(a, b)`。
+kernel 类继承 [`Kernel`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/kernels/kernel_base.py) 与它实现的 kernel 接口，放在 [`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels) 下，用 TileLang 编写：构造时取得 TileLang 构建函数，程序在首次以某个配置调用时编译。kernel 类实现 `forward`，由基类的 `__call__` 调用。构造函数由本类 `entry_for` 返回的 builder 调用；`forward` 接受 kernel 接口规定的参数，也就是第二步中的 `kernel(a, b)`。
 
 kernel 是这六处中唯一不受 spec 约束的一处：kernel 不读取 spec，也不对照 spec 检查。
 
@@ -166,9 +164,9 @@ kernel 是这六处中唯一不受 spec 约束的一处：kernel 不读取 spec�
 
 ```python
 class GemmTMAKernel(Kernel, GemmFwdInterface):
-    def __init__(self, m, n, k, dtype, config=None, tune=False, trans_a=False, trans_b=False, ...):
-        self.kernel = _gemm_kernel(m, n, k, trans_a, trans_b, self.dtype_str, ...)  # compiles
-        self.init_config(config, tune)      # tile sizes and pipeline depth
+    def __init__(self, m, n, k, dtype, config=None, trans_a=False, trans_b=False, ...):
+        self.kernel = _gemm_kernel(m, n, k, trans_a, trans_b, self.dtype_str, ...)  # the TileLang builder
+        self.init_config(config)            # tile sizes and pipeline depth
 
     def forward(self, a, b):                # a call passes tensors, nothing else
         ...
@@ -202,6 +200,8 @@ workload 行不属于单元测试的覆盖范围，因为契约测试已经用 o
 测试骨架使用 [`tests/workload_test_base.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/workload_test_base.py) 中的 `TestBase`，用例写在 `PARAMS` 中。
 
 op 有可选输入时，传入与不传入各至少需要一条用例，因为两种情况通常走不同的 kernel。
+
+有编译边界的 op，即 spec 有调用期张量输入、且没有 `composition` 的 op，还需要一个冷启动的 `torch.compile(op, fullgraph=True)` 测试，并通过 [`tests/compile_contract.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/compile_contract.py) 中的 `register_compile_contract` 登记。一项测试比较已登记的 op 与有编译边界的 implemented op 两个集合，二者不一致即失败。
 
 ## 第五步：写 benchmark
 
@@ -238,7 +238,4 @@ python -m pytest benchmarks/ops/bench_gemm.py             # the benchmark produc
 
 ## 后续步骤
 
-op 能够运行之后，还有两项可选的工作：
-
-- 让 op 能够进入使用者的编译图，见[接入 torch.compile](torch-compile.md)。
-- 让 op 在其他硬件上由其他 kernel 服务，见[接入新硬件 backend](backends.md)。
+op 能够运行之后，让它在其他硬件上由其他 kernel 服务是可选的工作，见[接入新硬件 backend](backends.md)。op 在使用者的编译图中的形态见[接入 torch.compile](torch-compile.md)。

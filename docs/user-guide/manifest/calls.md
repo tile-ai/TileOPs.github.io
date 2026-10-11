@@ -31,7 +31,7 @@ If every tensor a call writes (each output and each written input) has no elemen
 An op declares in `interfaces` the positions where it calls kernels, and each position corresponds to a kernel interface. An implementation of a kernel interface is a kernel class that inherits it. At call time, the op constructs a call spec and calls `kernel_for(interface, call)` to obtain an entry. Each distinct call spec is looked up only once. When a call spec first appears, the Op base class selects exactly one implementation in the following order:
 
 1. availability: the implementation's `devices` and `supported_archs`;
-2. applicability: the implementation's `applies` and `refusal`;
+2. applicability: the implementation's `refusal`;
 3. precedence: the implementation's `general` and `preferred_over`.
 
 The selected implementation's `entry_for(call)` gives the build identity and the factory. The signature declares only the requirements of the algorithm itself, and the restrictions of each implementation are written in that implementation's own declarations.

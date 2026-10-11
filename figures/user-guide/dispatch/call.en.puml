@@ -25,7 +25,7 @@ skinparam participant<<dev>> {
   BorderColor #8E6CCF
 }
 box "Written by the developer" #F8F5FD
-  participant "Op class\n_eager_forward" as op <<dev>>
+  participant "Op class\nforward" as op <<dev>>
 end box
 box "Provided by the system" #F3FBFC
   participant "Op base\nkernel_for" as base <<sys>>
@@ -50,13 +50,13 @@ else Miss
     facts -> facts : Resolved from call.device on first read
     impl --> base : a reason, or None
   end
-  base -> base : Take the one winner by precedence among the available, applicable ones; for a key replaced through kernel_map=, check the replacement serves the call
+  base -> base : Take the one winner by precedence among the available, applicable ones
   base -> impl : entry_for(call)
   impl --> base : (build identity, factory)
   opt This (implementation class, build identity)\nis not built yet
     base -> entry : Run the factory with call.device current
   end
-  base -> base : Request tuning on the entry when the op tunes; store in the dispatch cache
+  base -> base : Call request_tune() on the entry's kernels when the op is in tuned mode; store in the dispatch cache
   base --> op : entry
 end
 deactivate base

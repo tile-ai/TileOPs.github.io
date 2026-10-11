@@ -4,7 +4,7 @@ This page describes the two steps of adding a kernel to an existing op, the defa
 
 ## 1. Step 1: register the implementation with the op {#register}
 
-An implementation is a class that subclasses both `Kernel` (or one of its subclasses) and a kernel interface. A TileOPs developer adds it to the op's `kernel_types` under a snake_case key. A backend author calls `register_implementation`; see [How a backend joins TileOPs § 3](backends.md#register).
+An implementation is a class that subclasses both `Kernel` (or one of its subclasses) and a kernel interface. A TileOPs developer adds it to the op's `kernel_types` under a snake_case key. A backend author calls `register_kernel_type`; see [How a backend joins TileOPs § 2](backends.md#register).
 
 ```python
 # src/tileops/ops/norm/batch_norm.py
@@ -27,11 +27,11 @@ A key belongs to the interface its class subclasses; no separate mapping is writ
 - `forward` accepts all parameters of the interface's `forward`, positionally;
 - the class method `entry_for(call)` returns `(build identity, factory)`. The build identity contains every fact that changes the build result and must be hashable. The factory runs only the first time that identity appears. The default implementation uses the whole call spec as the build identity and builds with `cls(call)`;
 - the constructor is the implementation's own choice; the op never constructs an implementation directly;
-- tuning does not go through the factory; the op applies it to the built kernel on the call's device.
+- tuning does not go through the factory: while the op is in tuned mode, it calls `request_tune()` on the built kernel on the call's device.
 
 ## 2. Step 2: declare which calls the implementation serves {#rule}
 
-An implementation's applicability is written in the class method `applies(call)`. It describes only the calls this implementation serves, not other implementations. When an error message needs to state the reason for a refusal, override `refusal(call)`: it returns `None` when the implementation applies and the reason otherwise, and `applies` then returns `cls.refusal(call) is None`. A check shared by several implementations is written as a property of the family's call spec (for example `AttentionCall.dense_decode_region`); a check shared within one inheritance chain is written as a class method of the base class.
+An implementation's applicability is written in the class method `refusal(call)`: it returns `None` when the implementation serves the call, and otherwise the reason it does not, which the error message lists. It describes only the calls this implementation serves, not other implementations. An override ends with `super().refusal(call)`, so the limits a base class states still apply. A check shared by several implementations is written as a property of the family's call spec (for example `AttentionCall.dense_decode_region`); a check shared within one inheritance chain is written as a class method of the base class.
 
 When a new implementation's applicability overlaps an existing implementation, what it overlaps decides whether precedence is declared:
 
@@ -45,13 +45,13 @@ When a new implementation's applicability overlaps an existing implementation, w
 
 - `general = True` marks the fallback: it serves the calls no other implementation serves. Each interface has at most one.
 - `preferred_over` states only which side wins when both apply. It does not require one side's applicability to be contained in the other's.
-- An implementation does not exclude another implementation's range in its own `applies`. When it should yield, the other implementation declares `preferred_over`.
+- An implementation does not exclude another implementation's range in its own `refusal`. When it should yield, the other implementation declares `preferred_over`.
 - An undeclared overlap raises an ambiguity error at call time; it is never decided silently by order.
 
 The three GQA dense decode implementations are case 3. bs1 serves calls with batch 1, and long-context serves calls with a long KV. The two overlap when batch is 1 and KV is long, and long-context declares that it wins:
 
 ```python
-# src/tileops/kernels/attention/gqa_decode.py
+# src/tileops/kernels/attention/gqa/decode.py
 class GQADecodeLongContextKernel(GQADecodeKernel):
     general: bool = False
     preferred_over = frozenset({"gqa_dense_decode_bs1"})
@@ -72,7 +72,7 @@ class GQADecodeLongContextKernel(GQADecodeKernel):
         return None if served else "does not serve this call"
 ```
 
-Two non-general implementations need a precedence declaration as soon as their applicability intersects; one range does not have to contain the other. FP8 decode and the generic FP8 implementation overlap on part of the calls. FP8 decode declares `preferred_over = frozenset({"gqa_dense_fp8"})` and wins inside the intersection; the generic FP8 implementation does not exclude the decode range in its own `applies`.
+Two non-general implementations need a precedence declaration as soon as their applicability intersects; one range does not have to contain the other. FP8 decode and the generic FP8 implementation overlap on part of the calls. FP8 decode declares `preferred_over = frozenset({"gqa_dense_fp8"})` and wins inside the intersection; the generic FP8 implementation does not exclude the decode range in its own `refusal`.
 
 `GQADecodeKernel` is general and supports SM80/89/90; bs1 supports only SM90. Availability filters before precedence is compared, so on SM80 bs1 takes no part in selection:
 
@@ -93,7 +93,7 @@ Two non-general implementations need a precedence declaration as soon as their a
 | --- | --- | --- | --- |
 | 1 | `devices` | `frozenset({"cuda"})` | available on CUDA devices |
 | 2 | `supported_archs` | `None` | available on every architecture |
-| 3 | `applies` | returns `True` | serves every call |
+| 3 | `refusal` | returns `None` | serves every call |
 | 4 | `general` | `False` | does not rank below other implementations |
 | 5 | `preferred_over` | empty set | wins over no implementation |
 
@@ -160,7 +160,7 @@ class LayerNormFwdInterface(KernelInterface):
         """
 ```
 
-- The call spec's fields are the call facts that implementations read in `applies`, `refusal`, and `entry_for`: shapes, dtypes, semantic parameters (including those fixed when the op is constructed), and `device`. Fields hold only immutable values. They do not hold tensor contents, tuning policy, or priorities; device facts are provided by `CallSpec`.
+- The call spec's fields are the call facts that implementations read in `refusal` and `entry_for`: shapes, dtypes, semantic parameters (including those fixed when the op is constructed), and `device`. Fields hold only immutable values. They do not hold tensor contents, tuning policy, or priorities; device facts are provided by `CallSpec`.
 - The interface class's `request` points to the call spec type. The parameter list of the abstract method `forward` is the arguments the op passes when it calls the kernel. Its docstring states, for each tensor, the shape, dtype, memory layout, device, and whether it is written in place, and it states the return value. A backend writes its implementation from this contract alone.
 - Methods other than `forward` that the op calls on the entry are also written as abstract methods of the interface. An implementation must implement every abstract method of the interface; otherwise the class cannot be instantiated.
 - Values that every implementation must agree on are written as ordinary class methods of the interface and computed by the interface. For example, when the op allocates an output buffer by size before selection, a class method of the interface computes that size from the call spec; the size is not read from the selected implementation.
@@ -169,24 +169,23 @@ class LayerNormFwdInterface(KernelInterface):
 
 ## 5. How to test the selection, and common errors {#tests}
 
-Write one test case for each applicability range and for each boundary between adjacent ranges. Check the selected key with `select_implementation`, and give the device facts explicitly so that the test does not depend on the machine that runs it:
+Write one test case for each applicability range and for each boundary between adjacent ranges. Check the selected key, or the reason for the refusal, with `key_for(interface, call)`, and give the device facts explicitly so that the test does not depend on the machine that runs it:
 
 ```python
-# tests/ops/test_batch_norm.py
-def test_each_region_selects_its_one_implementation(
-    op_cls, interface, n, c, spatial, dtype, key
-) -> None:
-    """Exactly one non-general implementation, or else the general one, serves each shape."""
-    op = op_cls()
-    call = BatchNormCall(arch=90, sm_count=132, n=n, c=c, spatial=spatial, dtype=dtype)
-    assert op.select_implementation(interface, call) == key
+# tests/ops/test_family_dispatch.py
+def test_gemm_k_too_narrow_to_vectorize_is_refused_during_selection() -> None:
+    op = GemmFwdOp()
+    call = GemmCall(arch=_SM90, sm_count=132, m=64, n=64, k=1, dtype=torch.float16, trans_b=True)
+
+    with pytest.raises(ValueError, match="k must span at least one"):
+        op.key_for("gemm", call)
 ```
 
 **Table 5** Common errors
 
 | No. | When | Error message fragment | Cause |
 | --- | --- | --- | --- |
-| 1 | constructing the op | `does not implement <Interface>` | the class that runs behind a key (including a `kernel_map=` replacement) does not subclass the interface; make it subclass the interface and build through `entry_for(call)` |
+| 1 | constructing the op | `does not implement <Interface>` | the class registered under a key subclasses the interface but not `Kernel`; make it subclass both `Kernel` and the interface, and build through `entry_for(call)` |
 | 2 | constructing the op | `forward does not take <Interface>'s arguments` | `forward`'s parameters do not match the interface |
 | 3 | constructing the op | `has more than one general implementation` | an interface has two general implementations |
 | 4 | constructing the op | `preferences form a cycle through` | `preferred_over` forms a cycle |
@@ -196,6 +195,6 @@ def test_each_region_selects_its_one_implementation(
 | 8 | calling | `dispatch is ambiguous` | several implementations apply, and none has precedence over the others |
 | 9 | calling | `takes a <Request> call spec` | the call spec passed to `kernel_for` has the wrong type |
 | 10 | calling | `cannot key a dispatch cache` | the call spec has a mutable field, such as a list |
-| 11 | calling | `this call spec states ['arch']` | the call spec passed to `kernel_for` gives device facts explicitly; they are derived from `device`, and only `select_implementation` accepts explicit device facts |
+| 11 | calling | `this call spec states ['arch']` | the call spec passed to `kernel_for` gives device facts explicitly; they are derived from `device`, and only `key_for` accepts explicit device facts |
 
 When a new op holds kernels without declaring `interfaces`, the inventory test in `tests/test_kernel_dispatch.py` raises `declare interfaces instead`.

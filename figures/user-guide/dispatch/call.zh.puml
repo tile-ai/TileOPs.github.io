@@ -25,7 +25,7 @@ skinparam participant<<dev>> {
   BorderColor #8E6CCF
 }
 box "开发者编写" #F8F5FD
-  participant "Op 类\n_eager_forward" as op <<dev>>
+  participant "Op 类\nforward" as op <<dev>>
 end box
 box "系统提供" #F3FBFC
   participant "Op 基类\nkernel_for" as base <<sys>>
@@ -50,13 +50,13 @@ else 未命中
     facts -> facts : 首次读取时从 call.device 解析
     impl --> base : 理由，或 None
   end
-  base -> base : 在可用且适用的实现中按优先关系取唯一胜者；key 被 kernel_map= 替换时，检查替换者能服务这次调用
+  base -> base : 在可用且适用的实现中按优先关系取唯一胜者
   base -> impl : entry_for(call)
   impl --> base : (build identity, 构建函数)
   opt 这个 (实现类, build identity)\n尚未构建
     base -> entry : 以 call.device 为当前设备运行构建函数
   end
-  base -> base : op 处于调参模式时对 entry 请求调参；写入派发缓存
+  base -> base : op 处于调优模式时对 entry 中的 kernel 调用 request_tune()；写入派发缓存
   base --> op : entry
 end
 deactivate base

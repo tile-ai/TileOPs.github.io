@@ -84,8 +84,9 @@ chk --> caller : 输出
 deactivate chk
 
 note over chk, kern #FBFAFE
-  声明了 compile boundary 的 op：forward 只调用 _call_boundary，
-  同样的步骤在生成的 torch.library operator 内执行，
-  in-tree 实现写在 _eager_forward 中；fake/meta 由同一份签名生成
+  有编译边界的 op（有调用期张量输入、没有 composition）：
+  Op.~__call~__ 调用生成的 _call_boundary，同样的步骤在生成的
+  torch.library operator 内执行，计算本体仍写在 forward 中；
+  fake/meta 由同一份签名生成
 end note
 @enduml

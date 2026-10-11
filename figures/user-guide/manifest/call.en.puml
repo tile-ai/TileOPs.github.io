@@ -84,9 +84,10 @@ chk --> caller : outputs
 deactivate chk
 
 note over chk, kern #FBFAFE
-  An op declaring a compile boundary: forward only calls
-  _call_boundary, the same steps run inside the generated
-  torch.library operator, and the in-tree implementation is
-  _eager_forward; fake/meta come from the same signature
+  An op with a compile boundary (a call-time tensor input, no
+  composition): Op.~__call~__ calls the generated _call_boundary,
+  the same steps run inside the generated torch.library operator,
+  and the computation is still forward; fake/meta come from the
+  same signature
 end note
 @enduml

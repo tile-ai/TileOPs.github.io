@@ -2,14 +2,14 @@
 
 一个 TileOPs op 接入 `torch.compile` 之后，在使用者的编译图中成为一个节点，这个节点的形态不随服务它的 backend 变化。
 
-接入只需要一项工作：在 op 层声明一条编译边界。边界之外由 dynamo 追踪，边界之内对编译器不可见。
+接入的方式是 op 层的一条编译边界。边界之外由 dynamo 追踪，边界之内对编译器不可见。manifest 条目有调用期张量输入、且没有 composition 的 op，在类定义时由基类生成这条边界，op 不编写边界相关的代码。
 
 正文说明接入相关的操作：
 
 1. 判断一个 op 是否已接入；
 1. 编译一段调用它的代码；
 1. 调用时的五条约定；
-1. 为尚未接入的 op 声明这条边界需要编写的代码。
+1. 边界如何生成，以及 op 需要编写的代码。
 
 附录说明这条边界为什么只能这样划分：dynamo 的工作方式、它与 op 层的不一致之处、边界为什么位于 op 层，以及这条边界的代价与限制。
 
@@ -17,7 +17,7 @@
 
 ### 判断一个 op 是否已接入 {#supported}
 
-读取类属性 `compile_op_names`。它非空时，说明这个类声明了编译边界（`compile_boundary = True`），边界位于 op 层，`fullgraph=True` 可用；它是空 tuple 时，说明这个类没有声明编译边界。
+读取类属性 `compile_op_names`。它非空时，说明这个类有编译边界，边界位于 op 层，`fullgraph=True` 可用；它是空 tuple 时，说明这个类没有编译边界。
 
 ```python
 >>> from tileops.norm import RMSNormFwdOp
@@ -25,7 +25,14 @@
 ('tileops::norm_rms_norm_fwd',)
 ```
 
-尚未迁移的 op 在 `fullgraph=True` 下报错，在默认设置下切图。
+一个 op 类有编译边界，当且仅当它的 manifest 条目同时满足两条：
+
+1. 有调用期张量输入；
+1. 没有 composition，即不是组合 op。
+
+满足两条的 implemented op 都必须通过冷启动的 `torch.compile(op, fullgraph=True)`。validator 检查每个 implemented 条目的 `compile_op_names` 与这两条一致；测试另外要求每个这样的 op 都在 [`tests/compile_contract.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/compile_contract.py) 中登记了冷编译测试。
+
+没有编译边界的 op 有两类：没有调用期张量输入的 op（`AlibiFwdOp`、`SinusoidalFwdOp`），以及组合 op。组合 op 被追踪时，dynamo 追踪它的 `forward`，它调用的子 op 若有编译边界，各自成为图中的节点。
 
 ### 编译一段调用它的代码
 
@@ -54,7 +61,7 @@ block(x, w)
 
 - **op 实例构造一次并反复使用。** 实例键是编译期常量，一个实例对应一张编译图；在循环中新建实例时，每次迭代都要重新编译。
 - **stride 不会原样传递。** op 不写入的非连续输入在节点内部被转为连续张量，op 自己分配的输出总是连续张量；后续计算需要其他布局时，在 op 之外自行转换。输出就是被写入的输入（`alias`）或调用方提供的 `out` 时，沿用那个张量的存储。
-- **meta 张量不能用于预热。** 声明边界之后，传入 meta 或 fake 张量的调用在 fake 函数处返回，不会执行到构造 kernel 的步骤。
+- **meta 张量不能用于预热。** 有编译边界的 op，传入 meta 或 fake 张量的调用在 fake 函数处返回，不会执行到构造 kernel 的步骤。
 - **CUDA graph 捕获之前需要预热。** 用真实张量以相同形状至少调用一次：构造 kernel 时允许编译，捕获期间只允许在缓存命中后直接调用。各阶段分别允许执行哪些操作，见[各阶段允许做什么](backends.md#phase-limits)。
 - **换到另一块卡时可能重新构造 kernel。** 对由 target 服务的调用，设备是 kernel 缓存键的一部分，同一个实例换到另一块卡上会重新构造一次。in-tree kernel 的缓存键是选中实现的 `entry_for` 返回的 build identity，只有构建结果与设备有关时才包含设备。构造函数中指定的 `target=` 在首次编译调用中同样生效；构造失败不会把 op 固定到任何 target。
 
@@ -63,27 +70,32 @@ block(x, w)
 边界位于 op 层之后，调用方可以依赖以下三点：
 
 - **编译图不随 target 变化。** 更换 backend 或硬件后，同一段代码编译出的图完全相同，编译产物因此与 backend 无关。
-- **`fullgraph=True` 可用。** 前提是该 op 已经声明这条契约，判断方法见[判断一个 op 是否已接入](#supported)。
+- **`fullgraph=True` 可用。** 前提是该 op 有编译边界，判断方法见[判断一个 op 是否已接入](#supported)。
 - **输出的形状、dtype 与 stride 由 manifest 规定。** 它们与 kernel 内部的分块和 padding 方式无关。op 自己分配的输出总是连续张量。
 
-## 为新 op 声明编译边界：`RMSNormFwdOp`
+## 编译边界的生成：以 `RMSNormFwdOp` 为例
 
-本节给出接入一个 op 需要编写的代码：边界如何声明、fake 如何编写，以及 target 判定为什么要在节点内部重新执行一次。其中涉及的追踪、切图与 guard 见 [dynamo 是怎么工作的](#dynamo)。
+本节说明有编译边界的 op 需要编写的代码、边界与 fake 如何生成，以及 target 判定为什么要在节点内部执行。其中涉及的追踪、切图与 guard 见 [dynamo 是怎么工作的](#dynamo)。
 
-`RMSNormFwdOp` 是仓库中第一个接入的 op。下面是它的骨架，略去 docstring，完整代码见 [`src/tileops/ops/norm/rms_norm.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops/norm/rms_norm.py)：
+下面是 `RMSNormFwdOp` 的骨架，略去 docstring，完整代码见 [`src/tileops/ops/norm/rms_norm.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/ops/norm/rms_norm.py)：
 
 ```python
 class RMSNormFwdOp(Op):
-    # the operators, their fakes and compile_op_names are generated from the manifest entry
-    compile_boundary: ClassVar[bool] = True
-    kernel_types: ClassVar[Mapping[str, type[Kernel]]] = {"rms_norm": RMSNormKernel}
+    # the operators, their fakes, _call_boundary and compile_op_names are generated
+    # from the manifest entry
+    kernel_types: ClassVar[Mapping[str, type[Kernel]]] = {
+        "rms_norm": RMSNormKernel,
+        "rms_norm_streaming": RMSNormStreamingKernel,
+        "rms_norm_on_chip": RMSNormOnChipKernel,
+    }
     interfaces: ClassVar[Mapping[str, type[KernelInterface]]] = {"rms_norm": RMSNormFwdInterface}
 
-    def forward(self, x, weight=None):
-        # the only line: call the generated operator
-        return self._call_boundary(x, weight)
+    def __init__(self, normalized_shape, eps=None, *, target=None):
+        self.normalized_shape = normalized_shape
+        self.eps = eps
+        super().__init__(target=target)
 
-    def _eager_forward(self, x, weight=None):
+    def forward(self, x, weight=None):
         weight = None if weight is None else weight.contiguous()
         x = x.contiguous()                         # the generated checks have run
         call = LayerNormCall(
@@ -95,7 +107,7 @@ class RMSNormFwdOp(Op):
         return self.kernel_for("rms_norm", call)(x, weight)
 ```
 
-声明只有以上内容。operator 与它的 fake 函数都从 manifest 条目生成，每个副作用分支对应一个 operator：
+op 只编写构造函数与计算本体 `forward`。`Op.__call__` 调用生成的 `_call_boundary`，它按 `forward` 的签名接收参数，再调用当前副作用分支的 operator；operator 在节点内部以 `forward` 为本体完成调用。operator 与它的 fake 函数都从 manifest 条目生成，每个副作用分支对应一个 operator：
 
 - 张量参数按 `signature.inputs` 的顺序排列；
 - 返回值由 `signature.outputs` 决定；
@@ -107,17 +119,17 @@ operator 的名字是 `tileops::<family>_<snake(class)>`（类名本身以 famil
 一次调用经过的各层，以及边界所在的位置：
 
 <figure class="callpath" markdown="0">
-  <div class="cp-step cp-traced"><code>Op.__call__</code><span>调用 <code>forward</code>，不判定 target</span></div>
-  <div class="cp-step cp-traced"><code>forward</code><span>一行，调用不透明 operator</span></div>
+  <div class="cp-step cp-traced"><code>Op.__call__</code><span>调用生成的 <code>_call_boundary</code>，不判定 target</span></div>
+  <div class="cp-step cp-traced"><code>_call_boundary</code><span>按 <code>forward</code> 的签名接收参数，调用不透明 operator</span></div>
   <div class="cp-boundary"><span>编译边界</span></div>
   <div class="cp-step cp-opaque"><code>生成的 operator</code><span>取回 op 实例，执行生成的检查，判定 target，失败时撤销</span></div>
-  <div class="cp-step cp-opaque"><code>_eager_forward</code><span>转为连续张量、取得 kernel、launch kernel</span></div>
-  <figcaption>紫色的两层在 dynamo 的追踪范围内，<code>forward</code> 中的那一行是 dynamo 追踪到的最后一处；边界以下由不透明 operator 执行，编译器看不到。</figcaption>
+  <div class="cp-step cp-opaque"><code>forward</code><span>转为连续张量、取得 kernel、launch kernel</span></div>
+  <figcaption>紫色的两层在 dynamo 的追踪范围内，<code>_call_boundary</code> 对 operator 的调用是 dynamo 追踪到的最后一处；边界以下由不透明 operator 执行，编译器看不到。</figcaption>
 </figure>
 
-其中有三处写法是固定的。
+生成的代码中有三处做法是固定的。
 
-**第一处，op 实例通过字符串键取回，不直接传递对象。** schema 的类型只有 `Tensor`、`int`、`float`、`bool`、`str` 等固定几种，没有「任意 Python 对象」；而 op 体需要的 `kernel_map`、已确定的 target 与 kernel 缓存表都保存在实例上，无法拆成 schema 参数。键还有两个不能改变的细节：
+**第一处，op 实例通过字符串键取回，不直接传递对象。** schema 的类型只有 `Tensor`、`int`、`float`、`bool`、`str` 等固定几种，没有「任意 Python 对象」；而 op 体需要的已确定的 target 与 kernel 缓存表都保存在实例上，无法拆成 schema 参数。键还有两个不能改变的细节：
 
 - **键是字符串，不是整数。** 字符串在追踪期是常量，整数会被泛化为 `SymInt`。
 - **键从不重用。** 由于键是常量，inductor 会把 fake 函数给出的形状固定在编译产物中；重用键的 op 会继承前一个实例的形状。
@@ -129,7 +141,7 @@ operator 的名字是 `tileops::<family>_<snake(class)>`（类名本身以 famil
 - 判定若写在节点之外，第一次编译调用会静默使用错误的实现。
 - 判定失败时的撤销由做出判定的位置负责，因为编译产物不保留调用点的 `try/except`。
 
-三处写法的原因相同：torch 的编译与声明机制以函数为单位，而需要编译的是一个对象上的一次调用。
+三处做法的原因相同：torch 的编译与声明机制以函数为单位，而需要编译的是一个对象上的一次调用。
 
 ## 附录：这条边界为什么是这样
 
@@ -175,7 +187,7 @@ dynamo 有两条规则决定了接入的方式：
 
 **这个区分需要人工标注**，dynamo 自己无法区分。torch 为此提供两个接口：`torch.library.custom_op` 把这一次调用注册为一个 operator，dynamo 在图中只放一个节点，不追踪其实现；`register_fake` 告诉编译器这个节点的输出是什么，它只接收输入的元信息，不接触真实数据。
 
-**不标注时，这些代码会被追踪，并且一定失败。** 以未声明边界的 `RMSNormFwdOp` 为例，实例的两种状态都无法编译：
+**不标注时，这些代码会被追踪，并且一定失败。** 假设 `RMSNormFwdOp` 没有编译边界，实例的两种状态都无法编译：
 
 - 尚未构造过 kernel 的实例会在本次调用中构造 kernel，dynamo 因此追踪进构造函数中的 TileLang JIT。
 - 已经构造过 kernel 的实例跳过构造，但每次调用仍要重新解析 TileLang program，dynamo 追踪进 `@tilelang.jit`，停在 `inspect.signature`。

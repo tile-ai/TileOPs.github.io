@@ -13,6 +13,9 @@
   write one.
 - [Adding a new op](../new-op.md)
   The six steps from a spec to `status: implemented`.
+- [Op base class developer guide](op/index.md)
+  What the `Op` base class does for every op, what a subclass declares to it, and the
+  steps construction and a call go through inside it.
 
 ## Kernels and hardware
 

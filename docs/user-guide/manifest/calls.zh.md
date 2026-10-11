@@ -31,7 +31,7 @@
 op 在 `interfaces` 中声明它调用 kernel 的位置，每个位置对应一个 kernel 接口；一个 kernel 接口的实现，是继承它的 kernel 类。调用时，op 构造 call spec，再调用 `kernel_for(interface, call)` 取得 entry。同一个 call spec 再次出现时只做一次查找；首次出现时，Op 基类按以下顺序选出唯一一个实现：
 
 1. 可用性：实现的 `devices` 与 `supported_archs`；
-2. 适用性：实现的 `applies` 与 `refusal`；
+2. 适用性：实现的 `refusal`；
 3. 优先级：实现的 `general` 与 `preferred_over`。
 
 选出的实现由 `entry_for(call)` 给出 build identity 与构建函数。签名只声明算法本身的要求，每个实现的限制写在实现自己的声明中。

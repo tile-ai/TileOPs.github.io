@@ -483,8 +483,8 @@ def _parametric_spec(plan, row, case, call, workload) -> Spec:
     if sym is not None and len(sym) == len(present):
         for text in sym.values():
             for node in ast.walk(ast.parse(text, mode="eval")):
-                if isinstance(node, ast.Name) and node.id in call.ix:
-                    value = call.ix[node.id]
+                if isinstance(node, ast.Name) and node.id in call.indices:
+                    value = call.indices[node.id]
                     bindings[node.id] = (fmt_shape(value)
                                          if isinstance(value, (tuple, list)) else value)
         symbolic = _group_tensors((n, sym[n], dt) for n, _, dt in shapes)

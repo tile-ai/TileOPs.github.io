@@ -1,0 +1,157 @@
+@startuml lifecycle
+title 一个 op 从类定义到调用结束
+
+skinparam defaultFontName "Noto Sans SC"
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #1E293B
+skinparam titleFontColor #0F172A
+skinparam titleFontSize 20
+skinparam defaultFontSize 14
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 320
+skinparam ArrowColor #64748B
+skinparam ArrowThickness 1.3
+skinparam sequence {
+  LifeLineBorderColor #94A3B8
+  ParticipantBorderColor #64748B
+  ParticipantFontSize 15
+  ParticipantFontStyle bold
+  ActorBorderColor #64748B
+  ActorBackgroundColor #FFFFFF
+  DividerBackgroundColor #CBD5E6
+  DividerBorderColor #64748B
+  DividerFontSize 16
+  DividerFontStyle bold
+  GroupBorderColor #94A3B8
+  GroupHeaderFontColor #0F172A
+  GroupBackgroundColor #F1F5F9
+}
+
+actor "调用方" as caller
+participant "op 子类" as sub #E9EAF0
+participant "Op 基类" as base #E9EAF0
+participant "_SignaturePlan" as plan #E7EEF6
+participant "_CompileBoundary" as cb #E7EEF6
+participant "custom op" as cop #E7EEF6
+participant "子 op" as child #E9EAF0
+participant "kernel\n实现类 · entry" as kern #EEF2E6
+participant "target 的 kernel" as tk #EEF2E6
+
+== 1. 类定义：每个 op 类一次 ==
+
+caller -> sub : 导入模块，执行 class 语句
+sub -> base : Op.~__init_subclass~__
+opt 类有 manifest 条目
+  base -> plan : 取该类所有实例共享的 _signature
+  base -> base : 安装生成的签名检查、输出 shape 推导；\n条目有 roofline 时安装 eval_roofline
+  opt 条目有调用期张量输入，且没有 composition
+    base -> cb : 安装编译边界
+    cb -> cop : 为每个 effect 分支注册 custom op
+    cb -> base : 生成 _call_boundary，写入 compile_op_names
+  end
+end
+base -> base : 记下 manifest 参数名，供 target 的 builder 使用
+
+== 2. 构造：每个 op 实例一次 ==
+
+caller -> sub : op = RMSNormFwdOp(...)
+sub -> sub : 确定 manifest 参数的取值
+sub -> base : super().~__init~__(target=target)
+activate base
+base -> base : 保存 target
+base -> base : 第 1 步　加载 backend 注册表
+base -> plan : 第 2 步　按 manifest 检查参数取值
+plan --> base : _construction_indices
+base -> base : 第 3 步　安装实现表 _installed_kernel_types，检查契约；\n建立两个 entry 缓存
+base -> base : 第 4 步　登记实例，得到 _instance_key
+base -> base : 第 5 步　建立绑定组与运行组的其余空字段
+base --> sub
+deactivate base
+sub -> sub : 建立派生属性
+opt 组合 op
+  sub -> base : delegate_for(stage, identity, ...)
+  opt 尚未持有这个 (stage, identity)
+    base -> child : 没有传入 given 时构造子 op，传入 target；\n调优模式下对新持有的子 op 调用 request_tune()
+  end
+  base --> sub : 持有的子 op；传入 given 时按原样持有
+end
+sub --> caller : op 实例；没有选择或构造任何 kernel
+
+== 3. 调用：每次以普通张量的 eager 调用 ==
+
+caller -> base : y = op(x, weight)，即 Op.~__call~__
+alt 有编译边界（compile_op_names 非空）
+  base -> cop : 生成的 _call_boundary(...)
+  cop -> base : 按 _instance_key 找回实例，\n_run_call(inputs, forward)
+else 没有编译边界
+  base -> base : 按 forward 的签名拆分参数，\n_run_call(inputs, forward)
+end
+activate base
+base -> base : 第 1 步　开启调用：压入调用栈
+base -> plan : 第 2 步　检查签名
+plan --> base : SignatureCall
+alt 第 3 步：至少有一个写入，且所有写入都没有元素
+  base -> base : 第 5 步　按签名构造结果
+else 需要运行实现
+  opt 第 4 步：实例尚未选定 target
+    base -> base : _bind_target：构造参数 → 进程默认 target\n→ 按调用设备检测；无从检测时\n本次不选定，下次调用再选
+    break 选定的 target 不是 BUILTIN、没有为 op 注册 builder，\n且 op 声明了自己的 kernel
+      base -> base : 抛出 OpNotAvailableError；\n弹出调用栈，_reset_binding 撤销这次选定的 target
+      base --> caller : 重新抛出 OpNotAvailableError；不执行第 5、6 步
+    end
+  end
+  alt 第 5 步：选定的 target 为 op 注册了 builder
+    base -> base : 以设备与各输入的 dtype、shape 查缓存；\n缺席的可选输入以 None 占位
+    opt 缓存未命中
+      base -> tk : 调用 target 的 builder 构造 kernel
+    end
+    base -> tk : kernel(张量)
+    tk --> base : 结果
+  else 第 5 步：没有 target 的 builder
+    base -> sub : forward(...)
+    note right of sub : 下面两段按本体的写法出现，\n可以只有其一，先后不限
+    opt op 声明了自己的 kernel
+      sub -> base : kernel_for(interface, call)
+      opt 以 (interface, call) 查缓存未命中
+        base -> base : 选择实现
+        base -> kern : 实现类.entry_for(call)
+        kern --> base : identity 与构造函数
+        base -> base : 以 (实现类, identity) 查已构造的 entry；\n未命中时运行构造函数
+      end
+      base --> sub : entry
+      sub -> kern : entry(张量)
+      kern --> sub : 结果
+    end
+    opt 组合 op
+      sub -> base : delegate_for(stage, identity, ...)
+      opt 尚未持有这个 (stage, identity)
+        base -> child : 没有传入 given 时构造子 op，传入 target；\n调优模式下对新持有的子 op 调用 request_tune()
+      end
+      base --> sub : 持有的子 op；传入 given 时按原样持有
+      sub -> child : 子 op(...)，按同样的七步完成
+      child -> base : 子 op 完成时报告调用记录
+      child --> sub : 结果
+    end
+    sub --> base : 结果
+  end
+end
+base -> plan : 第 6 步　按签名检查返回值
+
+== 4. 结束：每次调用 ==
+
+alt 成功
+  base -> base : 第 7 步　子 op 的记录按 stage 写入 stages；弹出调用栈；\n保存为 last_call；报告给外层调用
+  base --> caller : 结果，经进入 _run_call 的各层调用者逐层返回
+else 任一步抛出 Exception
+  base -> base : 弹出调用栈，丢弃这次调用的记录；last_call 不变
+  opt target 在这次调用的第 4 步选定
+    base -> base : _reset_binding：重置绑定组，丢弃这次构造的 kernel
+    base -> child : 对持有的子 op 递归执行 _reset_binding
+  end
+  base --> caller : 重新抛出异常，经各层调用者向上传播
+end
+deactivate base
+
+@enduml
