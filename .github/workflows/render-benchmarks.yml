@@ -6,13 +6,14 @@ name: Daily refresh
 # job checks that repository out fresh each run. Nothing is committed; the rendered HTML
 # lives on gh-pages.
 #
-# 22:00 UTC is 06:00 Beijing, and the TileOPs nightly finishes before that, so the data is
-# waiting at the start of the working day. GitHub queues scheduled runs, so the deploy can
-# land a few minutes late; workflow_dispatch is there when it should not wait.
+# 20:30 UTC is 04:30 Beijing (UTC+8). The TileOPs nightly starts at 18:00 UTC and has
+# published its snapshot by about 20:20 UTC, so the data is waiting at the start of the
+# working day. GitHub queues scheduled runs, so the deploy can land a few minutes late;
+# workflow_dispatch is there when it should not wait.
 
 on:
   schedule:
-    - cron: "0 22 * * *"
+    - cron: "30 20 * * *"
   workflow_dispatch:
 
 permissions:
