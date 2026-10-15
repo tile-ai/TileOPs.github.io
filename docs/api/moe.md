@@ -62,6 +62,12 @@ the routes are few enough to read the weights once per route rather than once pe
       heading_level: 3
       members: ["__init__", "forward"]
 
+::: tileops.moe.MoEGroupedGemmFP8FwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
 ::: tileops.moe.MoEExpertMLPFwdOp
     options:
       show_root_heading: true

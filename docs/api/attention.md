@@ -88,3 +88,11 @@ what runs when you call `op(...)`.
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
+
+## Paged KV Cache
+
+::: tileops.attention.PagedKVCacheWriteFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
