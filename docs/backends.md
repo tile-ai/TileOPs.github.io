@@ -437,6 +437,7 @@ Each file in the example covers one part of the backend author's work:
 | `tests/test_discovery.py` | entry point and registration |
 | `tests/test_errors.py` | the three error paths: an unregistered op raises rather than falling back, an unknown target raises, and a failed call binds the op to no target |
 | `tests/test_memoization.py` | when `build_kernel` is called again |
+| `tests/test_tuning.py` | a tuning request reaching the kernels built before and after it, and `op.kernel_config()` reporting a kernel's `config` |
 
 `CpuRMSNorm` does not receive the row count when it is constructed. This is the rule
 "the constructor takes compile-time parameters only" in practice.
@@ -447,7 +448,7 @@ The example's tests need an environment with `tileops` installed:
 
 ```bash
 pip install -e .          # add --no-deps when tileops is already installed
-python -m pytest -q       # 24 passed, both with two H200s visible and with CUDA_VISIBLE_DEVICES=""
+python -m pytest -q       # 28 passed, both with an H200 visible and with no GPU
 ```
 
 The tests also run inside the TileOPs dev image, again without modifying TileOPs:
@@ -472,7 +473,7 @@ TileOPs is too old.
 2. Change `detect` in `target.py` to claim the corresponding device type.
 3. Replace the kernels in the `ops/` modules with real ones, which compile on construction and launch on `__call__`.
 4. Pick the first op to take over, write its `build_kernel` against the op's manifest signature, and add it to `BUILDERS`.
-5. The four files under [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/main/tests) carry over largely as they are; substitute the op and target names.
+5. The five files under [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/master/tests) carry over largely as they are; substitute the op and target names.
 6. Add a `build_kernel` per op from there, until every op the target model uses is covered.
 
 ## Writing a kernel

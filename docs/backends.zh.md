@@ -353,6 +353,7 @@ for _op, _build_kernel in BUILDERS.items():
 | `tests/test_discovery.py` | entry point 与注册 |
 | `tests/test_errors.py` | 三条错误路径：未登记的 op 报错而不回退，未知的 target 报错，调用失败后 op 不固定到任何 target |
 | `tests/test_memoization.py` | `build_kernel` 在什么条件下被重新调用 |
+| `tests/test_tuning.py` | 调优请求到达请求前后构造的 kernel，`op.kernel_config()` 报告 kernel 的 `config` |
 
 `CpuRMSNorm` 在构造时**得不到行数**，这体现了「构造函数只接收编译期参数」这条规则。
 
@@ -362,7 +363,7 @@ for _op, _build_kernel in BUILDERS.items():
 
 ```bash
 pip install -e .          # tileops 已安装时加 --no-deps
-python -m pytest -q       # 两块 H200 可见与 CUDA_VISIBLE_DEVICES="" 两种情况下都是 24 passed
+python -m pytest -q       # 一块 H200 可见与没有 GPU 两种情况下都是 28 passed
 ```
 
 在 TileOPs 的 dev 镜像中运行同样不需要修改 TileOPs：
@@ -383,7 +384,7 @@ docker run --rm --gpus all -v "$PWD/..":/work -w /work \
 2. 修改 `target.py` 中的 `detect`，认领对应的设备类型。
 3. 把 `ops/` 下各模块中的 kernel 替换为真实 kernel：构造时编译，在 `__call__` 中启动。
 4. 选定第一个要接管的 op，按它的 manifest 签名编写 `build_kernel`，并在 `BUILDERS` 中加一行。
-5. [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/main/tests) 中的四个文件大体可以直接沿用，只需替换其中的 op 名与 target 名。
+5. [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/master/tests) 中的五个文件大体可以直接沿用，只需替换其中的 op 名与 target 名。
 6. 之后逐个 op 增加 `build_kernel`，直到覆盖目标模型用到的全部 op。
 
 ## 编写 kernel
