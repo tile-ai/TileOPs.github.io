@@ -22,15 +22,14 @@ from the latest upstream `main`, and the upstream repository is recorded as
 ```bash
 docker run --rm -it --gpus all \
   -v "$(pwd)":/workspace -w /workspace \
-  ghcr.io/tile-ai/tileops-runner:<tag>
+  ghcr.io/tile-ai/tileops-dev:<tag>
 
 # inside the container
 pip install -e . --no-deps --no-build-isolation
 ```
 
-- The dev images are published at
-  [ghcr.io/tile-ai/tileops-runner](https://github.com/tile-ai/TileOPs/pkgs/container/tileops-runner);
-  development uses a tag ending in `-dev`.
+- The dev image is published at [ghcr.io/tile-ai/tileops-dev](https://github.com/tile-ai/TileOPs/pkgs/container/tileops-dev). Its tag names the
+  CUDA, PyTorch and TileLang versions, for example `cuda13.2-torch2.13-tilelang0.1.12`.
 - The image carries CUDA, PyTorch, TileLang and the test tools, and comes from the
   same build as the CI's GPU runners.
 - `--no-deps` skips resolving and installing dependencies, and uses the ones the

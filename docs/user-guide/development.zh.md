@@ -19,13 +19,13 @@ git switch -c <branch> upstream/main
 ```bash
 docker run --rm -it --gpus all \
   -v "$(pwd)":/workspace -w /workspace \
-  ghcr.io/tile-ai/tileops-runner:<tag>
+  ghcr.io/tile-ai/tileops-dev:<tag>
 
 # 以下命令在容器内执行
 pip install -e . --no-deps --no-build-isolation
 ```
 
-- dev 镜像发布在 [ghcr.io/tile-ai/tileops-runner](https://github.com/tile-ai/TileOPs/pkgs/container/tileops-runner)，开发使用以 `-dev` 结尾的 tag。
+- dev 镜像发布在 [ghcr.io/tile-ai/tileops-dev](https://github.com/tile-ai/TileOPs/pkgs/container/tileops-dev)，tag 写明 CUDA、PyTorch 与 TileLang 的版本，例如 `cuda13.2-torch2.13-tilelang0.1.12`。
 - 镜像包含 CUDA、PyTorch、TileLang 与测试工具，与 CI 的 GPU runner 出自同一构建流程。
 - `--no-deps` 跳过依赖的解析与安装，直接使用镜像中已有的依赖。
 
