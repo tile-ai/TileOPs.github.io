@@ -12,7 +12,8 @@ subpath `site_url` carries. Palette and type come from
 bash scripts/dev.sh serve     # or: build, bench
 ```
 
-- Sets up a `.venv` from `requirements-docs.txt` and the `./TileOPs` checkout.
+- Sets up a `.venv` from `requirements-docs.txt`, with uv when it is on PATH
+  and pip otherwise, and the `./TileOPs` checkout.
   `build` applies `checks.yml`'s warning rule; `bench` calls `render_bench.sh`.
 - Both are reused and stay at the revision they were cloned at. Pass `--update`
   before trusting a local build against upstream.

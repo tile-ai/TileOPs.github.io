@@ -62,9 +62,15 @@ py="$(command -v python3 || command -v python)"  # a system may ship only one
 
 if [ "$use_venv" = 1 ]; then
   venv=".venv"
+  # uv when it is on PATH, else the stdlib venv and pip.
+  uv="$(command -v uv || true)"
   if [ ! -x "$venv/bin/python" ]; then
     echo "==> creating $venv"
-    "$py" -m venv "$venv"
+    if [ -n "$uv" ]; then
+      "$uv" venv --quiet "$venv"
+    else
+      "$py" -m venv "$venv"
+    fi
   fi
   export PATH="$PWD/$venv/bin:$PATH"
   py="$venv/bin/python"
@@ -75,8 +81,14 @@ if [ "$use_venv" = 1 ]; then
   stamp="$venv/.docs-requirements"
   if [ ! -f "$stamp" ] || [ requirements-docs.txt -nt "$stamp" ]; then
     echo "==> installing requirements-docs.txt"
-    "$py" -m pip install --quiet --upgrade pip
-    "$py" -m pip install --quiet -r requirements-docs.txt
+    if [ -n "$uv" ]; then
+      "$uv" pip install --quiet --python "$py" -r requirements-docs.txt
+    else
+      # A venv uv created ships without pip.
+      "$py" -m pip --version > /dev/null 2>&1 || "$py" -m ensurepip > /dev/null
+      "$py" -m pip install --quiet --upgrade pip
+      "$py" -m pip install --quiet -r requirements-docs.txt
+    fi
     touch "$stamp"
   fi
 fi
