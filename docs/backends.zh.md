@@ -82,7 +82,7 @@ def detect(device: torch.device) -> bool: ...
 def detect(device: torch.device) -> bool:
     return device.type == "acme"
 
-# 需要读环境变量或问厂商 runtime 时也在这里做
+# 需要读取环境变量或查询厂商 runtime 的判断也在这里完成
 def detect(device: torch.device) -> bool:
     if device.type != "privateuseone":
         return False
@@ -100,7 +100,7 @@ def build_kernel(*inputs: "TensorSpec | None", **params) -> Callable[..., Kernel
 ```python
 # GroupNormFwdOp 的 spec：weight、bias 是可选输入，没传时实参是 None
 def build_group_norm(x, weight, bias, *, num_groups, eps):
-    if weight is None:                                   # 从槽位上的值判断传没传
+    if weight is None:                                   # 由该位置的实参判断是否传入
         return AcmeGroupNorm(num_groups, eps, x.dtype)
     return AcmeGroupNormAffine(num_groups, eps, x.dtype)
 ```
@@ -185,13 +185,13 @@ class TensorSpec(NamedTuple):
 协议定义的类型，由 op 层构造后传入 `build_kernel`。它描述一个张量的属性，不包含张量本身。
 
 ```python
-# build_kernel 收到的实参长这样
+# build_kernel 收到的实参
 TensorSpec(device=torch.device("acme:0"), dtype=torch.float16, shape=(4096, 4096))
 
-# 能读的就这三项
+# 可读取的只有这三项
 def build_gemm(a: TensorSpec, b: TensorSpec, *, trans_a, trans_b):
-    m, k = a.shape                    # 形状：编译期常量，用来选实现、定 tile
-    if a.dtype is not torch.float16:  # dtype：不支持就在这里报错
+    m, k = a.shape                    # 形状是编译期常量，用于选择实现与 tile
+    if a.dtype is not torch.float16:  # 不支持的 dtype 在这里报错
         raise ValueError(f"acme gemm needs fp16, got {a.dtype}")
     ...
 ```
@@ -213,38 +213,38 @@ def build_gemm(a: TensorSpec, b: TensorSpec, *, trans_a, trans_b):
 
 ```python
 # ── 调用方 ───────────────────────────────────────────────────────────
-op = GemmFwdOp()                 # 构造时不写 target=，本次由输入张量的设备决定
-                                 #   写了 target="acme" 就跳过设备探测，直接用它；
-                                 #   写 target=BUILTIN 则强制走 TileOPs 自带的 kernel
+op = GemmFwdOp()                 # 构造时未给出 target=，由输入张量的设备决定
+                                 #   给出 target="acme" 时跳过设备探测，直接使用它；
+                                 #   给出 target=BUILTIN 时强制使用 in-tree kernel
 a = torch.randn(4096, 4096, dtype=torch.float16, device="acme:0")
 b = torch.randn(4096, 4096, dtype=torch.float16, device="acme:0")
 d = op(a, b)                     # 所有输入必须在同一设备上：a.device == b.device
 
 # ── op 层：定 target ────────────────────────────────────────────────
-# 每个装好的 backend在 import 时都往注册表里放了一个 detect。op 层把 a.device
-# 这一个对象原样交给每个 detect，问「这块设备是不是你这套 kernel 的」：
-#   acme 的 detect(device) → True      其他 backend的 → False
-#   恰好一个返回 True    → target = "acme"，这个op 实例此后固定用它
-#   一个都没有返回 True  → 用 TileOPs 自带的 kernel
-#   两个以上返回 True    → 抛 AmbiguousTargetError，要求显式写 target=
+# 每个已安装的 backend 在 import 时向注册表登记一个 detect。op 层把 a.device
+# 原样传给每个 detect，由它回答这块设备是否属于自己这套 kernel：
+#   acme 的 detect(device) → True      其他 backend 的 → False
+#   恰好一个返回 True    → target = "acme"，这个 op 实例此后固定使用它
+#   没有一个返回 True    → 使用 in-tree kernel
+#   两个以上返回 True    → 抛出 AmbiguousTargetError，要求显式给出 target=
 
-# ── op 层：先跑由 manifest 签名生成的检查，再把整个 op交给 target ──
-#   GemmFwdOp 自己的 forward 与 kernel_for 只服务in-tree 实现，这次不走
-#   传给 target 的张量顺序照 signature.inputs，不写入的输入先转成连续
+# ── op 层：先执行由 manifest 签名生成的检查，再由 target 服务整个 op ──
+#   GemmFwdOp 自己的 forward 与 kernel_for 只服务 in-tree 实现，这次不执行
+#   传给 target 的张量按 signature.inputs 排列，不写入的输入先转为连续张量
 
 # ── op 层：按设备与输入签名查外部记忆表 ─────────────────────────────
 #   ("acme:0", (float16, (4096, 4096)), (float16, (4096, 4096)))
 #   第一项是设备，其余每项对应一个输入的 (dtype, shape)
-#   这是这个op 实例的第一次调用，表还是空的 → 未命中，往下走构造
-#   同样设备、同样 dtype 与形状的下一次调用就会命中，直接跳到最后一步
+#   这是该 op 实例的第一次调用，表为空 → 未命中，进入构造
+#   设备、dtype 与形状都相同的下一次调用命中，直接进入最后一步
 
-# ── backend：op 层调 build_gemm，张量已转成 TensorSpec ─────────────────
+# ── backend：op 层调用 build_gemm，张量已转为 TensorSpec ───────────────
 #   build_gemm(TensorSpec("acme:0", float16, (4096, 4096)),
 #              TensorSpec("acme:0", float16, (4096, 4096)),
-#              trans_a=False, trans_b=True)      # params 按 manifest 的名字传
+#              trans_a=False, trans_b=True)      # params 按 manifest 中的名字传入
 #   → 返回一个可调用对象
 
-# ── op 层：存进记忆表，然后 launch ─────────────────────────────────
+# ── op 层：存入记忆表，然后 launch ─────────────────────────────────
 #   kernel(a, b)                 # d = a @ b.T，由 acme 的 kernel 算出
 ```
 
@@ -253,7 +253,7 @@ backend 只需编写其中一步，即 `build_gemm`，并把它注册进来：
 ```python
 def build_gemm(a: TensorSpec, b: TensorSpec, *, trans_a, trans_b):
     m = a.shape[1] if trans_a else a.shape[0]
-    if m == 1:                                  # 情形由 backend从 TensorSpec 自行判断
+    if m == 1:                                  # backend 从 TensorSpec 自行判断属于哪种情形
         return AcmeGemv(a, b, trans_a, trans_b)
     return AcmeGemm(a, b, trans_a, trans_b)
 
@@ -261,18 +261,18 @@ def build_gemm(a: TensorSpec, b: TensorSpec, *, trans_a, trans_b):
 register_kernel_builder(op="GemmFwdOp", target="acme", build_kernel=build_gemm)
 ```
 
-`build_gemm` 由 op 层调用，backend 自己从不调用它。import backend 模块时只是把它登记进注册表；它真正被调用，是在一次调用由这个 target 服务、且外部记忆表未命中的时候，每个「设备 + 输入签名」调用一次。它返回的可调用对象随后由 op 层 launch，并由 op 层存进记忆表。
+`build_gemm` 由 op 层调用，backend 自己不调用它。import backend 模块时只把它登记进注册表；一次调用由这个 target 服务且外部记忆表未命中时，op 层才调用它，每个「设备 + 输入签名」一次。它返回的可调用对象由 op 层 launch 并存入记忆表。
 
 这条调用路径对应以下四点：
 
 - **`kernel_for` 与各实现的 `entry_for` 只服务 in-tree 实现。** 它们决定取哪个 in-tree kernel、按什么查表以及如何构造。op 选中某个 target 之后，整个 op 由这个 target 服务，这几处都不会执行。
 - **张量按位置传入，参数按名字传入。** 在 `build_kernel(*inputs, **params)` 中，位置实参是 `TensorSpec`（没有传入的可选输入是 `None`），关键字实参是 manifest 中 `params` 的名字与本次调用的确定值。
-- **一组 `(op, target)` 只注册一个 builder。** in-tree 实现内部区分的几种 kernel（GEMM 的 `kernel_types` 中有三个）不会传给 backend，`build_kernel` 从 `TensorSpec` 自行判断应返回哪个 kernel。
+- **一组 `(op, target)` 只注册一个 builder。** in-tree 路径会选用哪个实现（例如 GEMM 在 `kernel_types` 中声明的多个实现之一）不会告诉 backend，`build_kernel` 从 `TensorSpec` 自行判断应返回哪个 kernel。
 - **backend 不必自己缓存构建结果。** 设备与输入签名相同时，op 层不会再次调用 `build_kernel`；需要更细的区分或更少的重建时，backend 在 `build_kernel` 内部另加一层缓存。专为外部 backend 编写的 op 既不声明 `kernel_types` 也不声明 `interfaces`，没有 target 认领设备时，调用直接抛出 `OpNotAvailableError`。
 
 ## 实现一个可运行的 backend {#runnable}
 
-[`tileops-backend-example`](https://github.com/lcy-seso/tileops-backend-example) 是按这四步写成的完整 backend，可以直接复制使用。它用纯 PyTorch 实现 kernel 并认领 CPU，因此在任何机器上都能安装、运行和测试。除了 kernel 本身不涉及专用硬件，它的其余部分与面向专用硬件的 backend 完全一致，包括 entry point、注册方式、`build_kernel` 签名、记忆规则与错误信息。
+[`tileops-backend-example`](https://github.com/lcy-seso/tileops-backend-example) 是按这四步写成的完整 backend，可以复制后改造。它用纯 PyTorch 实现 kernel 并认领 CPU，因此在任何机器上都能安装、运行和测试。除了 kernel 本身不涉及专用硬件，它的其余部分与面向专用硬件的 backend 完全一致，包括 entry point、注册方式、`build_kernel` 签名、记忆规则与错误信息。
 
 安装这个包前后的差别如下：
 
@@ -311,7 +311,7 @@ def detect(device: torch.device) -> bool:
 
 两个名字含义不同：`TARGET = "torch_cpu"` 是这套 kernel 的名字，由 backend 作者决定；`device.type == "cpu"` 是它认领的设备类型，由 torch 定义。
 
-**第三步，按 manifest 签名编写 `build_kernel`。** `RMSNormFwdOp` 的 spec 声明了两个输入 `x` 与 `weight`（可选），以及两个参数 `normalized_shape` 与 `eps`，函数的形参照抄这份声明。它与 kernel 类 `CpuRMSNorm` 一起放在 `ops/rms_norm.py` 中：
+**第三步，按 manifest 签名编写 `build_kernel`。** `RMSNormFwdOp` 的 spec 声明了两个输入 `x` 与 `weight`（可选），以及两个参数 `normalized_shape` 与 `eps`，函数的形参与这份声明一一对应。它与 kernel 类 `CpuRMSNorm` 一起放在 `ops/rms_norm.py` 中：
 
 ```python
 def build_rms_norm(x: TensorSpec, weight: TensorSpec | None, *, normalized_shape, eps):
@@ -344,7 +344,7 @@ for _op, _build_kernel in BUILDERS.items():
 
 | 文件 | 内容 |
 | --- | --- |
-| `pyproject.toml` | entry point 声明，这就是全部的安装机制 |
+| `pyproject.toml` | entry point 声明，即全部的安装机制 |
 | `src/tileops_cpu/__init__.py` | 全部注册代码 |
 | `src/tileops_cpu/target.py` | target 名与 `detect` |
 | `src/tileops_cpu/ops/__init__.py` | `BUILDERS`，即这个 target 接管的全部 op。键按 manifest 中的拼写书写，键写错的 builder 永远不会被调用 |
@@ -363,14 +363,14 @@ for _op, _build_kernel in BUILDERS.items():
 
 ```bash
 pip install -e .          # tileops 已安装时加 --no-deps
-python -m pytest -q       # 一块 H200 可见与没有 GPU 两种情况下都是 28 passed
+python -m pytest -q       # 有 GPU 与没有 GPU 时都全部通过，没有跳过项
 ```
 
-在 TileOPs 的 dev 镜像中运行同样不需要修改 TileOPs：
+在 TileOPs 的 [dev 镜像](user-guide/development.md#docker)中运行同样不需要修改 TileOPs，`<tag>` 取该页给出的当前 tag：
 
 ```bash
 docker run --rm --gpus all -v "$PWD/..":/work -w /work \
-  ghcr.io/tile-ai/tileops-dev:cuda13.2-torch2.13-tilelang0.1.12 \
+  ghcr.io/tile-ai/tileops-dev:<tag> \
   bash -lc 'pip install -e /work/TileOPs --no-deps -q &&
             pip install -e /work/tileops-backend-example --no-deps -q &&
             cd /work/tileops-backend-example && python -m pytest -q'
@@ -380,12 +380,14 @@ docker run --rm --gpus all -v "$PWD/..":/work -w /work \
 
 ### 改造成面向真实硬件的 backend
 
-1. 复制该仓库，把 `tileops_cpu` 改为 `tileops_<硬件名>`，并相应改写 target 名。
-2. 修改 `target.py` 中的 `detect`，认领对应的设备类型。
-3. 把 `ops/` 下各模块中的 kernel 替换为真实 kernel：构造时编译，在 `__call__` 中启动。
-4. 选定第一个要接管的 op，按它的 manifest 签名编写 `build_kernel`，并在 `BUILDERS` 中加一行。
-5. [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/master/tests) 中的五个文件大体可以直接沿用，只需替换其中的 op 名与 target 名。
-6. 之后逐个 op 增加 `build_kernel`，直到覆盖目标模型用到的全部 op。
+改造分为六步：
+
+1. 复制仓库：`tileops_cpu` 改为 `tileops_<硬件名>`，target 名随之改写。
+2. `target.py` 中的 `detect` 改为认领对应的设备类型。
+3. `ops/` 下各模块中的 kernel 换成真实 kernel：构造时编译，在 `__call__` 中启动。
+4. 第一个要接管的 op 按它的 manifest 签名编写 `build_kernel`，并在 `BUILDERS` 中登记。
+5. [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/master/tests) 中的测试替换包名、target 名、op 名与 kernel 类名后沿用。
+6. 其余 op 逐个增加 `build_kernel`，直到覆盖目标模型用到的全部 op。
 
 ## 编写 kernel
 
@@ -461,7 +463,7 @@ decode 路径会被 CUDA graph 捕获，因此各阶段允许执行的操作规�
 
 `detect` 认领某一类设备之后，该设备上的**所有** op 都由这个 target 服务，缺少其中任何一个都会报错，不会改用 in-tree 实现。唯一的例外是不自己构造 kernel 的复合 op。
 
-不回退的理由是：选中一个 target 意味着这块设备属于另一套硬件，in-tree kernel 在它上面无法启动。如果回退，只会把一条清楚的「该 target 未实现此 op」错误换成一次难以理解的启动失败。
+不回退的理由是：选中一个 target 意味着这块设备属于另一套硬件，in-tree kernel 在它上面无法启动。回退会把一条明确的「该 target 未实现此 op」错误变成一次难以诊断的启动失败。
 
 因此安装之后，每个 op 处于以下三种状态之一：
 
@@ -477,7 +479,7 @@ decode 路径会被 CUDA graph 捕获，因此各阶段允许执行的操作规�
 
 target 确定之前，op 层不查询与特定硬件绑定的信息，例如 CUDA 的 SM 版本。如果查询，在没有该驱动的机器上，调用会在到达 `build_kernel` 之前失败，而失败原因与这个 backend 无关。
 
-如果在自己的硬件上遇到这种失败，调用栈会停在 TileOPs 内部，而不是 backend 的 `build_kernel` 中。这属于 TileOPs 一侧的回归，应提交 issue 并附上调用栈。
+在 backend 的硬件上出现这种失败时，调用栈停在 TileOPs 内部，而不是 backend 的 `build_kernel` 中。这属于 TileOPs 一侧的回归，应提交 issue 并附上调用栈。
 
 在看不到 GPU 的环境中，示例仓库的全部测试照常通过，没有跳过项；这次运行本身检查了这条前提。
 
@@ -661,7 +663,7 @@ target 按以下顺序选取：
 | --- | --- |
 | 同一个 target 上存在多个 backend | 一个 target 对应一套 kernel 与一个提供者。重复注册同一组 `(op, target)` 会直接报错，因为这说明安装了两个都声明服务该 target 的包 |
 | 跨 target 回退 | 指定的 target 没有实现时直接报错，不会改用其他 target 执行 |
-| backend 改变输入形状，或代替调用方还原输出 | 这是 op 层对所有 target 统一提供的服务；如需改动，就对所有 target 一起改动 |
+| backend 改变输入形状，或代替调用方还原输出 | 这是 op 层对所有 target 统一提供的服务，需要改动时对所有 target 一起改动 |
 | 一次调用跨越多个设备 | 所有输入位于同一设备上，manifest 声明 `device: cpu` 的张量除外 |
 | 调用方提供 workspace 或显式 stream | backend 需要的只是当前流，而 torch 的流本身就是隐式的当前值 |
 | 与 autograd 联动 | 这条调用链服务推理，fwd 与 bwd 各自是独立的 op |
