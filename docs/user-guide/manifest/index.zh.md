@@ -90,7 +90,11 @@ manifest 测试与 benchmark 所用的调用，包括形状、dtype 与输入张
 
 1. spec 以 `status: spec-only` 提交。此时 validator 只做静态检查，不要求代码存在。
 2. 开发者编写 kernel 与 op 类，并在实现所在的包（例如 `src/tileops/ops/reduction/__init__.py`）与公开模块 `src/tileops/<family>.py` 中导出 op，两处的 `__all__` 都要包含它。op 类一旦存在，由签名生成的方法就会加入这个类。
-3. 开发者编写参考实现、正确性测试与 benchmark 函数。family 或模块已有对应文件时，在已有文件中添加。正确性测试默认使用 `BUILTIN` target，测试设备取自 `workloads.device.run_device()`；依赖 in-tree kernel 状态的测试标记 `pytest.mark.in_tree_kernels` 或显式传入 `target=BUILTIN`；执行时需要 CUDA 的测试标记 `pytest.mark.cuda_only`，`tests/ops` 中只因 in-tree kernel 而需要 CUDA 的测试只标 `in_tree_kernels`；判断设备是否可用时调用 `workloads.device.run_device_available()`，而不是 `torch.cuda.is_available()`。benchmark 同样接受 `--tileops-target` 与 `--tileops-device` 选项，默认使用 `BUILTIN`；benchmark 在 CUDA 或进程的 accelerator 上运行，CUDA 上用 CUPTI 计时，其他 accelerator 上用设备事件计时。详见设计文档 [Testing](../../design/testing.md)。
+3. 开发者编写参考实现、正确性测试与 benchmark 函数。family 或模块已有对应文件时，在已有文件中添加。详见设计文档 [Testing](../../design/testing.md)。
+    - 正确性测试默认使用 `BUILTIN` target，测试设备取自 `workloads.device.run_device()`。判断设备是否可用时调用 `workloads.device.run_device_available()`，不调用 `torch.cuda.is_available()`。
+    - 依赖 in-tree kernel 状态的测试标记 `pytest.mark.in_tree_kernels`，或显式传入 `target=BUILTIN`。
+    - 执行时需要 CUDA 的测试标记 `pytest.mark.cuda_only`。`tests/ops` 中只因 in-tree kernel 而需要 CUDA 的测试只标 `in_tree_kernels`。
+    - benchmark 同样接受 `--tileops-target` 与 `--tileops-device`，默认使用 `BUILTIN`。它在 CUDA 或进程的 accelerator 上运行：CUDA 上用 CUPTI 计时，其他 accelerator 上用设备事件计时。
 4. `status` 改为 `implemented` 后，validator 开始核对代码与 spec，CI 运行 manifest 测试与 GPU 上的正确性测试。检查失败时修改实现，不修改 spec。
 5. 合入 main 之后，nightly 按 case id 运行 benchmark，roofline 工具计算效率，文档站随之更新。
 

@@ -686,7 +686,7 @@ the order a backend author meets them:
 | 3 | Parameters by name | Parameters arrive under the manifest's `params` names, with the values the op instance holds. For a parameter the manifest defaults to null, that is the value the op settled on, either `None` or a number |
 | 4 | Input contiguity | Every input the call does not write arrives contiguous; an input it writes arrives as the caller passed it, unless the manifest declares it `contiguous: true` |
 | 5 | Memoisation and reuse of kernels | The builder is called once per specialization: a later call with the same device and input signature reuses the previous return value. A builder may therefore compile, and the op layer guarantees it is not called again |
-| 6 | The `torch.compile` and CUDA-graph boundary | The op layer wraps a call as an opaque operator and registers a fake alongside, so the compiler can infer the output's shape and dtype without executing. **A backend's kernels do nothing for compilation**; see [Bringing an op into torch.compile](torch-compile.md) |
+| 6 | The `torch.compile` and CUDA-graph boundary | For an op with a compile boundary (its spec has a call-time tensor input and no `composition`), the op layer wraps a call as an opaque operator and registers a fake alongside, so the compiler can infer the output's shape and dtype without executing. **A backend's kernels do nothing for compilation**; see [Bringing an op into torch.compile](torch-compile.md) |
 | 7 | Roofline, profiling and numerical tests | The op layer's existing tests can run with the backend's kernel; see [A backend's test claim](#test-claim). Performance reports: see [Performance reports](#reports) |
 
 The op layer implements all seven, and every target gets them identically on the devices
@@ -698,7 +698,7 @@ Item 2's checks fall in three layers:
 | --- | --- | --- |
 | The dtypes and shapes conform to the manifest signature | the op layer | the call never reaches the backend |
 | The target serves this dtype, shape and params combination inside the signature | `build_kernel` | `build_kernel` raises |
-| A condition on tensor values, such as RoPE's out-of-range positions | the target's kernel, at call time | the kernel raises `ValueError` |
+| A condition on tensor values, such as RoPE's out-of-range positions | the target's kernel, at call time; the op layer does not check it | the kernel must raise `ValueError`, as the in-tree implementation does; the op layer passes it to the caller unchanged |
 
 ### Performance reports {#reports}
 
@@ -751,12 +751,12 @@ does not cover every dtype, shape and output of the op. The claim needs all thre
 | No failure | No test under the op failed |
 | Behaviour tests | No test without an `op` property failed in the run |
 
-The claim reports three sets of numbers:
+A claim comes with three sets of numbers:
 
 - the op's pass and skip counts, where a test with `checked_outputs == 0` counts as a skip;
 - each test's `checked_outputs`;
 - the number of tests dropped, per test file. Dropped tests never reach the JUnit report,
-  so this number is the difference in node ids between two
+  so the backend computes this number itself, as the difference in node ids between two
   `pytest tests/ops --collect-only -q` runs: one with the default options, one with
   `--tileops-target` and `--tileops-device`.
 

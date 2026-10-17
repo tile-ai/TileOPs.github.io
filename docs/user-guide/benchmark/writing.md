@@ -219,7 +219,7 @@ Two kinds of implementation are never checked numerically:
 ### Timing {#timing}
 
 `benchmarks.timing.bench_kernel()` handles calibration, warm-up, the L2 flush, sampling,
-and CUPTI recording. `Runner` determines the order in which implementations are timed.
+and recording the time: CUPTI records on CUDA, device events on another accelerator. `Runner` determines the order in which implementations are timed.
 Each implementation is timed twice in the order A B C C B A, with the time budget split
 between the two passes. [How a benchmark is timed](../../timing.md#comparing) explains
 why this order is used.
@@ -233,8 +233,9 @@ reset → flush L2 → timed run(*args)
 This sequence ensures that:
 
 - Every round starts with the same input data.
-- Restoring state does not add to the measurement because the CUDA copies issued by
-  `reset` are not attributed to that round's CUPTI records.
+- Restoring state does not add to the measurement. On CUDA, the copies `reset` issues are
+  not attributed to that round's CUPTI records; on another accelerator, `reset` runs
+  before the round's start event.
 - Restored data does not remain in L2. If `reset` ran inside the timed function, the
   inputs it rewrites would be warm in L2, giving that implementation a cache advantage.
 

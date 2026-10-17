@@ -5,7 +5,9 @@ The nightly benchmark measures one row per workload per op and reports
 that call produces. CUPTI records each kernel's device-side start and end, and an
 external correlation id attributes the kernel to an iteration. L2 is cleared before
 every iteration, warm-up runs for 25 ms and measurement for 100 ms, and the result is
-the median.
+the median. This page covers timing on CUDA. Another accelerator is timed with device
+events, where `device_busy_ms` equals `latency_ms`; see
+[Adding a hardware backend § Performance reports](backends.md#reports).
 
 **Every number in the tables is therefore time the device spent executing kernels. It
 excludes the host cost of issuing the call and the gaps between kernels. Reading the
@@ -98,7 +100,7 @@ The five choices, and the reason for each:
 
 ## What is measured {#what-is-measured}
 
-**`device_busy_ms` is the length of the union of the execution intervals on the device
+**On CUDA, `device_busy_ms` is the length of the union of the execution intervals on the device
 of every kernel one call produces.** A CUPTI kernel record gives the device-side start
 and end of execution, excluding the host cost of issuing the call. There are three
 cases:

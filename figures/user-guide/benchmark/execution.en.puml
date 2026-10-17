@@ -45,7 +45,7 @@ group Timing: in the order A B C C B A, two passes sharing the budget
     BenchKernel -> BenchKernel: reset() if any
     BenchKernel -> BenchKernel: flush L2
     BenchKernel -> BenchKernel: timed run(*args)
-    BenchKernel -> BenchKernel: attribute this iteration's CUPTI records
+    BenchKernel -> BenchKernel: record this iteration's device time
   end
   BenchKernel --> Runner: list[Sample]
 end

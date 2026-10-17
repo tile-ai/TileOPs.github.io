@@ -172,7 +172,7 @@ reference 本身运行时显存不足，也会让这个 case 的所有实现标�
 
 ### 计时 {#timing}
 
-计时由 `benchmarks.timing.bench_kernel()` 完成，校准、预热、L2 flush、采样与 CUPTI 记录都在其中处理。`Runner` 只负责安排各实现的先后顺序：按 A B C C B A 让每个实现各测两趟，两趟平分时间预算，原因见 [benchmark 的计时方法](../../timing.md#comparing)。
+计时由 `benchmarks.timing.bench_kernel()` 完成，校准、预热、L2 flush、采样与计时记录都在其中处理：CUDA 上用 CUPTI 记录，其他 accelerator 上用设备事件。`Runner` 只负责安排各实现的先后顺序：按 A B C C B A 让每个实现各测两趟，两趟平分时间预算，原因见 [benchmark 的计时方法](../../timing.md#comparing)。
 
 校准、预热与采样的每一轮都按以下顺序执行：
 
@@ -183,7 +183,7 @@ reset → flush L2 → timed run(*args)
 这个顺序同时满足了三个要求：
 
 - 每一轮都从内容相同的输入开始。
-- 恢复状态的耗时不计入读数，因为 `reset` 发起的 CUDA copy 不会归入这一轮的 CUPTI 记录。
+- 恢复状态的耗时不计入读数：CUDA 上 `reset` 发起的 copy 不归入这一轮的 CUPTI 记录，其他 accelerator 上 `reset` 在这一轮的起始事件之前执行。
 - 恢复时写入的数据不会留在 L2 中。如果把 `reset` 放进被计时的函数，它写入的输入会留在 L2 里，这个实现就获得了其他实现没有的缓存优势。
 
 `count_copies` 只影响 `run` 内的 copy 是否计入读数；`reset` 始终位于计时区间之外，不受它影响。只想测量单个调用、不需要 case 与校验时，可以直接调用 `bench_kernel`，用法与各项读数的含义见 [benchmark 的计时方法](../../timing.md#how-it-runs)。

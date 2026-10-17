@@ -45,7 +45,7 @@ group 性能测量：按 A B C C B A 顺序，两趟平分预算
     BenchKernel -> BenchKernel: reset()（若有）
     BenchKernel -> BenchKernel: flush L2
     BenchKernel -> BenchKernel: 计时 run(*args)
-    BenchKernel -> BenchKernel: 归属本次迭代的 CUPTI 记录
+    BenchKernel -> BenchKernel: 记录本次迭代的设备时间
   end
   BenchKernel --> Runner: list[Sample]
 end
