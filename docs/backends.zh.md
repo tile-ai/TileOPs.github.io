@@ -108,12 +108,12 @@ def build_group_norm(x, weight, bias, *, num_groups, eps):
 
 | 成员 | op 层怎么用 |
 | --- | --- |
-| `request_tune()` | op 处于调优模式时调用：`op.request_tune()` 时对已构造的 kernel 调用，之后新构造的 kernel 在首次调用之前调用。每个 kernel 在它所属的每个设备上各调用一次，调用时该设备是当前设备 |
+| `request_tune()` | op 处于调优模式时调用：`op.request_tune()` 时对已构造的 kernel 调用，之后新构造的 kernel 在首次调用之前调用。每次请求对每个 kernel 在它所属的每个设备上各调用一次，调用时该设备是当前设备 |
 | `config` | 一个 dict，`op.kernel_config()` 报告它 |
 
 `request_tune()` 的约定：
 
-- 必须幂等，可能被调用多次。
+- 之后的请求会再次调用它，所以它必须按设备幂等：同一个对象被两个设备共享时，在每个设备上各调优一次。
 - 可以当场调优，也可以推迟到下一次 launch；推迟时，完成调优的那次调用必须发生在 CUDA graph 捕获之前（见[各阶段允许做什么](#phase-limits)）。
 - 它抛出的异常就是触发它的那次调用或 `op.request_tune()` 的异常。构造时调优失败的 kernel 不进记忆表，下一次调用重新构造。
 - kernel 没有定义它时，op 层在调优请求到达这个 kernel 时警告一次。
@@ -137,10 +137,10 @@ def register_kernel_builder(op: str, target: str, build_kernel: BuildKernel) -> 
 ### 非 CUDA 设备的设备参数：`register_device_facts` {#device-facts}
 
 ```python
-def register_device_facts(device_type: str, read: Callable[[int], DeviceFacts]) -> None: ...
+def register_device_facts(device_type: str, read: Callable[[torch.device], DeviceFacts]) -> None: ...
 ```
 
-由 backend 调用，每种设备类型一次。kernel 选择会读调用设备的四项参数：`arch`、`calibration`、`sm_count`、`smem_budget`。TileOPs 自己读 CUDA 设备的这四项；其他设备类型的由注册的 `read` 提供，`read` 收到设备序号，返回 `DeviceFacts`。
+由 backend 调用，每种设备类型一次。kernel 选择会读调用设备的四项参数：`arch`、`calibration`、`sm_count`、`smem_budget`。TileOPs 自己读 CUDA 设备的这四项；其他设备类型的由注册的 `read` 提供，`read` 收到调用的设备，返回 `DeviceFacts`。设备是进程当前 accelerator 的类型时，op 层先补上设备序号；`cpu` 这类不编号的设备原样传入。构造与调优时，op 层经 `torch.accelerator` 把调用的设备设为当前设备；这只对进程当前 accelerator 类型的设备生效，其他设备类型不切换。
 
 - 只服务整个 op 的 target 不需要它：target 的 kernel 自己决定怎么选。
 - 用 `register_kernel_type` 加入实现、并声明了 `supported_archs` 的 backend 需要它。没有注册的设备类型这四项为 `-1 / None / 0 / 0`，声明了 `supported_archs` 的实现在这种设备上永远不可用。
@@ -150,11 +150,12 @@ def register_device_facts(device_type: str, read: Callable[[int], DeviceFacts]) 
 - `read` 只在 kernel 选择第一次读这台设备的参数时被调用，开销大时由 backend 自己缓存。
 
 ```python
+import torch
 from tileops.backend import DeviceFacts, register_device_facts
 import acme_runtime                                      # 厂商 runtime，这里是假想的
 
-def read_acme(index: int) -> DeviceFacts:
-    props = acme_runtime.device_properties(index)
+def read_acme(device: torch.device) -> DeviceFacts:
+    props = acme_runtime.device_properties(device.index)
     return DeviceFacts(arch=props.arch, calibration=None,
                        sm_count=props.compute_units,
                        smem_budget=props.shared_memory_per_block)
@@ -536,9 +537,9 @@ TileOPs 把 `torch.device` 原样传给 `detect`，自己不解析它。原因�
 | 4 | 输入的连续性归一 | 本次调用不写入的输入都转成连续张量；被写入的输入按调用方传入的原样传给 backend，除非 manifest 声明它 `contiguous: true` |
 | 5 | kernel 的记忆与重用 | 构造函数对每种特化调用一次：设备与输入签名相同的后续调用直接使用上一次的返回值。因此构造函数内部可以编译，op 层保证它不会被重复调用 |
 | 6 | `torch.compile` 与 CUDA graph 的边界 | op 层把一次调用包装成不透明 op，并另配一个 fake，使编译器不执行也能推出输出的形状与 dtype。**backend 的 kernel 不为编译做任何事**，细节见[接入 torch.compile](torch-compile.md) |
-| 7 | roofline、profile 与数值测试 | op 层已有的测试可以用 backend 的 kernel 运行，与 manifest 的 `ref_api` 比对数值，见[backend 的测试结论](#test-claim)。性能报告照常产出：CUDA 设备经 CUPTI 计时，其他设备用设备事件计时，报告的 `timing` 一栏写 `events`。只在 CUDA 上安装的 baseline 库在其他设备上缺失时，以它为必选对照的 case 跳过并写明原因，以它为可选对照的 case 去掉它这一列 |
+| 7 | roofline、profile 与数值测试 | op 层已有的测试可以用 backend 的 kernel 运行，与 manifest 的 `ref_api` 比对数值，见[backend 的测试结论](#test-claim)。在 CUDA 与其他 accelerator 上照常产出性能报告：CUDA 设备经 CUPTI 计时，其他 accelerator 用设备事件计时，报告的 `timing` 一栏写 `events`；`cpu` 设备不做 benchmark。只在 CUDA 上安装的 baseline 库在其他设备上缺失时，以它为必选对照的 case 跳过并写明原因，以它为可选对照的 case 去掉它这一列 |
 
-七项均与硬件无关，每个 target 得到的完全相同。接入第三方 backend 时不得绕过其中任何一项，也不得另行实现。
+七项由 op 层统一实现，每个 target 在它所运行的设备上得到的完全相同。接入第三方 backend 时不得绕过其中任何一项，也不得另行实现。
 
 ### backend 的测试结论 {#test-claim}
 

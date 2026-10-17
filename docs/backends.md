@@ -136,12 +136,12 @@ in-tree `Kernel`'s members of the same names mean. Both are optional:
 
 | Member | How the op layer uses it |
 | --- | --- |
-| `request_tune()` | Called while the op is in tuned mode: on the kernels built so far when `op.request_tune()` is called, and on each kernel built later before its first call. Each kernel receives it once per device it was built for, with that device current |
+| `request_tune()` | Called while the op is in tuned mode: on the kernels built so far when `op.request_tune()` is called, and on each kernel built later before its first call. Each request calls it on each kernel once per device the kernel was built for, with that device current |
 | `config` | A dict, which `op.kernel_config()` reports |
 
 `request_tune()` follows four rules:
 
-- It is idempotent; it may be called more than once.
+- A later request calls it again, so it is idempotent per device: one object shared by two devices tunes on each.
 - It may tune at once or defer to the next launch; a deferred tuning completes in a call
   made before any CUDA graph capture (see [What each phase may do](#phase-limits)).
 - What it raises is the error of the call that triggered it, or of `op.request_tune()`.
@@ -170,13 +170,17 @@ Called by the backend, once per op it takes over. It registers the kernel builde
 ### Device facts on another device type: `register_device_facts` {#device-facts}
 
 ```python
-def register_device_facts(device_type: str, read: Callable[[int], DeviceFacts]) -> None: ...
+def register_device_facts(device_type: str, read: Callable[[torch.device], DeviceFacts]) -> None: ...
 ```
 
 Called by the backend, once per device type. Kernel selection reads four facts of the
 call's device: `arch`, `calibration`, `sm_count` and `smem_budget`. TileOPs reads a CUDA
-device's itself; another device type's come from the registered `read`, which receives a
-device index and returns `DeviceFacts`.
+device's itself; another device type's come from the registered `read`, which receives the
+call's device and returns `DeviceFacts`. The op layer fills in the index of a device of the
+process's accelerator type; a device that numbers none, such as `cpu`, arrives as it is.
+While building and tuning, the op layer makes the call's device current through
+`torch.accelerator`; that applies to a device of the process's accelerator type, and a
+device of another type is left as it is.
 
 - A target that serves whole ops does not need it: the target's kernel makes its own
   choices.
@@ -196,11 +200,12 @@ device index and returns `DeviceFacts`.
   caches inside it when it is expensive.
 
 ```python
+import torch
 from tileops.backend import DeviceFacts, register_device_facts
 import acme_runtime                                      # a vendor runtime, imagined
 
-def read_acme(index: int) -> DeviceFacts:
-    props = acme_runtime.device_properties(index)
+def read_acme(device: torch.device) -> DeviceFacts:
+    props = acme_runtime.device_properties(device.index)
     return DeviceFacts(arch=props.arch, calibration=None,
                        sm_count=props.compute_units,
                        smem_budget=props.shared_memory_per_block)
@@ -676,10 +681,10 @@ the order a backend author meets them:
 | 4 | Input contiguity | Every input the call does not write arrives contiguous; an input it writes arrives as the caller passed it, unless the manifest declares it `contiguous: true` |
 | 5 | Memoisation and reuse of kernels | The builder is called once per specialization: a later call with the same device and input signature reuses the previous return value. A builder may therefore compile, and the op layer guarantees it is not called again |
 | 6 | The `torch.compile` and CUDA-graph boundary | The op layer wraps a call as an opaque operator and registers a fake alongside, so the compiler can infer the output's shape and dtype without executing. **A backend's kernels do nothing for compilation**; see [Bringing an op into torch.compile](torch-compile.md) |
-| 7 | Roofline, profiling and numerical tests | The op layer's existing tests can run with the backend's kernel and compare against the manifest's `ref_api`; see [A backend's test claim](#test-claim). Performance reports are produced as usual: a CUDA device is timed through CUPTI, any other with its device events, and the report's `timing` column reads `events`. Where a baseline library installed only for CUDA is absent on another device, a case that selects it is skipped with the reason, and a case that prefers it drops its column |
+| 7 | Roofline, profiling and numerical tests | The op layer's existing tests can run with the backend's kernel and compare against the manifest's `ref_api`; see [A backend's test claim](#test-claim). On CUDA and on another accelerator, performance reports are produced as usual: a CUDA device is timed through CUPTI, any other accelerator with its device events, and the report's `timing` column reads `events`; a `cpu` device is not benchmarked. Where a baseline library installed only for CUDA is absent on another device, a case that selects it is skipped with the reason, and a case that prefers it drops its column |
 
-None of the seven depends on hardware, and every target gets them identically. A
-third-party backend neither bypasses any of them nor substitutes its own.
+The op layer implements all seven, and every target gets them identically on the devices
+it runs on. A third-party backend neither bypasses any of them nor substitutes its own.
 
 ### A backend's test claim {#test-claim}
 
