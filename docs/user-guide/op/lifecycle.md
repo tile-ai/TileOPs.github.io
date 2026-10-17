@@ -199,12 +199,13 @@ The call's device is settled by the signature check, taken from the first of:
 1. the device of the call-time tensors;
 1. the declared `device` parameter;
 1. the device of the construction-time tensors;
-1. when there is none of the three, the current CUDA device.
+1. when there is none of the three, the current device of the process's accelerator.
 
-When CUDA is unavailable too, and there is no constructor argument or process default target,
-the base class has nothing to select from:
+When the process has no accelerator either, and there is no constructor argument or process
+default target, the base class has nothing to select from:
 
-- this call runs the in-tree body;
+- this call runs the in-tree body; with the call device unknown, no in-tree implementation
+  is available, and selecting one raises `OpNotAvailableError`;
 - the instance still has no target, and the next call selects again.
 
 The cache of kernels a target builds:
@@ -287,8 +288,8 @@ A subclass gets a kernel through `self.kernel_for(interface, call)`:
 
 1. **Confirm the interface.**
     - When `interface` is not in `interfaces`, it raises `OpNotAvailableError`.
-    - When the call spec gives no device and CUDA is available, the base class fills in the
-      current CUDA device, so the cache key names a device.
+    - When the call spec gives no device and the process has an accelerator, the base class
+      fills in the accelerator's current device, so the cache key names a device.
 1. **Look up by call.**
     - `_entries_by_call` is keyed by `(interface, call)`.
     - Equal call specs describe the same call: a hit is one lookup and reads no device
@@ -305,8 +306,9 @@ A subclass gets a kernel through `self.kernel_for(interface, call)`:
     - `_built_entries` is split by interface and keyed by `(implementation class, identity)`
       within each: calls with the same identity share one entry, and a new identity builds a
       new entry and keeps it.
-    - When the call spec's device is a CUDA device, building the entry and handling a tuning
-      request both run under `torch.cuda.device(call.device)`.
+    - Building the entry and handling a tuning request both run with the call spec's device
+      made current through `torch.accelerator`; a device that is not of the process's
+      accelerator type is left alone.
 
 Further notes:
 

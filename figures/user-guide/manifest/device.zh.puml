@@ -31,7 +31,7 @@ card "声明 device: cpu 的张量固定在 CPU，不参与下面的判定" as p
 card "有调用期输入？" as c1
 card "参数 device 不为 None？" as c2
 card "有构造期张量？" as c3
-card "取当前 CUDA 设备；\nCUDA 不可用时为 None" as r5 #E2F6F8;line:3AA9B8
+card "取当前 accelerator 设备；\n没有 accelerator 时为 None" as r5 #E2F6F8;line:3AA9B8
 
 rectangle "取这些输入的设备；它们须位于同一设备" as r1
 rectangle "取 device；字符串按 torch.device 解析" as r2

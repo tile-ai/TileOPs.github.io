@@ -57,6 +57,7 @@ register_kernel_type("LayerNormFwdOp", "torch_short_rows", _NarrowTorchLayerNorm
 - 新实现在 `n <= 256` 上与 `LayerNormKernel` 重叠，后者不是 general，因此新实现声明 `preferred_over`。
 - 新实现不服务的调用仍由 in-tree 实现服务，例如 `n = 1024`。
 - 新实现只进入注册之后构造的 op 实例。
+- 新实现在 `devices` 中声明它运行的设备类型。CUDA 以外的设备类型，其设备事实由 backend 用 `register_device_facts` 注册，见[接入新的硬件 backend § 设备事实](../../backends.md#device-facts)。
 - 同一个 op 下重复注册同一个 key 报 `BackendError`；key 与 in-tree 的 key 相同时，构造 op 时报 `reuse keys it has`。
 - 新实现不继承 op 的任何 kernel 接口、`entry_for` 不是类方法、或 `forward` 不接受接口的参数时，构造 op 时报错，见[如何为 op 新增 kernel § 5](writing.md#tests)。
 
@@ -88,6 +89,7 @@ register_kernel_builder(op="RMSNormFwdOp", target="acme", build_kernel=build_rms
 ```
 
 - `build_kernel` 按 op 的 `signature.inputs` 顺序接收每个输入的 `TensorSpec`（未传入的可选输入为 `None`，例如 `RMSNormFwdOp` 的 `weight`），并以关键字接收 `signature.params`。它返回的 kernel 在调用时按同样的顺序接收输入张量，并以关键字接收调用方传入的输出缓冲与执行参数。导入模块时不编译任何东西，构建在 `build_kernel` 被调用时发生。
+- 返回的 kernel 可选定义 `request_tune()` 与 `config`，含义与 in-tree `Kernel` 的同名成员相同，见[接入新的硬件 backend § build_kernel](../../backends.md#build-kernel)。
 - op 实例按调用设备，以及每个输入是否传入、dtype 与 shape，缓存 `build_kernel` 返回的 kernel。
 - op 实例在第一次需要执行实现的调用中确定 target，此后不变：构造参数 `target=` 优先，其次是 `set_default_target` 设置的进程默认值，最后由各 target 的 detector 检测调用设备；没有 target 认领时使用 in-tree 实现，多个 target 认领时报 `AmbiguousTargetError`。写入张量都为空的调用不确定 target；确定 target 的那次调用失败时，选择被撤销，下一次调用重新确定。
 - 传给 target 的调用已经通过由签名生成的检查；除声明了 `device: cpu` 的张量外，所有张量位于调用设备上；所有不被写入的输入都是连续的，被写入的输入在声明了 `contiguous: true` 时是连续的。

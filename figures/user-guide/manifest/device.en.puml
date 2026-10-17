@@ -31,7 +31,7 @@ card "A tensor declaring device: cpu stays on the CPU\nand takes no part below" 
 card "Any call-time input?" as c1
 card "device parameter not None?" as c2
 card "Any construction-time tensor?" as c3
-card "The current CUDA device;\nNone without CUDA" as r5 #E2F6F8;line:3AA9B8
+card "The accelerator's current device;\nNone without an accelerator" as r5 #E2F6F8;line:3AA9B8
 
 rectangle "Their device; they must share one" as r1
 rectangle "device; a string is parsed\nby torch.device" as r2

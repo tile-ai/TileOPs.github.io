@@ -145,11 +145,11 @@ backend 接入 TileOPs 有两种方式，接入方法见 [backend 如何接入 T
 1. 调用期张量所在的设备；
 1. 声明的 `device` 参数；
 1. 构造期张量所在的设备；
-1. 三者都没有时，取当前 CUDA 设备。
+1. 三者都没有时，取进程 accelerator 的当前设备。
 
-CUDA 也不可用、且没有构造参数或进程默认 target 时，基类无从选择：
+进程也没有 accelerator、且没有构造参数或进程默认 target 时，基类无从选择：
 
-- 这次调用运行 in-tree 本体；
+- 这次调用运行 in-tree 本体；调用设备未知，所有 in-tree 实现都不可用，选择实现时报 `OpNotAvailableError`；
 - 实例仍未选定 target，下一次调用再选择。
 
 target 构造的 kernel 的缓存：
@@ -214,7 +214,7 @@ target 被调用前，生成的检查已经运行，基类保证以下三点：
 
 1. **确认接口。**
     - `interface` 不在 `interfaces` 中时，抛出 `OpNotAvailableError`。
-    - call spec 没有给出设备且 CUDA 可用时，基类填入当前 CUDA 设备，使缓存键带有设备。
+    - call spec 没有给出设备、而进程有 accelerator 时，基类填入它的当前设备，使缓存键带有设备。
 1. **按调用查找。**
     - `_entries_by_call` 以 `(interface, call)` 为键。
     - 相等的 call spec 表示同一种调用，命中只需一次查表，不读取设备属性。
@@ -226,7 +226,7 @@ target 被调用前，生成的检查已经运行，基类保证以下三点：
     - 派发机制选出一个实现，见 [op 如何选择 kernel § 一次调用如何找到 kernel](../dispatch/index.md#call-path)；`key_for(interface, call)` 返回这一步选中的 key。
     - 实现的 `entry_for(call)` 给出 identity 与构造函数。
     - `_built_entries` 按接口分开，在每个接口下以 `(实现类, identity)` 为键：identity 相同的调用共用一个 entry，不同则构造新的 entry 并保存。
-    - call spec 的设备是 CUDA 设备时，构造 entry 与处理调优请求都在 `torch.cuda.device(call.device)` 下进行。
+    - 构造 entry 与处理调优请求时，基类经 `torch.accelerator` 把 call spec 的设备设为当前设备；设备不是进程 accelerator 的类型时不切换。
 
 补充说明：
 

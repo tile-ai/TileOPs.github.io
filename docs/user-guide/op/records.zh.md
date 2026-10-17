@@ -66,7 +66,7 @@
 三个方法的用途：
 
 - `built_entries()` 只用于测试与 benchmark 报告。
-- `iter_kernels()` 还供 `request_tune()` 与 `kernel_config()` 使用。
+- `request_tune()` 与 `kernel_config()` 经 `iter_kernels()` 取得 in-tree kernel，另按设备取得 target 构造的 kernel。
 - `held_delegates()` 还供失败时递归撤销子 op 使用。
 
 调用路径不用这三个方法取得 kernel：
@@ -86,6 +86,6 @@
 - **`request_tune()`：** 进入调优模式的唯一方式，op 与 kernel 都不接收 `tune` 构造参数。它把 op 及其持有的子 op 置为调优模式。
     - 对已构造的每个 kernel 调用 `Kernel.request_tune()`：程序已构建的 kernel 立即调优，尚未构建的在构建程序的那次启动时调优；没有 `autotune_configs` 的 kernel 不调优。
     - 之后构造的 entry，基类构造后立即对其中每个 `Kernel` 调用 `request_tune()`。
-- **target：** 调优请求到不了 target 构造的 kernel，此时发出警告，每个实例只警告一次。
+- **target：** target 构造的 kernel 可选定义 `request_tune()`。`request_tune()` 对已构造的每个 target kernel，在它所属的每个设备上各调用一次，调用时该设备是当前设备；之后构造的 target kernel 在首次调用之前调用。kernel 没有定义它时发出警告，每个实例只警告一次。约定见[接入新的硬件 backend § build_kernel](../../backends.md#build-kernel)。
 - **子类覆盖：** 以上是基类的行为，子类可以覆盖。`GemmW4A16FwdOp` 不支持通用调优：覆盖 `request_tune()`，发出警告，改用自己校准过的选择。
-- **`kernel_config()`：** 返回 op 自己的配置；没有时，返回 `iter_kernels()` 中第一个有配置的 kernel 的配置。
+- **`kernel_config()`：** 返回 op 自己的配置；没有时，先在 `iter_kernels()` 枚举的 kernel 中、再在 target 构造的 kernel 中，返回第一个非空的 `config`。

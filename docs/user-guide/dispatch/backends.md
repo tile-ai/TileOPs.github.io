@@ -57,6 +57,7 @@ register_kernel_type("LayerNormFwdOp", "torch_short_rows", _NarrowTorchLayerNorm
 - The new implementation overlaps `LayerNormKernel` on `n <= 256`, and `LayerNormKernel` is not general, so the new implementation declares `preferred_over`.
 - Calls the new implementation does not serve, such as `n = 1024`, are still served by the in-tree implementation.
 - The new implementation enters only op instances constructed after registration.
+- The new implementation declares the device types it runs on in `devices`. On a device type other than CUDA, the backend registers the device facts with `register_device_facts`; see [Adding a hardware backend § Device facts](../../backends.md#device-facts).
 - Registering the same key twice under one op raises `BackendError`. A key equal to an in-tree key raises `reuse keys it has` when the op is constructed.
 - When the new implementation inherits none of the op's kernel interfaces, states `entry_for` other than as a class method, or has a `forward` that does not take the interface's arguments, constructing the op raises; see [Adding a kernel to an op § 5](writing.md#tests).
 
@@ -88,6 +89,7 @@ register_kernel_builder(op="RMSNormFwdOp", target="acme", build_kernel=build_rms
 ```
 
 - `build_kernel` receives a `TensorSpec` for each input in the order of the op's `signature.inputs` (an optional input that is not passed is `None`, such as `RMSNormFwdOp`'s `weight`), and receives `signature.params` as keywords. The kernel it returns receives the input tensors in the same order at call time, and receives the output buffers and execution arguments the caller passes as keywords. Importing the module compiles nothing; building happens when `build_kernel` is called.
+- The kernel returned may define the optional members `request_tune()` and `config`, which mean the same as on an in-tree `Kernel`; see [Adding a hardware backend § build_kernel](../../backends.md#build-kernel).
 - An op instance caches the kernels returned by `build_kernel` by the call's device, and by whether each input is passed, its dtype, and its shape.
 - An op instance fixes its target on the first call that needs to run an implementation, and the target does not change afterwards. The construction argument `target=` comes first, then the process default set by `set_default_target`, and finally each target's detector inspects the call's device. When no target claims the device, the in-tree implementation is used; when several targets claim it, the call raises `AmbiguousTargetError`. A call whose written tensors are all empty does not fix the target. When the call that fixes the target fails, the choice is undone and the next call fixes it again.
 - A call passed to a target has already passed the checks generated from the signature. Every tensor is on the call's device, except tensors declared `device: cpu`. Every input that is not written is contiguous, and a written input is contiguous when it declares `contiguous: true`.

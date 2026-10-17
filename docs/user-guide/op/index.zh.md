@@ -110,7 +110,7 @@ op 实例构造一次，调用多次：
     - FLOPs 不在 fp32 CUDA core 上计算的子类覆盖 `roof_key()`。
     - 见[调用记录与调优 § roofline](records.md#roofline)。
 1. **调优与枚举。**
-    - `request_tune()` 是进入调优模式的唯一方式：它把 op 及其子 op 置为调优模式，并向 `iter_kernels()` 枚举到的已构造 kernel 发出调优请求；之后构造的 in-tree entry 也按该模式调优；请求到不了 target 时发出警告。
+    - `request_tune()` 是进入调优模式的唯一方式：它把 op 及其子 op 置为调优模式，并向已构造的 kernel 发出调优请求，包括 target 构造的 kernel；之后构造的 kernel 也按该模式调优；target 的 kernel 没有定义 `request_tune()` 时发出警告。
     - `iter_kernels()` 等方法枚举已构造的 kernel。
     - 见[调用记录与调优](records.md)。
 

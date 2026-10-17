@@ -76,7 +76,8 @@ A subclass may also override two methods:
 What the three methods are for:
 
 - `built_entries()` is for tests and benchmark reports only.
-- `iter_kernels()` also serves `request_tune()` and `kernel_config()`.
+- `request_tune()` and `kernel_config()` reach the in-tree kernels through `iter_kernels()`,
+  and the kernels a target built by device.
 - `held_delegates()` also serves the recursive undo of sub-ops after a failure.
 
 The call path does not get kernels through these three methods:
@@ -104,10 +105,13 @@ reflection:
       kernel without `autotune_configs` is not tuned.
     - For an entry built afterwards, the base class calls `request_tune()` on each `Kernel` in
       it right after building it.
-- **Targets:** a tuning request cannot reach the kernels a target builds, so the base class
-  warns, once per instance.
+- **Targets:** a kernel a target builds may define `request_tune()`. `request_tune()` calls
+  it on each target kernel built so far, once on every device the kernel was built for,
+  with that device current; a target kernel built later gets it before its first call. A
+  kernel that does not define it makes the base class warn, once per instance. The rules
+  are in [Adding a hardware backend § build_kernel](../../backends.md#build-kernel).
 - **Subclass overrides:** the above is the base class's behavior, and a subclass may override
   it. `GemmW4A16FwdOp` does not support generic tuning: it overrides `request_tune()` to warn
   and use its own calibrated selection.
-- **`kernel_config()`:** returns the op's own configuration; without one, the configuration of
-  the first configured kernel `iter_kernels()` yields.
+- **`kernel_config()`:** returns the op's own configuration; without one, the first non-empty
+  `config` among the kernels `iter_kernels()` yields, then among the kernels a target built.

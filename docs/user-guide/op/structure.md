@@ -142,8 +142,9 @@ Notes on Table 2:
     1. **The running group's tuned mode decides how the binding group is built.** When the
        instance is in tuned mode, a kernel newly built in the binding group is put in tuned
        mode right after it is built; `request_tune()` sets `_tune_requested` and sends a
-       tuning request to the built kernels `iter_kernels()` yields. Kernels a target built
-       are not among them, and when the request cannot reach the target, it warns.
+       tuning request to the built kernels: the in-tree ones `iter_kernels()` yields, and
+       each kernel a target built, once on every device it was built for. It warns when a
+       target's kernel defines no `request_tune()`.
     1. **Undo does not touch the record of the last success.** When the target was selected
        in the failing call, the binding group is reset; undone or not, a failed call does not
        write `_last_call`, and `last_call` still points to the earlier successful call.

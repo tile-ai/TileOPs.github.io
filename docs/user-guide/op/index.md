@@ -143,9 +143,9 @@ Two more duties belong to no single call:
     - See [Call records and tuning § Roofline](records.md#roofline).
 1. **Tuning and enumeration.**
     - `request_tune()` is the only way into tuned mode: it puts the op and its sub-ops in
-      tuned mode and sends a tuning request to the built kernels `iter_kernels()` yields;
-      in-tree entries built afterwards are tuned too; when the request cannot reach a target,
-      it warns.
+      tuned mode and sends a tuning request to the built kernels, a target's kernels
+      included; kernels built afterwards are tuned too; it warns when a target's kernel
+      defines no `request_tune()`.
     - `iter_kernels()` and related methods enumerate the built kernels.
     - See [Call records and tuning](records.md).
 

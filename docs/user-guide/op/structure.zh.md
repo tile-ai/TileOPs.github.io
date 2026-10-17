@@ -85,7 +85,7 @@
     两组之间有三处交互：
 
     1. **撤销沿运行组里的子 op 向下传。** 组合 op 撤销时，对 `_delegates` 中的每个子 op 也调用 `_reset_binding`：父 op 继续持有子 op，每个子 op 重置自己的绑定组。
-    1. **运行组的调优模式决定绑定组如何构造。** 实例处于调优模式时，绑定组中新构造的 kernel 构造后立即进入调优模式；`request_tune()` 置 `_tune_requested`，并向 `iter_kernels()` 枚举到的已构造 kernel 发出调优请求。target 构造的 kernel 不在其中，调优请求到不了 target 时发出警告。
+    1. **运行组的调优模式决定绑定组如何构造。** 实例处于调优模式时，绑定组中新构造的 kernel 构造后立即进入调优模式；`request_tune()` 置 `_tune_requested`，并向已构造的 kernel 发出调优请求：in-tree kernel 由 `iter_kernels()` 枚举，target 构造的 kernel 在它所属的每个设备上各收到一次。target 的 kernel 没有定义 `request_tune()` 时发出警告。
     1. **撤销不影响上一次成功的记录。** target 在失败的这次调用中选定时，绑定组被重置；无论是否撤销，失败的调用都不写 `_last_call`，`last_call` 仍然指向之前那次成功的调用。
 
 **表 3** 绑定组字段
