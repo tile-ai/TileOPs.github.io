@@ -109,7 +109,7 @@ def build_group_norm(x, weight, bias, *, num_groups, eps):
 | 成员 | op 层怎么用 |
 | --- | --- |
 | `request_tune()` | op 处于调优模式时调用：`op.request_tune()` 时对已构造的 kernel 调用，之后新构造的 kernel 在首次调用之前调用。每次请求对每个 kernel 在它所属的每个设备上各调用一次，调用时该设备是当前设备 |
-| `config` | 一个 dict，`op.kernel_config()` 报告它 |
+| `config` | 一个非空 dict。op 自己没有非空配置时，`op.kernel_config()` 返回第一个非空的 kernel `config` |
 
 `request_tune()` 的约定：
 
@@ -147,7 +147,7 @@ def register_device_facts(device_type: str, read: Callable[[torch.device], Devic
 - 按设备类型注册，与 target 无关：同一种设备上有多个 target 时，只由一个包注册。重复注册、注册 `cuda` 都会报 `BackendError`。
 - `arch` 只与同一设备类型上的实现的 `supported_archs` 比较，所以声明 `supported_archs` 的实现的 `devices` 只能有一种设备类型。
 - `read` 抛异常或返回值不合规（不是 `DeviceFacts`、字段类型不对、`sm_count` 或 `smem_budget` 为负）时，op 层报 `BackendError` 并指出是哪个 `read`。
-- `read` 只在 kernel 选择第一次读这台设备的参数时被调用，开销大时由 backend 自己缓存。
+- 每个 call spec 第一次读设备参数时调用一次 `read`，结果只存在这个 call spec 上；开销大时由 backend 在 `read` 内缓存。
 
 ```python
 import torch
@@ -532,14 +532,29 @@ TileOPs 把 `torch.device` 原样传给 `detect`，自己不解析它。原因�
 | # | op 层提供 | 对 backend 意味着什么 |
 | --- | --- | --- |
 | 1 | torch 侧的公开 API 与参数语义 | 这个 op 如何被调用、参数名与各参数的含义均已确定，backend 既不定义也不能改动 |
-| 2 | manifest 校验 | dtype 或形状不符合 manifest 签名的调用由 op 层拒绝，不会到达 backend。签名之内的一组 dtype、形状与参数 target 是否服务，由 `build_kernel` 判断，不服务时报错。依赖张量取值的检查（如 RoPE 的位置越界）由 target 的 kernel 在调用时自己做，抛 `ValueError` |
+| 2 | manifest 校验 | 不符合 manifest 签名的调用由 op 层拒绝，不会到达 backend；签名之内的检查分工见下文 |
 | 3 | 参数按名字传入 | backend 收到的参数名是 manifest `params` 的名字，值是 op 实例保存的值。manifest 中默认为 null 的参数，传入的是 op 选定的值，可能是 `None`，也可能是一个具体数值 |
 | 4 | 输入的连续性归一 | 本次调用不写入的输入都转成连续张量；被写入的输入按调用方传入的原样传给 backend，除非 manifest 声明它 `contiguous: true` |
 | 5 | kernel 的记忆与重用 | 构造函数对每种特化调用一次：设备与输入签名相同的后续调用直接使用上一次的返回值。因此构造函数内部可以编译，op 层保证它不会被重复调用 |
 | 6 | `torch.compile` 与 CUDA graph 的边界 | op 层把一次调用包装成不透明 op，并另配一个 fake，使编译器不执行也能推出输出的形状与 dtype。**backend 的 kernel 不为编译做任何事**，细节见[接入 torch.compile](torch-compile.md) |
-| 7 | roofline、profile 与数值测试 | op 层已有的测试可以用 backend 的 kernel 运行，与 manifest 的 `ref_api` 比对数值，见[backend 的测试结论](#test-claim)。在 CUDA 与其他 accelerator 上照常产出性能报告：CUDA 设备经 CUPTI 计时，其他 accelerator 用设备事件计时，报告的 `timing` 一栏写 `events`；`cpu` 设备不做 benchmark。只在 CUDA 上安装的 baseline 库在其他设备上缺失时，以它为必选对照的 case 跳过并写明原因，以它为可选对照的 case 去掉它这一列 |
+| 7 | roofline、profile 与数值测试 | op 层已有的测试可以用 backend 的 kernel 运行，见[backend 的测试结论](#test-claim)；性能报告见[性能报告](#reports) |
 
 七项由 op 层统一实现，每个 target 在它所运行的设备上得到的完全相同。接入第三方 backend 时不得绕过其中任何一项，也不得另行实现。
+
+第 2 项的检查分三层：
+
+| 检查 | 由谁做 | 不满足时 |
+| --- | --- | --- |
+| dtype 与形状是否符合 manifest 签名 | op 层 | 调用不到达 backend |
+| target 是否服务签名之内的这组 dtype、形状与参数 | `build_kernel` | `build_kernel` 报错 |
+| 依赖张量取值的条件，如 RoPE 的位置越界 | target 的 kernel，在调用时 | kernel 抛 `ValueError` |
+
+### 性能报告 {#reports}
+
+- benchmark 在 CUDA 或进程当前的 accelerator 上运行；`cpu` 设备不做 benchmark。
+- CUDA 设备用 CUPTI 计时；只有 CUPTI 失败且这次运行允许回退时，才改用 CUDA events，`timing` 一栏写 `cuda-events`。
+- 其他 accelerator 用设备事件计时，`timing` 一栏写 `events`。
+- 在 CUDA 以外的设备上，不能运行的 baseline 库让以它为必选对照的 case 跳过并写明原因，让以它为可选对照的 case 去掉它这一列。
 
 ### backend 的测试结论 {#test-claim}
 

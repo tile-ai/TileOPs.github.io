@@ -137,7 +137,7 @@ in-tree `Kernel`'s members of the same names mean. Both are optional:
 | Member | How the op layer uses it |
 | --- | --- |
 | `request_tune()` | Called while the op is in tuned mode: on the kernels built so far when `op.request_tune()` is called, and on each kernel built later before its first call. Each request calls it on each kernel once per device the kernel was built for, with that device current |
-| `config` | A dict, which `op.kernel_config()` reports |
+| `config` | A non-empty dict. Where the op holds no non-empty config of its own, `op.kernel_config()` returns the first non-empty kernel `config` |
 
 `request_tune()` follows four rules:
 
@@ -196,8 +196,8 @@ device of another type is left as it is.
 - When `read` raises or returns something invalid (not `DeviceFacts`, a field of the
   wrong type, a negative `sm_count` or `smem_budget`), the op layer raises
   `BackendError` naming that `read`.
-- `read` is called the first time selection reads the facts of a device; the backend
-  caches inside it when it is expensive.
+- `read` is called once per call spec, the first time that call spec's facts are read, and
+  the result stays on that call spec; the backend caches inside `read` when it is expensive.
 
 ```python
 import torch
@@ -676,15 +676,34 @@ the order a backend author meets them:
 | # | The op layer supplies | What it means for a backend |
 | --- | --- | --- |
 | 1 | The public torch-side API and the meaning of each parameter | How the op is called, the parameter names and their semantics are settled; a backend neither defines nor changes them |
-| 2 | Manifest validation | A call whose dtype or shape does not conform to the manifest signature is rejected at the op layer and never reaches the backend. Whether the target serves a dtype, shape and params combination inside the signature is `build_kernel`'s answer, which raises when it does not. A check that depends on tensor values, such as RoPE's out-of-range positions, is the target's kernel's own, made at call time with `ValueError` |
+| 2 | Manifest validation | A call that does not conform to the manifest signature is rejected at the op layer and never reaches the backend; who checks what inside the signature follows the table |
 | 3 | Parameters by name | Parameters arrive under the manifest's `params` names, with the values the op instance holds. For a parameter the manifest defaults to null, that is the value the op settled on, either `None` or a number |
 | 4 | Input contiguity | Every input the call does not write arrives contiguous; an input it writes arrives as the caller passed it, unless the manifest declares it `contiguous: true` |
 | 5 | Memoisation and reuse of kernels | The builder is called once per specialization: a later call with the same device and input signature reuses the previous return value. A builder may therefore compile, and the op layer guarantees it is not called again |
 | 6 | The `torch.compile` and CUDA-graph boundary | The op layer wraps a call as an opaque operator and registers a fake alongside, so the compiler can infer the output's shape and dtype without executing. **A backend's kernels do nothing for compilation**; see [Bringing an op into torch.compile](torch-compile.md) |
-| 7 | Roofline, profiling and numerical tests | The op layer's existing tests can run with the backend's kernel and compare against the manifest's `ref_api`; see [A backend's test claim](#test-claim). On CUDA and on another accelerator, performance reports are produced as usual: a CUDA device is timed through CUPTI, any other accelerator with its device events, and the report's `timing` column reads `events`; a `cpu` device is not benchmarked. Where a baseline library installed only for CUDA is absent on another device, a case that selects it is skipped with the reason, and a case that prefers it drops its column |
+| 7 | Roofline, profiling and numerical tests | The op layer's existing tests can run with the backend's kernel; see [A backend's test claim](#test-claim). Performance reports: see [Performance reports](#reports) |
 
 The op layer implements all seven, and every target gets them identically on the devices
 it runs on. A third-party backend neither bypasses any of them nor substitutes its own.
+
+Item 2's checks fall in three layers:
+
+| Check | Made by | When it fails |
+| --- | --- | --- |
+| The dtypes and shapes conform to the manifest signature | the op layer | the call never reaches the backend |
+| The target serves this dtype, shape and params combination inside the signature | `build_kernel` | `build_kernel` raises |
+| A condition on tensor values, such as RoPE's out-of-range positions | the target's kernel, at call time | the kernel raises `ValueError` |
+
+### Performance reports {#reports}
+
+- A benchmark runs on CUDA or on the process's accelerator; a `cpu` device is not
+  benchmarked.
+- A CUDA device is timed through CUPTI. Only where CUPTI fails and the run allows the
+  fallback is it timed with CUDA events, and the `timing` column reads `cuda-events`.
+- Another accelerator is timed with its device events, and the `timing` column reads
+  `events`.
+- On a device other than CUDA, a baseline library that cannot run there skips a case that
+  selects it, with the reason, and drops its column from a case that prefers it.
 
 ### A backend's test claim {#test-claim}
 
