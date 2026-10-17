@@ -1,6 +1,8 @@
 # benchmark 的计时方法
 
-nightly benchmark 为每个 op 的每个 workload 各测一行，报出的 `device_busy_ms` 是这次调用产生的全部 kernel 在设备上执行区间的并集。CUPTI 记录每个 kernel 的执行起止时间，并按 external correlation id 把它归到某一次迭代。每次迭代之前清空 L2，预热 25 ms、测量 100 ms，结果取中位数。本页讲 CUDA 上的计时；其他 accelerator 用设备事件计时，`device_busy_ms` 与 `latency_ms` 相等，见[接入新的硬件 backend § 性能报告](backends.md#reports)。
+本页讲 CUDA 上的计时；其他 accelerator 用设备事件计时，`device_busy_ms` 与 `latency_ms` 相等，见[接入新的硬件 backend § 性能报告](backends.md#reports)。
+
+nightly benchmark 为每个 op 的每个 workload 各测一行，报出的 `device_busy_ms` 是这次调用产生的全部 kernel 在设备上执行区间的并集。CUPTI 记录每个 kernel 的执行起止时间，并按 external correlation id 把它归到某一次迭代。每次迭代之前清空 L2，预热 25 ms、测量 100 ms，结果取中位数。
 
 **因此表中的每个数都是设备执行 kernel 的时间，不含 CPU 发起调用的开销，也不含 kernel 之间的空隙。阅读表格只需要知道这一点。**{ .keystone }
 
