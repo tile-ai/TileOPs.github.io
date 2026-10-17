@@ -452,7 +452,7 @@ python -m pytest -q       # all pass, none skipped, with a GPU visible and with 
 ```
 
 The tests also run inside the TileOPs [dev image](user-guide/development.md#docker), again
-without modifying TileOPs; `<tag>` is the current tag that page names:
+without modifying TileOPs; `<tag>` is a published tag, in the form that page describes:
 
 ```bash
 docker run --rm --gpus all -v "$PWD/..":/work -w /work \
@@ -474,7 +474,7 @@ TileOPs is too old.
 2. Change `detect` in `target.py` to claim the corresponding device type.
 3. Replace the kernels in the `ops/` modules with real ones, which compile on construction and launch on `__call__`.
 4. Pick the first op to take over, write its `build_kernel` against the op's manifest signature, and add it to `BUILDERS`.
-5. The tests under [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/master/tests) carry over once the package, target, op and kernel class names are substituted.
+5. The tests under [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/master/tests) carry over with three changes: the package, target, op and kernel class names; the device the tests create tensors on and the device type they assert (CPU in the example); and the assertions specific to an op or kernel.
 6. Add a `build_kernel` per op from there, until every op the target model uses is covered.
 
 ## Writing a kernel

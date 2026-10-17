@@ -366,7 +366,7 @@ pip install -e .          # tileops 已安装时加 --no-deps
 python -m pytest -q       # 有 GPU 与没有 GPU 时都全部通过，没有跳过项
 ```
 
-在 TileOPs 的 [dev 镜像](user-guide/development.md#docker)中运行同样不需要修改 TileOPs，`<tag>` 取该页给出的当前 tag：
+在 TileOPs 的 [dev 镜像](user-guide/development.md#docker)中运行同样不需要修改 TileOPs，`<tag>` 取一个已发布的 tag，格式见该页：
 
 ```bash
 docker run --rm --gpus all -v "$PWD/..":/work -w /work \
@@ -386,7 +386,7 @@ docker run --rm --gpus all -v "$PWD/..":/work -w /work \
 2. `target.py` 中的 `detect` 改为认领对应的设备类型。
 3. `ops/` 下各模块中的 kernel 换成真实 kernel：构造时编译，在 `__call__` 中启动。
 4. 第一个要接管的 op 按它的 manifest 签名编写 `build_kernel`，并在 `BUILDERS` 中登记。
-5. [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/master/tests) 中的测试替换包名、target 名、op 名与 kernel 类名后沿用。
+5. [`tests/`](https://github.com/lcy-seso/tileops-backend-example/tree/master/tests) 中的测试沿用，改动三处：包名、target 名、op 名与 kernel 类名；构造张量的设备与断言中的设备类型（示例为 CPU）；针对具体 op 或 kernel 的断言。
 6. 其余 op 逐个增加 `build_kernel`，直到覆盖目标模型用到的全部 op。
 
 ## 编写 kernel
