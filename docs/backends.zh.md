@@ -104,6 +104,20 @@ def build_group_norm(x, weight, bias, *, num_groups, eps):
     return AcmeGroupNormAffine(num_groups, eps, x.dtype)
 ```
 
+`build_kernel` 返回的 kernel 可以另外定义两个成员，与 in-tree `Kernel` 的同名成员含义相同。两者都可选：
+
+| 成员 | op 层怎么用 |
+| --- | --- |
+| `request_tune()` | op 处于调优模式时调用：`op.request_tune()` 时对已构造的 kernel 调用，之后新构造的 kernel 在首次调用之前调用。每个 kernel 在它所属的每个设备上各调用一次，调用时该设备是当前设备 |
+| `config` | 一个 dict，`op.kernel_config()` 报告它 |
+
+`request_tune()` 的约定：
+
+- 必须幂等，可能被调用多次。
+- 可以当场调优，也可以推迟到下一次 launch；推迟时，完成调优的那次调用必须发生在 CUDA graph 捕获之前（见[各阶段允许做什么](#phase-limits)）。
+- 它抛出的异常就是触发它的那次调用或 `op.request_tune()` 的异常。构造时调优失败的 kernel 不进记忆表，下一次调用重新构造。
+- kernel 没有定义它时，op 层在调优请求到达这个 kernel 时警告一次。
+
 ### 3. `register_detector`
 
 ```python
@@ -119,6 +133,34 @@ def register_kernel_builder(op: str, target: str, build_kernel: BuildKernel) -> 
 ```
 
 由 backend 调用，每个要接管的 op 一次。它登记 `(op, target)` 的 kernel 构造函数；同一组重复登记会报错。
+
+### 非 CUDA 设备的设备参数：`register_device_facts` {#device-facts}
+
+```python
+def register_device_facts(device_type: str, read: Callable[[int], DeviceFacts]) -> None: ...
+```
+
+由 backend 调用，每种设备类型一次。kernel 选择会读调用设备的四项参数：`arch`、`calibration`、`sm_count`、`smem_budget`。TileOPs 自己读 CUDA 设备的这四项；其他设备类型的由注册的 `read` 提供，`read` 收到设备序号，返回 `DeviceFacts`。
+
+- 只服务整个 op 的 target 不需要它：target 的 kernel 自己决定怎么选。
+- 用 `register_kernel_type` 加入实现、并声明了 `supported_archs` 的 backend 需要它。没有注册的设备类型这四项为 `-1 / None / 0 / 0`，声明了 `supported_archs` 的实现在这种设备上永远不可用。
+- 按设备类型注册，与 target 无关：同一种设备上有多个 target 时，只由一个包注册。重复注册、注册 `cuda` 都会报 `BackendError`。
+- `arch` 只与同一设备类型上的实现的 `supported_archs` 比较，所以声明 `supported_archs` 的实现的 `devices` 只能有一种设备类型。
+- `read` 抛异常或返回值不合规（不是 `DeviceFacts`、字段类型不对、`sm_count` 或 `smem_budget` 为负）时，op 层报 `BackendError` 并指出是哪个 `read`。
+- `read` 只在 kernel 选择第一次读这台设备的参数时被调用，开销大时由 backend 自己缓存。
+
+```python
+from tileops.backend import DeviceFacts, register_device_facts
+import acme_runtime                                      # 厂商 runtime，这里是假想的
+
+def read_acme(index: int) -> DeviceFacts:
+    props = acme_runtime.device_properties(index)
+    return DeviceFacts(arch=props.arch, calibration=None,
+                       sm_count=props.compute_units,
+                       smem_budget=props.shared_memory_per_block)
+
+register_device_facts("acme", read_acme)                 # "acme" 是 torch 的设备类型名
+```
 
 ### `TensorSpec`
 
@@ -391,6 +433,7 @@ decode 路径会被 CUDA graph 捕获，因此各阶段允许执行的操作规�
 | 查记忆表（键与重建条件见 [kernel 的重建条件](#memo)） | 一次字典查找 | 其他任何操作 |
 | `detect` | 一次谓词判断 | 任何 import，任何加锁 |
 | 构造 kernel | 选择实现、编译、分配显存、重新 import、建立 handle | 依赖真实张量的调优 |
+| kernel 的 `request_tune()` | 编译、分配显存、计时 | 依赖调用方真实张量的调优 |
 | 调用 kernel | 启动已编译的 kernel，经 torch allocator 分配输出 | 编译、惰性初始化、建立 handle、host 端同步 |
 
 **模块顶层的 import 不得触发编译。** TileOPs 在构造第一个 op 时 import backend 模块，编译应当发生在 `build_kernel` 被调用时。
@@ -400,7 +443,7 @@ decode 路径会被 CUDA graph 捕获，因此各阶段允许执行的操作规�
 - **必须在当前流上启动。** 在 CUDA 上，当前流即 `torch.cuda.current_stream(device)`，不得改用默认流。自带 launcher 的 backend 尤其容易违反这一条。
 - **内部分配的生命周期必须覆盖异步执行。** 如果只把裸指针传给 launch，对应对象必须存活到该流执行完成。协议不提供 workspace，这部分安全由 backend 自己保证。
 
-因为构造 kernel 时允许编译，调用方需要在捕获之前完成预热，即至少执行一次同形状的非捕获调用。捕获期间只允许「查表命中后直接调用」这一条路径。
+因为构造 kernel 时允许编译，调用方需要在捕获之前完成预热，即至少执行一次同形状的非捕获调用。`op.request_tune()` 之后同样如此：每种形状在捕获之前至少再执行一次非捕获调用，推迟到 launch 的调优在这次调用中完成。捕获期间只允许「查表命中后直接调用」这一条路径。
 
 ## 安装之后：三种状态 {#three-states}
 
@@ -488,14 +531,32 @@ TileOPs 把 `torch.device` 原样传给 `detect`，自己不解析它。原因�
 | # | op 层提供 | 对 backend 意味着什么 |
 | --- | --- | --- |
 | 1 | torch 侧的公开 API 与参数语义 | 这个 op 如何被调用、参数名与各参数的含义均已确定，backend 既不定义也不能改动 |
-| 2 | manifest 校验 | dtype 或形状不合规的调用由 op 层拒绝，不会到达 backend |
+| 2 | manifest 校验 | dtype 或形状不符合 manifest 签名的调用由 op 层拒绝，不会到达 backend。签名之内的一组 dtype、形状与参数 target 是否服务，由 `build_kernel` 判断，不服务时报错。依赖张量取值的检查（如 RoPE 的位置越界）由 target 的 kernel 在调用时自己做，抛 `ValueError` |
 | 3 | 参数按名字传入 | backend 收到的参数名是 manifest `params` 的名字，值是 op 实例保存的值。manifest 中默认为 null 的参数，传入的是 op 选定的值，可能是 `None`，也可能是一个具体数值 |
 | 4 | 输入的连续性归一 | 本次调用不写入的输入都转成连续张量；被写入的输入按调用方传入的原样传给 backend，除非 manifest 声明它 `contiguous: true` |
 | 5 | kernel 的记忆与重用 | 构造函数对每种特化调用一次：设备与输入签名相同的后续调用直接使用上一次的返回值。因此构造函数内部可以编译，op 层保证它不会被重复调用 |
 | 6 | `torch.compile` 与 CUDA graph 的边界 | op 层把一次调用包装成不透明 op，并另配一个 fake，使编译器不执行也能推出输出的形状与 dtype。**backend 的 kernel 不为编译做任何事**，细节见[接入 torch.compile](torch-compile.md) |
-| 7 | roofline、profile 与数值测试 | op 层已有的测试会用 backend 的 kernel 运行一遍，与 manifest 的 `ref_api` 比对数值；性能报告照常产出 |
+| 7 | roofline、profile 与数值测试 | op 层已有的测试可以用 backend 的 kernel 运行，与 manifest 的 `ref_api` 比对数值，见[backend 的测试结论](#test-claim)。性能报告照常产出：CUDA 设备经 CUPTI 计时，其他设备用设备事件计时，报告的 `timing` 一栏写 `events`。只在 CUDA 上安装的 baseline 库在其他设备上缺失时，以它为必选对照的 case 跳过并写明原因，以它为可选对照的 case 去掉它这一列 |
 
 七项均与硬件无关，每个 target 得到的完全相同。接入第三方 backend 时不得绕过其中任何一项，也不得另行实现。
+
+### backend 的测试结论 {#test-claim}
+
+```bash
+pytest tests/ops --tileops-target=<t> --tileops-device=<d> --junitxml=<report>
+```
+
+运行的测试集合由两个标记决定：`--tileops-device` 不是 `cuda` 时去掉标了 `cuda_only` 的测试，`--tileops-target` 不是 `builtin` 时去掉标了 `in_tree_kernels` 的测试。JUnit 中每个调用了 `check()` 的测试带 `op` 与 `checked_outputs` 两个属性。
+
+backend 对一个 op 的结论是「通过了这台设备上实际运行的测试」，不代表覆盖了这个 op 全部的 dtype、形状与输出。给出结论的条件：
+
+| 条件 | 内容 |
+| --- | --- |
+| 有数值证据 | 该 op 名下至少一个测试通过且 `checked_outputs > 0` |
+| 没有失败 | 该 op 名下没有失败的测试 |
+| 行为测试 | 不带 `op` 属性的测试，整次运行没有失败 |
+
+结论随附该 op 名下的通过数、skip 数（`checked_outputs == 0` 的测试记为 skip）与各测试的 `checked_outputs`，以及按测试文件统计的被去掉的测试数。被去掉的测试不进 JUnit，这个数取自两次 `pytest tests/ops --collect-only -q` 的 node id 之差：一次用默认参数，一次加上 `--tileops-target` 与 `--tileops-device`。
 
 TileOPs 的 in-tree kernel（[`src/tileops/kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/kernels)）是**默认实现**：它没有 target 名，也不进入注册表。
 
