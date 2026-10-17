@@ -366,7 +366,7 @@ pip install -e .          # tileops 已安装时加 --no-deps
 python -m pytest -q       # 有 GPU 与没有 GPU 时都全部通过，没有跳过项
 ```
 
-在 TileOPs 的 [dev 镜像](user-guide/development.md#docker)中运行同样不需要修改 TileOPs，`<tag>` 取一个已发布的 tag，格式见该页：
+在 TileOPs 的 [dev 镜像](user-guide/development.md#docker) 中运行同样不需要修改 TileOPs，`<tag>` 取一个已发布的 tag，格式见该页：
 
 ```bash
 docker run --rm --gpus all -v "$PWD/..":/work -w /work \
@@ -589,13 +589,13 @@ backend 在自己的设备上运行 op 层已有的测试：
 pytest tests/ops --tileops-target=<t> --tileops-device=<d> --junitxml=<report>
 ```
 
-`<t>` 是服务设备 `<d>` 的 backend target；`cpu` 加 `builtin` 不是 `tests/ops` 支持的运行配置。三个标记决定哪些测试运行：
+`<t>` 是服务设备 `<d>` 的 backend target；`cpu` 加 `builtin` 不是 `tests/ops` 支持的运行配置。三类标记决定哪些测试运行：
 
 | 标记 | 含义 | 在 backend 的运行中 |
 | --- | --- | --- |
 | `in_tree_kernels` | 测试依赖 in-tree 实现 | `--tileops-target` 不是 `builtin` 时去掉 |
 | `cuda_only` | 测试本身需要 CUDA | `--tileops-device` 不是 `cuda` 时去掉 |
-| `sm80` / `sm86` / `sm89` / `sm90` | 测试需要该 CUDA 架构 | 设备不符时跳过，计入 skip 数 |
+| `sm<NN>`，如 `sm90` | 测试需要该 CUDA 架构 | 设备不符时跳过，计入 skip 数 |
 
 JUnit 中每个调用了 `check()` 的测试带 `op` 与 `checked_outputs` 两个属性。
 
