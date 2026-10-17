@@ -562,7 +562,15 @@ TileOPs 把 `torch.device` 原样传给 `detect`，自己不解析它。原因�
 pytest tests/ops --tileops-target=<t> --tileops-device=<d> --junitxml=<report>
 ```
 
-运行的测试集合由两个标记决定：`--tileops-device` 不是 `cuda` 时去掉标了 `cuda_only` 的测试，`--tileops-target` 不是 `builtin` 时去掉标了 `in_tree_kernels` 的测试。JUnit 中每个调用了 `check()` 的测试带 `op` 与 `checked_outputs` 两个属性。
+`<t>` 是服务这台设备的 backend target；`cpu` 加 `builtin` 不是这套测试的运行配置。运行的测试集合由三个标记决定：
+
+| 标记 | 含义 | 在 backend 的运行中 |
+| --- | --- | --- |
+| `in_tree_kernels` | 测试依赖 in-tree 实现 | `--tileops-target` 不是 `builtin` 时去掉 |
+| `cuda_only` | 测试本身需要 CUDA | `--tileops-device` 不是 `cuda` 时去掉 |
+| `sm80` / `sm86` / `sm89` / `sm90` | 测试需要该 CUDA 架构 | 设备不符时跳过，计入 skip 数 |
+
+JUnit 中每个调用了 `check()` 的测试带 `op` 与 `checked_outputs` 两个属性。
 
 backend 对一个 op 的结论是「通过了这台设备上实际运行的测试」，不代表覆盖了这个 op 全部的 dtype、形状与输出。给出结论的条件：
 

@@ -711,10 +711,17 @@ Item 2's checks fall in three layers:
 pytest tests/ops --tileops-target=<t> --tileops-device=<d> --junitxml=<report>
 ```
 
-Two markers decide which tests run: `--tileops-device` other than `cuda` drops the tests
-marked `cuda_only`, and `--tileops-target` other than `builtin` drops those marked
-`in_tree_kernels`. In the JUnit report, each test that called `check()` carries an `op`
-and a `checked_outputs` property.
+`<t>` is a backend target that serves the device; `cpu` with `builtin` is not a
+configuration of this suite. Three markers decide which tests run:
+
+| Marker | Meaning | In a backend's run |
+| --- | --- | --- |
+| `in_tree_kernels` | The test depends on the in-tree implementations | dropped when `--tileops-target` is not `builtin` |
+| `cuda_only` | The test itself needs CUDA | dropped when `--tileops-device` is not `cuda` |
+| `sm80` / `sm86` / `sm89` / `sm90` | The test needs that CUDA architecture | skipped on another device, and counted as a skip |
+
+In the JUnit report, each test that called `check()` carries an `op` and a
+`checked_outputs` property.
 
 A backend's claim about an op is that it passes the tests that ran on that device; it
 does not cover every dtype, shape and output of the op. The claim holds when:
