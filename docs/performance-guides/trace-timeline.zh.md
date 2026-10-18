@@ -6,7 +6,7 @@
 
 1. 在 kernel 代码中用标记（`trace.range`、`trace.group` 等）标注要记录的区间。
 1. 标记**总是以占位的形式生成**。构建时，kernel 要么被 **lower**：标记变成真正调用 `clock64()` 记录时间的代码，并在输出末尾多出一个 `slots`；要么被 **strip**：标记变成空操作，生成的 CUDA 与未插桩的版本完全相同。
-1. 运行时，`trace.run` 执行 kernel，解码 `slots` 缓冲区，并写出一个自包含的 Plotly HTML 时间线。
+1. 运行时，`trace.run` 执行 kernel；开启追踪时，它解码 `slots` 缓冲区，并写出一个自包含的 Plotly HTML 时间线。
 1. 由进程内的开关 `trace.enable()` 决定 lower 还是 strip，因此关闭时追踪**没有任何开销**，标记可以留在生产代码中。
 
 时间戳来自 `clock64()`，即每个 SM 的周期计数器。
@@ -81,7 +81,7 @@ def forward(self, a, b):
 ```
 
 1. 按开关构建对应的 kernel：[`trace.enabled`](../api/trace.md#tileops.trace.api._Trace.enabled) 决定选用带追踪的版本还是 strip 后的版本，它也是标记 `(7)` 所说的缓存键的一部分。
-1. [`trace.run(compiled, inputs, stem=...)`](../api/trace.md#tileops.trace.api._Trace.run) 运行 kernel。带追踪时，它把末尾的 `slots` 拆出来解码，写出 `debug/<stem>.html`，每次调用都生成一个不会重名的新文件。它内部由 [`decode`](../api/trace.md#tileops.trace.api._Trace.decode) 和 [`dump`](../api/trace.md#tileops.trace.api._Trace.dump) 组成，两者也可以直接调用。
+1. [`trace.run(compiled, inputs, stem=...)`](../api/trace.md#tileops.trace.api._Trace.run) 运行 kernel。带追踪构建的 kernel，末尾的 `slots` 总会被拆出来；开启追踪时，它被解码并写进 `debug/<stem>.html`，每次调用都生成一个不会重名的新文件。它内部由 [`decode`](../api/trace.md#tileops.trace.api._Trace.decode) 和 [`dump`](../api/trace.md#tileops.trace.api._Trace.dump) 组成，两者也可以直接调用。
 
 ## 开启追踪 { #enabling-tracing }
 
