@@ -34,7 +34,7 @@ a tool rather than an op, comes last. The Benchmarks pages use the same order.
 | [MoE](moe.md) | the routed mixture-of-experts FFN and its separately callable stages |
 | [Top-k & Sampling](sampling.md) | top-k selection, logits masks (top-k, top-p, min-p) and sampling, including chain speculative sampling |
 | [Linear Attention](linear-attention.md) | DeltaNet, Gated DeltaNet, Kimi Delta Attention and Gated Linear Attention |
-| [Mamba](mamba.md) | the SSD scan, its decode step, and the chunked forms |
+| [Mamba](mamba.md) | the causal convolution and the SSD scan, their decode steps, and the chunked forms |
 | [FFT](fft.md) | the discrete transform |
 | [Transform](transform.md) | the fast Walsh-Hadamard transform along the last axis |
 | [mHC](mhc.md) | Manifold-Constrained Hyper-Connections — the pre/post pair around a layer |

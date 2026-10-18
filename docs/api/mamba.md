@@ -13,6 +13,14 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
+## Causal convolution
+
+::: tileops.mamba.CausalConv1dFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
 ## SSD stages
 
 ::: tileops.mamba.SSDChunkCumsumFwdOp
@@ -46,6 +54,12 @@ what runs when you call `op(...)`.
       members: ["__init__", "forward"]
 
 ## Decode
+
+::: tileops.mamba.CausalConv1dUpdateFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
 
 ::: tileops.mamba.SSDRecurrentFwdOp
     options:
