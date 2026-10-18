@@ -53,6 +53,12 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
+::: tileops.attention.MLAVarlenFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
 ## Native Sparse Attention
 
 ::: tileops.attention.NSACompressedVarlenFwdOp
