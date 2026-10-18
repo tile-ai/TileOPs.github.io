@@ -17,7 +17,7 @@ The pages run in the order a reader meets the ops in a model: the pointwise
 transforms and the positional rotation, then the axis reductions and the
 normalizations built on them, the windowed kernels, the matmul and the
 quantization around it, then attention, the expert routing after it and sampling,
-then the sequence-model kernels. FFT, mHC and Engram follow, and Trace,
+then the sequence-model kernels. FFT, Transform, mHC and Engram follow, and Trace,
 a tool rather than an op, comes last. The Benchmarks pages use the same order.
 
 | Page | What it covers |
@@ -28,14 +28,15 @@ a tool rather than an op, comes last. The Benchmarks pages use the same order.
 | [Normalization](normalization.md) | RMSNorm, LayerNorm, GroupNorm, BatchNorm and the fused variants |
 | [Pooling](pool.md) | average, max and adaptive pooling, with and without indices, plus the chunked sequence mean |
 | [Convolution](convolution.md) | forward convolution over 1D, 2D and 3D inputs |
-| [GEMM](linear-algebra.md) | dense matmul — plain, batched, and the fp8 variants |
+| [GEMM](linear-algebra.md) | dense matmul — plain, batched and grouped, with the fp8, W4A16 and W4A8 variants |
 | [Quantization & Dequantization](quantization.md) | INT8, FP8 and INT4 quantization, and INT8 dequantization |
-| [Attention](attention.md) | forward and backward attention, including the paged and decode kernels |
+| [Attention](attention.md) | forward and backward attention, including the paged and decode kernels, merging attention states, and writing and gathering the paged KV cache |
 | [MoE](moe.md) | the routed mixture-of-experts FFN and its separately callable stages |
 | [Top-k & Sampling](sampling.md) | top-k selection, logits masks (top-k, top-p, min-p) and sampling, including chain speculative sampling |
 | [Linear Attention](linear-attention.md) | DeltaNet, Gated DeltaNet, Kimi Delta Attention and Gated Linear Attention |
 | [Mamba](mamba.md) | the SSD scan, its decode step, and the chunked forms |
 | [FFT](fft.md) | the discrete transform |
+| [Transform](transform.md) | the fast Walsh-Hadamard transform along the last axis |
 | [mHC](mhc.md) | Manifold-Constrained Hyper-Connections — the pre/post pair around a layer |
 | [Engram](engram.md) | the Engram GateConv pair and its decode step |
 | [Trace](trace.md) | the in-kernel timeline tracer, a tool rather than an op |

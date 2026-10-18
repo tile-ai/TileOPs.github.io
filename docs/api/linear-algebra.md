@@ -31,6 +31,14 @@ what runs when you call `op(...)`.
       merge_init_into_class: false
       show_signature_annotations: false
 
+::: tileops.gemm.GemmW4A8FwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+      merge_init_into_class: false
+      show_signature_annotations: false
+
 ## Batched GEMM
 
 ::: tileops.gemm.BmmFwdOp

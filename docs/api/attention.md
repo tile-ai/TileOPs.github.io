@@ -89,9 +89,23 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
+## Merging attention states
+
+::: tileops.attention.MergeAttentionStatesFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
 ## Paged KV Cache
 
 ::: tileops.attention.PagedKVCacheWriteFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
+::: tileops.attention.PagedKVCacheGatherFwdOp
     options:
       show_root_heading: true
       heading_level: 3
