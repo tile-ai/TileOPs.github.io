@@ -87,6 +87,12 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
+::: tileops.attention.DSAPagedFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
 ## Attention indexing
 
 ::: tileops.attention.FP8LightningIndexerFwdOp
