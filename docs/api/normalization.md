@@ -33,6 +33,18 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
+::: tileops.norm.FusedAddRMSNormPerTokenQuantFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
+::: tileops.norm.FusedQKNormRoPEFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
 ## Adaptive LayerNorm
 
 ::: tileops.norm.AdaLayerNormFwdOp

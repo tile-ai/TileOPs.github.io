@@ -53,6 +53,12 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
+::: tileops.attention.MLAPagedFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
 ::: tileops.attention.MLAVarlenFwdOp
     options:
       show_root_heading: true
@@ -118,6 +124,12 @@ what runs when you call `op(...)`.
       members: ["__init__", "forward"]
 
 ::: tileops.attention.PagedKVCacheGatherFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
+::: tileops.attention.MLAKVCacheWriteFwdOp
     options:
       show_root_heading: true
       heading_level: 3

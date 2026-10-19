@@ -25,16 +25,16 @@ a tool rather than an op, comes last. The Benchmarks pages use the same order.
 | [Elementwise](elementwise.md) | unary and binary maps, activations, dropout, and the in-place forms |
 | [RoPE](rope.md) | rotary position embedding — NeoX and interleaved layouts, Llama 3.1, YaRN, LongRoPE |
 | [Reduction](reduction.md) | sums, extrema, arg-reductions, cumulative scans, softmax |
-| [Normalization](normalization.md) | RMSNorm, LayerNorm, GroupNorm, BatchNorm and the fused variants |
+| [Normalization](normalization.md) | RMSNorm, LayerNorm, GroupNorm, BatchNorm and the fused variants, including RMSNorm with per-token quantization and the q/k RMSNorm with RoPE |
 | [Pooling](pool.md) | average, max and adaptive pooling, with and without indices, plus the chunked sequence mean |
 | [Convolution](convolution.md) | forward convolution over 1D, 2D and 3D inputs |
-| [GEMM](linear-algebra.md) | dense matmul — plain, batched and grouped, with the fp8, W4A16 and W4A8 variants |
+| [GEMM](linear-algebra.md) | dense matmul — plain, batched and grouped, with the fp8, W4A16, W4A8 and INT8 W8A8 variants |
 | [Quantization & Dequantization](quantization.md) | INT8, FP8 and INT4 quantization, and INT8 dequantization |
-| [Attention](attention.md) | forward and backward attention, including the paged and decode kernels, merging attention states, and writing and gathering the paged KV cache |
+| [Attention](attention.md) | forward and backward attention, including the paged and decode kernels, merging attention states, writing and gathering the paged KV cache, and writing the MLA latent cache |
 | [MoE](moe.md) | the routed mixture-of-experts FFN and its separately callable stages |
 | [Top-k & Sampling](sampling.md) | top-k selection, logits masks (top-k, top-p, min-p) and sampling, including chain speculative sampling |
 | [Linear Attention](linear-attention.md) | DeltaNet, Gated DeltaNet, Kimi Delta Attention and Gated Linear Attention |
-| [Mamba](mamba.md) | the causal convolution and the SSD scan, their decode steps, and the chunked forms |
+| [Mamba](mamba.md) | the Mamba-1 selective scan, the causal convolution and the SSD scan, their decode steps, and the chunked forms |
 | [FFT](fft.md) | the discrete transform |
 | [Transform](transform.md) | the fast Walsh-Hadamard transform along the last axis |
 | [mHC](mhc.md) | Manifold-Constrained Hyper-Connections — the pre/post pair around a layer |
