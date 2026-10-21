@@ -53,7 +53,19 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
+::: tileops.attention.MLADenseBwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
 ::: tileops.attention.MLAPagedFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
+::: tileops.attention.MLAVarlenBwdOp
     options:
       show_root_heading: true
       heading_level: 3
