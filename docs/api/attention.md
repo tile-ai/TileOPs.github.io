@@ -33,12 +33,6 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.attention.GQAPrefillPagedWithKVCacheFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
 ::: tileops.attention.GQAVarlenFwdOp
     options:
       show_root_heading: true
