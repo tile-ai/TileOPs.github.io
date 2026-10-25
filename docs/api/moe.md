@@ -91,3 +91,25 @@ the routes are few enough to read the weights once per route rather than once pe
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
+
+## Layout and epilogue specs
+
+`MoEPrePermuteFwdOp`, `MoEGroupedGEMMFwdOp`, `MoEExpertMLPFwdOp` and
+`MoEPostPermuteFwdOp` take a `layout`, a `ContiguousLayoutSpec` or a `MaskedLayoutSpec`;
+`MoEGroupedGEMMFP8FwdOp` takes a `MaskedLayoutSpec`. `MoEPostPermuteFwdOp` also takes an
+`epilogue`, a `RoutingEpilogueSpec`.
+
+::: tileops.moe.ContiguousLayoutSpec
+    options:
+      show_root_heading: true
+      heading_level: 3
+
+::: tileops.moe.MaskedLayoutSpec
+    options:
+      show_root_heading: true
+      heading_level: 3
+
+::: tileops.moe.RoutingEpilogueSpec
+    options:
+      show_root_heading: true
+      heading_level: 3

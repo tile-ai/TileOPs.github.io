@@ -69,6 +69,8 @@ def build_gemm(m, n, k, dtype="float16", traced=False):
 1. [`trace.dag(src, dst)`](../api/trace.md#tileops.trace._api._Trace.dag) 声明从一个命名区间指向另一个区间的依赖箭头（`arrive` → `wait`），每出现一次画一条。
 1. [`trace.finalize(func, traced, max_events)`](../api/trace.md#tileops.trace._api._Trace.finalize) 在 `traced` 时 lower 标记并加上 `slots` 输出，否则把标记 strip 成零开销。`traced` **必须是构建函数缓存键的一部分**，这样同一形状下带追踪和不带追踪的两次构建才不会冲突。
 
+标记把名字记入按线程保存的注册表，`trace.finalize` 读取并清空它。多个线程可以同时构建带追踪的 kernel。一个线程同一时间只构建一个带追踪的 kernel：在一个线程上 finalize 第一个之前就定义第二个，不受支持。
+
 ## 运行带追踪的 kernel { #running-a-traced-kernel }
 
 调用构建函数时传入 `traced=trace.enabled`，再把编译好的 kernel 交给 `trace.run`。同一个 `forward` 在两种模式下都能使用：追踪关闭时原样返回输出；追踪开启时写出时间线，并且只返回真正的输出。因此调用方不需要自己按开关分支。

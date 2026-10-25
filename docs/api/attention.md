@@ -27,6 +27,12 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
+::: tileops.attention.GQADenseWithLSEFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
 ::: tileops.attention.GQAPagedFwdOp
     options:
       show_root_heading: true

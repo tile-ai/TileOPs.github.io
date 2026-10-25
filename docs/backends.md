@@ -63,8 +63,8 @@ target's devices. A composite op, which only runs sub-ops, needs no builder.
 
 ## The protocol: four functions
 
-`tileops.backend` defines only the outward-facing interface, expressed with Python
-structural typing (`typing.Protocol`). A backend subclasses no base class and implements
+`tileops.backend` defines only the outward-facing interface: function signatures and a few
+data types. A backend subclasses no base class and implements
 no abstract method; it writes plain functions with matching signatures and registers them.
 The op layer checks a backend's return value structurally as well, with `callable()`.
 
@@ -171,14 +171,16 @@ Called by the backend, once per op it takes over. It registers the kernel builde
 def register_device_facts(device_type: str, read: Callable[[torch.device], DeviceFacts]) -> None: ...
 ```
 
-Called by the backend, once per device type. Kernel selection reads four facts about the
-call's device: `arch`, `calibration`, `sm_count` and `smem_budget`.
+Called by the backend, once per device type. Kernel selection reads three facts about the
+call's device, the fields of `DeviceFacts`: `arch`, `sm_count` and `smem_budget`. A CUDA
+device's `arch` is `major * 10 + minor`; for another device type, the backend that
+registers it states how its `arch` is encoded.
 
 | Device type | Where its facts come from |
 | --- | --- |
 | `cuda` | TileOPs reads them itself |
 | Another registered type | The registered `read`, which takes the call's `torch.device` and returns `DeviceFacts` |
-| An unregistered type, such as `cpu` | Nowhere: it reports `-1 / None / 0 / 0` |
+| An unregistered type, such as `cpu` | Nowhere: it reports `arch=-1, sm_count=0, smem_budget=0` |
 
 - Facts are read by implementations that are selected by architecture, SM count or shared
   memory. An implementation that declares
@@ -194,6 +196,8 @@ call's device: `arch`, `calibration`, `sm_count` and `smem_budget`.
 - `read` runs the first time a call spec's facts are read, and the result stays on that
   call spec. It also runs when a kernel that declares `supported_archs` is constructed.
   If reading is expensive, the backend caches inside `read`.
+- `DeviceFacts` is constructed by keyword only. A field added in a later release comes with a
+  default, so code that constructs it by keyword keeps working.
 - If `read` raises or returns something invalid (not a `DeviceFacts`, a field of the
   wrong type, a negative `sm_count` or `smem_budget`), the op layer raises a
   `BackendError` that names the `read`.
@@ -205,7 +209,7 @@ import acme_runtime                                      # a vendor runtime, ima
 
 def read_acme(device: torch.device) -> DeviceFacts:
     props = acme_runtime.device_properties(device.index)
-    return DeviceFacts(arch=props.arch, calibration=None,
+    return DeviceFacts(arch=props.arch,                 # encoded as this backend states
                        sm_count=props.compute_units,
                        smem_budget=props.shared_memory_per_block)
 
@@ -215,14 +219,16 @@ register_device_facts("acme", read_acme)                 # "acme" is torch's dev
 ### `TensorSpec`
 
 ```python
-class TensorSpec(NamedTuple):
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class TensorSpec:
     device: torch.device
     dtype: torch.dtype
     shape: tuple[int, ...]
 ```
 
 Defined by the protocol, built by the op layer and passed into `build_kernel`. It describes
-a tensor's properties and does not contain the tensor.
+a tensor's properties and does not contain the tensor. It is constructed by keyword only;
+`TensorSpec.of(tensor)` describes a tensor.
 
 ```python
 # what a build_kernel argument looks like
@@ -285,8 +291,8 @@ d = op(a, b)                     # every input on one device: a.device == b.devi
 #   a later call at the same device, dtypes and shapes hits and jumps to the last step
 
 # ── backend: the op layer calls build_gemm, with TensorSpecs, not tensors ──
-#   build_gemm(TensorSpec("acme:0", float16, (4096, 4096)),
-#              TensorSpec("acme:0", float16, (4096, 4096)),
+#   build_gemm(TensorSpec(device=torch.device("acme:0"), dtype=float16, shape=(4096, 4096)),
+#              TensorSpec(device=torch.device("acme:0"), dtype=float16, shape=(4096, 4096)),
 #              trans_a=False, trans_b=True)      # params by their manifest names
 #   → returns something callable
 
