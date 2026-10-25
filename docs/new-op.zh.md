@@ -8,10 +8,10 @@ spec 最先编写，因为后面五个文件的内容都由 spec 决定，最后
 | --- | --- | --- | --- |
 | 1 | [`src/tileops/manifest/spec/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest/spec)`<family>.yaml` | 校验器的 `schema` 与 `signature` 两级 | spec 本身 |
 | 2 | [`src/tileops/_ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/_ops)`<family>/…` | 校验器对照 `__init__`、`forward` 与声明的 kernel；每次调用前后生成的检查 | op 类，继承 `Op` |
-| 2 | [`src/tileops/_ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/_ops)`<family>/__init__.py` 与 [`src/tileops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops)`<family>.py` | 校验器：family 的 `__all__` 与 manifest 一致 | op 名，由所属 family 导出，并出现在公开路径 `tileops.<family>.<Op>` 上 |
-| 3 | [`src/tileops/_kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/_kernels)`<family>/…` | —— | kernel 类，继承 `Kernel` |
-| 4 | [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)`test_<名字>.py` | 契约测试，逐个运行每个 workload 行 | 与参考实现 `ref_program` 的数值比对 |
-| 5 | [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)`bench_<名字>.py` | 校验器的 `bench` 级 | benchmark，以及该 op 在 `benchmarks/_cases/` 中的 case 注册项 |
+| 3 | [`src/tileops/_ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/_ops)`<family>/__init__.py` 与 [`src/tileops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops)`<family>.py` | 校验器：family 的 `__all__` 与 manifest 一致 | op 名，由所属 family 导出，并出现在公开路径 `tileops.<family>.<Op>` 上 |
+| 4 | [`src/tileops/_kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/_kernels)`<family>/…` | —— | kernel 类，继承 `Kernel` |
+| 5 | [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)`test_<名字>.py` | 契约测试，逐个运行每个 workload 行 | 与参考实现 `ref_program` 的数值比对 |
+| 6 | [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)`bench_<名字>.py` | 校验器的 `bench` 级 | benchmark，以及该 op 在 `benchmarks/_cases/` 中的 case 注册项 |
 
 下文以最简单的矩阵乘 `GEMMFwdOp` 为例，依次说明这六处。
 
