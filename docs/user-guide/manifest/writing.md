@@ -80,7 +80,7 @@ The following lists every top-level field a spec can contain. Each comment gives
 - A `Dim` can be used where an `Int` is required, and a `Shape` can be used where a `Seq[Int]` is required.
 - Every axis in a shape is an integer expression. An axis whose kind is not `Dim`, and every element of a sequence expanded with `*p`, must be non-negative; the generated checks confirm this at construction or at call time.
 - Values in YAML are converted to Python values by the declared kind or `type`: `Shape` and `tuple[...]` become tuples, `Seq[Int]` and `list[...]` stay lists, dtype names become `torch.dtype`, and ADT values become the corresponding Python objects.
-- Within one spec, the names of indices, `let` entries and tensors are all distinct. `out` is a reserved name and cannot be used as the name of a tensor, parameter or index.
+- Within one spec, the names of indices, `let` entries and tensors are all distinct. `out` is reserved for the output buffer: no parameter or index is named `out`, and the only tensor that may be is the required output buffer of [Extensions § 6](extensions.md#effects), Table 1 row 6.
 
 ## 4. params {#params}
 
@@ -88,7 +88,7 @@ The following lists every top-level field a spec can contain. Each comment gives
 
 - The spec is the authority. For an `implemented` op, the validator compares `params` with `__init__` item by item, and requires the same set of parameters, order, `default` and `kw_only`.
 - The code may have only two kinds of extra parameter: the execution-policy parameter `target`, which every op has, written as `*, target=None` after the manifest parameters; and the implementation objects injected by the caller that the class attribute `injected_parameters` lists.
-- The call-time inputs and output buffers in the signature form, in order, the leading part of the `forward` parameter list. `forward` may append code-defined execution parameters after them; those parameters are not part of the signature.
+- The `forward` parameter list begins with the call-time inputs that do not declare `kw_only`, in order; after them, keyword-only, come the output buffer `out` and then the `kw_only` inputs. `forward` may append code-defined execution parameters after them; those parameters are not part of the signature.
 
 Construction parameters can appear directly in types without extra annotation:
 

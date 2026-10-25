@@ -138,11 +138,18 @@ An op without effect declarations only reads its inputs and allocates new tensor
 
 | No. | Declaration | Meaning | Example |
 | --- | --- | --- | --- |
-| 1 | `buffer: out` on an output | `forward` gets a parameter `out` after all inputs. When the caller passes `out`, the op writes the result into it and returns it; otherwise the op allocates a new tensor. `out` has the same shape and dtype as that output | `output` of MoEGroupedGEMM |
+| 1 | `buffer: out` on an output | `forward` gets a keyword-only parameter `out`, default `None`, after all inputs that do not declare `kw_only`. When the caller passes `out`, the op writes the result into it and returns it; otherwise the op allocates a new tensor. `out` has the same shape and dtype as that output | `output` of MoEGroupedGEMM |
 | 2 | `mutated: true` on an input | the op may write this input, and its contents before the call take part in the computation | |
-| 3 | `mutated: true` and `write_only: true` on an input | a result buffer that must be passed: the op overwrites it, and the result depends only on the other inputs; if the op returns `None`, `outputs` is empty | `output` of FusedMoEExperts |
+| 3 | `mutated: true` and `write_only: true` on an input | a result buffer that must be passed: the op overwrites it, and the result depends only on the other inputs; if the op returns `None`, `outputs` is empty | |
 | 4 | `mutated: "<discriminant expression>"` on an input | the op writes this input only when the expression is true | `mutated: inplace` of activation functions |
 | 5 | `alias: <input name>` on an output | when that input is written, this output is that input object itself | `alias: input` of activation functions |
+| 6 | input `out` with `mutated: true`, `write_only: true` and `kw_only: true` | the required output buffer of an op that cannot allocate its output: keyword-only without a default, last among the inputs; an output declares `alias: out` | `out` of PagedKVCacheGather |
+
+What a call returns follows from these declarations:
+
+- an op given `out` writes into it and returns that object;
+- an op with several outputs returns a tuple with one slot per declared output, in declaration order, and an absent `nullable` output is `None` in its slot;
+- an op whose only effect is writing its inputs declares no outputs and returns `None`.
 
 The `inplace` parameter of activation functions is an example:
 

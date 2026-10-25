@@ -138,11 +138,18 @@ primitive 是表达式中可以调用的内建函数，例如 `broadcast`、`red
 
 | No. | 声明 | 含义 | 例子 |
 | --- | --- | --- | --- |
-| 1 | 输出上的 `buffer: out` | `forward` 在所有输入之后增加参数 `out`。调用方传入 `out` 时，op 将结果写入并返回它；未传入时，op 分配新张量。`out` 与该输出的形状和 dtype 相同 | MoEGroupedGEMM 的 `output` |
+| 1 | 输出上的 `buffer: out` | `forward` 在所有未声明 `kw_only` 的输入之后增加只能以关键字传入的参数 `out`，默认为 `None`。调用方传入 `out` 时，op 将结果写入并返回它；未传入时，op 分配新张量。`out` 与该输出的形状和 dtype 相同 | MoEGroupedGEMM 的 `output` |
 | 2 | 输入上的 `mutated: true` | op 可能写入这个输入，它在调用前的内容参与计算 | |
-| 3 | 输入上的 `mutated: true` 与 `write_only: true` | 必须传入的结果缓冲：op 覆盖写入，结果只取决于其他输入；如果 op 返回 `None`，`outputs` 为空 | FusedMoEExperts 的 `output` |
+| 3 | 输入上的 `mutated: true` 与 `write_only: true` | 必须传入的结果缓冲：op 覆盖写入，结果只取决于其他输入；如果 op 返回 `None`，`outputs` 为空 | |
 | 4 | 输入上的 `mutated: "<discriminant 表达式>"` | 仅当表达式为 true 时，op 才写入这个输入 | 激活函数的 `mutated: inplace` |
 | 5 | 输出上的 `alias: <输入名>` | 该输入被写入时，这个输出就是该输入对象本身 | 激活函数的 `alias: input` |
+| 6 | 输入 `out` 上的 `mutated: true`、`write_only: true` 与 `kw_only: true` | 无法自行分配输出的 op 所必须传入的输出缓冲：只能以关键字传入，没有默认值，位于所有输入的最后；一个输出声明 `alias: out` | PagedKVCacheGather 的 `out` |
+
+调用的返回值由这些声明决定：
+
+- 传入了 `out` 的 op 写入 `out`，并返回这个对象；
+- 有多个输出的 op 返回一个 tuple，每个声明的输出按声明顺序占一个位置，缺省的 `nullable` 输出在其位置上为 `None`；
+- 唯一的 effect 是写入输入的 op 不声明输出，返回 `None`。
 
 以激活函数的 `inplace` 为例：
 

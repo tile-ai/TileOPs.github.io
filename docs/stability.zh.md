@@ -38,6 +38,13 @@
 - 编译出的可调用对象（`torch.compile` 的输出）的生命周期不超过它调用的 op 实例。
 - 调用不写入的输入是连续的，op 另有说明的除外。
 - `Bwd` op 直接调用，不接入 `torch.autograd`。
+- CUDA Graph 捕获支持 [`tests/cuda_graph_contract.py`](https://github.com/tile-ai/TileOPs/blob/main/tests/cuda_graph_contract.py) 列出的 op，限于这些 op 的 `cuda_graph` 测试所做的调用（[CUDA Graph validation](https://github.com/tile-ai/TileOPs/blob/main/docs/development.md#cuda-graph-validation)）。
+
+## 缓存与日志
+
+- 编译出的 kernel 与调优结果缓存在磁盘上的 `TILELANG_CACHE_DIR` 下，默认为 `~/.tilelang/cache`，跨进程重用。
+- 调优进度经由 `logging` 模块输出，记在 `tilelang` logger 下，由应用决定去向；不向 stdout 打印，也不向工作目录写文件。
+- 编译或运行失败的调优候选被跳过；设备内存耗尽或调用方代码出错会中止调优。
 
 ## 在 TileOPs 之外编写 op
 

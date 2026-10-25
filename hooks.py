@@ -4,7 +4,8 @@ untranslated-page notice.
 * Mirrored design docs carry repo-relative paths (`../../tileops/...`) and
   links to other upstream docs (`../code-style.md`) that do not resolve here;
   `on_page_markdown` rewrites them after include-markdown has pulled the content
-  in.
+  in. A mirrored page outside docs/design gets the same treatment for each link
+  whose target this site does not have.
 * The Benchmarks pages are generated at deploy time and cannot be listed in
   `mkdocs.yml`; `on_config` expands that one nav entry to whatever the renderer
   produced.
@@ -28,12 +29,26 @@ from __future__ import annotations
 import hashlib
 import html as htmllib
 import os
+import posixpath
 import re
 
 UPSTREAM_BLOB = "https://github.com/tile-ai/TileOPs/blob/main"
 
 _DESIGN_REPO_PATH = re.compile(r"\.\./\.\./([\w./-]+)")
 _DESIGN_DOCS_PATH = re.compile(r"\]\(\.\./([\w./-]+)")
+
+# Upstream docs/ pages included whole, outside docs/design.
+_MIRRORED_DOCS = {"stability.md"}
+_RELATIVE_LINK = re.compile(r"\]\((?![a-z]+:|#)([\w./-]+)")
+
+
+def _upstream_link(match, files):
+    """A link of a mirrored docs/ page, sent upstream when this site lacks its target."""
+    target = match.group(1)
+    if files.get_file_from_path(posixpath.normpath(target)) is not None:
+        return match.group(0)
+    return f"]({UPSTREAM_BLOB}/{posixpath.normpath(posixpath.join('docs', target))}"
+
 
 # Keyed by the locale being built, not by the locale of the content shown.
 # A plain block, not an admonition: admonitions are styled as technical asides
@@ -69,6 +84,8 @@ def on_page_markdown(markdown, page, config, files):
         markdown = _DESIGN_REPO_PATH.sub(rf"{UPSTREAM_BLOB}/\1", markdown)
         # And to upstream docs outside docs/design via ../<doc>.
         markdown = _DESIGN_DOCS_PATH.sub(rf"]({UPSTREAM_BLOB}/docs/\1", markdown)
+    elif src in _MIRRORED_DOCS:
+        markdown = _RELATIVE_LINK.sub(lambda m: _upstream_link(m, files), markdown)
 
     notice = _fallback_notice(page)
     if notice:

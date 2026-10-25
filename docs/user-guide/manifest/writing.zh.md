@@ -80,7 +80,7 @@ SiLUAndMulFwdOp:
 - 要求 `Int` 的位置可以使用 `Dim`，要求 `Seq[Int]` 的位置可以使用 `Shape`。
 - 形状中的每个轴都是一个整数表达式。kind 不是 `Dim` 的轴，以及以 `*p` 展开的序列中的每个元素，都必须是非负数；生成的检查会在构造时或调用时确认这一点。
 - YAML 中的值按声明的 kind 或 `type` 转换为 Python 值：`Shape` 与 `tuple[...]` 转为 tuple，`Seq[Int]` 与 `list[...]` 保持为 list，dtype 名转为 `torch.dtype`，ADT 值转为对应的 Python 对象。
-- 在同一个 spec 中，index、`let` 与张量的名字互不相同。`out` 是保留名，不能用作张量、参数或 index 的名字。
+- 在同一个 spec 中，index、`let` 与张量的名字互不相同。`out` 保留给输出缓冲：参数与 index 都不能命名为 `out`，唯一可以命名为 `out` 的张量是[扩展写法 6](extensions.md#effects) 表 1 第 6 行的必须传入的输出缓冲。
 
 ## 4. params {#params}
 
@@ -88,7 +88,7 @@ SiLUAndMulFwdOp:
 
 - 以 spec 为准。对于 `implemented` 的 op，validator 逐项比较 `params` 与 `__init__`，要求参数集合、顺序、`default` 与 `kw_only` 都相同。
 - 代码中可以额外出现的只有两类参数：所有 op 共有的执行策略参数 `target`，以 `*, target=None` 写在 manifest 参数之后；以及类属性 `injected_parameters` 列出的、由调用方注入的实现对象。
-- 签名中的调用期输入与输出缓冲，按顺序构成 `forward` 参数表的开头部分。`forward` 可以在其后追加由代码定义的执行参数，这些参数不属于签名。
+- `forward` 的参数表以未声明 `kw_only` 的调用期输入开头，按顺序排列；其后是只能以关键字传入的部分，先是输出缓冲 `out`，再是声明了 `kw_only` 的输入。`forward` 可以在其后追加由代码定义的执行参数，这些参数不属于签名。
 
 构造参数可以直接出现在类型中，不需要额外标注：
 
