@@ -119,7 +119,7 @@ shape_rules:
 ```
 
 - 形状、`let`、type family、refinement 与内联 roofline 公式使用同一套封闭的表达式语言，运算优先级与 Python 相同。表达式语言的组成见设计文档 [Manifest 表 10](../../design/manifest.md#t-lang)。
-- refinement 只能依赖运行时可以得到的量。能在构造时求值的 refinement 在构造时检查，其余的在每次调用时检查。
+- refinement 只能依赖运行时可以得到的量。能在构造时求值的 refinement 在构造时检查，其余的在调用时检查。
 - 对 metadata 张量内容的约束写在张量的 `requires` 中，而非 `shape_rules` 中，见[扩展写法 7](extensions.md#generators)。
 - 条件判断会在其所选分支内收窄 kind：`present(v)` 为 true 的分支中，`Maybe[X]` 收窄为 `X`；`x == 'a'` 或 `x in ('a', 'b')` 成立的分支中，`x` 的取值收窄为这些字面量。如果一个比较所用的字面量不是对应枚举或 dtype 集合中的任何成员，validator 会拒绝这条 refinement。
 - refinement 是否可以满足，由 spec 的作者负责。

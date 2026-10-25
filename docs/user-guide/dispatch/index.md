@@ -22,19 +22,22 @@ Take `BatchNormFwdOp` as an example. The op selects the interface `batch_norm_fw
 
 ## 2. How a call finds its kernel {#call-path}
 
-On every call, the op builds a **call spec**, which records the facts of this call that affect selection and building. It then calls `self.kernel_for(interface, call)`:
+The op describes each kernel call with a **call spec**, which records the facts of this call that affect selection and building. It calls `self.kernel_for(interface, call)`, where `call` is a function of no argument that returns the call spec. The call's Op plan holds the spec, so `call` runs only on the first call of each specialization:
 
 ```python
 # src/tileops/_ops/norm/layer_norm.py
-call = LayerNormCall(device=input.device, n=math.prod(ns), eps=self.eps, dtype=input.dtype)
-return self.kernel_for("layer_norm", call)(input, weight, bias)
+n = math.prod(self.normalized_shape)
+return self.kernel_for(
+    "layer_norm",
+    lambda: LayerNormCall(device=input.device, n=n, eps=self.eps, dtype=input.dtype),
+)(input, weight, bias)
 ```
 
 ![The path of one kernel_for call](img/call.svg)
 
 **Figure 1** The hit and miss paths of one `kernel_for` call. Purple marks the parts written by the developer; teal marks the parts provided by the system.
 
-- **Hit**: one cache lookup by `(interface, call)` returns the resolved entry directly. No implementation is consulted and no device property is read.
+- **Hit**: one cache lookup by `(interface, call spec)` returns the resolved entry directly; a repeated specialization returns the entry its plan holds without a lookup. No implementation is consulted and no device property is read.
 - **Miss**: dispatch selects in the following order and writes the result to the cache:
   1. Drop the implementations that cannot run on the call's device, based on `devices` and `supported_archs`.
   2. Drop the implementations that do not serve this call, based on `refusal`.

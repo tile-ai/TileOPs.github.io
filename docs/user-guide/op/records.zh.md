@@ -11,6 +11,7 @@
 
 `op.last_call` 返回最近一次完成调用的记录 `SignatureCall`：
 
+- 完成的调用提交它的记录；`last_call` 在第一次读取时由记录构造 `SignatureCall`，在下一次调用完成之前每次读取都返回同一个对象；
 - 还没有调用完成时，它抛出 `RuntimeError`；
 - 失败的调用不替换记录，见[构造与调用 § 失败与撤销](lifecycle.md#failure)。
 
@@ -29,7 +30,7 @@
 
 使用记录时注意：
 
-- **记录对外按不可变对象使用。** `stages` 在记录成为 `last_call` 之前写入一次。
+- **记录对外按不可变对象使用。** `stages` 在第一次读取、构造记录时写入一次。
 - **`metadata` 保存的是张量引用，不是拷贝。**
     - `metadata_values(name)` 在被调用时才读取张量内容，所以调用过程中不需要同步到 host。
     - 调用方之后修改这些张量，早先记录读到的值也会随之改变。
@@ -71,7 +72,7 @@
 
 调用路径不用这三个方法取得 kernel：
 
-- in-tree 本体通过 `kernel_for` 取得；target 路径由基类按缓存键查找。
+- `forward` 通过 `kernel_for` 取得；target 路径由基类按缓存键查找。
 - 二者在缓存未命中时选择并构造 kernel，不因未命中而报错。
 - 调用或实现不符合要求时仍会报错，见[构造与调用 § kernel 缓存](lifecycle.md#kernel)。
 

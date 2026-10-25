@@ -105,8 +105,8 @@ How to read Figure 1:
   [How an op selects a kernel § How a call finds its kernel](../dispatch/index.md#call-path).
 - **The figure shows only eager calls on ordinary tensors.** An eager call on meta tensors of
   an op with a compile boundary runs the signature check in the generated fake and does not
-  enter `_run_call`. When traced, an op without a compile boundary skips the signature check,
-  and an op with one runs the check in its fake, again without entering `_run_call`. Both are
+  enter `_execute`. When traced, an op without a compile boundary skips the signature check,
+  and an op with one runs the check in its fake, again without entering `_execute`. Both are
   in [Construction and calls § Call entry points](lifecycle.md#entry).
 
 **Table 3** What the base class and the subclass do at each stage
@@ -115,9 +115,9 @@ How to read Figure 1:
 | --- | --- | --- | --- |
 | 1 | Class definition | • Generates the signature check and output-shape inference from the manifest entry, and `eval_roofline` when the entry has a `roofline`<br>• Generates custom ops, the compile boundary, when the entry has a call-time tensor input and no composition<br>• Records the names of the manifest parameters, by which a target's builder is called | • An op class with a manifest entry has the entry key's name; an intermediate base class may have no entry<br>• Declares `kernel_types`, `interfaces`, `delegate_types` |
 | 2 | Construction | `Op.__init__` stores `target`, then in order:<br>1. loads the backend registry<br>2. checks the parameter values against the manifest<br>3. installs the implementation table and checks the contracts<br>4. registers the instance<br>5. builds the instance state fields | • Inheriting `Op` directly: assigns the manifest parameters to attributes of the same name, then calls `super().__init__(target=target)`<br>• Through a family base class: passes arguments by the family base's signature, which ends by calling `Op.__init__`<br>• Builds derived attributes and sub-ops after that |
-| 3 | Call: before the body | 1. Checks the call against the manifest signature.<br>2. If every tensor the call writes holds no elements, runs no kernel and returns the result built from the signature.<br>3. If the instance has no target yet, selects one from the call's device. | — |
-| 4 | Call: running | • For an empty write, builds the result from the signature<br>• Otherwise runs the target's kernel when there is a target builder, and the subclass's body when there is not<br>• When the body calls `kernel_for`: looks up the cache, and on a miss selects the implementation and builds the entry<br>• When the body calls `delegate_for`: builds or returns the held sub-op | • `forward`<br>• Calls `kernel_for(interface, call)` and `delegate_for(stage, identity, ...)` in it |
-| 5 | Call: after the body returns | • Checks the return value<br>• Files the sub-ops' calls under their stages<br>• Keeps the call record `last_call` | — |
+| 3 | Call: before `forward` | 1. Checks the call against the manifest signature on the first call of its specialization, and holds the verdict in the Op plan; a later call of the specialization reuses it.<br>2. If every tensor the call writes holds no elements, runs no kernel and returns the result built from the signature.<br>3. If the instance has no target yet, selects one from the call's device. | — |
+| 4 | Call: running | • For an empty write, builds the result from the signature<br>• Otherwise runs the target's kernel when there is a target builder, and the subclass's `forward` when there is not<br>• When `forward` calls `kernel_for`: returns the entry the plan holds, and on the specialization's first call builds the call spec, looks up the cache, and on a miss selects the implementation and builds the entry<br>• When `forward` calls `delegate_for`: builds or returns the held sub-op | • `forward`<br>• Calls `kernel_for(interface, call)` and `delegate_for(stage, identity, ...)` in it |
+| 5 | Call: after `forward` returns | • Checks the return value<br>• Files the sub-ops' calls under their stages<br>• Commits the call record that `last_call` reads | — |
 | 6 | Call fails | • Discards this call's record; `last_call` is unchanged<br>• When this call selected the target: undoes the target, drops the built kernels, and undoes the sub-ops' bindings level by level<br>• When an earlier call selected the target: keeps the target, the kernels and the sub-ops | — |
 
 Notes on Table 3:
@@ -153,7 +153,7 @@ Three rules for subclasses follow:
 
 1. **Do not repeat checks.** A subclass does not repeat checks the signature declares, and
    does not check the device type.
-    - When the body runs, the signature check has passed.
+    - When `forward` runs, the signature check has passed.
     - A kernel declares the devices it runs on.
 1. **Do not build your own cache.** A subclass keeps no kernel cache and does not decide
    whether to build a kernel by whether some attribute is empty; `kernel_for` owns the cache.
@@ -188,14 +188,14 @@ The base class's members fall into three layers by who uses them:
 | 2 | `kernel_types`, `interfaces` | The subclass's kernel interfaces and implementations | [Construction and calls § Kernel cache](lifecycle.md#kernel) |
 | 3 | `injected_parameters` | • The manifest validator's allowlist: the parameter names a constructor may take beyond the manifest parameters and the execution policy<br>• The family defines and uses the parameters; they are not an extension mechanism of the base class | [Construction and calls § Construction](lifecycle.md#construct) |
 | 4 | `dtype` | • Declared on the base class with default `None`<br>• A subclass taking a `dtype` construction parameter overrides it | [Construction and calls § Construction](lifecycle.md#construct) |
-| 5 | `forward` | The computation, the one method every op writes; with a compile boundary, the base class runs it inside the custom op through the generated `_call_boundary` | [Construction and calls § Call entry points](lifecycle.md#entry) |
-| 6 | `kernel_for(interface, call)`, `key_for(interface, call)` | • `kernel_for` gets the entry that serves this call<br>• `key_for` returns only the selected implementation's key and builds no entry; tests use it to check the selection | [Construction and calls § Kernel cache](lifecycle.md#kernel) |
+| 5 | `forward` | The computation, the one method every op writes; the base class runs it inside `_execute`, which, with a compile boundary, the generated `_call_boundary` reaches directly or through the custom op | [Construction and calls § Call entry points](lifecycle.md#entry) |
+| 6 | `kernel_for(interface, call)`, `call_spec(interface, call)`, `key_for(interface, call)` | • `kernel_for` gets the entry that serves this call; its `call` is a function returning the call spec<br>• `call_spec` returns the call spec the plan holds, for a `forward` that reads it<br>• `key_for` returns only the selected implementation's key and builds no entry; tests use it to check the selection | [Construction and calls § Kernel cache](lifecycle.md#kernel) |
 | 7 | `delegate_types`, `delegate_for(stage, identity, ...)` | Declare and hold sub-ops | [Composite ops](composite.md) |
 | 8 | `roof_key()`, `eval_roofline_read_bytes()`, `roofline_data_terms()` | The parts of the roofline a subclass may override | [Call records and tuning § Roofline](records.md#roofline) |
 
 **Implementation:**
 
-- Includes `_run_call`, `_reset_binding`, the call stack, `_SignaturePlan`, which generates
+- Includes `_execute`, the Op plan `_plans`, `_reset_binding`, the call stack, `_SignaturePlan`, which generates
   the signature checks, and `_CompileBoundary`, which generates the compile boundary.
 - These members start with an underscore; a subclass neither calls nor overrides them.
 - See [Construction and calls](lifecycle.md) and

@@ -11,6 +11,8 @@ This page describes what the `Op` base class offers after a call:
 
 `op.last_call` returns the record of the last completed call, a `SignatureCall`:
 
+- a completed call commits its record; `last_call` builds the `SignatureCall` from it on the
+  first read and returns the same object on every read until another call completes;
 - before any call has completed, it raises `RuntimeError`;
 - a failed call does not replace the record; see
   [Construction and calls § Failure and undo](lifecycle.md#failure).
@@ -30,8 +32,8 @@ This page describes what the `Op` base class offers after a call:
 
 When using a record:
 
-- **Treat the record as immutable.** `stages` is written once, before the record becomes
-  `last_call`.
+- **Treat the record as immutable.** `stages` is filled once, when the record is built on
+  the first read.
 - **`metadata` holds references to the tensors, not copies.**
     - `metadata_values(name)` reads the tensor's contents only when it is called, so the call
       needs no synchronization to the host.
@@ -82,7 +84,7 @@ What the three methods are for:
 
 The call path does not get kernels through these three methods:
 
-- the in-tree body gets them through `kernel_for`; on the target path the base class looks
+- `forward` gets them through `kernel_for`; on the target path the base class looks
   them up by the cache key;
 - both select and build a kernel on a cache miss, and do not raise because of the miss;
 - they still raise when the call or the implementation breaks a requirement; see

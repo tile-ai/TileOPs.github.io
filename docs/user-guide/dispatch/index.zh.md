@@ -22,19 +22,22 @@ op 先按语义选定一个 **kernel 接口**，派发机制再按调用的 shap
 
 ## 2. 一次调用如何找到 kernel {#call-path}
 
-op 每次调用构造一个 **call spec**，它记录这次调用中影响选择与构建的事实，然后调用 `self.kernel_for(interface, call)`：
+op 用一个 **call spec** 描述每次 kernel 调用，它记录这次调用中影响选择与构建的事实。op 调用 `self.kernel_for(interface, call)`，其中 `call` 是一个不接受参数、返回 call spec 的函数。调用的 Op plan 保存这个 call spec，所以 `call` 只在每个特化的第一次调用时运行：
 
 ```python
 # src/tileops/_ops/norm/layer_norm.py
-call = LayerNormCall(device=input.device, n=math.prod(ns), eps=self.eps, dtype=input.dtype)
-return self.kernel_for("layer_norm", call)(input, weight, bias)
+n = math.prod(self.normalized_shape)
+return self.kernel_for(
+    "layer_norm",
+    lambda: LayerNormCall(device=input.device, n=n, eps=self.eps, dtype=input.dtype),
+)(input, weight, bias)
 ```
 
 ![一次 kernel_for 调用的路径](img/call.svg)
 
 **图 1** 一次 `kernel_for` 调用的命中与未命中路径。紫色为开发者编写的部分，青色为系统提供的部分。
 
-- **命中**：以 `(interface, call)` 查一次缓存，直接返回已解析的 entry，不询问任何实现，也不读取设备属性。
+- **命中**：以 `(interface, call spec)` 查一次缓存，直接返回已解析的 entry（重复的特化直接返回 plan 保存的 entry，不查缓存），不询问任何实现，也不读取设备属性。
 - **未命中**：派发机制按以下顺序选择，结果写入缓存：
   1. 去掉在调用设备上不能运行的实现，依据 `devices` 与 `supported_archs`；
   2. 去掉不服务这次调用的实现，依据 `refusal`；

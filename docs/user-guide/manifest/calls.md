@@ -24,11 +24,13 @@ In the **call** phase, the checks generated from the signature around `forward` 
 
 When any check fails, the op raises an error that names the unsatisfied declaration.
 
+Steps 1–5 run on the first call of each specialization: each tensor's layout, dtype, device and presence, the parameters, the construction-time tensors, the execution arguments, and the current device of a call no input places. The Op plan holds what they decide, and a later call of the same specialization runs them no more. Step 7 runs on every call.
+
 If every tensor a call writes (each output and each written input) has no elements, step 6 runs no implementation: new outputs are created on the call device with the checked shapes and dtypes, and `out` and the written inputs are returned unchanged. When the inputs are empty but the outputs are not, the implementation runs as usual.
 
 ## 2. Kernel selection {#selection}
 
-An op declares in `interfaces` the positions where it calls kernels, and each position corresponds to a kernel interface. An implementation of a kernel interface is a kernel class that inherits it. At call time, the op constructs a call spec and calls `kernel_for(interface, call)` to obtain an entry. Each distinct call spec is looked up only once. When a call spec first appears, the Op base class selects exactly one implementation in the following order:
+An op declares in `interfaces` the positions where it calls kernels, and each position corresponds to a kernel interface. An implementation of a kernel interface is a kernel class that inherits it. At call time, the op calls `kernel_for(interface, call)` to obtain an entry, where `call` is a function that returns the call spec; the Op plan holds the spec, so `call` runs only on the first call of each specialization. Each distinct call spec is looked up only once. When a call spec first appears, the Op base class selects exactly one implementation in the following order:
 
 1. availability: the implementation's `devices` and `supported_archs`;
 2. applicability: the implementation's `refusal`;

@@ -23,8 +23,15 @@ class MoEExpertMLPFwdOp(Op):
         self.layout = layout
         self.activation = activation
         super().__init__(target=target)
-        self.gate_up = self.delegate_for("gate_up", None, layout=layout, activation=activation)
-        self.down = self.delegate_for("down", None, layout=layout)
+        # Build the sub-ops now: a traced forward cannot build one on a miss.
+        self._gate_up()
+        self._down()
+
+    def _gate_up(self) -> Op:
+        return self.delegate_for("gate_up", None, layout=self.layout, activation=self.activation)
+
+    def _down(self) -> Op:
+        return self.delegate_for("down", None, layout=self.layout)
 ```
 
 The example leaves out the class docstring and `forward`; the full code is in
@@ -41,8 +48,12 @@ method of the base class.
     - One `(stage, identity)` is built once.
     - `identity` covers every argument that changes what the sub-op is built as, the same
       meaning as the identity a kernel's `entry_for` returns.
-    - When the construction arguments are settled when the composite op is constructed,
-      `identity` is `None`.
+    - `identity` is `None` when the sub-op's arguments come from the composite op's params
+      and construction-time tensors. The sub-op is then held per specialization of the
+      composite op: changed params build a new sub-op, and a return to earlier params reuses
+      the one built for them.
+    - `forward` gets the sub-op through `delegate_for` again rather than through an
+      attribute, so it reaches the sub-op of the current params.
 - **Inheriting the execution policy.**
     - A sub-op the base class builds inherits the composite op's `target`.
     - A sub-op the caller injects is passed as `given` and held as passed, keeping its own

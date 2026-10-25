@@ -106,7 +106,7 @@ outputs:
   output: {dtype: T, shape: "[N, C, H_out, W_out]"}
 ```
 
-- `let` 的值由签名计算：能在构造时求值的在构造时计算，其余的在每次调用时计算。workload 行中不需要给出 `let`。
+- `let` 的值由签名计算：能在构造时求值的在构造时计算，其余的在调用时计算。workload 行中不需要给出 `let`。
 - 一个 `let` 可以引用其他 `let`，例如 `sH` 引用了 `kH`，但 `let` 之间的依赖不能成环。
 
 primitive 是表达式中可以调用的内建函数，例如 `broadcast`、`reduced`、`per_axis`、`ceil_div`。

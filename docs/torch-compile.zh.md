@@ -87,6 +87,7 @@ class RMSNormFwdOp(Op):
         "rms_norm": RMSNormKernel,
         "rms_norm_streaming": RMSNormStreamingKernel,
         "rms_norm_on_chip": RMSNormOnChipKernel,
+        "rms_norm_two_pass": RMSNormTwoPassKernel,
     }
     interfaces: ClassVar[Mapping[str, type[KernelInterface]]] = {"rms_norm": RMSNormFwdInterface}
 
@@ -98,16 +99,20 @@ class RMSNormFwdOp(Op):
     def forward(self, x, weight=None):
         weight = None if weight is None else weight.contiguous()
         x = x.contiguous()                         # the generated checks have run
-        call = LayerNormCall(
-            device=x.device,
-            n=math.prod(self.normalized_shape),
-            eps=torch.finfo(torch.float32).eps if self.eps is None else float(self.eps),
-            dtype=x.dtype,
-        )
-        return self.kernel_for("rms_norm", call)(x, weight)
+        n = math.prod(self.normalized_shape)
+        return self.kernel_for(
+            "rms_norm",
+            lambda: LayerNormCall(
+                device=x.device,
+                n=n,
+                eps=torch.finfo(torch.float32).eps if self.eps is None else float(self.eps),
+                dtype=x.dtype,
+                rows=x.numel() // n,
+            ),
+        )(x, weight)
 ```
 
-op 只编写构造函数与计算本体 `forward`。`Op.__call__` 调用生成的 `_call_boundary`，它按 `forward` 的签名接收参数，再调用当前副作用分支的 operator；operator 在节点内部以 `forward` 为本体完成调用。operator 与它的 fake 函数都从 manifest 条目生成，每个副作用分支对应一个 operator：
+op 只编写构造函数与计算本体 `forward`。`Op.__call__` 调用生成的 `_call_boundary`，它按 `forward` 的签名接收参数。普通 eager 调用直接运行 op 的执行函数；其他调用（包括被 trace 的调用）调用当前副作用分支的 operator，operator 在节点内部运行执行函数，由它运行 `forward`。operator 与它的 fake 函数都从 manifest 条目生成，每个副作用分支对应一个 operator：
 
 - 张量参数按 `signature.inputs` 的顺序排列；
 - 返回值由 `signature.outputs` 决定；
@@ -222,7 +227,7 @@ dynamo 有两条规则决定了接入的方式：
 | kernel 时间 | 0.0119 ms | 0.0117 ms |
 | eager 路径每次调用 | 42.5–45.2 µs | 38.2–42.0 µs |
 
-kernel 本身不受影响，边界位于哪一层与 kernel 如何计算无关。eager 路径快 3–5 µs，原因是边界上移之后，一次调用只需穿过一层 op 边界。
+kernel 本身不受影响，边界位于哪一层与 kernel 如何计算无关。eager 路径快 3–5 µs，原因是边界上移之后，一次调用只需穿过一层 op 边界。这组数字测于边界上移之时；现在普通的 eager 调用直接运行 op 的执行器，不穿过任何算子。
 
 编译图一侧的代价见[为什么边界位于 op 层](#at-op-layer)：融合不跨越节点边界，节点的输出必定写入显存。
 

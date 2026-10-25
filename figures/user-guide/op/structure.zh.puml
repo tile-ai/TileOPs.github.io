@@ -54,7 +54,7 @@ abstract class Op #E9EAF0 {
     _delegates : stage → identity → Op
     _delegate_stages
     _effect_branches
-    _last_call : SignatureCall
+    _last_call : _CallRecord
     _tune_warned
     == <back:#CBD5E6> <b>方法</b> </back> ==
     .. <i>对外接口</i> ..
@@ -76,7 +76,7 @@ abstract class Op #E9EAF0 {
     roof_key()
     .. <i>内部实现</i> ..
     __init_subclass__() —— 类定义时运行，安装生成的方法
-    _run_call(inputs, body)
+    _execute(inputs, writes)
     _bind_target()
     _reset_binding()
     _get_or_build_entry(interface, call)

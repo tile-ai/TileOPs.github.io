@@ -24,11 +24,13 @@
 
 任何一项检查失败时，op 都会报错，并指出未满足的那条声明。
 
+第 1 至 5 步在每个特化的第一次调用时执行。特化包括：每个张量的布局、dtype、设备与是否传入，参数，构造期张量，执行参数，以及没有输入确定设备时的当前设备。Op plan 保存这几步的结论，同一特化之后的调用不再执行它们。第 7 步每次调用都执行。
+
 如果一次调用写入的所有张量（各输出与被写入的输入）都不含元素，第 6 步不执行任何实现：新的输出按检查过的形状与 dtype 在调用设备上创建，`out` 与被写入的输入原样返回。输入为空而输出不为空时，照常执行实现。
 
 ## 2. kernel 的选择 {#selection}
 
-op 在 `interfaces` 中声明它调用 kernel 的位置，每个位置对应一个 kernel 接口；一个 kernel 接口的实现，是继承它的 kernel 类。调用时，op 构造 call spec，再调用 `kernel_for(interface, call)` 取得 entry。同一个 call spec 再次出现时只做一次查找；首次出现时，Op 基类按以下顺序选出唯一一个实现：
+op 在 `interfaces` 中声明它调用 kernel 的位置，每个位置对应一个 kernel 接口；一个 kernel 接口的实现，是继承它的 kernel 类。调用时，op 调用 `kernel_for(interface, call)` 取得 entry，其中 `call` 是返回 call spec 的函数；Op plan 保存这个 call spec，所以 `call` 只在每个特化的第一次调用时运行。同一个 call spec 再次出现时只做一次查找；首次出现时，Op 基类按以下顺序选出唯一一个实现：
 
 1. 可用性：实现的 `devices` 与 `supported_archs`；
 2. 适用性：实现的 `refusal`；

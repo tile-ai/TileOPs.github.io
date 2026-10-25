@@ -119,7 +119,7 @@ shape_rules:
 ```
 
 - Shapes, `let`, type families, refinements and inline roofline formulas use the same closed expression language, with the same operator precedence as Python. The parts of the expression language are in the design document [Manifest Table 10](../../design/manifest.md#t-lang).
-- A refinement can depend only on quantities available at run time. A refinement that can be evaluated at construction is checked at construction; the others are checked on every call.
+- A refinement can depend only on quantities available at run time. A refinement that can be evaluated at construction is checked at construction; the others are checked at call time.
 - Constraints on the contents of a metadata tensor are written in the tensor's `requires`, not in `shape_rules`, see [Extensions § 7](extensions.md#generators).
 - A condition narrows kinds within the branch it selects: in the branch where `present(v)` is true, `Maybe[X]` narrows to `X`; in the branch where `x == 'a'` or `x in ('a', 'b')` holds, the values of `x` narrow to those literals. If a comparison uses a literal that is not a member of the corresponding enum or dtype set, the validator rejects the refinement.
 - Whether a refinement can be satisfied is the responsibility of the spec's author.

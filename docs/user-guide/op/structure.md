@@ -43,7 +43,7 @@ Legend:
 | No. | Class | Visibility | Responsible for | Details |
 | --- | --- | --- | --- | --- |
 | 1 | `Op` | public | the op's lifecycle: at construction, checking the parameters and installing the implementation table; at each call, checking the signature, selecting the target, getting the kernel, keeping the record and undoing on failure; holding sub-ops | [Construction and calls](lifecycle.md), [Composite ops](composite.md) |
-| 2 | `SignatureCall` | public, read-only | the record of one call that passed the signature check, which callers use as read-only (`stages` is written before the record becomes `last_call`): index values, tensor shapes and dtypes, traffic, the sub-ops' calls; `last_call` and the roofline read it | [Call records and tuning § last_call](records.md#last-call) |
+| 2 | `SignatureCall` | public, read-only | the record of one call that passed the signature check, which callers use as read-only (`last_call` builds it from the committed record on the first read): index values, tensor shapes and dtypes, traffic, the sub-ops' calls; `last_call` and the roofline read it | [Call records and tuning § last_call](records.md#last-call) |
 | 3 | `KernelInterface` | public | the call contract of one kernel interface: the call spec's type and `forward`'s arguments; every implementation of the interface inherits it | [How an op selects a kernel](../dispatch/index.md) |
 | 4 | `Kernel` | public | the base class of kernel implementations: declares the devices it is available on (`devices`, `supported_archs`), the calls it serves (`refusal`) and its precedence over other implementations (`general`, `preferred_over`), and provides its builder through `entry_for` | [How an op selects a kernel](../dispatch/index.md) |
 | 5 | `_SignaturePlan` | internal | the table of functions one op class's manifest signature generates: construction check, call check, output-shape inference, effect branch, roofline evaluation; shared by the class's instances | [Construction and calls § The seven steps of a call](lifecycle.md#serve) |
@@ -72,7 +72,8 @@ How the classes in the figure relate:
     - A branch is decided by the inputs written, whether `out` is passed, and the outputs
       returned.
     - The custom op's body looks the instance up by the key it was registered under and calls
-      `Op._run_call()`.
+      `Op._execute()`; a plain eager call reaches `_execute` from `_call_boundary` without the
+      custom op.
 - **Entries and implementation classes:** an entry is built by the selected implementation
   class. An implementation class inherits both `Kernel` and a kernel interface; for example,
   `RMSNormOnChipKernel` inherits `Kernel` and `RMSNormFwdInterface`.
@@ -95,13 +96,14 @@ the selected target, so they belong to the binding group.
 
 | No. | Group | Written | On undoing the target selection | Fields |
 | --- | --- | --- | --- | --- |
-| 1 | construction | at construction, never after | kept | manifest parameters (construction-time tensors aside), `target`, `_installed_kernel_types`, `_preferred_over`, `_keys_by_interface`, `_construction_indices`, `_instance_key` |
+| 1 | construction | at construction, never after | kept | manifest parameters (construction-time tensors aside), `target`, `_installed_kernel_types`, `_preferred_over`, `_keys_by_interface`, `_construction_indices`, `_instance_key`, `_building` |
 | 2 | binding | when a target is selected and kernels are built | reset to initial values | `_target_builder`, `_serving_target`, `_entries_by_call`, `_built_entries`, `_target_kernels` |
-| 3 | running | still written after construction | kept | construction-time tensors, `_tune_requested`, `_delegates`, `_delegate_stages`, `_effect_branches`, `_last_call`, `_tune_warned` |
+| 3 | running | still written after construction | kept | construction-time tensors, `_tune_requested`, `_delegates`, `_delegate_stages`, `_effect_branches`, `_plans`, `_last_call`, `_tune_warned` |
 
 Notes on Table 2:
 
-- **Construction group:** written by the constructor and `Op.__init__`. A composite op that
+- **Construction group:** written by the constructor and `Op.__init__`. `_building` is the lock
+  under which concurrent calls resolve one plan or build one entry once. A composite op that
   declares no kernel of its own does not build `_installed_kernel_types`, `_preferred_over`
   or `_keys_by_interface`, and reads the empty mappings on the class attributes.
 - **Binding group:** built empty or given class-attribute initial values at construction,
@@ -113,6 +115,11 @@ Notes on Table 2:
     - `_tune_requested` starts as `False`, and only `request_tune()` sets it to `True`;
     - `_effect_branches` is decided by the manifest, this instance's construction parameters
       and which optional inputs a call passes, not by the selected target;
+    - `_plans` holds the Op plan of each specialization, see
+      [Construction and calls § The seven steps of a call](lifecycle.md#serve); a plan holds
+      decisions only, not the entries the target built;
+    - `_last_call` holds the committed record of the last successful call, from which
+      `last_call` builds the `SignatureCall`;
     - a construction-time tensor (such as `LongRoPEFwdOp`'s `rescale_factors`) whose device
       or dtype differs from the call's is converted at the call and written back to the
       instance;
@@ -162,8 +169,8 @@ Notes on Table 2:
 The base class's methods read and write these fields without asking whether they exist,
 because after construction they all do:
 
-- the binding group's three cache fields, and the running group's `_delegates`,
-  `_delegate_stages` and `_effect_branches`, are built by `Op.__init__`;
+- the binding group's three cache fields, `_building`, and the running group's `_delegates`,
+  `_delegate_stages`, `_effect_branches` and `_plans`, are built by `Op.__init__`;
 - `_target_builder` and `_serving_target` have class-attribute initial values.
 
 ## 3. What the base class guarantees when something is added {#extend}
@@ -177,7 +184,7 @@ takes; the full steps to add an op (tests, benchmarks, registration and so on) a
 
 | No. | Added | What to do | The base class guarantees |
 | --- | --- | --- | --- |
-| 1 | an op with a compile boundary | • A manifest entry of the same name, with a call-time tensor input and no composition<br>• Passing a cold `fullgraph=True` compile<br>• When it runs kernels of its own, declaring `kernel_types` and `interfaces`<br>• The constructor and `forward`<br>• Registering the cold-compile test | `_run_call` does the checks, target selection, recording and failure handling |
+| 1 | an op with a compile boundary | • A manifest entry of the same name, with a call-time tensor input and no composition<br>• Passing a cold `fullgraph=True` compile<br>• When it runs kernels of its own, declaring `kernel_types` and `interfaces`<br>• The constructor and `forward`<br>• Registering the cold-compile test | `_execute` does the checks, target selection, recording and failure handling |
 | 2 | an op without a compile boundary | • A manifest entry of the same name<br>• When it runs kernels of its own, declaring `kernel_types` and `interfaces`<br>• The constructor and `forward` | the same |
 | 3 | a composite op | `delegate_types`, with every sub-op held through `delegate_for` | every sub-call is filed under one stage, or the call raises |
 | 4 | a target | registering a builder for the op | the same checks, recording and failure handling as the in-tree kernels |

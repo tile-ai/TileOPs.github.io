@@ -132,12 +132,14 @@ class LayerNormCall(CallSpec):
     """The facts that select an implementation normalizing trailing rows and build it.
 
     Layer, RMS, fused-add and adaptive layer normalization take it. ``n`` is the row's
-    element count and ``eps`` the op's epsilon.
+    element count, ``eps`` the op's epsilon and ``rows`` the rows the call normalizes, ``0``
+    where the op does not state them.
     """
 
     n: int = 0
     eps: float = 1e-5
     dtype: torch.dtype = torch.float16
+    rows: int = 0
 
 class LayerNormFwdInterface(KernelInterface):
     """Layer normalization over the trailing ``call.n`` elements."""
@@ -145,15 +147,17 @@ class LayerNormFwdInterface(KernelInterface):
     request = LayerNormCall
 
     @abstractmethod
-    def forward(self, x: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, weight: Optional[torch.Tensor], bias: Optional[torch.Tensor]
+    ) -> torch.Tensor:
         """Normalize each run of ``call.n`` trailing elements; nothing is written in place.
 
         Every tensor is contiguous on ``call.device``.
 
         Args:
             x: Any shape whose trailing axes hold ``call.n`` elements, in ``call.dtype``.
-            weight: ``call.n`` elements of scale in ``call.dtype``.
-            bias: ``call.n`` elements of shift in ``call.dtype``.
+            weight: ``call.n`` elements of scale in ``call.dtype``, or ``None`` for one.
+            bias: ``call.n`` elements of shift in ``call.dtype``, or ``None`` for zero.
 
         Returns:
             A new output shaped like *x*, in ``call.dtype``.
@@ -193,8 +197,9 @@ def test_gemm_k_too_narrow_to_vectorize_is_refused_during_selection() -> None:
 | 6 | calling | `in-tree kernels do not run on` | no key can run on the call's device type (`OpNotAvailableError`) |
 | 7 | calling | `no implementation serves this call` | some key supports the device type, but no implementation is both available and applicable; the message lists each implementation's reason |
 | 8 | calling | `dispatch is ambiguous` | several implementations apply, and none has precedence over the others |
-| 9 | calling | `takes a <Request> call spec` | the call spec passed to `kernel_for` has the wrong type |
+| 9 | calling | `takes a <Request> call spec` | the call spec that `kernel_for`'s `call` returns has the wrong type |
 | 10 | calling | `cannot key a dispatch cache` | the call spec has a mutable field, such as a list |
-| 11 | calling | `this call spec states ['arch']` | the call spec passed to `kernel_for` gives device facts explicitly; they are derived from `device`, and only `key_for` accepts explicit device facts |
+| 11 | calling | `this call spec states ['arch']` | the call spec that `kernel_for`'s `call` returns gives device facts explicitly; they are derived from `device`, and only `key_for` accepts explicit device facts |
+| 12 | calling | `takes a function returning the call spec` | `kernel_for` was passed a call spec rather than a function that returns it |
 
 When a new op holds kernels without declaring `interfaces`, the inventory test in `tests/test_kernel_dispatch.py` raises `declare interfaces instead`.

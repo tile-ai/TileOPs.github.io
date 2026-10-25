@@ -129,6 +129,7 @@ class RMSNormFwdOp(Op):
         "rms_norm": RMSNormKernel,
         "rms_norm_streaming": RMSNormStreamingKernel,
         "rms_norm_on_chip": RMSNormOnChipKernel,
+        "rms_norm_two_pass": RMSNormTwoPassKernel,
     }
     interfaces: ClassVar[Mapping[str, type[KernelInterface]]] = {"rms_norm": RMSNormFwdInterface}
 
@@ -140,19 +141,24 @@ class RMSNormFwdOp(Op):
     def forward(self, x, weight=None):
         weight = None if weight is None else weight.contiguous()
         x = x.contiguous()                         # the generated checks have run
-        call = LayerNormCall(
-            device=x.device,
-            n=math.prod(self.normalized_shape),
-            eps=torch.finfo(torch.float32).eps if self.eps is None else float(self.eps),
-            dtype=x.dtype,
-        )
-        return self.kernel_for("rms_norm", call)(x, weight)
+        n = math.prod(self.normalized_shape)
+        return self.kernel_for(
+            "rms_norm",
+            lambda: LayerNormCall(
+                device=x.device,
+                n=n,
+                eps=torch.finfo(torch.float32).eps if self.eps is None else float(self.eps),
+                dtype=x.dtype,
+                rows=x.numel() // n,
+            ),
+        )(x, weight)
 ```
 
 The op writes only its constructor and `forward`, its computation. `Op.__call__` calls
-the generated `_call_boundary`, which takes `forward`'s parameters and calls the
-operator of the call's effect branch; inside the node, the operator runs the call with
-`forward` as its body. The operators and their fakes are generated from the manifest
+the generated `_call_boundary`, which takes `forward`'s parameters. A plain eager call
+runs the op's executor directly; any other call, a traced one included, calls the
+operator of the call's effect branch, and inside the node the operator runs the executor,
+which runs `forward`. The operators and their fakes are generated from the manifest
 entry, one operator per effect branch:
 
 - its tensor arguments are `signature.inputs`, in order;
@@ -346,7 +352,9 @@ runs of 2000 iterations × 9 rounds:
 
 The kernel itself is unaffected, because where the boundary sits has nothing to do
 with how the kernel computes. The eager path is 3–5 µs faster because, with the boundary
-moved up, a call crosses one operator boundary instead of two.
+moved up, a call crosses one operator boundary instead of two. These figures were taken
+when the boundary moved; a plain eager call now runs the op's executor directly and
+crosses no operator.
 
 The cost on the graph side is described in
 [Why the boundary falls at the op layer](#at-op-layer): fusion does not cross the node

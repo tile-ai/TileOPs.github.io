@@ -76,16 +76,19 @@ class GEMMFwdOp(Op):
 
     def forward(self, a, b):                          # the generated checks have run
         a, b = a.contiguous(), b.contiguous()         # handed over as the spec declares it
-        m, k = (a.shape[1], a.shape[0]) if self.trans_a else a.shape
-        call = GEMMCall(                              # what this call is
-            m=m,
-            n=b.shape[0] if self.trans_b else b.shape[1],
-            k=k,
-            dtype=a.dtype,
-            trans_a=self.trans_a,
-            trans_b=self.trans_b,
-            device=a.device,
-        )
+
+        def call() -> GEMMCall:                       # what this call is
+            m, k = (a.shape[1], a.shape[0]) if self.trans_a else a.shape
+            return GEMMCall(
+                m=m,
+                n=b.shape[0] if self.trans_b else b.shape[1],
+                k=k,
+                dtype=a.dtype,
+                trans_a=self.trans_a,
+                trans_b=self.trans_b,
+                device=a.device,
+            )
+
         return self.kernel_for("gemm", call)(a, b)
 
     def roof_key(self):                               # FLOPs priced on tensor cores
@@ -97,12 +100,12 @@ class GEMMFwdOp(Op):
 | 1 | `__init__` | `signature.params` 的名字、顺序与默认值，再加上仅限关键字的 `target`；先把每个 manifest 参数赋给同名属性，再调用 `super().__init__(target=target)` |
 | 2 | `kernel_types` | 能服务这个 op 的 Kernel 类，各对应一个 key |
 | 3 | `interfaces` | op 发出的每一个 kernel 调用各占一条，从 `kernel_for` 使用的名字映射到服务这个调用的各实现所继承的 `KernelInterface` 类 |
-| 4 | `forward` | 参数按 `signature.inputs` 的顺序，可选输入排在最后，默认值为 `None`；方法体把输入转为连续张量，构造 call spec，取得 kernel，再调用它 |
+| 4 | `forward` | 参数按 `signature.inputs` 的顺序，可选输入排在最后，默认值为 `None`；方法体把输入转为连续张量，写出构造 call spec 的函数，取得 kernel，再调用它 |
 | 5 | `roof_key` | 可选。表示 op 的 FLOPs 按哪个硬件单元的峰值计算，默认是 CUDA core 上的 fp32，只在使用其他单元时编写 |
 
 `_infer_output_shapes` 与 `eval_roofline` 都依照 spec 生成，不需要编写。
 
-`forward` 是 op 的计算本体，也是唯一承载计算的方法。调用方写 `op(a, b)`，不直接调用 `op.forward(a, b)`：`Op.__call__` 先运行生成的检查，再运行 `forward`。spec 有调用期张量输入、且没有 `composition` 的 op，在类定义时生成编译边界，`__call__` 在生成的 operator 之内运行 `forward`。具体机制见[接入 torch.compile](torch-compile.md)。
+`forward` 是 op 的计算本体，也是唯一承载计算的方法。调用方写 `op(a, b)`，不直接调用 `op.forward(a, b)`：`Op.__call__` 先运行生成的检查，再运行 `forward`。spec 有调用期张量输入、且没有 `composition` 的 op，在类定义时生成编译边界，`__call__` 经编译边界运行 `forward`：普通 eager 调用直接运行，其他调用在生成的 operator 之内运行。具体机制见[接入 torch.compile](torch-compile.md)。
 
 构造函数不接收调优参数。需要调优时，先构造 op，再调用 `op.request_tune()`。
 
@@ -113,7 +116,7 @@ kernel 是编译产物，构造一次需要几百毫秒到几秒，而一个 op 
 `kernel_for` 接受两个参数：
 
 - **`interface`**：`interfaces` 的一个 key，指 op 发出的某一个 kernel 调用。`GEMMFwdOp` 只发出一个 kernel 调用，因此只声明一个 `"gemm"`。只有语义或调用契约改变时才新增一个 kernel 接口，例如 `BatchNormFwdOp` 的 `batch_norm_fwd_train` 与 `batch_norm_fwd_infer` 返回的内容不同。在某个形状范围或某个架构上更快的 kernel 是已有 kernel 接口的另一个实现。
-- **`call`**：一个冻结的 `CallSpec` 子类，包含选择实现和构造 kernel 所需的信息，即形状、dtype、op 的语义参数与设备。它必须是这个 kernel 接口的 `request` 指定的类型。设备事实（`arch`、`sm_count`、`calibration`、`smem_budget`）由派发机制在缓存未命中时从 `call.device` 推出，调用方不填写。
+- **`call`**：一个不接受参数、返回 call spec 的函数。call spec 是一个冻结的 `CallSpec` 子类，包含选择实现和构造 kernel 所需的信息，即形状、dtype、op 的语义参数与设备，它必须是这个 kernel 接口的 `request` 指定的类型。设备事实（`arch`、`sm_count`、`calibration`、`smem_budget`）由派发机制在缓存未命中时从 call spec 的 `device` 推出，调用方不填写。调用的 Op plan 保存这个 call spec，所以 `call` 只在每个特化的第一次调用时运行，重复的特化不构造 call spec、也不查缓存就取得 entry。
 
 op 按 kernel 接口的抽象 `forward` 方法所声明的参数及其顺序调用取得的 kernel。
 

@@ -106,7 +106,7 @@ outputs:
   output: {dtype: T, shape: "[N, C, H_out, W_out]"}
 ```
 
-- The value of a `let` is computed from the signature: a `let` that can be evaluated at construction is computed at construction, and the others are computed on every call. Workload rows do not give `let` entries.
+- The value of a `let` is computed from the signature: a `let` that can be evaluated at construction is computed at construction, and the others are computed at call time. Workload rows do not give `let` entries.
 - A `let` can refer to other `let` entries, as `sH` refers to `kH`, but dependencies between `let` entries must not form a cycle.
 
 A primitive is a built-in function callable in expressions, such as `broadcast`, `reduced`, `per_axis` and `ceil_div`.

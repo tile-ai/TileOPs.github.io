@@ -75,7 +75,7 @@ manifest 测试与 benchmark 所用的调用，包括形状、dtype 与输入张
 
 - 构造阶段，生成的检查按 `type` 检查参数，并完成构造时已经可以求值的检查。
 - 调用阶段，生成的检查先确定输入、选择分支并推断 index，然后才调用开发者编写的实现；实现返回之后，再检查输出的数量、形状、dtype、设备与内存布局，并核对 `out` 与 `alias` 输出是否就是对应的张量对象。因此实现中不需要重复 spec 已经声明的检查。
-- 实现通过 `kernel_for(interface, call)` 取得要调用的 entry，通常就是一个 kernel。同一个 call spec 再次出现时，Op 基类只做一次查找；首次出现时，Op 基类在该 kernel 接口的实现中选出唯一一个，由它的 `entry_for(call)` 返回 build identity 与构建函数，在同一个 kernel 接口内，同一实现类、相同 build identity 的 entry 只构造一次。选择规则见[调用与校验 2](calls.md#selection)。
+- 实现通过 `kernel_for(interface, call)` 取得要调用的 entry，其中 `call` 是返回 call spec 的函数；entry 通常就是一个 kernel。同一个 call spec 再次出现时，Op 基类只做一次查找；首次出现时，Op 基类在该 kernel 接口的实现中选出唯一一个，由它的 `entry_for(call)` 返回 build identity 与构建函数，在同一个 kernel 接口内，同一实现类、相同 build identity 的 entry 只构造一次。选择规则见[调用与校验 2](calls.md#selection)。
 - 有编译边界的 op，`Op.__call__` 调用生成的 `_call_boundary`，经 operator 在节点内部运行 `forward`；没有编译边界的 op，`Op.__call__` 直接运行 `forward`。两种情况下计算本体都写在 `forward` 中。
 - 某个 target 通过 `register_kernel_builder` 为 op 注册了 builder 时，生成的检查之后调用 target 返回的 kernel，op 的 `forward` 不执行。
 - 如果一次调用写入的所有张量（各输出与被写入的输入）都不含元素，in-tree 实现与 target 都不执行：新的输出按检查过的形状与 dtype 在调用设备上创建，`out` 与被写入的输入原样返回。输入为空而输出不为空时，照常执行实现。
