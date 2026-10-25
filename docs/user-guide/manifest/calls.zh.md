@@ -75,7 +75,7 @@ op 在 `interfaces` 中声明它调用 kernel 的位置，每个位置对应一�
 ![调用设备](img/device.svg)
 
 - 声明了 `device: cpu` 的张量始终位于 CPU，不参与调用设备的判定；构造期张量也只有未声明 `device: cpu` 的才参与判定。
-- 没有调用期张量、`device` 参数与参与判定的构造期张量时，调用设备取进程 accelerator 的当前设备；进程没有 accelerator 时为 `None`。accelerator 是 `torch.accelerator` 报告的设备类型，CUDA 或某个 backend 的设备类型。设计上，在这一步之前还会由显式指定或进程默认的 target 在其声明的设备类别中选择设备，这一步尚未实现。
+- 没有调用期张量、`device` 参数与参与判定的构造期张量时，调用设备取进程 accelerator 的当前设备；进程没有 accelerator 时为 `None`。accelerator 是 `torch.accelerator` 报告的设备类型，CUDA 或某个 backend 的设备类型。
 - 调用设备确定后，`out` 与各输出在该设备上检查或分配。
 - 没有声明 `device: cpu` 的构造期张量，在调用时复制到调用设备，并转换为签名中的 dtype。
 - 声明了 `contiguous: true` 的张量，由生成的检查确认其内存连续；workload 实例化生成的张量总是连续的。

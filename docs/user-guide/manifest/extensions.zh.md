@@ -126,7 +126,7 @@ primitive 是表达式中可以调用的内建函数，例如 `broadcast`、`red
     rescale_factors: {dtype: R, shape: "[D // 2]", optional: true}
   ```
 
-- 要求内存连续的张量声明 `contiguous: true`，例如 MoE staged 系列 op 的输入与输出。没有这项声明的张量可以有任意 stride。
+- 要求内存连续的张量声明 `contiguous: true`，例如 MoE staged 系列 op 的输入与输出。受支持的调用使用连续的输入（[API 稳定性](../../stability.md)）；没有这项声明的张量不连续时，不保证可用。
 - 必须位于 CPU 上的张量声明 `device: cpu`，例如 `GDNFwdOp` 的 `cu_seqlens_cpu`。
 - 没有调用期张量输入的 op 声明 `device` 参数，例如 Alibi。调用设备的确定方式见[调用与校验 4](calls.md#device)。
 
@@ -140,7 +140,7 @@ primitive 是表达式中可以调用的内建函数，例如 `broadcast`、`red
 | --- | --- | --- | --- |
 | 1 | 输出上的 `buffer: out` | `forward` 在所有未声明 `kw_only` 的输入之后增加只能以关键字传入的参数 `out`，默认为 `None`。调用方传入 `out` 时，op 将结果写入并返回它；未传入时，op 分配新张量。`out` 与该输出的形状和 dtype 相同 | MoEGroupedGEMM 的 `output` |
 | 2 | 输入上的 `mutated: true` | op 可能写入这个输入，它在调用前的内容参与计算 | |
-| 3 | 输入上的 `mutated: true` 与 `write_only: true` | 必须传入的结果缓冲：op 覆盖写入，结果只取决于其他输入；如果 op 返回 `None`，`outputs` 为空 | |
+| 3 | 输入上的 `mutated: true` 与 `write_only: true` | 必须传入的结果缓冲：op 覆盖写入，结果只取决于其他输入；如果 op 返回 `None`，`outputs` 为空 | 目前没有 op 使用 |
 | 4 | 输入上的 `mutated: "<discriminant 表达式>"` | 仅当表达式为 true 时，op 才写入这个输入 | 激活函数的 `mutated: inplace` |
 | 5 | 输出上的 `alias: <输入名>` | 该输入被写入时，这个输出就是该输入对象本身 | 激活函数的 `alias: input` |
 | 6 | 输入 `out` 上的 `mutated: true`、`write_only: true` 与 `kw_only: true` | 无法自行分配输出的 op 所必须传入的输出缓冲：只能以关键字传入，没有默认值，位于所有输入的最后；一个输出声明 `alias: out` | PagedKVCacheGather 的 `out` |
