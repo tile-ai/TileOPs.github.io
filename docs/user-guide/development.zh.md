@@ -41,11 +41,11 @@ pre-commit install
 ### 使用本地环境 { #local }
 
 ```bash
-pip install -e '.[dev]' -c constraints.txt
+pip install -e . --group dev -c constraints.txt
 pre-commit install
 ```
 
-- 支持的 Python、PyTorch、CUDA、GPU 架构与 TileLang 版本组合，以 TileOPs 仓库 [README](https://github.com/tile-ai/TileOPs#installation) 的 Prerequisites 为准。
+- 支持的 Python、PyTorch、CUDA、GPU 架构与 TileLang 版本组合，以 TileOPs 仓库 [README](https://github.com/tile-ai/TileOPs#installation) 的 Installation 一节为准。
 - `-c constraints.txt` 使用仓库提供的依赖约束，使本地依赖与 CI 验证的组合一致。
 
 ### 确认环境可用 { #verify }
@@ -104,7 +104,7 @@ pre-commit run --all-files                            # 代码检查，与 CI �
 ## 运行 benchmark { #bench }
 
 ```bash
-PIP_NO_BUILD_ISOLATION=1 pip install -e '.[dev]' --group bench -c constraints.txt
+PIP_NO_BUILD_ISOLATION=1 pip install -e . --group dev --group bench -c constraints.txt
 python -m pytest -q <bench-file>
 ```
 
@@ -146,7 +146,7 @@ python scripts/test_node_delta.py --base upstream/main
 ### 本地安装在重新解析 CUDA 或 TileLang 时失败 { #faq-rebuild }
 
 ```bash
-PIP_NO_BUILD_ISOLATION=1 pip install -e '.[dev]' -c constraints.txt
+PIP_NO_BUILD_ISOLATION=1 pip install -e . --group dev -c constraints.txt
 ```
 
 本机已安装 CUDA 与 TileLang 时，关闭构建隔离，构建过程直接使用已安装的版本。
