@@ -50,6 +50,26 @@ Three groups of pages are not written by hand:
 the repo-relative paths mirrored content arrives with, and expands the single
 Benchmarks nav entry, since those pages do not exist until the renderer has run.
 
+## Checks
+
+CI (`.github/workflows/checks.yml`) runs these on every push and pull request:
+
+```bash
+pip install -r requirements-dev.txt
+ruff check scripts hooks.py tests
+pytest -rs                              # the renderer, and tests/golden/ byte for byte
+python scripts/check_api_pages.py       # every op the API pages name is exported
+npx stylelint "docs/assets/**/*.css"
+bash scripts/dev.sh build               # mkdocs build; any warning not from griffe fails
+```
+
+`tests/golden/` holds the Benchmarks pages the trimmed snapshot in `tests/fixtures/`
+must produce. After an intended change to what they say, review the diff, then run
+`python tests/refresh_golden.py`.
+
+Which ops a `docs/api/` page names is written by hand. When TileOPs adds or removes
+an op, `scripts/check_api_pages.py` reports it.
+
 ## Bilingual pages
 
 English lives at the site root, Chinese under `/zh/`. A Chinese page is a
@@ -59,3 +79,7 @@ a page's two versions are kept in step by hand.
 
 A page with no translation falls back to English at the same URL, with a notice
 prepended by `hooks.py` — so the Chinese nav is never sparse.
+
+A figure with text has one SVG per language, `img/<name>.svg` and `img/<name>.zh.svg`.
+The user-guide figures are drawn from sources under `figures/user-guide/`: edit the
+source, then run `figures/user-guide/render.sh`.
