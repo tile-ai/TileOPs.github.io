@@ -8,9 +8,9 @@ bench.Runner(op, case).compare(implementations)
 
 其中：
 
-- `op` 是 TileOps 的实现，在报告中记为 `tileops`；
+- `op` 是 TileOPs 的实现，在报告中记为 `tileops`；
 - `case` 由 `bench.cases(Op)` 生成，对应 manifest 中的一次 workload 调用；
-- `implementations` 是与 TileOps 比较的其他实现。
+- `implementations` 是与 TileOPs 比较的其他实现。
 
 `compare()` 会先按 workload 声明的规则校验每个实现，校验通过之后才开始计时，最后为每个实现在报告中写一行结果。这里涉及的四个公开接口都定义在 [`benchmarks/api.py`](https://github.com/tile-ai/TileOPs/blob/main/benchmarks/api.py) 中：
 
@@ -18,14 +18,14 @@ bench.Runner(op, case).compare(implementations)
 | --- | --- | --- |
 | `bench.cases(Op)` | 函数 | 把 op 的 manifest workload 行展开为一组 `bench.Case` |
 | `bench.Case` | 类 | 记录一次 benchmark 的输入、op 构造参数、reference、数值校验规则和计时口径 |
-| `bench.Runner` | 类 | 校验、计时并记录 TileOps 实现与对比实现 |
+| `bench.Runner` | 类 | 校验、计时并记录 TileOPs 实现与对比实现 |
 | `bench.Implementation` | 类 | 描述一个需要私有参数、需要恢复状态，或在数值上不可比的对比实现 |
 
 写一个 benchmark 通常分三步：在 `benchmarks/ops/` 中写测试函数，在 `benchmarks/_cases/` 中为 op 注册 case，再决定与哪些实现比较。下面三节依次说明。
 
 ## 示例 {#example}
 
-下面以批量矩阵乘为例，把 TileOps 与 vLLM、SGLang 和 PyTorch/cuBLAS 放在一起比较：
+下面以批量矩阵乘为例，把 TileOPs 与 vLLM、SGLang 和 PyTorch/cuBLAS 放在一起比较：
 
 ```python
 import pytest
@@ -132,7 +132,7 @@ vendor = bench.Implementation(
 )
 ```
 
-这个实现照常计时，但跳过数值校验，`Runner` 只检查它没有改写共享输入。报告保留这条原因，并且不计算它与 TileOps 的性能比值。原因不能为空，TileOps 实现也不能设置这个字段，这两种情况都会在计时之前报错。
+这个实现照常计时，但跳过数值校验，`Runner` 只检查它没有改写共享输入。报告保留这条原因，并且不计算它与 TileOPs 的性能比值。原因不能为空，TileOPs 实现也不能设置这个字段，这两种情况都会在计时之前报错。
 
 数值误差超出容差属于校验失败，与语义不同是两回事，不能用这个字段绕过。
 
@@ -140,14 +140,14 @@ vendor = bench.Implementation(
 
 ![compare() 的执行顺序](img/execution.svg)
 
-`compare()` 首先通过 binder 得到 TileOps 实现，并把每个对比对象转换为 `bench.Implementation`，然后依次进行正确性校验和计时，最后聚合样本、计算 roofline，并写入报告。
+`compare()` 首先通过 binder 得到 TileOPs 实现，并把每个对比对象转换为 `bench.Implementation`，然后依次进行正确性校验和计时，最后聚合样本、计算 roofline，并写入报告。
 
 ### 正确性校验 {#verify}
 
-`case.reference` 在一次 `compare()` 中只执行一次，其结果作为期望结果。TileOps 实现与每个对比实现都和这同一份期望结果比较，实现之间不做两两比较：
+`case.reference` 在一次 `compare()` 中只执行一次，其结果作为期望结果。TileOPs 实现与每个对比实现都和这同一份期望结果比较，实现之间不做两两比较：
 
 ```text
-TileOps op  ↔ case.reference
+TileOPs op  ↔ case.reference
 vLLM        ↔ case.reference
 SGLang      ↔ case.reference
 ```
@@ -168,7 +168,7 @@ reference 本身运行时显存不足，也会让这个 case 的所有实现标�
 以下两种对比实现不参与数值比较：
 
 - 设置了 `noncomparable_reason` 的实现，见[数值上不可比的实现](#noncomparable)。
-- `run` 正是 `case.reference`、`args` 为 `None` 且没有 `reset` 的实现。它与自己比较没有意义，校验状态沿用 TileOps 实现的结果。reference 的 wrapper、换了参数的调用或编译后的版本则算独立的实现，照常接受校验。
+- `run` 正是 `case.reference`、`args` 为 `None` 且没有 `reset` 的实现。它与自己比较没有意义，校验状态沿用 TileOPs 实现的结果。reference 的 wrapper、换了参数的调用或编译后的版本则算独立的实现，照常接受校验。
 
 ### 计时 {#timing}
 
@@ -203,7 +203,7 @@ reset → flush L2 → timed run(*args)
 | `count_copies` | `run` 内属于算子语义的 D2D copy 是否计入读数，来自注册项 |
 | `workload` | 生成 `inputs` 的 workload；对比实现需要 workload 派生的数据（例如注意力窗口、分块边界、预处理后的权重）时，可以从这里读取 |
 
-case 的数据在首次访问时才创建，在测试结束后释放。因此 pytest 收集用例时不需要 GPU，而同一个 case 的校验与计时读取的是同一组 tensor，TileOps 实现、reference 与报告参数总是对应同一个用例。
+case 的数据在首次访问时才创建，在测试结束后释放。因此 pytest 收集用例时不需要 GPU，而同一个 case 的校验与计时读取的是同一组 tensor，TileOPs 实现、reference 与报告参数总是对应同一个用例。
 
 ## 各层的分工 {#layers}
 
@@ -215,7 +215,7 @@ benchmark 用到的信息分布在几个层次中，各层负责的内容如下�
 | --- | --- |
 | manifest | op 签名、副作用、模型 workload、roofline |
 | workload（`workloads/`） | 输入数据的分布、reference、数值校验方式 |
-| case 注册项（`benchmarks/_cases/`） | 由 workload 构造 case、case 的计时口径、TileOps 实现的调用方式 |
+| case 注册项（`benchmarks/_cases/`） | 由 workload 构造 case、case 的计时口径、TileOPs 实现的调用方式 |
 | `bench.Runner` | 校验、计时顺序、roofline 计算与报告 |
 | 测试（`tests/`） | kernel 分支、边界条件与数值回归 |
 
@@ -223,14 +223,14 @@ benchmark 只读取 manifest 中的调用，不会为 benchmark 或某个实现�
 
 ## 常见问题 {#faq}
 
-**对比实现会改写一个参数，能不能让 `Runner` 自动 clone 全部输入？**
+**对比实现会改写一个参数，能否让 `Runner` 自动 clone 全部输入？**
 
 `Runner` 不会替实现 clone 输入。clone 无法保留输入之间的 alias 与 view 关系，也无法表示输入之外的状态。哪个参数会被改写，就由这个实现在 `args` 中传入它的私有副本，并在 `reset` 中恢复，写法见[传入对比实现](#implementation)。
 
-**只有一个实现在 `run` 内做 D2D copy，能不能只为它计入 copy？**
+**只有一个实现在 `run` 内做 D2D copy，能否只为它计入 copy？**
 
 不能。`count_copies` 属于整个 case，写在注册项中。如果每个实现各自决定，同一张表里的实现就会按不同的口径计时，它们之间的比值也就失去了意义。
 
-**TileOps 的 op 需要包一层才能按 `case.inputs` 调用，能不能把 wrapper 传给 `Runner`？**
+**TileOPs 的 op 需要包一层才能按 `case.inputs` 调用，能否把 wrapper 传给 `Runner`？**
 
 不能。`Runner` 按 op 的类名在 manifest 中查找，并以这个名字写入报告，所以 wrapper 或子类会在构造 `Runner` 时报错。调用方式的适配应当写在该 op 注册项的 binder 中。

@@ -11,10 +11,10 @@ the other five places are written from it.**{ .keystone }
 | --- | --- | --- | --- |
 | 1 | [`src/tileops/manifest/spec/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/manifest/spec)`<family>.yaml` | the validator's `schema` and `signature` levels | the spec itself |
 | 2 | [`src/tileops/_ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/_ops)`<family>/…` | the validator, against `__init__`, `forward` and the declared kernels; the checks generated around every call | the op class, subclassing `Op` |
-| 2 | [`src/tileops/_ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/_ops)`<family>/__init__.py` and [`src/tileops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops)`<family>.py` | the validator: the family's `__all__` agrees with the manifest | the op's name, exported by its family and on the public path `tileops.<family>.<Op>` |
-| 3 | [`src/tileops/_kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/_kernels)`<family>/…` | — | the kernel classes, subclassing `Kernel` |
-| 4 | [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)`test_<name>.py` | the contract tests, which run every workload row | the numerical comparison against the reference `ref_program` |
-| 5 | [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)`bench_<name>.py` | the validator's `bench` level | the benchmark, and the op's case entry in `benchmarks/_cases/` |
+| 3 | [`src/tileops/_ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/_ops)`<family>/__init__.py` and [`src/tileops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops)`<family>.py` | the validator: the family's `__all__` agrees with the manifest | the op's name, exported by its family and on the public path `tileops.<family>.<Op>` |
+| 4 | [`src/tileops/_kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/_kernels)`<family>/…` | — | the kernel classes, subclassing `Kernel` |
+| 5 | [`tests/ops/`](https://github.com/tile-ai/TileOPs/tree/main/tests/ops)`test_<name>.py` | the contract tests, which run every workload row | the numerical comparison against the reference `ref_program` |
+| 6 | [`benchmarks/ops/`](https://github.com/tile-ai/TileOPs/tree/main/benchmarks/ops)`bench_<name>.py` | the validator's `bench` level | the benchmark, and the op's case entry in `benchmarks/_cases/` |
 
 The steps below take `GEMMFwdOp`, the simplest matmul, through all six places.
 
@@ -89,16 +89,19 @@ class GEMMFwdOp(Op):
 
     def forward(self, a, b):                          # the generated checks have run
         a, b = a.contiguous(), b.contiguous()         # handed over as the spec declares it
-        m, k = (a.shape[1], a.shape[0]) if self.trans_a else a.shape
-        call = GEMMCall(                              # what this call is
-            m=m,
-            n=b.shape[0] if self.trans_b else b.shape[1],
-            k=k,
-            dtype=a.dtype,
-            trans_a=self.trans_a,
-            trans_b=self.trans_b,
-            device=a.device,
-        )
+
+        def call() -> GEMMCall:                       # what this call is
+            m, k = (a.shape[1], a.shape[0]) if self.trans_a else a.shape
+            return GEMMCall(
+                m=m,
+                n=b.shape[0] if self.trans_b else b.shape[1],
+                k=k,
+                dtype=a.dtype,
+                trans_a=self.trans_a,
+                trans_b=self.trans_b,
+                device=a.device,
+            )
+
         return self.kernel_for("gemm", call)(a, b)
 
     def roof_key(self):                               # FLOPs priced on tensor cores
@@ -110,7 +113,7 @@ class GEMMFwdOp(Op):
 | 1 | `__init__` | the names, order and defaults in `signature.params`, then the keyword-only `target`; it assigns each manifest parameter to the attribute of the same name, then calls `super().__init__(target=target)` |
 | 2 | `kernel_types` | the Kernel classes that can serve the op, each under a key |
 | 3 | `interfaces` | one entry per kernel call the op makes, mapping the name `kernel_for` uses to the `KernelInterface` class that the implementations serving that call inherit |
-| 4 | `forward` | the parameters: the order of `signature.inputs`, with optional inputs last and defaulting to `None`; the body: making the inputs contiguous, building the call spec, fetching the kernel and calling it |
+| 4 | `forward` | the parameters: the order of `signature.inputs`, with optional inputs last and defaulting to `None`; the body: making the inputs contiguous, writing the function that builds the call spec, fetching the kernel and calling it |
 | 5 | `roof_key` | optional: the hardware unit whose peak prices the op's FLOPs; the default is fp32 on CUDA cores, and the member is written only when the op uses another unit |
 
 `_infer_output_shapes` and `eval_roofline` are generated from the spec and are not
@@ -119,8 +122,8 @@ written by hand.
 `forward` is the op's computation and the only method that carries it. A caller writes
 `op(a, b)`, never `op.forward(a, b)`: `Op.__call__` runs the generated checks and then
 `forward`. An op whose spec has a call-time tensor input and no `composition` gets a
-compile boundary generated for it, and `__call__` runs `forward` behind the generated
-operator. How that works is in [Bringing an op into torch.compile](torch-compile.md).
+compile boundary generated for it, and `__call__` runs `forward` through it: a plain eager
+call directly, any other call inside the generated operator. How that works is in [Bringing an op into torch.compile](torch-compile.md).
 
 The constructor takes no tuning parameter. To tune, construct the op, then call
 `op.request_tune()`.
@@ -142,11 +145,14 @@ before is returned from the table, and otherwise the kernel is built and stored.
   `BatchNormFwdOp` has `batch_norm_fwd_train` and `batch_norm_fwd_infer`, which return
   different things. A kernel that is faster on some shape range or some architecture
   is another implementation of the existing kernel interface.
-- **`call`**: a frozen `CallSpec` subclass carrying the facts needed to select an
-  implementation and build the kernel: shapes, the dtype, the op's semantic parameters,
-  and the device. It must be the type the kernel interface names in `request`. The
-  dispatcher derives the device facts (`arch`, `sm_count`, `calibration`,
-  `smem_budget`) from `call.device` on a cache miss; the caller does not fill them in.
+- **`call`**: a function of no argument that returns the call spec, a frozen `CallSpec`
+  subclass carrying the facts needed to select an implementation and build the kernel:
+  shapes, the dtype, the op's semantic parameters, and the device. The spec must be the
+  type the kernel interface names in `request`. The dispatcher derives the device facts
+  (`arch`, `sm_count`, `calibration`, `smem_budget`) from the spec's `device` on a cache
+  miss; the caller does not fill them in. The call's Op plan holds the spec, so `call`
+  runs only on the first call of each specialization, and a repeated specialization gets
+  its entry without building a spec or looking one up.
 
 The op calls the returned kernel with the parameters of the kernel interface's
 abstract `forward`, in that order.

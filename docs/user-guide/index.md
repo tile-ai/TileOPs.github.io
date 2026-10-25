@@ -1,6 +1,6 @@
 # User Guide
 
-## Getting started
+## Developing TileOPs
 
 - [Development guide](development.md)
   Getting the code, setting up the dev image or a local environment, running the

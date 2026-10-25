@@ -16,7 +16,7 @@
 
 | No. | 主题 | 指南 |
 | --- | --- | --- |
-| 1 | • 新增一个 op 的步骤：manifest 条目、op 类的成员、`kernel_for` 的参数<br>• 注册、测试与 benchmark | [添加一个新 op](../../new-op.md) |
+| 1 | • 新增一个 op 的步骤：manifest 条目、op 类的成员、`kernel_for` 的参数<br>• 注册、测试与 benchmark | [添加新 op](../../new-op.md) |
 | 2 | • 在 `torch.compile` 中调用 op<br>• 编译边界的生成条件与冷编译要求<br>• custom op 与 fake 的生成 | [接入 torch.compile](../../torch-compile.md) |
 | 3 | • kernel 接口与实现的选择<br>• 新增 kernel<br>• backend 接入 | [op 如何选择 kernel](../dispatch/index.md) |
 | 4 | • manifest 条目的格式<br>• 从签名生成的检查 | [读写 manifest](../manifest/index.md) |
@@ -81,7 +81,7 @@ op 实例构造一次，调用多次：
 - **步骤编号：** 构造阶段的「第 n 步」对应[构造与调用 § 构造](lifecycle.md#construct)表 1；调用与结束阶段的「第 n 步」对应[构造与调用 § 一次调用的七步](lifecycle.md#serve)表 3。
 - **`opt` 框**只在条件成立时执行；**`alt` 框**按条件执行其中一个分支。
 - **`kernel_for` 只画到「构造 entry」。** 选择实现的细节见 [op 如何选择 kernel § 一次调用如何找到 kernel](../dispatch/index.md#call-path)。
-- **图中只画以普通张量进行的 eager 调用。** 以 meta 张量 eager 调用有编译边界的 op 时，生成的 fake 运行签名检查，不进入 `_run_call`；被 trace 时，没有编译边界的 op 跳过签名检查，有编译边界的 op 由 fake 运行签名检查，也不进入 `_run_call`。两者见[构造与调用 § 调用入口](lifecycle.md#entry)。
+- **图中只画以普通张量进行的 eager 调用。** 以 meta 张量 eager 调用有编译边界的 op 时，生成的 fake 运行签名检查，不进入 `_execute`；被 trace 时，没有编译边界的 op 跳过签名检查，有编译边界的 op 由 fake 运行签名检查，也不进入 `_execute`。两者见[构造与调用 § 调用入口](lifecycle.md#entry)。
 
 **表 3** 各阶段中基类与子类的分工
 
@@ -89,9 +89,9 @@ op 实例构造一次，调用多次：
 | --- | --- | --- | --- |
 | 1 | 类定义 | • 从 manifest 条目生成签名检查、输出 shape 推导；条目提供 `roofline` 时生成 `eval_roofline`<br>• 条目有调用期张量输入、且没有 composition 时，生成 custom op，即编译边界<br>• 记下 manifest 参数的名字，调用 target 的 builder 时按这些名字传参 | • 有 manifest 条目的 op 类，类名与条目的 key 相同；中间基类可以没有条目<br>• 声明 `kernel_types`、`interfaces`、`delegate_types` |
 | 2 | 构造 | `Op.__init__` 先保存 `target`，再依次：<br>1. 加载 backend 注册表<br>2. 按 manifest 检查参数取值<br>3. 安装实现表并检查契约<br>4. 登记实例<br>5. 建立实例状态字段 | • 直接继承 `Op` 的：把 manifest 参数赋给同名属性，再调用 `super().__init__(target=target)`<br>• 经过 family 基类的：按 family 基类的签名传参，由它最终调用 `Op.__init__`<br>• 之后建立派生属性与子 op |
-| 3 | 调用：进入本体之前 | 1. 检查调用是否符合 manifest 签名。<br>2. 如果这次调用要写的张量都没有元素，就不运行 kernel，直接按签名返回结果。<br>3. 如果实例还没有 target，按调用设备选定一个。 | — |
-| 4 | 调用：执行 | • 空写时按签名构造结果<br>• 否则，有 target 的 builder 时运行 target 的 kernel，没有时运行子类的本体<br>• 本体调用 `kernel_for` 时：查缓存，未命中时选择实现、构造 entry<br>• 本体调用 `delegate_for` 时：构造或返回持有的子 op | • `forward`<br>• 在其中调用 `kernel_for(interface, call)` 与 `delegate_for(stage, identity, ...)` |
-| 5 | 调用：本体返回之后 | • 检查返回值<br>• 把子 op 的调用归入 stage<br>• 保存调用记录 `last_call` | — |
+| 3 | 调用：进入 `forward` 之前 | 1. 在特化的第一次调用时检查调用是否符合 manifest 签名，并把结论保存在 Op plan 中；同一特化之后的调用复用它。<br>2. 如果这次调用要写的张量都没有元素，就不运行 kernel，直接按签名返回结果。<br>3. 如果实例还没有 target，按调用设备选定一个。 | — |
+| 4 | 调用：执行 | • 空写时按签名构造结果<br>• 否则，有 target 的 builder 时运行 target 的 kernel，没有时运行子类的 `forward`<br>• `forward` 调用 `kernel_for` 时：返回 plan 保存的 entry；特化的第一次调用时构造 call spec、查缓存，未命中时选择实现、构造 entry<br>• `forward` 调用 `delegate_for` 时：构造或返回持有的子 op | • `forward`<br>• 在其中调用 `kernel_for(interface, call)` 与 `delegate_for(stage, identity, ...)` |
+| 5 | 调用：`forward` 返回之后 | • 检查返回值<br>• 把子 op 的调用归入 stage<br>• 提交调用记录，供 `last_call` 读取 | — |
 | 6 | 调用失败 | • 丢弃这次调用的记录，`last_call` 不变<br>• target 在这次调用中选定时：撤销 target，丢弃已构造的 kernel，逐层撤销子 op 的绑定<br>• target 在之前的调用中选定时：target、kernel 与子 op 都保留 | — |
 
 表 3 的说明：
@@ -117,7 +117,7 @@ op 实例构造一次，调用多次：
 由此得到子类遵守的三条规则：
 
 1. **不重复检查。** 子类不重复签名已经声明的检查，也不检查设备类型。
-    - 本体运行时，签名检查已经通过。
+    - `forward` 运行时，签名检查已经通过。
     - kernel 自己声明能在哪些设备上运行。
 1. **不自建缓存。** 子类不维护 kernel 缓存，也不以某个属性是否为空来决定是否构造 kernel；缓存由 `kernel_for` 负责。
 1. **子 op 只经 `delegate_for` 持有。** 未经持有的子 op 完成调用时，父调用报错。
@@ -149,14 +149,14 @@ op 实例构造一次，调用多次：
 | 2 | `kernel_types`、`interfaces` | 子类的 kernel 接口与实现 | [构造与调用 § kernel 缓存](lifecycle.md#kernel) |
 | 3 | `injected_parameters` | • manifest validator 的白名单：构造函数在 manifest 参数与执行策略之外允许的参数名<br>• 参数本身由 family 定义和使用，不是基类的扩展机制 | [构造与调用 § 构造](lifecycle.md#construct) |
 | 4 | `dtype` | • 基类声明的默认值 `None`<br>• 接收 `dtype` 构造参数的子类覆盖它 | [构造与调用 § 构造](lifecycle.md#construct) |
-| 5 | `forward` | 计算本体，每个 op 都只写这一个方法；有编译边界时，基类经生成的 `_call_boundary` 在 custom op 内运行它 | [构造与调用 § 调用入口](lifecycle.md#entry) |
-| 6 | `kernel_for(interface, call)`、`key_for(interface, call)` | • `kernel_for` 取得服务这次调用的 entry<br>• `key_for` 只返回选中实现的 key，不构造 entry；测试用它检查选择结果 | [构造与调用 § kernel 缓存](lifecycle.md#kernel) |
+| 5 | `forward` | 计算本体，每个 op 都只写这一个方法；基类在 `_execute` 中运行它，有编译边界时由生成的 `_call_boundary` 直接或经 custom op 进入 `_execute` | [构造与调用 § 调用入口](lifecycle.md#entry) |
+| 6 | `kernel_for(interface, call)`、`call_spec(interface, call)`、`key_for(interface, call)` | • `kernel_for` 取得服务这次调用的 entry，`call` 是返回 call spec 的函数<br>• `call_spec` 返回 plan 保存的 call spec，供需要读取它的 `forward` 使用<br>• `key_for` 只返回选中实现的 key，不构造 entry；测试用它检查选择结果 | [构造与调用 § kernel 缓存](lifecycle.md#kernel) |
 | 7 | `delegate_types`、`delegate_for(stage, identity, ...)` | 声明并持有子 op | [组合 op](composite.md) |
 | 8 | `roof_key()`、`eval_roofline_read_bytes()`、`roofline_data_terms()` | roofline 中可由子类覆盖的部分 | [调用记录与调优 § roofline](records.md#roofline) |
 
 **内部实现：**
 
-- 包括 `_run_call`、`_reset_binding`、调用栈，以及生成签名检查的 `_SignaturePlan`、生成编译边界的 `_CompileBoundary`。
+- 包括 `_execute`、Op plan `_plans`、`_reset_binding`、调用栈，以及生成签名检查的 `_SignaturePlan`、生成编译边界的 `_CompileBoundary`。
 - 这些成员以下划线开头，子类不调用，也不覆盖。
 - 见[构造与调用](lifecycle.md)与[类结构与实例状态](structure.md)。
 

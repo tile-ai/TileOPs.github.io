@@ -1,4 +1,4 @@
-# 接入新的硬件 backend
+# 接入新硬件 backend
 
 TileLang 是支持多种 backend 的 DSL，每种硬件各有一套独立的 kernel，由各自的 Python 包发行。TileOPs 因此定义了一套协议：仓库之外的 Python 包可以接管某个 op 的 kernel，取代 in-tree 实现，且不必修改 TileOPs 的任何代码。
 
@@ -8,7 +8,7 @@ TileLang 是支持多种 backend 的 DSL，每种硬件各有一套独立的 ker
 
 本页讲的是 target，即接管整个 op 的那种接入方式。前半部分按实现顺序说明 backend 作者要做的事：
 
-1. 要写的四样东西；
+1. 要做的四件事；
 2. 协议中的四个函数；
 3. 一次调用如何走到这些函数；
 4. 一个可直接安装运行的 backend；
@@ -27,7 +27,7 @@ TileLang 是支持多种 backend 的 DSL，每种硬件各有一套独立的 ker
 
 ## 接入方式 {#extend}
 
-一个仓库之外的包通过 target 接管 op 的全部调用。target 遵守的是 op 在 manifest 中的签名，backend 为它写一个 `build_kernel`。TileOPs 各 op 的 kernel 接口与 call spec 不是公开 API，backend 不为单个 kernel 接口新增实现，见 [backend 如何接入](user-guide/dispatch/backends.md)。
+一个仓库之外的包通过 target 接管 op 的全部调用。target 遵守的是 op 在 manifest 中的签名，backend 为它写一个 `build_kernel`。TileOPs 各 op 的 kernel 接口与 call spec 不是公开 API，backend 不为单个 kernel 接口新增实现，见 [backend 如何接入](user-guide/dispatch/backends.md)。backend 可以导入的公开模块列在 [API 稳定性](stability.md)。
 
 ## 写一个 backend 要做的四件事
 
@@ -44,7 +44,7 @@ TileLang 是支持多种 backend 的 DSL，每种硬件各有一套独立的 ker
 2. 一次调用如何走到它们；
 3. 一个按这四步写成、可直接安装运行的[完整 backend](#runnable)。
 
-之后逐个 op 增加 `build_kernel`。**目标模型用到的、自己构造 kernel 的 op 必须全部覆盖**：缺少任何一个都会报错，不会改用 in-tree 实现，因为 in-tree kernel 在该 target 的设备上无法启动。只调用子 op 的复合 op 不需要 builder。
+之后逐个 op 增加 `build_kernel`。**目标模型用到的、自己构造 kernel 的 op 必须全部覆盖**：缺少任何一个都会报错，不会改用 in-tree 实现，因为 in-tree kernel 在该 target 的设备上无法启动。只调用子 op 的组合 op 不需要 builder。
 
 ## 协议中的四个函数
 
@@ -147,7 +147,7 @@ def register_device_facts(device_type: str, read: Callable[[torch.device], Devic
 | 未注册的类型，如 `cpu` | 没有设备事实：`arch=-1, sm_count=0, smem_budget=0` |
 
 - 读取设备事实的是按架构、SM 数或共享内存选择的实现。声明了 `supported_archs` 的实现在未注册的设备类型上永远不可用。
-- 只服务整个 op 的 target 不需要注册：target 的 kernel 自己决定怎么选。
+- 只服务整个 op 的 target 不需要注册：target 的 kernel 自行决定如何选择。
 - 按设备类型注册，与 target 无关：同一种设备上有多个 target 时，只由一个包注册。重复注册、注册 `cuda` 都报 `BackendError`。
 - `arch` 只在同一种设备类型内可比，所以声明 `supported_archs` 的实现，其 `devices` 只能有一种设备类型。
 - `read` 收到的设备：设备是进程 accelerator 的类型时，op 层先补上设备序号；`cpu` 这类不编号的设备原样传入。
@@ -458,7 +458,7 @@ decode 路径会被 CUDA graph 捕获，因此各阶段允许执行的操作规�
 
 ## 安装之后：三种状态 {#three-states}
 
-`detect` 认领某一类设备之后，该设备上的**所有** op 都由这个 target 服务，缺少其中任何一个都会报错，不会改用 in-tree 实现。唯一的例外是不自己构造 kernel 的复合 op。
+`detect` 认领某一类设备之后，该设备上的**所有** op 都由这个 target 服务，缺少其中任何一个都会报错，不会改用 in-tree 实现。唯一的例外是不自己构造 kernel 的组合 op。
 
 不回退的理由是：选中一个 target 意味着这块设备属于另一套硬件，in-tree kernel 在它上面无法启动。回退会把一条明确的「该 target 未实现此 op」错误变成一次难以诊断的启动失败。
 
@@ -468,7 +468,7 @@ decode 路径会被 CUDA graph 捕获，因此各阶段允许执行的操作规�
 | --- | --- |
 | 该 target 为这个 op 注册了 `build_kernel` | 正常执行，整个 op 由 target 服务 |
 | 没有注册，且 op 自己构造 kernel | 报错，指出这个 target 没有为该 op 注册 builder，且不会改用 in-tree 实现 |
-| 没有注册，且 op 是复合 op | op 照常执行它的组合，每个子 op 各自选定 target |
+| 没有注册，且 op 是组合 op | op 照常执行它的组合，每个子 op 各自选定 target |
 
 因此，覆盖目标模型用到的每一个 op 是 backend 一侧的工作。op 一侧的前提由设计保证：op 层按本次调用的输入为外部路径计算记忆键（见[一次调用如何走到 `build_kernel`](#from-op-layer)）。
 
@@ -510,7 +510,7 @@ OpNotAvailableError: RMSNormFwdOp's in-tree kernels do not run on cpu; known tar
 
 `BUILTIN` 显式绕过所有 backend。in-tree 实现无法在 CPU 张量上运行，这条错误展示的正是「不改用 in-tree 实现」这条规则所要避免的后果。
 
-**backend 包 import 失败**时，TileOPs 跳过它并发出一条警告，同时把原因收入 `load_failures()`。单个损坏的插件不会导致 TileOPs 无法导入。如果注册过程中途抛出异常，该 backend 本次注册的内容会**全部回滚**，注册表中不会留下只完成一半注册的 target。
+**backend 包 import 失败**时，TileOPs 跳过它并发出一条警告，同时把原因收入 `load_failures()`。单个损坏的 backend 包不会导致 TileOPs 无法导入。如果注册过程中途抛出异常，该 backend 本次注册的内容会**全部回滚**，注册表中不会留下只完成一半注册的 target。
 
 ```python
 from tileops.backend import load_failures
@@ -626,7 +626,7 @@ op 层如何查表、未命中时如何调用 `build_kernel`，见[一次调用�
 
 由此得出两点：
 
-- **条目不一定一直保留。** 一次调用失败时，op 会撤销它的 target 判定并清空记忆表。backend 不得假设自己返回的可调用对象一直存活，它所依赖的资源应由它自己持有引用。
+- **条目不一定一直保留。** 选定 target 的那次调用失败时，op 撤销这次选择并清空记忆表。backend 不得假设自己返回的可调用对象一直存活，它所依赖的资源应由它自己持有引用。
 - **需要更细或更粗的粒度时，都在 backend 一侧解决。** 更细的区分在 backend 内部处理；需要减少重建次数时，在 `build_kernel` 内部另加一层缓存。
 
 ## 调用方可用的接口

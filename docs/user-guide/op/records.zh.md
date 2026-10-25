@@ -11,6 +11,7 @@
 
 `op.last_call` 返回最近一次完成调用的记录 `SignatureCall`：
 
+- 完成的调用提交它的记录；`last_call` 在第一次读取时由记录构造 `SignatureCall`，在下一次调用完成之前每次读取都返回同一个对象；
 - 还没有调用完成时，它抛出 `RuntimeError`；
 - 失败的调用不替换记录，见[构造与调用 § 失败与撤销](lifecycle.md#failure)。
 
@@ -29,7 +30,7 @@
 
 使用记录时注意：
 
-- **记录对外按不可变对象使用。** `stages` 在记录成为 `last_call` 之前写入一次。
+- **记录对外按不可变对象使用。** `stages` 在第一次读取、构造记录时写入一次。
 - **`metadata` 保存的是张量引用，不是拷贝。**
     - `metadata_values(name)` 在被调用时才读取张量内容，所以调用过程中不需要同步到 host。
     - 调用方之后修改这些张量，早先记录读到的值也会随之改变。
@@ -71,7 +72,7 @@
 
 调用路径不用这三个方法取得 kernel：
 
-- in-tree 本体通过 `kernel_for` 取得；target 路径由基类按缓存键查找。
+- `forward` 通过 `kernel_for` 取得；target 路径由基类按缓存键查找。
 - 二者在缓存未命中时选择并构造 kernel，不因未命中而报错。
 - 调用或实现不符合要求时仍会报错，见[构造与调用 § kernel 缓存](lifecycle.md#kernel)。
 
@@ -86,6 +87,6 @@
 - **`request_tune()`：** 进入调优模式的唯一方式，op 与 kernel 都不接收 `tune` 构造参数。它把 op 及其持有的子 op 置为调优模式。
     - 对已构造的每个 kernel 调用 `Kernel.request_tune()`：程序已构建的 kernel 立即调优，尚未构建的在构建程序的那次启动时调优；没有 `autotune_configs` 的 kernel 不调优。
     - 之后构造的 entry，基类构造后立即对其中每个 `Kernel` 调用 `request_tune()`。
-- **target：** target 构造的 kernel 可选定义 `request_tune()`。`request_tune()` 对已构造的每个 target kernel，在它所属的每个设备上各调用一次，调用时该设备是当前设备；之后构造的 target kernel 在首次调用之前调用。kernel 没有定义它时发出警告，每个实例只警告一次。约定见[接入新的硬件 backend § build_kernel](../../backends.md#build-kernel)。
+- **target：** target 构造的 kernel 可选定义 `request_tune()`。`request_tune()` 对已构造的每个 target kernel，在它所属的每个设备上各调用一次，调用时该设备是当前设备；之后构造的 target kernel 在首次调用之前调用。kernel 没有定义它时发出警告，每个实例只警告一次。约定见[接入新硬件 backend § build_kernel](../../backends.md#build-kernel)。
 - **子类覆盖：** 以上是基类的行为，子类可以覆盖。`GEMMW4A16FwdOp` 不支持通用调优：覆盖 `request_tune()`，发出警告，改用自己校准过的选择。
 - **`kernel_config()`：** 返回 op 自己的配置；没有时，先在 `iter_kernels()` 枚举的 kernel 中、再在 target 构造的 kernel 中，返回第一个非空的 `config`。

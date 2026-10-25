@@ -32,7 +32,7 @@ reason to be at construction; none of them selects or builds a kernel.
 | 2 | Check the parameter values against the manifest, and keep the solved values as `_construction_indices` | • The parameters are settled at construction, so their errors are reported there<br>• Every call uses the solved values, so they are solved once |
 | 3 | Install the implementation table and check the contracts, see [§ 4](#target); this also builds the two entry caches `_entries_by_call` and `_built_entries`, both empty | • The result depends on the op class's `kernel_types` and the registry, and does not change for an instance<br>• It resolves classes only and needs no device |
 | 4 | Register the instance and get its instance key | • The compile boundary's custom ops look the instance up by this string key<br>• The key must exist before tracing, as a compile-time constant, and is never reused |
-| 5 | Build the binding group's `_target_kernels` and the running group's `_delegates`, `_delegate_stages` and `_effect_branches`, all empty; see [Class structure and instance state § Instance state](structure.md#state) | The base class reads and writes these fields without asking whether they exist |
+| 5 | Build the binding group's `_target_kernels`, the construction group's lock `_building`, and the running group's `_delegates`, `_delegate_stages`, `_effect_branches` and `_plans`, all empty; see [Class structure and instance state § Instance state](structure.md#state) | The base class reads and writes these fields without asking whether they exist |
 
 Selecting an implementation and building a kernel wait until the call, when the tensors'
 dtypes, shapes and device are known: with in-tree kernels, `kernel_for` selects the
@@ -94,19 +94,20 @@ Exceptions and additions:
 
 ## 2. Call entry points {#entry}
 
-Every eager call that runs an implementation passes through `Op._run_call(inputs, body)`:
+Every eager call that runs an implementation passes through one executor, `Op._execute`:
 
-- `body` is the subclass's computation `forward`, the one method every op writes;
-- how the call reaches `_run_call` depends on whether the subclass has a compile boundary.
+- it runs the subclass's computation `forward`, the one method every op writes, or the
+  target's kernel;
+- how the call reaches `_execute` depends on whether the subclass has a compile boundary.
 
 **Table 2** Call entry points
 
-| No. | Entry point | Applies to | How it reaches `_run_call` | `body` |
-| --- | --- | --- | --- | --- |
-| 1 | `op(...)` | ops with a compile boundary | `__call__` calls the generated `_call_boundary`, which reaches `_run_call` through the custom op | `forward` |
-| 2 | `op(...)` | ops without a compile boundary | `__call__` binds the arguments by `forward`'s signature, then calls `_run_call` | `forward`, arguments passed by name |
-| 3 | an eager `op(...)` on meta tensors | ops with a compile boundary | • Does not reach it<br>• The generated fake runs the signature check, keeps the call record, and builds the result from the signature | — |
-| 4 | a traced `op(...)` | ops without a compile boundary | • Does not reach it, and runs no signature check<br>• Calls the target's kernel when a target already serves the instance, and `forward` otherwise<br>• A composite's sub-ops' custom ops become nodes of the graph: tracing runs their fakes, and `_run_call` is reached when the graph's nodes run | — |
+| No. | Entry point | Applies to | How it reaches `_execute` |
+| --- | --- | --- | --- |
+| 1 | `op(...)` | ops with a compile boundary | `__call__` calls the generated `_call_boundary`:<br>• a plain eager call with no execution argument runs `_execute` directly, below the in-place bookkeeping, and bumps the version of each argument it writes<br>• any other call, such as one autograd or another dispatcher mode has to see, reaches `_execute` as the custom op's eager body |
+| 2 | `op(...)` | ops without a compile boundary | `__call__` splits the arguments by `forward`'s signature, then calls `_execute` |
+| 3 | an eager `op(...)` on meta tensors | ops with a compile boundary | • Does not reach it<br>• The generated fake runs the signature check, keeps the call record, and builds the result from the signature |
+| 4 | a traced `op(...)` | ops without a compile boundary | • Does not reach it, and runs no signature check<br>• Calls the target's kernel when a target already serves the instance, and `forward` otherwise<br>• A composite's sub-ops' custom ops become nodes of the graph: tracing runs their fakes, and `_execute` is reached when the graph's nodes run |
 
 Notes on Table 2:
 
@@ -127,8 +128,8 @@ Notes on Table 2:
   instance; the limits on the traced path: with a compile boundary what is traced is the
   generated `_call_boundary`, and for a composite op without one it is `forward`) are in
   [Bringing an op into torch.compile](../../torch-compile.md).
-- **One implementation:** a call that runs an implementation has one entry point, so the
-  check, the record and the failure handling exist once.
+- **One executor:** a call that runs an implementation runs `_execute`, whichever route
+  reaches it, so the check, the record and the failure handling exist once.
 
 ## 3. The seven steps of a call {#serve}
 
@@ -139,13 +140,26 @@ Where the seven steps sit in time is shown in Figure 1 of
 
 | No. | Step | What happens |
 | --- | --- | --- |
-| 1 | Begin the call | • Push the current thread's call stack<br>• Collect the calls sub-ops complete during this call |
-| 2 | Check the signature | Run the checks `_SignaturePlan` generated, which produce this call's record, a `SignatureCall` |
-| 3 | Detect an empty write | When there is at least one write and every write holds no elements, run no implementation and build the result from the signature |
+| 1 | Begin the call | • Observe the call's specialization and look up its plan in `_plans`<br>• Push the current thread's call stack<br>• Collect the calls sub-ops complete during this call |
+| 2 | Check the signature | • On a plan miss: run the checks `_SignaturePlan` generated, and hold what they decide as the plan<br>• On a hit: reuse the plan and run no check again |
+| 3 | Detect an empty write | When the plan says there is at least one write and every write holds no elements, run no implementation and build the result from the signature |
 | 4 | Select the target | Select one when the instance has none yet and this call needs to run an implementation; see [§ 4](#target) |
-| 5 | Run | Run one of the three: the empty-write result, the target's kernel, or `body` |
-| 6 | Check the result | Check the return value against the signature |
-| 7 | Record | 1. Write the sub-ops' calls into the record's `stages`, by stage<br>2. Pop the call stack<br>3. Keep it as `last_call`<br>4. Report it to the enclosing call |
+| 5 | Run | Run one of the three: the empty-write result, the target's kernel, or `forward` |
+| 6 | Check the result | Check the return value with the plan's result check, on every call: the returned structure, each output's shape, dtype, device and layout, and the identities of `out` and the written inputs |
+| 7 | Record | 1. Pop the call stack<br>2. File the sub-ops' records under their stages<br>3. Commit the call's record as `_last_call`<br>4. Report it to the enclosing call |
+
+The plan (the Op plan):
+
+- **What it is keyed by:** the call's specialization, that is, everything the checks read:
+  each tensor's layout, dtype, device and presence, the params, the construction-time
+  tensors, the execution arguments, and the current device of a call no input places.
+- **What it holds:** the checked call's facts, the effect branch, the result check, whether
+  the call writes no element, and the call specs `forward` built
+  (see [§ 5](#kernel)); it holds no tensor of any call.
+- **How long it lives:** `_plans` holds up to 256 plans, oldest out first; an evicted
+  specialization is checked again on its next call.
+- **What is not reused:** the result check, the version bumps, the sub-op collection and the
+  record run on every call.
 
 The signature check and dtypes:
 
@@ -176,7 +190,7 @@ Once selected:
 - **No backend claims the device:** the in-tree kernels run, and `serving_target` is
   `BUILTIN`.
 - **A backend claims it:** the kernel built by the builder this target registered for the op
-  runs, and the subclass's `body` does not.
+  runs, and the subclass's `forward` does not.
     - The base class calls the builder with arguments in `signature.inputs` order: a
       `TensorSpec` for an input that is present, `None` for an optional input that is not.
     - The manifest parameters on the instance are passed by keyword; see
@@ -197,7 +211,7 @@ The call's device is settled by the signature check, taken from the first of:
 When the process has no accelerator either, and there is no constructor argument or process
 default target, the base class has nothing to select from:
 
-- this call runs the in-tree body; with the call device unknown, no in-tree implementation
+- this call runs `forward`; with the call device unknown, no in-tree implementation
   is available, and selecting one raises `OpNotAvailableError`;
 - the instance still has no target, and the next call selects again.
 
@@ -269,7 +283,8 @@ example:
 `register_kernel_builder` registers a builder that builds the target's kernel directly,
 without selecting among kernel types; see [§ 4](#target).
 
-A subclass gets a kernel through `self.kernel_for(interface, call)`:
+A subclass gets a kernel through `self.kernel_for(interface, call)`, where `call` is a
+function of no argument that returns the call spec:
 
 - how to write the arguments is in
   [Adding a new op § kernel_for](../../new-op.md#kernel-selection);
@@ -280,10 +295,17 @@ A subclass gets a kernel through `self.kernel_for(interface, call)`:
 
 1. **Confirm the interface.**
     - When `interface` is not in `interfaces`, it raises `OpNotAvailableError`.
+    - When `call` is not callable, it raises `TypeError`.
+1. **Reuse the plan's request.**
+    - Inside a call with a plan, the plan holds each request `forward` made, in request
+      order, matched by interface and by the code of `call`.
+    - `call` runs only when the plan lacks the request, that is, on the specialization's
+      first call; a request that already resolved to an entry returns that entry.
+    - Outside a call, such as in a traced `forward`, `call` runs on every request.
+1. **Look up by call.**
     - When the call spec gives no device and the process has an accelerator, the base class
       fills in the accelerator's current device, so the cache key names a device.
-1. **Look up by call.**
-    - `_entries_by_call` is keyed by `(interface, call)`.
+    - `_entries_by_call` is keyed by `(interface, call spec)`.
     - Equal call specs describe the same call: a hit is one lookup and reads no device
       property.
 1. **Check the call spec.** On a miss, it raises `TypeError` unless all of these hold:
@@ -309,9 +331,12 @@ Further notes:
   `entry_for` returns.
 - **Only the implementation knows the identity:** a subclass defines no identity and keeps no
   cache of its own.
-- **Only the base class holds entries:** in its body, a subclass receives the entry
+- **Only the base class holds entries:** in `forward`, a subclass receives the entry
   `kernel_for` returns in a local variable and does not store it on the instance; the next
-  call gets it through `kernel_for` again, and a cache hit is one lookup.
+  call gets it through `kernel_for` again, which returns the entry the plan holds.
+- **Reading the call spec in `forward`:** a `forward` that needs the spec's facts itself,
+  such as a buffer size, gets the spec with `call_spec(interface, call)`, which the plan
+  holds the same way, then passes `lambda: spec` to `kernel_for`.
 
 ## 6. Failure and undo {#failure}
 

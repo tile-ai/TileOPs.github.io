@@ -84,9 +84,9 @@ sub --> caller : op 实例；没有选择或构造任何 kernel
 caller -> base : y = op(x, weight)，即 Op.~__call~__
 alt 有编译边界（compile_op_names 非空）
   base -> cop : 生成的 _call_boundary(...)
-  cop -> base : 按 _instance_key 找回实例，\n_run_call(inputs, forward)
+  cop -> base : 按 _instance_key 找回实例，\n_execute(inputs, writes)
 else 没有编译边界
-  base -> base : 按 forward 的签名拆分参数，\n_run_call(inputs, forward)
+  base -> base : 按 forward 的签名拆分参数，\n_execute(inputs, writes)
 end
 activate base
 base -> base : 第 1 步　开启调用：压入调用栈
@@ -143,7 +143,7 @@ base -> plan : 第 6 步　按签名检查返回值
 
 alt 成功
   base -> base : 第 7 步　子 op 的记录按 stage 写入 stages；弹出调用栈；\n保存为 last_call；报告给外层调用
-  base --> caller : 结果，经进入 _run_call 的各层调用者逐层返回
+  base --> caller : 结果，经进入 _execute 的各层调用者逐层返回
 else 任一步抛出 Exception
   base -> base : 弹出调用栈，丢弃这次调用的记录；last_call 不变
   opt target 在这次调用的第 4 步选定

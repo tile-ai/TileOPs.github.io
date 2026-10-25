@@ -6,9 +6,9 @@ A benchmark for a manifest op centers on one call:
 bench.Runner(op, case).compare(implementations)
 ```
 
-Here, `op` is the TileOps implementation, which appears as `tileops` in the report.
+Here, `op` is the TileOPs implementation, which appears as `tileops` in the report.
 `case` represents one workload call from the manifest and comes from `bench.cases(Op)`.
-`implementations` contains the other implementations you want to compare with TileOps.
+`implementations` contains the other implementations you want to compare with TileOPs.
 
 Before timing begins, `compare()` checks each implementation against the case's
 reference. It then writes one report row for each implementation. The four public
@@ -19,7 +19,7 @@ interfaces are defined in
 | --- | --- | --- |
 | `bench.cases(Op)` | function | Creates a list of `bench.Case` objects from the op's manifest workload rows. |
 | `bench.Case` | class | Holds the inputs, op constructor arguments, reference, numerical check, and copy policy for one benchmark. |
-| `bench.Runner` | class | Checks, times, and records the TileOps implementation and the implementations being compared with it. |
+| `bench.Runner` | class | Checks, times, and records the TileOPs implementation and the implementations being compared with it. |
 | `bench.Implementation` | class | Describes an implementation that needs private arguments or state restoration, or cannot be compared numerically. |
 
 To write a benchmark, you usually add a test function in `benchmarks/ops/`, register a
@@ -28,7 +28,7 @@ next three sections walk through these steps.
 
 ## Example {#example}
 
-This example compares TileOps batched matmul with vLLM, SGLang, and PyTorch/cuBLAS:
+This example compares TileOPs batched matmul with vLLM, SGLang, and PyTorch/cuBLAS:
 
 ```python
 import pytest
@@ -162,7 +162,7 @@ vendor = bench.Implementation(
 
 `Runner` times this implementation as usual and checks that it leaves the shared inputs
 unchanged, but skips the numerical check. The report records the reason and omits the
-ratio against TileOps. An empty reason, or this field on the TileOps implementation,
+ratio against TileOPs. An empty reason, or this field on the TileOPs implementation,
 causes an error before timing.
 
 Use this field only for differences in semantics. A numerical error beyond tolerance
@@ -172,18 +172,18 @@ is a failed check, not a semantic difference.
 
 ![The order bench.Runner.compare() runs in](img/execution.svg)
 
-`compare()` gets the TileOps implementation from the binder and converts each comparison
+`compare()` gets the TileOPs implementation from the binder and converts each comparison
 implementation to a `bench.Implementation`. It then checks correctness, times the
 implementations, aggregates the samples, computes the roofline, and writes the report.
 
 ### Correctness check {#verify}
 
-`case.reference` runs once per `compare()` and produces the expected result. TileOps
+`case.reference` runs once per `compare()` and produces the expected result. TileOPs
 and every other implementation are checked against that result, rather than
 against one another:
 
 ```text
-TileOps op  ↔ case.reference
+TileOPs op  ↔ case.reference
 vLLM        ↔ case.reference
 SGLang      ↔ case.reference
 ```
@@ -212,7 +212,7 @@ Two kinds of implementation are never checked numerically:
 - An implementation with `noncomparable_reason` set; see
   [Implementations that are not numerically comparable](#noncomparable).
 - The reference itself, when `run` is `case.reference`, `args` is `None`, and there is
-  no `reset`. Checking it against itself would prove nothing, so it inherits the TileOps
+  no `reset`. Checking it against itself would prove nothing, so it inherits the TileOPs
   implementation's status. A wrapper around the reference, a call with different
   arguments, or a compiled version is a separate implementation and is checked as usual.
 
@@ -262,7 +262,7 @@ A `bench.Case` holds the information needed for one benchmark:
 
 A case creates its data on first access and releases it when the test ends, so pytest
 can collect cases without a GPU. The correctness check and timing use the same tensors.
-As a result, the TileOps implementation, the reference, and the report parameters all
+As a result, the TileOPs implementation, the reference, and the report parameters all
 correspond to the same case.
 
 ## Who owns what {#layers}
@@ -275,7 +275,7 @@ The information used by a benchmark comes from several layers:
 | --- | --- |
 | manifest | Defines the op signature, side effects, model workloads, and roofline. |
 | workload (`workloads/`) | Defines the input data distribution, reference, and numerical check. |
-| case entry (`benchmarks/_cases/`) | Builds a case from a workload and defines its copy policy and how the TileOps implementation is called. |
+| case entry (`benchmarks/_cases/`) | Builds a case from a workload and defines its copy policy and how the TileOPs implementation is called. |
 | `bench.Runner` | Handles checking, timing order, roofline computation, and reporting. |
 | tests (`tests/`) | Cover kernel branches, edge cases, and numerical regressions. |
 
@@ -302,7 +302,7 @@ one?**
 chose their own copy policies, rows in the same table would follow different timing
 rules, and their ratios would no longer be meaningful.
 
-**The TileOps op needs a wrapper before it can take `case.inputs`. Can I pass the wrapper
+**The TileOPs op needs a wrapper before it can take `case.inputs`. Can I pass the wrapper
 to `Runner`?**
 
 `Runner` finds the op in the manifest by its class name and uses that name in the

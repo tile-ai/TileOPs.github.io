@@ -75,7 +75,7 @@ block(x, w)
 
 ## 编译边界的生成：以 `RMSNormFwdOp` 为例
 
-本节说明有编译边界的 op 需要编写的代码、边界与 fake 如何生成，以及 target 判定为什么要在节点内部执行。其中涉及的追踪、切图与 guard 见 [dynamo 是怎么工作的](#dynamo)。
+本节说明有编译边界的 op 需要编写的代码、边界与 fake 如何生成，以及 target 判定为什么要在节点内部执行。其中涉及的追踪、切图与 guard 见 [dynamo 的工作方式](#dynamo)。
 
 下面是 `RMSNormFwdOp` 的骨架，略去 docstring，完整代码见 [`src/tileops/_ops/norm/rms_norm.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/_ops/norm/rms_norm.py)：
 
@@ -87,6 +87,7 @@ class RMSNormFwdOp(Op):
         "rms_norm": RMSNormKernel,
         "rms_norm_streaming": RMSNormStreamingKernel,
         "rms_norm_on_chip": RMSNormOnChipKernel,
+        "rms_norm_two_pass": RMSNormTwoPassKernel,
     }
     interfaces: ClassVar[Mapping[str, type[KernelInterface]]] = {"rms_norm": RMSNormFwdInterface}
 
@@ -98,16 +99,20 @@ class RMSNormFwdOp(Op):
     def forward(self, x, weight=None):
         weight = None if weight is None else weight.contiguous()
         x = x.contiguous()                         # the generated checks have run
-        call = LayerNormCall(
-            device=x.device,
-            n=math.prod(self.normalized_shape),
-            eps=torch.finfo(torch.float32).eps if self.eps is None else float(self.eps),
-            dtype=x.dtype,
-        )
-        return self.kernel_for("rms_norm", call)(x, weight)
+        n = math.prod(self.normalized_shape)
+        return self.kernel_for(
+            "rms_norm",
+            lambda: LayerNormCall(
+                device=x.device,
+                n=n,
+                eps=torch.finfo(torch.float32).eps if self.eps is None else float(self.eps),
+                dtype=x.dtype,
+                rows=x.numel() // n,
+            ),
+        )(x, weight)
 ```
 
-op 只编写构造函数与计算本体 `forward`。`Op.__call__` 调用生成的 `_call_boundary`，它按 `forward` 的签名接收参数，再调用当前副作用分支的 operator；operator 在节点内部以 `forward` 为本体完成调用。operator 与它的 fake 函数都从 manifest 条目生成，每个副作用分支对应一个 operator：
+op 只编写构造函数与计算本体 `forward`。`Op.__call__` 调用生成的 `_call_boundary`，它按 `forward` 的签名接收参数。普通 eager 调用直接运行 op 的执行函数；其他调用（包括被 trace 的调用）调用当前副作用分支的 operator，operator 在节点内部运行执行函数，由它运行 `forward`。operator 与它的 fake 函数都从 manifest 条目生成，每个副作用分支对应一个 operator：
 
 - 张量参数按 `signature.inputs` 的顺序排列；
 - 返回值由 `signature.outputs` 决定；
@@ -136,7 +141,7 @@ operator 的名字是 `tileops::<family>_<snake(class)>`（类名本身以 famil
 
 **第二处，fake 函数用 `torch.empty` 按签名检查推出的形状与 dtype 构造输出，不使用 `torch.empty_like(x)`。** fake 函数返回的张量在形状、dtype 与 stride 三项上都必须与真实执行的返回值一致。不一致时，要么在追踪期报错，要么在运行期按错误布局访问内存而静默出错。op 体先把输入转为连续张量，再写入新分配的输出，因此真实输出总是连续的；而 `empty_like` 会复制入参的 stride，输入不连续时，fake 函数声明的布局就是真实执行不会产出的布局。
 
-**第三处，target 在节点内部判定，不在 `Op.__call__` 中判定。** 追踪期执行 `self.x = ...` 时，dynamo 把这次写入记为待执行的副作用，等整张图执行完才补写；而不透明节点的执行早于补写，所以节点之外刚写下的判定结果在节点之内读不到。因此以下两件事都在节点内部完成：
+**第三处，target 在节点内部判定，不在 `Op.__call__` 中判定。** 追踪期执行 `self.x = ...` 时，dynamo 把这次写入记为待执行的副作用，等整张图执行完才补写；而不透明节点的执行早于补写，所以节点之外刚写下的判定结果在节点之内读不到。因此判定与撤销都在节点内部完成，原因分别是：
 
 - 判定若写在节点之外，第一次编译调用会静默使用错误的实现。
 - 判定失败时的撤销由做出判定的位置负责，因为编译产物不保留调用点的 `try/except`。
@@ -145,7 +150,7 @@ operator 的名字是 `tileops::<family>_<snake(class)>`（类名本身以 famil
 
 ## 附录：这条边界为什么是这样
 
-### dynamo 是怎么工作的 {#dynamo}
+### dynamo 的工作方式 {#dynamo}
 
 本节说明 dynamo 如何决定哪些代码能进入编译图。一个 op 接入 `torch.compile` 需要满足的条件由此而来。
 
@@ -222,7 +227,7 @@ dynamo 有两条规则决定了接入的方式：
 | kernel 时间 | 0.0119 ms | 0.0117 ms |
 | eager 路径每次调用 | 42.5–45.2 µs | 38.2–42.0 µs |
 
-kernel 本身不受影响，边界位于哪一层与 kernel 如何计算无关。eager 路径快 3–5 µs，原因是边界上移之后，一次调用只需穿过一层 op 边界。
+kernel 本身不受影响，边界位于哪一层与 kernel 如何计算无关。eager 路径快 3–5 µs，原因是边界上移之后，一次调用只需穿过一层 op 边界。这组数字测于边界上移之时；现在普通的 eager 调用直接运行 op 的执行函数，不经过任何 operator。
 
 编译图一侧的代价见[为什么边界位于 op 层](#at-op-layer)：融合不跨越节点边界，节点的输出必定写入显存。
 

@@ -106,7 +106,7 @@ outputs:
   output: {dtype: T, shape: "[N, C, H_out, W_out]"}
 ```
 
-- The value of a `let` is computed from the signature: a `let` that can be evaluated at construction is computed at construction, and the others are computed on every call. Workload rows do not give `let` entries.
+- The value of a `let` is computed from the signature: a `let` that can be evaluated at construction is computed at construction, and the others are computed at call time. Workload rows do not give `let` entries.
 - A `let` can refer to other `let` entries, as `sH` refers to `kH`, but dependencies between `let` entries must not form a cycle.
 
 A primitive is a built-in function callable in expressions, such as `broadcast`, `reduced`, `per_axis` and `ceil_div`.
@@ -126,7 +126,7 @@ A primitive is a built-in function callable in expressions, such as `broadcast`,
     rescale_factors: {dtype: R, shape: "[D // 2]", optional: true}
   ```
 
-- A tensor that must be contiguous in memory declares `contiguous: true`, for example the inputs and outputs of the MoE staged ops. A tensor without this declaration can have any strides.
+- A tensor that must be contiguous in memory declares `contiguous: true`, for example the inputs and outputs of the MoE staged ops. Calls are supported with contiguous inputs ([API Stability](../../stability.md)); a non-contiguous tensor without this declaration is not promised to work.
 - A tensor that must be on the CPU declares `device: cpu`, for example `cu_seqlens_cpu` in `GDNFwdOp`.
 - An op without call-time tensor inputs declares a `device` parameter, for example Alibi. How the call device is determined is in [Calls and validation § 4](calls.md#device).
 
@@ -138,11 +138,18 @@ An op without effect declarations only reads its inputs and allocates new tensor
 
 | No. | Declaration | Meaning | Example |
 | --- | --- | --- | --- |
-| 1 | `buffer: out` on an output | `forward` gets a parameter `out` after all inputs. When the caller passes `out`, the op writes the result into it and returns it; otherwise the op allocates a new tensor. `out` has the same shape and dtype as that output | `output` of MoEGroupedGEMM |
+| 1 | `buffer: out` on an output | `forward` gets a keyword-only parameter `out`, default `None`, after all inputs that do not declare `kw_only`. When the caller passes `out`, the op writes the result into it and returns it; otherwise the op allocates a new tensor. `out` has the same shape and dtype as that output | `output` of MoEGroupedGEMM |
 | 2 | `mutated: true` on an input | the op may write this input, and its contents before the call take part in the computation | |
-| 3 | `mutated: true` and `write_only: true` on an input | a result buffer that must be passed: the op overwrites it, and the result depends only on the other inputs; if the op returns `None`, `outputs` is empty | `output` of FusedMoEExperts |
+| 3 | `mutated: true` and `write_only: true` on an input | a result buffer that must be passed: the op overwrites it, and the result depends only on the other inputs; if the op returns `None`, `outputs` is empty | no current op |
 | 4 | `mutated: "<discriminant expression>"` on an input | the op writes this input only when the expression is true | `mutated: inplace` of activation functions |
 | 5 | `alias: <input name>` on an output | when that input is written, this output is that input object itself | `alias: input` of activation functions |
+| 6 | input `out` with `mutated: true`, `write_only: true` and `kw_only: true` | the required output buffer of an op that cannot allocate its output: keyword-only without a default, last among the inputs; an output declares `alias: out` | `out` of PagedKVCacheGather |
+
+What a call returns follows from these declarations:
+
+- an op given `out` writes into it and returns that object;
+- an op with several outputs returns a tuple with one slot per declared output, in declaration order, and an absent `nullable` output is `None` in its slot;
+- an op whose only effect is writing its inputs declares no outputs and returns `None`.
 
 The `inplace` parameter of activation functions is an example:
 

@@ -48,7 +48,7 @@ TileOPs 的组件分为四层：
 - op 的 FLOPs 属于矩阵乘收缩、最优实现应使用 tensor core 时，覆写 `roof_key()`。它表示最优实现应当使用的计算单元，与当前 kernel 实际使用的单元无关；
 - 同一个 kernel 接口有多个实现时，在各实现上声明它服务哪些调用（`refusal`）与能在哪些设备上运行（`devices`、`supported_archs`）；实现之间的适用范围有重叠时，用 `preferred_over` 声明哪个优先，兜底的实现声明 `general = True`，见[如何为 op 新增 kernel](../dispatch/writing.md#rule)；
 - 外部 backend 不修改 op，而是调用 `tileops.backend.register_kernel_builder`，为 op 注册一个 target 的 builder，由这个 target 接管 op 的全部调用。参数 `op` 是 manifest 中的 op 名，见 [backend 如何接入 TileOPs](../dispatch/backends.md#target)；
-- 复合 op 在类上声明 `delegate_types`，与 spec 的 `composition` 对应；复合 op 也运行自己的 kernel 时，才声明 `kernel_types` 与 `interfaces`；
+- 组合 op 在类上声明 `delegate_types`，与 spec 的 `composition` 对应；组合 op 也运行自己的 kernel 时，才声明 `kernel_types` 与 `interfaces`；
 - spec 有调用期张量输入、且没有 `composition` 的 op 在类定义时自动生成编译边界，必须通过冷启动的 `fullgraph=True` 编译，并在 `tests/compile_contract.py` 中登记冷编译测试。
 
 **表 2** 系统提供的部分
@@ -75,7 +75,7 @@ manifest 测试与 benchmark 所用的调用，包括形状、dtype 与输入张
 
 - 构造阶段，生成的检查按 `type` 检查参数，并完成构造时已经可以求值的检查。
 - 调用阶段，生成的检查先确定输入、选择分支并推断 index，然后才调用开发者编写的实现；实现返回之后，再检查输出的数量、形状、dtype、设备与内存布局，并核对 `out` 与 `alias` 输出是否就是对应的张量对象。因此实现中不需要重复 spec 已经声明的检查。
-- 实现通过 `kernel_for(interface, call)` 取得要调用的 entry，通常就是一个 kernel。同一个 call spec 再次出现时，Op 基类只做一次查找；首次出现时，Op 基类在该 kernel 接口的实现中选出唯一一个，由它的 `entry_for(call)` 返回 build identity 与构建函数，在同一个 kernel 接口内，同一实现类、相同 build identity 的 entry 只构造一次。选择规则见[调用与校验 2](calls.md#selection)。
+- 实现通过 `kernel_for(interface, call)` 取得要调用的 entry，其中 `call` 是返回 call spec 的函数；entry 通常就是一个 kernel。同一个 call spec 再次出现时，Op 基类只做一次查找；首次出现时，Op 基类在该 kernel 接口的实现中选出唯一一个，由它的 `entry_for(call)` 返回 build identity 与构建函数，在同一个 kernel 接口内，同一实现类、相同 build identity 的 entry 只构造一次。选择规则见[调用与校验 2](calls.md#selection)。
 - 有编译边界的 op，`Op.__call__` 调用生成的 `_call_boundary`，经 operator 在节点内部运行 `forward`；没有编译边界的 op，`Op.__call__` 直接运行 `forward`。两种情况下计算本体都写在 `forward` 中。
 - 某个 target 通过 `register_kernel_builder` 为 op 注册了 builder 时，生成的检查之后调用 target 返回的 kernel，op 的 `forward` 不执行。
 - 如果一次调用写入的所有张量（各输出与被写入的输入）都不含元素，in-tree 实现与 target 都不执行：新的输出按检查过的形状与 dtype 在调用设备上创建，`out` 与被写入的输入原样返回。输入为空而输出不为空时，照常执行实现。
@@ -119,7 +119,7 @@ spec 描述 op 的外部契约，其内容分为五组字段：
 | 2 | 副作用 | 张量上的 `mutated`、`write_only`、`buffer`、`alias` | [扩展写法 6](extensions.md#effects) |
 | 3 | 测试用例 | `workloads`，以及张量上的 `values`、`requires` | [写一个 spec 8](writing.md#workloads)、[扩展写法 7](extensions.md#generators) |
 | 4 | 代价模型 | `roofline` | [写一个 spec 9](writing.md#roofline) |
-| 5 | 复合 op 的内部结构 | `composition` | [扩展写法 10](extensions.md#composition) |
+| 5 | 组合 op 的内部结构 | `composition` | [扩展写法 10](extensions.md#composition) |
 
 后四组字段都以签名为基础：
 

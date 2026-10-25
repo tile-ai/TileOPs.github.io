@@ -22,8 +22,15 @@ class MoEExpertMLPFwdOp(Op):
         self.layout = layout
         self.activation = activation
         super().__init__(target=target)
-        self.gate_up = self.delegate_for("gate_up", None, layout=layout, activation=activation)
-        self.down = self.delegate_for("down", None, layout=layout)
+        # Build the sub-ops now: a traced forward cannot build one on a miss.
+        self._gate_up()
+        self._down()
+
+    def _gate_up(self) -> Op:
+        return self.delegate_for("gate_up", None, layout=self.layout, activation=self.activation)
+
+    def _down(self) -> Op:
+        return self.delegate_for("down", None, layout=self.layout)
 ```
 
 示例省略了类 docstring 和 `forward`，完整代码见 [`src/tileops/_ops/moe/staged.py`](https://github.com/tile-ai/TileOPs/blob/main/src/tileops/_ops/moe/staged.py)。子 op 遵循与 kernel 相同的规则：先在类上声明，再经基类的方法取得。
@@ -34,7 +41,8 @@ class MoEExpertMLPFwdOp(Op):
 - **持有。** `delegate_for(stage, identity, given=None, /, **params)` 是持有子 op 的唯一方式。
     - 同一个 `(stage, identity)` 只构造一次。
     - `identity` 包含所有会改变子 op 构造结果的参数，与 kernel 侧 `entry_for` 返回的 identity 同义。
-    - 构造参数在组合 op 构造时就已确定时，`identity` 取 `None`。
+    - 子 op 的参数来自组合 op 的参数与构造期张量时，`identity` 取 `None`。这时子 op 按组合 op 的特化持有：参数改变时构造新的子 op，参数改回之前的值时重用为它构造的子 op。
+    - `forward` 再次经 `delegate_for` 取得子 op，不经属性取得，从而拿到与当前参数对应的子 op。
 - **继承执行策略。**
     - 基类构造的子 op 继承组合 op 的 `target`。
     - 调用方注入的子 op 通过 `given` 传入，按原样持有，保持自己的 `target`。

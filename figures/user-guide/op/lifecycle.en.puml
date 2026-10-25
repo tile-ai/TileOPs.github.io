@@ -84,9 +84,9 @@ sub --> caller : the op instance; no kernel selected or built
 caller -> base : y = op(x, weight), that is Op.~__call~__
 alt compile boundary (compile_op_names non-empty)
   base -> cop : the generated _call_boundary(...)
-  cop -> base : look the instance up by _instance_key,\n_run_call(inputs, forward)
+  cop -> base : look the instance up by _instance_key,\n_execute(inputs, writes)
 else no compile boundary
-  base -> base : split the arguments by forward's signature,\n_run_call(inputs, forward)
+  base -> base : split the arguments by forward's signature,\n_execute(inputs, writes)
 end
 activate base
 base -> base : step 1: begin the call: push the call stack
@@ -143,7 +143,7 @@ base -> plan : step 6: check the return value against the signature
 
 alt success
   base -> base : step 7: sub-op records into stages, by stage; pop the call stack;\nkeep as last_call; report to the enclosing call
-  base --> caller : the result, returned through each caller that led into _run_call
+  base --> caller : the result, returned through each caller that led into _execute
 else any step raises an Exception
   base -> base : pop the call stack, discard this call's record; last_call unchanged
   opt the target was selected in this call's step 4

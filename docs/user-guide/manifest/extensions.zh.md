@@ -106,7 +106,7 @@ outputs:
   output: {dtype: T, shape: "[N, C, H_out, W_out]"}
 ```
 
-- `let` 的值由签名计算：能在构造时求值的在构造时计算，其余的在每次调用时计算。workload 行中不需要给出 `let`。
+- `let` 的值由签名计算：能在构造时求值的在构造时计算，其余的在调用时计算。workload 行中不需要给出 `let`。
 - 一个 `let` 可以引用其他 `let`，例如 `sH` 引用了 `kH`，但 `let` 之间的依赖不能成环。
 
 primitive 是表达式中可以调用的内建函数，例如 `broadcast`、`reduced`、`per_axis`、`ceil_div`。
@@ -126,7 +126,7 @@ primitive 是表达式中可以调用的内建函数，例如 `broadcast`、`red
     rescale_factors: {dtype: R, shape: "[D // 2]", optional: true}
   ```
 
-- 要求内存连续的张量声明 `contiguous: true`，例如 MoE staged 系列 op 的输入与输出。没有这项声明的张量可以有任意 stride。
+- 要求内存连续的张量声明 `contiguous: true`，例如 MoE staged 系列 op 的输入与输出。受支持的调用使用连续的输入（[API 稳定性](../../stability.md)）；没有这项声明的张量不连续时，不保证可用。
 - 必须位于 CPU 上的张量声明 `device: cpu`，例如 `GDNFwdOp` 的 `cu_seqlens_cpu`。
 - 没有调用期张量输入的 op 声明 `device` 参数，例如 Alibi。调用设备的确定方式见[调用与校验 4](calls.md#device)。
 
@@ -138,11 +138,18 @@ primitive 是表达式中可以调用的内建函数，例如 `broadcast`、`red
 
 | No. | 声明 | 含义 | 例子 |
 | --- | --- | --- | --- |
-| 1 | 输出上的 `buffer: out` | `forward` 在所有输入之后增加参数 `out`。调用方传入 `out` 时，op 将结果写入并返回它；未传入时，op 分配新张量。`out` 与该输出的形状和 dtype 相同 | MoEGroupedGEMM 的 `output` |
+| 1 | 输出上的 `buffer: out` | `forward` 在所有未声明 `kw_only` 的输入之后增加只能以关键字传入的参数 `out`，默认为 `None`。调用方传入 `out` 时，op 将结果写入并返回它；未传入时，op 分配新张量。`out` 与该输出的形状和 dtype 相同 | MoEGroupedGEMM 的 `output` |
 | 2 | 输入上的 `mutated: true` | op 可能写入这个输入，它在调用前的内容参与计算 | |
-| 3 | 输入上的 `mutated: true` 与 `write_only: true` | 必须传入的结果缓冲：op 覆盖写入，结果只取决于其他输入；如果 op 返回 `None`，`outputs` 为空 | FusedMoEExperts 的 `output` |
+| 3 | 输入上的 `mutated: true` 与 `write_only: true` | 必须传入的结果缓冲：op 覆盖写入，结果只取决于其他输入；如果 op 返回 `None`，`outputs` 为空 | 目前没有 op 使用 |
 | 4 | 输入上的 `mutated: "<discriminant 表达式>"` | 仅当表达式为 true 时，op 才写入这个输入 | 激活函数的 `mutated: inplace` |
 | 5 | 输出上的 `alias: <输入名>` | 该输入被写入时，这个输出就是该输入对象本身 | 激活函数的 `alias: input` |
+| 6 | 输入 `out` 上的 `mutated: true`、`write_only: true` 与 `kw_only: true` | 无法自行分配输出的 op 所必须传入的输出缓冲：只能以关键字传入，没有默认值，位于所有输入的最后；一个输出声明 `alias: out` | PagedKVCacheGather 的 `out` |
+
+调用的返回值由这些声明决定：
+
+- 传入了 `out` 的 op 写入 `out`，并返回这个对象；
+- 有多个输出的 op 返回一个 tuple，每个声明的输出按声明顺序占一个位置，缺省的 `nullable` 输出在其位置上为 `None`；
+- 唯一的 effect 是写入输入的 op 不声明输出，返回 `None`。
 
 以激活函数的 `inplace` 为例：
 
@@ -232,9 +239,9 @@ shape_rules:
 
 生成的调用检查对 TileOPs in-tree 实现与 target 提供的实现应用同一条规则。
 
-## 10. 复合 op：composition {#composition}
+## 10. 组合 op：composition {#composition}
 
-复合 op 用 `composition` 记录其 in-tree 实现可能持有的子 op，以及它自身 kernel 的位置。以 FusedMoESharedExpert 为例：
+组合 op 用 `composition` 记录其 in-tree 实现可能持有的子 op，以及它自身 kernel 的位置。以 FusedMoESharedExpert 为例：
 
 ```yaml
 composition:
@@ -248,6 +255,6 @@ composition:
 - 每个 stage 或者引用一个 manifest 中的 op（`op`），或者引用 op 自身 `kernel_types` 中的一个键（`kernel`）。
 - 并非每次调用都会持有的子 op，写成 `optional: true` 的 stage；是否持有由代码决定。
 - 子 op 的构造时机与次数、调度方式以及 forward 的执行，都由代码决定。
-- manifest 不规定复合 op 的 roofline 与其各 stage 的 roofline 之间的关系。
+- manifest 不规定组合 op 的 roofline 与其各 stage 的 roofline 之间的关系。
 - 对于 `implemented` 的 op，validator 按顺序核对：`op` stage 与类的 `delegate_types` 一致，`kernel` stage 与类的 `kernel_types` 一致。
 - `stages` 不能为空，stage 名互不相同，`optional` 为布尔值。

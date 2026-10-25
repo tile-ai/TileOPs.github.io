@@ -1,5 +1,8 @@
 # Development Guide { #development-guide }
 
+This guide is for contributors working on TileOPs itself. Using TileOPs needs only
+`pip install tileops`; see [Installation](../index.md#installation).
+
 ## Getting the code { #get-code }
 
 ```bash
@@ -46,12 +49,12 @@ pre-commit install
 ### A local environment { #local }
 
 ```bash
-pip install -e '.[dev]' -c constraints.txt
+pip install -e . --group dev -c constraints.txt
 pre-commit install
 ```
 
 - The supported combination of Python, PyTorch, CUDA, GPU architecture and
-  TileLang is the one listed under Prerequisites in the TileOPs
+  TileLang is the one listed under Installation in the TileOPs
   [README](https://github.com/tile-ai/TileOPs#installation).
 - `-c constraints.txt` applies the repository's dependency constraints, so the
   local dependencies match the combination CI validates.
@@ -122,7 +125,7 @@ pre-commit run --all-files                            # lint, the same as CI's p
 ## Running benchmarks { #bench }
 
 ```bash
-PIP_NO_BUILD_ISOLATION=1 pip install -e '.[dev]' --group bench -c constraints.txt
+PIP_NO_BUILD_ISOLATION=1 pip install -e . --group dev --group bench -c constraints.txt
 python -m pytest -q <bench-file>
 ```
 
@@ -183,7 +186,7 @@ python scripts/test_node_delta.py --base upstream/main
 ### A local install fails while re-resolving CUDA or TileLang { #faq-rebuild }
 
 ```bash
-PIP_NO_BUILD_ISOLATION=1 pip install -e '.[dev]' -c constraints.txt
+PIP_NO_BUILD_ISOLATION=1 pip install -e . --group dev -c constraints.txt
 ```
 
 With CUDA and TileLang already installed, turning off build isolation lets the
@@ -191,5 +194,5 @@ build use the installed versions.
 
 ### Checks that run without an SM90 GPU { #faq-no-gpu }
 
-The three GPU-free checks under [Running the tests](#tests). The tests that need a
-GPU run in the PR's CI.
+The three GPU-free checks under [Running the tests](#tests) run locally. The tests
+that need a GPU run in the PR's CI.

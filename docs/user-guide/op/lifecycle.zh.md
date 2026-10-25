@@ -27,7 +27,7 @@
 | 2 | 按 manifest 检查参数取值，把求出的值保存为 `_construction_indices` | • 参数在构造时确定，错误在构造时报出<br>• 求出的值每次调用都要用，只求一次 |
 | 3 | 安装实现表并检查契约，见[第 4 节](#target)；同时建立两个 entry 缓存 `_entries_by_call` 与 `_built_entries`，均为空 | • 结果由 op 类的 `kernel_types` 与注册表决定，对一个实例不变<br>• 只解析类，不需要设备 |
 | 4 | 登记实例，得到实例 key | • 编译边界的 custom op 按这个字符串 key 找回实例<br>• key 必须在 trace 之前存在，作为编译期常量，且不复用 |
-| 5 | 建立绑定组的 `_target_kernels`，以及运行组的 `_delegates`、`_delegate_stages`、`_effect_branches`，全部为空，见[类结构与实例状态 § 实例状态](structure.md#state) | 基类读写这些字段时不判断字段是否存在 |
+| 5 | 建立绑定组的 `_target_kernels`、构造组的锁 `_building`，以及运行组的 `_delegates`、`_delegate_stages`、`_effect_branches`、`_plans`，全部为空，见[类结构与实例状态 § 实例状态](structure.md#state) | 基类读写这些字段时不判断字段是否存在 |
 
 选择实现与构造 kernel 要等到调用时张量的 dtype、shape 与设备都已知：运行 in-tree kernel 时由 `kernel_for` 选择实现并取得 entry，见[第 5 节](#kernel)；由 target 服务时由基类调用 target 的 builder 构造 kernel，见[第 4 节](#target)。
 
@@ -63,19 +63,19 @@
 
 ## 2. 调用入口 {#entry}
 
-需要运行实现的 eager 调用都经过 `Op._run_call(inputs, body)`：
+需要运行实现的 eager 调用都经过同一个执行函数 `Op._execute`：
 
-- `body` 是子类的计算本体 `forward`，每个 op 只写这一个方法；
-- 进入 `_run_call` 的方式，取决于子类是否有编译边界。
+- 它运行子类的计算本体 `forward`（每个 op 只写这一个方法），或 target 的 kernel；
+- 进入 `_execute` 的方式，取决于子类是否有编译边界。
 
 **表 2** 调用入口
 
-| No. | 入口 | 适用的 op | 进入 `_run_call` 的方式 | `body` |
-| --- | --- | --- | --- | --- |
-| 1 | `op(...)` | 有编译边界 | `__call__` 调用生成的 `_call_boundary`，经 custom op 进入 `_run_call` | `forward` |
-| 2 | `op(...)` | 没有编译边界 | `__call__` 按 `forward` 的签名绑定参数，再调用 `_run_call` | `forward`，按参数名传入 |
-| 3 | 以 meta 张量 eager 调用 `op(...)` | 有编译边界 | • 不进入<br>• 生成的 fake 运行签名检查并保存调用记录，按签名构造结果 | — |
-| 4 | 被 trace 的 `op(...)` | 没有编译边界 | • 不进入，也不运行签名检查<br>• 实例已由 target 服务时调用 target 的 kernel，否则调用 `forward`<br>• 组合 op 的子 op 的 custom op 成为图中的节点：trace 时运行各自的 fake，执行图中的节点时才进入 `_run_call` | — |
+| No. | 入口 | 适用的 op | 进入 `_execute` 的方式 |
+| --- | --- | --- | --- |
+| 1 | `op(...)` | 有编译边界 | `__call__` 调用生成的 `_call_boundary`：<br>• 没有执行参数的普通 eager 调用直接运行 `_execute`，位于 in-place 记账之下，并为它写入的每个参数增加 version<br>• 其他调用，例如需要 autograd 或其他 dispatcher 模式介入的调用，作为 custom op 的 eager 本体进入 `_execute` |
+| 2 | `op(...)` | 没有编译边界 | `__call__` 按 `forward` 的签名拆分参数，再调用 `_execute` |
+| 3 | 以 meta 张量 eager 调用 `op(...)` | 有编译边界 | • 不进入<br>• 生成的 fake 运行签名检查并保存调用记录，按签名构造结果 |
+| 4 | 被 trace 的 `op(...)` | 没有编译边界 | • 不进入，也不运行签名检查<br>• 实例已由 target 服务时调用 target 的 kernel，否则调用 `forward`<br>• 组合 op 的子 op 的 custom op 成为图中的节点：trace 时运行各自的 fake，执行图中的节点时才进入 `_execute` |
 
 表 2 的说明：
 
@@ -86,7 +86,7 @@
 - **这是要求，不是选项：** 满足三条的 implemented op 都必须支持 `torch.compile(op, fullgraph=True)`，没有逐个 op 的豁免。validator 检查每个 implemented 条目：类的 `compile_op_names` 非空，当且仅当条目满足三条；测试另外要求每个这样的 op 都登记了 `fullgraph=True` 的冷编译测试，作为可编译的证据。
 - **前两行的选择：** `__call__` 按 `compile_op_names` 是否为空，选择表 2 的前两行。
 - **编译边界的细节**（custom op 如何生成、如何找回实例；被 trace 的路径受哪些限制：有编译边界时 trace 的是生成的 `_call_boundary`，没有编译边界的组合 op trace 的是 `forward`）见[接入 torch.compile](../../torch-compile.md)。
-- **只有一份实现：** 运行实现的调用只有一个入口，所以检查、记录和失败处理只有一份实现。
+- **只有一个执行函数：** 运行实现的调用无论经哪条路径，都运行 `_execute`，所以检查、记录和失败处理只有一份实现。
 
 ## 3. 一次调用的七步 {#serve}
 
@@ -96,13 +96,20 @@
 
 | No. | 步骤 | 内容 |
 | --- | --- | --- |
-| 1 | 开启调用 | • 压入当前线程的调用栈<br>• 收集本次调用期间子 op 完成的调用 |
-| 2 | 检查签名 | 运行 `_SignaturePlan` 生成的检查，得到这次调用的记录 `SignatureCall` |
-| 3 | 判断空写 | 至少有一个写入、且所有写入都没有元素时，不运行任何实现，按签名构造结果 |
+| 1 | 开启调用 | • 确定这次调用的特化，在 `_plans` 中查找它的 plan<br>• 压入当前线程的调用栈<br>• 收集本次调用期间子 op 完成的调用 |
+| 2 | 检查签名 | • plan 未命中：运行 `_SignaturePlan` 生成的检查，把检查的结论保存为 plan<br>• 命中：复用 plan，不再运行检查 |
+| 3 | 判断空写 | plan 表明至少有一个写入、且所有写入都没有元素时，不运行任何实现，按签名构造结果 |
 | 4 | 选择 target | 实例尚未选定 target、且这次调用需要运行实现时选择，见[第 4 节](#target) |
-| 5 | 执行 | 运行空写结果、target 的 kernel 或 `body`，三者取一 |
-| 6 | 检查结果 | 按签名检查返回值 |
-| 7 | 记录 | 1. 把子 op 的调用按 stage 写入记录的 `stages`<br>2. 弹出调用栈<br>3. 保存为 `last_call`<br>4. 报告给外层调用 |
+| 5 | 执行 | 运行空写结果、target 的 kernel 或 `forward`，三者取一 |
+| 6 | 检查结果 | 每次调用都用 plan 中的结果检查核对返回值：返回结构，每个输出的 shape、dtype、设备与布局，以及 `out` 与被写入输入的身份 |
+| 7 | 记录 | 1. 弹出调用栈<br>2. 把子 op 的记录按 stage 归档<br>3. 把这次调用的记录提交为 `_last_call`<br>4. 报告给外层调用 |
+
+plan（Op plan）：
+
+- **以什么为键：** 调用的特化，即检查读取的全部内容：每个张量的布局、dtype、设备与是否传入，参数，构造期张量，执行参数，以及没有输入确定设备时的当前设备。
+- **保存什么：** 检查后的调用事实、effect branch、结果检查、是否没有写入任何元素，以及 `forward` 构造的 call spec（见[第 5 节](#kernel)）；不保存任何调用的张量。
+- **保存多久：** `_plans` 至多保存 256 个 plan，最早的先移除；被移除的特化在下一次调用时重新检查。
+- **不复用的部分：** 结果检查、version 增加、子 op 调用的收集与记录，每次调用都执行。
 
 签名检查与 dtype：
 
@@ -125,7 +132,7 @@ backend 通过 target 接管整个 op，接入方法见 [backend 如何接入 Ti
 选定之后：
 
 - **没有 backend 认领这个设备：** 运行 in-tree kernel，`serving_target` 为 `BUILTIN`。
-- **有 backend 认领：** 运行这个 target 为 op 注册的 builder 构造的 kernel，子类的 `body` 不运行。
+- **有 backend 认领：** 运行这个 target 为 op 注册的 builder 构造的 kernel，子类的 `forward` 不运行。
     - 基类调用 builder 时，按 `signature.inputs` 的顺序传入参数：出现的输入传 `TensorSpec`，未传入的可选输入传 `None`。
     - 实例上的 manifest 参数以关键字传入，见 [backend 如何接入 TileOPs § 替换整个 op](../dispatch/backends.md#target)。
 - **选定的 target 没有为 op 注册 builder：**
@@ -142,7 +149,7 @@ backend 通过 target 接管整个 op，接入方法见 [backend 如何接入 Ti
 
 进程也没有 accelerator、且没有构造参数或进程默认 target 时，基类无从选择：
 
-- 这次调用运行 in-tree 本体；调用设备未知，所有 in-tree 实现都不可用，选择实现时报 `OpNotAvailableError`；
+- 这次调用运行 `forward`；调用设备未知，所有 in-tree 实现都不可用，选择实现时报 `OpNotAvailableError`；
 - 实例仍未选定 target，下一次调用再选择。
 
 target 构造的 kernel 的缓存：
@@ -198,18 +205,23 @@ target 被调用前，生成的检查已经运行，基类保证以下三点：
 
 `register_kernel_builder` 登记的 builder 直接构造 target 的 kernel，不经过 kernel type 的选择，见[第 4 节](#target)。
 
-子类通过 `self.kernel_for(interface, call)` 取得 kernel：
+子类通过 `self.kernel_for(interface, call)` 取得 kernel，其中 `call` 是一个不接受参数、返回 call spec 的函数：
 
-- 参数的写法见[添加一个新 op § kernel_for](../../new-op.md#kernel-selection)；
+- 参数的写法见[添加新 op § kernel_for](../../new-op.md#kernel-selection)；
 - kernel 接口、实现、call spec 与 entry 的定义见 [op 如何选择 kernel § 术语](../dispatch/index.md#terms)。
 
 `kernel_for` 依次完成：
 
 1. **确认接口。**
     - `interface` 不在 `interfaces` 中时，抛出 `OpNotAvailableError`。
-    - call spec 没有给出设备、而进程有 accelerator 时，基类填入它的当前设备，使缓存键带有设备。
+    - `call` 不可调用时，抛出 `TypeError`。
+1. **复用 plan 中的请求。**
+    - 在有 plan 的调用中，plan 按请求顺序保存 `forward` 发出的每个请求，按接口和 `call` 的代码对应。
+    - 只有 plan 中没有这个请求时才运行 `call`，即特化的第一次调用；已经对应到 entry 的请求直接返回该 entry。
+    - 在调用之外，例如被 trace 的 `forward` 中，每次请求都运行 `call`。
 1. **按调用查找。**
-    - `_entries_by_call` 以 `(interface, call)` 为键。
+    - call spec 没有给出设备、而进程有 accelerator 时，基类填入它的当前设备，使缓存键带有设备。
+    - `_entries_by_call` 以 `(interface, call spec)` 为键。
     - 相等的 call spec 表示同一种调用，命中只需一次查表，不读取设备属性。
 1. **检查 call spec。** 未命中时，以下任一不满足就抛出 `TypeError`：
     - call spec 是接口 `request` 声明的类型；
@@ -225,7 +237,8 @@ target 被调用前，生成的检查已经运行，基类保证以下三点：
 
 - **dtype 与 entry：** 不同 dtype 的 call spec 分别派发；是否复用已构造的 entry，由选中实现的 `entry_for` 返回的 identity 决定。
 - **identity 只有实现知道：** 子类不定义 identity，也不维护自己的缓存。
-- **entry 只由基类持有：** 子类在本体中用局部变量接收 `kernel_for` 返回的 entry，不保存到实例上；第二次调用再经 `kernel_for` 取得，命中缓存只需一次查表。
+- **entry 只由基类持有：** 子类在 `forward` 中用局部变量接收 `kernel_for` 返回的 entry，不保存到实例上；第二次调用再经 `kernel_for` 取得，返回 plan 保存的 entry。
+- **在 `forward` 中读取 call spec：** `forward` 自己需要 call spec 中的事实（例如缓冲区大小）时，用 `call_spec(interface, call)` 取得，plan 以同样方式保存它；之后把 `lambda: spec` 传给 `kernel_for`。
 
 ## 6. 失败与撤销 {#failure}
 

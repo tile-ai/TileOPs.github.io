@@ -1,6 +1,6 @@
 # kernel 内的时间线追踪 { #in-kernel-timeline-trace }
 
-[`tileops.trace`](../api/trace.md) 是一个在 kernel 内部记录时间线的追踪工具，用于诊断 kernel 的性能。它在 kernel 内为每个 CTA 记录时间戳，并渲染成一条可以滚动查看的时间线，显示执行区间、空隙，以及 producer 与 consumer 之间的重叠。这些信息是 `ncu` 这类以 kernel 为单位的 profiler 看不到的。warp specialization 的 kernel 最能用上它：这类 kernel 的关键就是让 producer（TMA）与 consumer（WGMMA）两个 warpgroup 的执行相互重叠。
+[`tileops.trace`](../api/trace.md) 是一个在 kernel 内部记录时间线的追踪工具，用于诊断 kernel 的性能。它在 kernel 内为每个 CTA 记录时间戳，并渲染成一条可以滚动查看的时间线，显示执行区间、空隙，以及 producer 与 consumer 之间的重叠。这些信息是 `ncu` 这类以 kernel 为单位的 profiler 看不到的。warp specialization 的 kernel 从中获益最多：这类 kernel 的关键就是让 producer（TMA）与 consumer（WGMMA）两个 warpgroup 的执行相互重叠。
 
 ## 工作方式 { #how-it-works }
 
@@ -73,7 +73,7 @@ def build_gemm(m, n, k, dtype="float16", traced=False):
 
 ## 运行带追踪的 kernel { #running-a-traced-kernel }
 
-调用构建函数时传入 `traced=trace.enabled`，再把编译好的 kernel 交给 `trace.run`。同一个 `forward` 在两种模式下都能使用：追踪关闭时原样返回输出；追踪开启时写出时间线，并且只返回真正的输出。因此调用方不需要自己按开关分支。
+调用构建函数时传入 `traced=trace.enabled`，再把编译好的 kernel 传给 `trace.run`。同一个 `forward` 在两种模式下都能使用：追踪关闭时原样返回输出；追踪开启时写出时间线，并且只返回真正的输出。因此调用方不需要自己按开关分支。
 
 ```{ .python .annotate }
 def forward(self, a, b):

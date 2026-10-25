@@ -1,6 +1,6 @@
 # 如何为 op 新增 kernel
 
-本页说明为已有 op 新增一个 kernel 的两步、什么都不声明时的默认规则、何时新开 kernel 接口，以及如何测试选择结果。选择的整体过程见[首页](index.md)。
+本页说明为已有 op 新增一个 kernel 的两步、什么都不声明时的默认规则、何时新开 kernel 接口，以及如何测试选择结果。选择的整体过程见 [op 如何选择 kernel](index.md)。
 
 ## 1. 第一步：把实现登记到 op {#register}
 
@@ -46,7 +46,7 @@ class BatchNormFwdOp(Op):
 - `general = True` 表示兜底：服务其他实现都不服务的调用，每个接口至多一个。
 - `preferred_over` 只说明两者都适用时谁胜出，不要求一方的适用范围包含在另一方之内。
 - 一个实现不在自己的 `refusal` 中排除另一个实现的范围；需要让出时，由另一个实现声明 `preferred_over`。
-- 没有声明的重叠在调用时报歧义，不会被按顺序悄悄决定。
+- 没有声明的重叠在调用时报歧义，不按声明顺序隐式决定。
 
 GQA dense decode 的三个实现是第 3 种情况。bs1 服务 batch 为 1 的调用，long-context 服务 KV 较长的调用，二者在 batch 为 1 且 KV 较长时重叠，由 long-context 声明它胜出：
 
@@ -132,12 +132,14 @@ class LayerNormCall(CallSpec):
     """The facts that select an implementation normalizing trailing rows and build it.
 
     Layer, RMS, fused-add and adaptive layer normalization take it. ``n`` is the row's
-    element count and ``eps`` the op's epsilon.
+    element count, ``eps`` the op's epsilon and ``rows`` the rows the call normalizes, ``0``
+    where the op does not state them.
     """
 
     n: int = 0
     eps: float = 1e-5
     dtype: torch.dtype = torch.float16
+    rows: int = 0
 
 class LayerNormFwdInterface(KernelInterface):
     """Layer normalization over the trailing ``call.n`` elements."""
@@ -145,15 +147,17 @@ class LayerNormFwdInterface(KernelInterface):
     request = LayerNormCall
 
     @abstractmethod
-    def forward(self, x: torch.Tensor, weight: torch.Tensor, bias: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, weight: Optional[torch.Tensor], bias: Optional[torch.Tensor]
+    ) -> torch.Tensor:
         """Normalize each run of ``call.n`` trailing elements; nothing is written in place.
 
         Every tensor is contiguous on ``call.device``.
 
         Args:
             x: Any shape whose trailing axes hold ``call.n`` elements, in ``call.dtype``.
-            weight: ``call.n`` elements of scale in ``call.dtype``.
-            bias: ``call.n`` elements of shift in ``call.dtype``.
+            weight: ``call.n`` elements of scale in ``call.dtype``, or ``None`` for one.
+            bias: ``call.n`` elements of shift in ``call.dtype``, or ``None`` for zero.
 
         Returns:
             A new output shaped like *x*, in ``call.dtype``.
@@ -193,8 +197,9 @@ def test_gemm_k_too_narrow_to_vectorize_is_refused_during_selection() -> None:
 | 6 | 调用 | `in-tree kernels do not run on` | 没有任何 key 能在调用设备类型上运行（`OpNotAvailableError`） |
 | 7 | 调用 | `no implementation serves this call` | 有 key 支持该设备类型，但没有实现同时可用且适用，信息中列出每个实现的理由 |
 | 8 | 调用 | `dispatch is ambiguous` | 多个实现都适用，且互相没有优先关系 |
-| 9 | 调用 | `takes a <Request> call spec` | 传给 `kernel_for` 的 call spec 类型不对 |
+| 9 | 调用 | `takes a <Request> call spec` | `kernel_for` 的 `call` 返回的 call spec 类型不对 |
 | 10 | 调用 | `cannot key a dispatch cache` | call spec 中有可变的字段，例如 list |
-| 11 | 调用 | `this call spec states ['arch']` | 传给 `kernel_for` 的 call spec 显式给出了设备事实；它们应由 `device` 推出，只有 `key_for` 接受显式给出的设备事实 |
+| 11 | 调用 | `this call spec states ['arch']` | `kernel_for` 的 `call` 返回的 call spec 显式给出了设备事实；它们应由 `device` 推出，只有 `key_for` 接受显式给出的设备事实 |
+| 12 | 调用 | `takes a function returning the call spec` | 传给 `kernel_for` 的是 call spec 本身，而不是返回它的函数 |
 
 新 op 没有声明 `interfaces` 而持有 kernel 时，`tests/test_kernel_dispatch.py` 中的清单测试报 `declare interfaces instead`。

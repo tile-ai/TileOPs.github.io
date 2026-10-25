@@ -283,12 +283,6 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.elementwise.GELUTanhAndMulFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
 ## Comparison
 
 ::: tileops.elementwise.EqFwdOp

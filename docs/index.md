@@ -25,6 +25,19 @@ serves three goals:
 pip install tileops
 ```
 
+A release is verified on one configuration:
+
+- Linux
+- Python 3.12 or 3.13
+- PyTorch 2.13
+- [TileLang](https://github.com/tile-ai/tilelang) 0.1.12
+- CUDA Toolkit 13.2, with `nvcc` on `PATH`: TileLang compiles kernels at run time
+- A GPU with compute capability 9.0 (SM90), tested on H200
+
+Some kernels also have SM80, SM86 or SM89 paths, which are outside the release
+verification. To build from source, see the
+[Development guide](user-guide/development.md).
+
 ## Quick Start
 
 An op binds no shape at construction. Shapes and dtype come from the tensors passed
@@ -49,10 +62,12 @@ flops, nbytes = op.eval_roofline()   # what the call had to do and move
   into `torch.compile`, how a benchmark is timed, and adding a hardware backend.
 - [API Reference](api/index.md): the constructor parameters and call signatures of
   each op family.
+- [API Stability](stability.md): which names are public, and what a release may
+  change.
 - [Benchmarks](benchmarks/index.md): measured nightly on an H200, each workload
   against other implementations.
 
 ## Links
 
 - [GitHub](https://github.com/tile-ai/TileOPs)
-- [Development guide](https://github.com/tile-ai/TileOPs/blob/main/docs/development.md)
+- [PyPI](https://pypi.org/project/tileops/)

@@ -24,11 +24,13 @@
 
 任何一项检查失败时，op 都会报错，并指出未满足的那条声明。
 
+第 1 至 5 步在每个特化的第一次调用时执行。特化包括：每个张量的布局、dtype、设备与是否传入，参数，构造期张量，执行参数，以及没有输入确定设备时的当前设备。Op plan 保存这几步的结论，同一特化之后的调用不再执行它们。第 7 步每次调用都执行。
+
 如果一次调用写入的所有张量（各输出与被写入的输入）都不含元素，第 6 步不执行任何实现：新的输出按检查过的形状与 dtype 在调用设备上创建，`out` 与被写入的输入原样返回。输入为空而输出不为空时，照常执行实现。
 
 ## 2. kernel 的选择 {#selection}
 
-op 在 `interfaces` 中声明它调用 kernel 的位置，每个位置对应一个 kernel 接口；一个 kernel 接口的实现，是继承它的 kernel 类。调用时，op 构造 call spec，再调用 `kernel_for(interface, call)` 取得 entry。同一个 call spec 再次出现时只做一次查找；首次出现时，Op 基类按以下顺序选出唯一一个实现：
+op 在 `interfaces` 中声明它调用 kernel 的位置，每个位置对应一个 kernel 接口；一个 kernel 接口的实现，是继承它的 kernel 类。调用时，op 调用 `kernel_for(interface, call)` 取得 entry，其中 `call` 是返回 call spec 的函数；Op plan 保存这个 call spec，所以 `call` 只在每个特化的第一次调用时运行。同一个 call spec 再次出现时只做一次查找；首次出现时，Op 基类按以下顺序选出唯一一个实现：
 
 1. 可用性：实现的 `devices` 与 `supported_archs`；
 2. 适用性：实现的 `refusal`；
@@ -73,7 +75,7 @@ op 在 `interfaces` 中声明它调用 kernel 的位置，每个位置对应一�
 ![调用设备](img/device.svg)
 
 - 声明了 `device: cpu` 的张量始终位于 CPU，不参与调用设备的判定；构造期张量也只有未声明 `device: cpu` 的才参与判定。
-- 没有调用期张量、`device` 参数与参与判定的构造期张量时，调用设备取进程 accelerator 的当前设备；进程没有 accelerator 时为 `None`。accelerator 是 `torch.accelerator` 报告的设备类型，CUDA 或某个 backend 的设备类型。设计上，在这一步之前还会由显式指定或进程默认的 target 在其声明的设备类别中选择设备，这一步尚未实现。
+- 没有调用期张量、`device` 参数与参与判定的构造期张量时，调用设备取进程 accelerator 的当前设备；进程没有 accelerator 时为 `None`。accelerator 是 `torch.accelerator` 报告的设备类型，CUDA 或某个 backend 的设备类型。
 - 调用设备确定后，`out` 与各输出在该设备上检查或分配。
 - 没有声明 `device: cpu` 的构造期张量，在调用时复制到调用设备，并转换为签名中的 dtype。
 - 声明了 `contiguous: true` 的张量，由生成的检查确认其内存连续；workload 实例化生成的张量总是连续的。
@@ -111,7 +113,7 @@ op 在 `interfaces` 中声明它调用 kernel 的位置，每个位置对应一�
 7. 每条 workload 行都能实例化。
 8. 在每个 effect 分支上，operator schema、别名关系与 roofline 的读写计数一致。
 
-对于 `implemented` 的 op，validator 还检查代码与 spec 是否一致，包括 `__init__` 与 `params`、`forward` 与调用期输入，composition 与类的 `delegate_types`、`kernel_types`，以及类在 `compile_op_names` 中列出编译边界算子当且仅当 spec 要求编译边界。`spec-only` 的 op 跳过这些依赖代码的检查。
+对于 `implemented` 的 op，validator 还检查代码与 spec 是否一致，包括 `__init__` 与 `params`、`forward` 与调用期输入，composition 与类的 `delegate_types`、`kernel_types`，以及类的 `compile_op_names` 列出编译边界的 operator，当且仅当 spec 要求编译边界。`spec-only` 的 op 跳过这些依赖代码的检查。
 
 - CI 对整份 manifest 运行 validator。
 - validator 逐字段解析 spec。某个字段无法解析时，validator 报告这个字段，并只跳过依赖该字段的检查，其余检查照常进行。

@@ -1,5 +1,7 @@
 # 开发指南 { #development-guide }
 
+本指南面向参与开发 TileOPs 本身的贡献者。使用 TileOPs 只需 `pip install tileops`，见[首页的安装说明](../index.md)。
+
 ## 获取代码 { #get-code }
 
 ```bash
@@ -39,11 +41,11 @@ pre-commit install
 ### 使用本地环境 { #local }
 
 ```bash
-pip install -e '.[dev]' -c constraints.txt
+pip install -e . --group dev -c constraints.txt
 pre-commit install
 ```
 
-- 支持的 Python、PyTorch、CUDA、GPU 架构与 TileLang 版本组合，以 TileOPs 仓库 [README](https://github.com/tile-ai/TileOPs#installation) 的 Prerequisites 为准。
+- 支持的 Python、PyTorch、CUDA、GPU 架构与 TileLang 版本组合，以 TileOPs 仓库 [README](https://github.com/tile-ai/TileOPs#installation) 的 Installation 一节为准。
 - `-c constraints.txt` 使用仓库提供的依赖约束，使本地依赖与 CI 验证的组合一致。
 
 ### 确认环境可用 { #verify }
@@ -102,7 +104,7 @@ pre-commit run --all-files                            # 代码检查，与 CI �
 ## 运行 benchmark { #bench }
 
 ```bash
-PIP_NO_BUILD_ISOLATION=1 pip install -e '.[dev]' --group bench -c constraints.txt
+PIP_NO_BUILD_ISOLATION=1 pip install -e . --group dev --group bench -c constraints.txt
 python -m pytest -q <bench-file>
 ```
 
@@ -144,11 +146,11 @@ python scripts/test_node_delta.py --base upstream/main
 ### 本地安装在重新解析 CUDA 或 TileLang 时失败 { #faq-rebuild }
 
 ```bash
-PIP_NO_BUILD_ISOLATION=1 pip install -e '.[dev]' -c constraints.txt
+PIP_NO_BUILD_ISOLATION=1 pip install -e . --group dev -c constraints.txt
 ```
 
 本机已安装 CUDA 与 TileLang 时，关闭构建隔离，构建过程直接使用已安装的版本。
 
 ### 没有 SM90 GPU 时可运行的检查 { #faq-no-gpu }
 
-[运行测试](#tests)一节中不需要 GPU 的三项检查。需要 GPU 的测试由 PR 上的 CI 运行。
+[运行测试](#tests)一节中不需要 GPU 的三项检查可以在本地运行。需要 GPU 的测试由 PR 上的 CI 运行。
