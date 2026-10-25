@@ -637,7 +637,7 @@ OpNotAvailableError: RMSNormFwdOp's in-tree kernels do not run on cpu; known tar
 tensors; this error shows the outcome that the no-fall-back rule avoids.
 
 **When a backend package fails to import**, TileOPs skips it, issues a warning, and
-collects the reason into `load_failures()`. One broken plugin does not make TileOPs fail
+collects the reason into `load_failures()`. One broken backend package does not make TileOPs fail
 to import. If registration raises part way through, everything that backend registered in
 that pass is **rolled back**, and no partly registered target is left in the registry.
 
@@ -787,8 +787,8 @@ How the op layer looks up that table, and what it does on a miss, is in
 
 Two consequences:
 
-- **An entry may not last.** When a call fails, the op revokes its target decision and
-  drops its memo table. A backend must not assume the callable it returned stays alive;
+- **An entry may not last.** When the call that selected the target fails, the op revokes
+  that choice and drops its memo table. A backend must not assume the callable it returned stays alive;
   the callable holds its own references to the resources it depends on.
 - **A finer or a coarser grain is handled on the backend side.** Finer distinctions are
   made inside the backend; to rebuild less often, the backend adds a cache inside

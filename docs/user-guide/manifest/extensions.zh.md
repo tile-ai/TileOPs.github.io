@@ -232,9 +232,9 @@ shape_rules:
 
 生成的调用检查对 TileOPs in-tree 实现与 target 提供的实现应用同一条规则。
 
-## 10. 复合 op：composition {#composition}
+## 10. 组合 op：composition {#composition}
 
-复合 op 用 `composition` 记录其 in-tree 实现可能持有的子 op，以及它自身 kernel 的位置。以 FusedMoESharedExpert 为例：
+组合 op 用 `composition` 记录其 in-tree 实现可能持有的子 op，以及它自身 kernel 的位置。以 FusedMoESharedExpert 为例：
 
 ```yaml
 composition:
@@ -248,6 +248,6 @@ composition:
 - 每个 stage 或者引用一个 manifest 中的 op（`op`），或者引用 op 自身 `kernel_types` 中的一个键（`kernel`）。
 - 并非每次调用都会持有的子 op，写成 `optional: true` 的 stage；是否持有由代码决定。
 - 子 op 的构造时机与次数、调度方式以及 forward 的执行，都由代码决定。
-- manifest 不规定复合 op 的 roofline 与其各 stage 的 roofline 之间的关系。
+- manifest 不规定组合 op 的 roofline 与其各 stage 的 roofline 之间的关系。
 - 对于 `implemented` 的 op，validator 按顺序核对：`op` stage 与类的 `delegate_types` 一致，`kernel` stage 与类的 `kernel_types` 一致。
 - `stages` 不能为空，stage 名互不相同，`optional` 为布尔值。

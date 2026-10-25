@@ -408,10 +408,8 @@ can be used directly to narrow the padding candidates.
 
 ## Things to watch when applying this
 
-1. **The formula gives candidates; the final value comes from measurement.** In
-   the table above, 1-way and 2-way both stay above 3.0, 4-way drops to around
-   2.6, and 8-way and worse fall below 1.6. The formula is useful for narrowing
-   the candidates to those that compute to no more than $w$ ways. Among those
+1. **The formula gives candidates; the final value comes from measurement.** The
+   sweep above shows the formula is useful for narrowing the candidates to those that compute to no more than $w$ ways. Among those
    candidates, measure: 2-way is slightly faster than 1-way on all four values
    of `chunk`, but the gap ranges from 0.9% to 10%, which does not make a rule
    that carries over.

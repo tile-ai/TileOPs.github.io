@@ -194,5 +194,5 @@ build use the installed versions.
 
 ### Checks that run without an SM90 GPU { #faq-no-gpu }
 
-The three GPU-free checks under [Running the tests](#tests). The tests that need a
-GPU run in the PR's CI.
+The three GPU-free checks under [Running the tests](#tests) run locally. The tests
+that need a GPU run in the PR's CI.

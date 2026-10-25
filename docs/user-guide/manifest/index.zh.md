@@ -48,7 +48,7 @@ TileOPs 的组件分为四层：
 - op 的 FLOPs 属于矩阵乘收缩、最优实现应使用 tensor core 时，覆写 `roof_key()`。它表示最优实现应当使用的计算单元，与当前 kernel 实际使用的单元无关；
 - 同一个 kernel 接口有多个实现时，在各实现上声明它服务哪些调用（`refusal`）与能在哪些设备上运行（`devices`、`supported_archs`）；实现之间的适用范围有重叠时，用 `preferred_over` 声明哪个优先，兜底的实现声明 `general = True`，见[如何为 op 新增 kernel](../dispatch/writing.md#rule)；
 - 外部 backend 不修改 op，而是调用 `tileops.backend.register_kernel_builder`，为 op 注册一个 target 的 builder，由这个 target 接管 op 的全部调用。参数 `op` 是 manifest 中的 op 名，见 [backend 如何接入 TileOPs](../dispatch/backends.md#target)；
-- 复合 op 在类上声明 `delegate_types`，与 spec 的 `composition` 对应；复合 op 也运行自己的 kernel 时，才声明 `kernel_types` 与 `interfaces`；
+- 组合 op 在类上声明 `delegate_types`，与 spec 的 `composition` 对应；组合 op 也运行自己的 kernel 时，才声明 `kernel_types` 与 `interfaces`；
 - spec 有调用期张量输入、且没有 `composition` 的 op 在类定义时自动生成编译边界，必须通过冷启动的 `fullgraph=True` 编译，并在 `tests/compile_contract.py` 中登记冷编译测试。
 
 **表 2** 系统提供的部分
@@ -119,7 +119,7 @@ spec 描述 op 的外部契约，其内容分为五组字段：
 | 2 | 副作用 | 张量上的 `mutated`、`write_only`、`buffer`、`alias` | [扩展写法 6](extensions.md#effects) |
 | 3 | 测试用例 | `workloads`，以及张量上的 `values`、`requires` | [写一个 spec 8](writing.md#workloads)、[扩展写法 7](extensions.md#generators) |
 | 4 | 代价模型 | `roofline` | [写一个 spec 9](writing.md#roofline) |
-| 5 | 复合 op 的内部结构 | `composition` | [扩展写法 10](extensions.md#composition) |
+| 5 | 组合 op 的内部结构 | `composition` | [扩展写法 10](extensions.md#composition) |
 
 后四组字段都以签名为基础：
 

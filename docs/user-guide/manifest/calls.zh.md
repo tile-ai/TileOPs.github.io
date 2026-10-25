@@ -113,7 +113,7 @@ op 在 `interfaces` 中声明它调用 kernel 的位置，每个位置对应一�
 7. 每条 workload 行都能实例化。
 8. 在每个 effect 分支上，operator schema、别名关系与 roofline 的读写计数一致。
 
-对于 `implemented` 的 op，validator 还检查代码与 spec 是否一致，包括 `__init__` 与 `params`、`forward` 与调用期输入，composition 与类的 `delegate_types`、`kernel_types`，以及类在 `compile_op_names` 中列出编译边界算子当且仅当 spec 要求编译边界。`spec-only` 的 op 跳过这些依赖代码的检查。
+对于 `implemented` 的 op，validator 还检查代码与 spec 是否一致，包括 `__init__` 与 `params`、`forward` 与调用期输入，composition 与类的 `delegate_types`、`kernel_types`，以及类的 `compile_op_names` 列出编译边界的 operator，当且仅当 spec 要求编译边界。`spec-only` 的 op 跳过这些依赖代码的检查。
 
 - CI 对整份 manifest 运行 validator。
 - validator 逐字段解析 spec。某个字段无法解析时，validator 报告这个字段，并只跳过依赖该字段的检查，其余检查照常进行。

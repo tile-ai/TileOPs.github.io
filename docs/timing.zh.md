@@ -1,6 +1,6 @@
 # benchmark 的计时方法
 
-本页讲 CUDA 上的计时；其他 accelerator 用设备事件计时，`device_busy_ms` 与 `latency_ms` 相等，见[接入新的硬件 backend § 性能报告](backends.md#reports)。
+本页说明 CUDA 上的计时；其他 accelerator 用设备事件计时，`device_busy_ms` 与 `latency_ms` 相等，见[接入新硬件 backend § 性能报告](backends.md#reports)。
 
 nightly benchmark 为每个 op 的每个 workload 各测一行，报出的 `device_busy_ms` 是这次调用产生的全部 kernel 在设备上执行区间的并集。CUPTI 记录每个 kernel 的执行起止时间，并按 external correlation id 把它归到某一次迭代。每次迭代之前清空 L2，预热 25 ms、测量 100 ms，结果取中位数。
 
@@ -11,7 +11,7 @@ nightly benchmark 为每个 op 的每个 workload 各测一行，报出的 `devi
 - [一次测量的流程](#how-it-runs)：伪代码，以及校准、迭代次数、清空 L2、归属与失败即停五项安排。
 - [被测量的量](#what-is-measured)：`device_busy_ms` 的定义，以及 kernel 之间的空隙不计入的原因。
 - [为什么不是墙钟时间](#why-not-wall-clock)：在 decode 尺度上，CUDA events 测不出小 kernel 的执行时间。
-- [什么时候要改测法](#when-to-change)：只在自行编写 benchmark 时用到，包括这套测法测不到的几种情形。
+- [何时需要改变测法](#when-to-change)：只在自行编写 benchmark 时用到，包括这套测法测不到的几种情形。
 
 下文的数字都在 H200 上实测，镜像为 `tileops-runner:cu132-torch2.13`。
 
@@ -106,7 +106,7 @@ for i in range(n_repeat):
 - **预算拆分，不翻倍。** 每段预热 12.5 ms、测量 50 ms，迭代次数的上下限各取一半。对称顺序的目的是抵消漂移，不是增加样本，因此样本量与单个实现计时时相当。
 - **两段的计时方法必须一致。** 一段使用 CUPTI、另一段退回 CUDA events 时直接报错，不合并结果，否则一个中位数会混合两种测量方法。
 
-## 什么时候要改测法 {#when-to-change}
+## 何时需要改变测法 {#when-to-change}
 
 默认情形下不需要任何处理：一次调用只发出一个 kernel，经由 Op 接口，使用 `bench_kernel`，并且进程中没有其他线程使用 GPU。当前多数 op 属于这种情形。以下八种情形需要单独处理：
 

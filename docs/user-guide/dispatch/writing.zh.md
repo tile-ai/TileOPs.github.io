@@ -1,6 +1,6 @@
 # 如何为 op 新增 kernel
 
-本页说明为已有 op 新增一个 kernel 的两步、什么都不声明时的默认规则、何时新开 kernel 接口，以及如何测试选择结果。选择的整体过程见[首页](index.md)。
+本页说明为已有 op 新增一个 kernel 的两步、什么都不声明时的默认规则、何时新开 kernel 接口，以及如何测试选择结果。选择的整体过程见 [op 如何选择 kernel](index.md)。
 
 ## 1. 第一步：把实现登记到 op {#register}
 
@@ -46,7 +46,7 @@ class BatchNormFwdOp(Op):
 - `general = True` 表示兜底：服务其他实现都不服务的调用，每个接口至多一个。
 - `preferred_over` 只说明两者都适用时谁胜出，不要求一方的适用范围包含在另一方之内。
 - 一个实现不在自己的 `refusal` 中排除另一个实现的范围；需要让出时，由另一个实现声明 `preferred_over`。
-- 没有声明的重叠在调用时报歧义，不会被按顺序悄悄决定。
+- 没有声明的重叠在调用时报歧义，不按声明顺序隐式决定。
 
 GQA dense decode 的三个实现是第 3 种情况。bs1 服务 batch 为 1 的调用，long-context 服务 KV 较长的调用，二者在 batch 为 1 且 KV 较长时重叠，由 long-context 声明它胜出：
 

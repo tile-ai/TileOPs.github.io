@@ -439,7 +439,7 @@ for c in T.serial(V):
 
 本节在 H200 上实测两个 workload，比较四种 access pattern 各自达到的**访存带宽**（搬运的字节数除以 kernel 耗时，单位 TB/s）。两个 workload 的计算对元素处理顺序的要求不同，这一要求决定了哪几种 access pattern 可用。
 
-测试中 SM 时钟锁在 1830 MHz；输入 bf16 的 $65536 \times 4096$（512 MB，**必须大于 L2 的 60 MiB**，否则测到的是 L2 带宽）；每个配置跑三次，三次的结果一致到 ±0.5%。staged 在表里占两列：一列不加 pad（此时 stride 恰好是 $V$ 个 word，产生 bank 冲突，见[优化 shared memory 访问](shared-memory-access.md)），一列是在若干个 pad 取值中测到的最优值。
+测试中 SM 时钟锁在 1830 MHz；输入 bf16 的 $65536 \times 4096$（512 MB，**必须大于 L2 的 60 MiB**，否则测到的是 L2 带宽）；每个配置运行三次，三次的结果一致到 ±0.5%。staged 在表里占两列：一列不加 pad（此时 stride 恰好是 $V$ 个 word，产生 bank 冲突，见[优化 shared memory 访问](shared-memory-access.md)），一列是在若干个 pad 取值中测到的最优值。
 
 **workload 1，按行求乘积**：一行的元素相乘，先后顺序不影响结果，每行只输出一个值，四种 access pattern 都可用。
 
@@ -463,7 +463,7 @@ for c in T.serial(V):
 
 ## access pattern 的取舍
 
-1. **逐元素的 blocked 在 $V > 1$ 时总是最差的 access pattern。** 固定 `c` 时相邻线程的地址相隔 $V$ 个元素，sector 利用率是 $1/V$，所以 $V$ 越大越差：workload 1 的表中从 $V = 8$ 的 3.02 掉到 $V = 64$ 的 0.48。这个关系由访存合并的规则决定，不随形状改变。
+1. **逐元素的 blocked 在 $V > 1$ 时总是最差的 access pattern。** 固定 `c` 时相邻线程的地址相隔 $V$ 个元素，sector 利用率是 $1/V$，所以 $V$ 越大越差：workload 1 的表中从 $V = 8$ 的 3.02 降到 $V = 64$ 的 0.48。这个关系由访存合并的规则决定，不随形状改变。
 
 2. **$V$ 小时用向量化的 blocked；$V$ 大到寄存器压力压低占用率时，改用加了 pad 的 staged。** 向量化把整段留在寄存器里（bf16 是每线程 $V/2$ 个），staged 把它放进 shared memory，以一次同步为代价节省寄存器。翻转点取决于 kernel 其余部分剩下的寄存器预算，没有固定的 $V$：上面两个 workload 在同一个行宽下分别落在 $V = 64$ 与 $V = 32$。**翻转点需要在具体的 kernel 上实测。**
 

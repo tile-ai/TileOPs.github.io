@@ -101,7 +101,7 @@
 | 3 | 判断空写 | plan 表明至少有一个写入、且所有写入都没有元素时，不运行任何实现，按签名构造结果 |
 | 4 | 选择 target | 实例尚未选定 target、且这次调用需要运行实现时选择，见[第 4 节](#target) |
 | 5 | 执行 | 运行空写结果、target 的 kernel 或 `forward`，三者取一 |
-| 6 | 检查结果 | 每次调用都用 plan 的结果检查检查返回值：返回结构，每个输出的 shape、dtype、设备与布局，以及 `out` 与被写入输入的身份 |
+| 6 | 检查结果 | 每次调用都用 plan 中的结果检查核对返回值：返回结构，每个输出的 shape、dtype、设备与布局，以及 `out` 与被写入输入的身份 |
 | 7 | 记录 | 1. 弹出调用栈<br>2. 把子 op 的记录按 stage 归档<br>3. 把这次调用的记录提交为 `_last_call`<br>4. 报告给外层调用 |
 
 plan（Op plan）：
@@ -207,7 +207,7 @@ target 被调用前，生成的检查已经运行，基类保证以下三点：
 
 子类通过 `self.kernel_for(interface, call)` 取得 kernel，其中 `call` 是一个不接受参数、返回 call spec 的函数：
 
-- 参数的写法见[添加一个新 op § kernel_for](../../new-op.md#kernel-selection)；
+- 参数的写法见[添加新 op § kernel_for](../../new-op.md#kernel-selection)；
 - kernel 接口、实现、call spec 与 entry 的定义见 [op 如何选择 kernel § 术语](../dispatch/index.md#terms)。
 
 `kernel_for` 依次完成：

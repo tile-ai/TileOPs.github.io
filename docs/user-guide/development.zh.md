@@ -153,4 +153,4 @@ PIP_NO_BUILD_ISOLATION=1 pip install -e '.[dev]' -c constraints.txt
 
 ### 没有 SM90 GPU 时可运行的检查 { #faq-no-gpu }
 
-[运行测试](#tests)一节中不需要 GPU 的三项检查。需要 GPU 的测试由 PR 上的 CI 运行。
+[运行测试](#tests)一节中不需要 GPU 的三项检查可以在本地运行。需要 GPU 的测试由 PR 上的 CI 运行。

@@ -209,7 +209,7 @@ roofline:
   | 3 | `call.tensors[t]` | 张量 `t` 的 `(形状, dtype 名)` |
   | 4 | `call.bytes(t)` | 张量 `t` 的字节数 |
   | 5 | `call.metadata_values(t)` | metadata 张量 `t` 的内容；在 meta 张量上调用时报错，因为 meta 张量没有取值 |
-  | 6 | `call.stages` | 复合 op 的各子 op 在本次调用中完成的调用，按 stage 名索引 |
+  | 6 | `call.stages` | 组合 op 的各子 op 在本次调用中完成的调用，按 stage 名索引 |
 
 - 每个 spec 都会生成一个 `eval_roofline()` 方法，它基于 op 最近一次完成的调用计算 FLOPs 与字节数。benchmark 通过这个方法取得数值并写入结果，roofline 工具读取 benchmark 的结果，不直接调用 op。
 

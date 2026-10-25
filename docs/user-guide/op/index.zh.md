@@ -16,7 +16,7 @@
 
 | No. | 主题 | 指南 |
 | --- | --- | --- |
-| 1 | • 新增一个 op 的步骤：manifest 条目、op 类的成员、`kernel_for` 的参数<br>• 注册、测试与 benchmark | [添加一个新 op](../../new-op.md) |
+| 1 | • 新增一个 op 的步骤：manifest 条目、op 类的成员、`kernel_for` 的参数<br>• 注册、测试与 benchmark | [添加新 op](../../new-op.md) |
 | 2 | • 在 `torch.compile` 中调用 op<br>• 编译边界的生成条件与冷编译要求<br>• custom op 与 fake 的生成 | [接入 torch.compile](../../torch-compile.md) |
 | 3 | • kernel 接口与实现的选择<br>• 新增 kernel<br>• backend 接入 | [op 如何选择 kernel](../dispatch/index.md) |
 | 4 | • manifest 条目的格式<br>• 从签名生成的检查 | [读写 manifest](../manifest/index.md) |
