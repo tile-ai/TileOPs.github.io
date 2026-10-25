@@ -75,6 +75,7 @@ nav:
   # unrelated algorithms. Trace comes last — a tool rather than an op.
   - API Reference:
     - api/index.md
+    - API Stability: stability.md
     - Elementwise: api/elementwise.md
     - RoPE: api/rope.md
     - Reduction: api/reduction.md
@@ -212,6 +213,7 @@ plugins:
             Layer Boundaries: 层间边界
             Elementwise: Elementwise
             API Reference: API 参考
+            API Stability: API 稳定性
             Reduction: Reduction
             Normalization: Normalization
             GEMM: GEMM
@@ -224,6 +226,7 @@ plugins:
             Linear Attention: Linear Attention
             Mamba: Mamba
             FFT: FFT
+            Transform: Transform
             mHC: mHC
             MoE: MoE
             Sampling: Sampling

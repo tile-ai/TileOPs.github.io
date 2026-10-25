@@ -58,6 +58,7 @@ jobs:
           sparse-checkout: |
             docs/design
             docs/perf
+            docs/stability.md
             src/tileops
             scripts/nightly_report.py
           sparse-checkout-cone-mode: false

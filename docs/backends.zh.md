@@ -48,7 +48,7 @@ TileLang 是支持多种 backend 的 DSL，每种硬件各有一套独立的 ker
 
 ## 协议中的四个函数
 
-`tileops.backend` 只定义对外接口，用 Python 的结构化类型（`typing.Protocol`）表达：backend 不继承基类，也不实现抽象方法，只需写出签名相符的普通函数并注册。op 层检查返回值时同样只看结构，即 `callable()`。
+`tileops.backend` 只定义对外接口，即函数的签名与几个数据类型：backend 不继承基类，也不实现抽象方法，只需写出签名相符的普通函数并注册。op 层检查返回值时同样只看结构，即 `callable()`。
 
 backend 实现 `detect` 与 `build_kernel`，再调用 `register_detector` 与 `register_kernel_builder` 登记它们。此外还有协议定义的 `TensorSpec`，以及 `pyproject.toml` 中的一条 entry point：
 
@@ -138,13 +138,13 @@ def register_kernel_builder(op: str, target: str, build_kernel: BuildKernel) -> 
 def register_device_facts(device_type: str, read: Callable[[torch.device], DeviceFacts]) -> None: ...
 ```
 
-由 backend 调用，每种设备类型一次。kernel 选择读取调用设备的四项设备事实：`arch`、`calibration`、`sm_count`、`smem_budget`。
+由 backend 调用，每种设备类型一次。kernel 选择读取调用设备的三项设备事实，即 `DeviceFacts` 的三个字段：`arch`、`sm_count`、`smem_budget`。CUDA 设备的 `arch` 是 `major * 10 + minor`；其他设备类型的 `arch` 如何编码，由注册它的 backend 写明。
 
 | 设备类型 | 设备事实的来源 |
 | --- | --- |
 | `cuda` | TileOPs 自己读取 |
 | 已注册的其他类型 | 注册的 `read`：收到调用的 `torch.device`，返回 `DeviceFacts` |
-| 未注册的类型，如 `cpu` | 没有设备事实：`-1 / None / 0 / 0` |
+| 未注册的类型，如 `cpu` | 没有设备事实：`arch=-1, sm_count=0, smem_budget=0` |
 
 - 读取设备事实的是按架构、SM 数或共享内存选择的实现。声明了 `supported_archs` 的实现在未注册的设备类型上永远不可用。
 - 只服务整个 op 的 target 不需要注册：target 的 kernel 自己决定怎么选。
@@ -152,6 +152,7 @@ def register_device_facts(device_type: str, read: Callable[[torch.device], Devic
 - `arch` 只在同一种设备类型内可比，所以声明 `supported_archs` 的实现，其 `devices` 只能有一种设备类型。
 - `read` 收到的设备：设备是进程 accelerator 的类型时，op 层先补上设备序号；`cpu` 这类不编号的设备原样传入。
 - `read` 的调用时机：每个 call spec 第一次读设备事实时调用一次，结果只存在这个 call spec 上；声明了 `supported_archs` 的 kernel 构造时也调用一次。开销大时由 backend 在 `read` 内缓存。
+- `DeviceFacts` 只能按关键字构造。之后的版本新增字段时会带默认值，按关键字构造的代码不受影响。
 - `read` 抛异常或返回值不合规（不是 `DeviceFacts`、字段类型不对、`sm_count` 或 `smem_budget` 为负）时，op 层报 `BackendError`，指出是哪个 `read`。
 
 ```python
@@ -161,7 +162,7 @@ import acme_runtime                                      # 厂商 runtime，这�
 
 def read_acme(device: torch.device) -> DeviceFacts:
     props = acme_runtime.device_properties(device.index)
-    return DeviceFacts(arch=props.arch, calibration=None,
+    return DeviceFacts(arch=props.arch,                 # 编码方式由本 backend 写明
                        sm_count=props.compute_units,
                        smem_budget=props.shared_memory_per_block)
 
@@ -171,13 +172,14 @@ register_device_facts("acme", read_acme)                 # "acme" 是 torch 的�
 ### `TensorSpec`
 
 ```python
-class TensorSpec(NamedTuple):
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class TensorSpec:
     device: torch.device
     dtype: torch.dtype
     shape: tuple[int, ...]
 ```
 
-协议定义的类型，由 op 层构造后传入 `build_kernel`。它描述一个张量的属性，不包含张量本身。
+协议定义的类型，由 op 层构造后传入 `build_kernel`。它描述一个张量的属性，不包含张量本身。它只能按关键字构造；`TensorSpec.of(tensor)` 由一个张量得到它的描述。
 
 ```python
 # build_kernel 收到的实参
@@ -234,8 +236,8 @@ d = op(a, b)                     # 所有输入必须在同一设备上：a.devi
 #   设备、dtype 与形状都相同的下一次调用命中，直接进入最后一步
 
 # ── backend：op 层调用 build_gemm，张量已转为 TensorSpec ───────────────
-#   build_gemm(TensorSpec("acme:0", float16, (4096, 4096)),
-#              TensorSpec("acme:0", float16, (4096, 4096)),
+#   build_gemm(TensorSpec(device=torch.device("acme:0"), dtype=float16, shape=(4096, 4096)),
+#              TensorSpec(device=torch.device("acme:0"), dtype=float16, shape=(4096, 4096)),
 #              trans_a=False, trans_b=True)      # params 按 manifest 中的名字传入
 #   → 返回一个可调用对象
 

@@ -102,12 +102,13 @@ pre-commit run --all-files                            # 代码检查，与 CI �
 ## 运行 benchmark { #bench }
 
 ```bash
-PIP_NO_BUILD_ISOLATION=1 pip install -e '.[dev,bench]' -c constraints.txt
+PIP_NO_BUILD_ISOLATION=1 pip install -e '.[dev]' --group bench -c constraints.txt
 python -m pytest -q <bench-file>
 ```
 
 - 改动 kernel 或 op 的 PR 需附上 benchmark 结果，对比对象是 TileOPs 以外的实现。
-- benchmark 的对比库通过 `bench` extra 安装。dev 镜像在构建时也会安装这些库，其中个别库安装失败不会中止构建，`sgl-kernel` 则不在镜像中；容器内缺少的库按仓库声明的版本另行安装。
+- benchmark 的对比库通过 `bench` 依赖组安装，`--group` 需要 pip 25.1 及以上。FlashAttention-3（`flash_attn_interface`）不在 PyPI 上，也不在这个依赖组里：从 FlashAttention 仓库的 `hopper/` 目录编译安装，或使用 dev 镜像。
+- dev 镜像在构建时也会安装这些库，其中个别库安装失败不会中止构建，`sgl-kernel` 则不在镜像中；容器内缺少的库按仓库声明的版本另行安装。
 - 加上 `--tileops-verify` 时，benchmark 只做正确性校验，不计时，适合在改动 kernel 后先确认数值。
 - benchmark 文件的写法见[编写 benchmark](benchmark/writing.md)，计时方式见 [benchmark 的计时方法](../timing.md)。
 

@@ -49,6 +49,8 @@ Two things this reference does not carry:
 - **How fast it is.** Device time against the fastest alternative on each workload is on
   the [Benchmarks](../benchmarks/index.md) pages.
 
+Which names are public, and what a release may change, is on [API Stability](../stability.md).
+
 These pages are generated from the docstrings in TileOPs, so an op whose docstring is
 thin reads thin here. The fix belongs upstream, in
 [`src/tileops/_ops/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/_ops).

@@ -122,16 +122,19 @@ pre-commit run --all-files                            # lint, the same as CI's p
 ## Running benchmarks { #bench }
 
 ```bash
-PIP_NO_BUILD_ISOLATION=1 pip install -e '.[dev,bench]' -c constraints.txt
+PIP_NO_BUILD_ISOLATION=1 pip install -e '.[dev]' --group bench -c constraints.txt
 python -m pytest -q <bench-file>
 ```
 
 - A PR that changes a kernel or an op includes benchmark results, compared against
   an implementation outside TileOPs.
-- The baseline libraries install through the `bench` extra. The dev image installs
-  them at build time too; a baseline that fails to install there does not stop the
-  build, and `sgl-kernel` is not in the image. A baseline missing from the
-  container is installed at the version the repository declares.
+- The baseline libraries install through the `bench` dependency group; `--group` needs
+  pip 25.1 or later. FlashAttention-3 (`flash_attn_interface`) is not on PyPI and is not
+  in the group: build it from the FlashAttention repository's `hopper/` directory, or use
+  the dev image.
+- The dev image installs the baseline libraries at build time too. A failed install of
+  some of them does not stop the build, and `sgl-kernel` is not in the image. A baseline
+  missing from the container is installed at the version the repository declares.
 - With `--tileops-verify`, a benchmark only checks correctness and times nothing, which
   is a quick way to confirm the numerics after changing a kernel.
 - How to write a benchmark file is in [Writing benchmarks](benchmark/writing.md); how the

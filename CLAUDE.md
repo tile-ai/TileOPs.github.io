@@ -88,7 +88,7 @@ Everything else goes the other way.
 |------|--------|
 | Coverage | Whichever pages have a `.zh.md` — `ls docs/**/*.zh.md` |
 | Never translate | `api/` and `benchmarks/`, both generated; `design/`, mirrored English |
-| Mirrored, translated | `performance-guides/trace-timeline.md` mirrors TileOPs `docs/perf/trace-timeline.md`; its `.zh.md` is a full translation. When upstream changes that file, update the translation in step |
+| Mirrored, translated | `performance-guides/trace-timeline.md` mirrors TileOPs `docs/perf/trace-timeline.md`, and `stability.md` mirrors TileOPs `docs/stability.md`; each `.zh.md` is a full translation. When upstream changes either file, update the translation in step |
 | Missing translation | Falls back to English at the same URL, and `hooks.py` prepends a "本页暂无中文版" notice. The fallback runs zh → en only: a page that exists only as `.zh.md` leaves its `nav` entry on a missing file and the English sidebar renders a dead link |
 | Figures | A figure with text needs one SVG per language: `img/<name>.svg` for English and `img/<name>.zh.svg` beside it, which the `zh` build picks up for the same reference. Translate the `<text>` nodes and the `aria-label`, keep the geometry. English runs longer than Chinese — grow the `viewBox` rather than let text overflow. The user-guide figures are drawn from sources under `figures/user-guide/` (`<name>.zh.puml`, `<name>.en.puml`, `manifest/overview.py`): edit the source, then run `figures/user-guide/render.sh` |
 | Nav labels | `nav_translations` in the `i18n` plugin block; keep an entry for every `nav` title |
