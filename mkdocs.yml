@@ -37,7 +37,7 @@ nav:
   - Blog:
     - blog/index.md
   - User Guide:
-    # In the order the index groups them: getting started, specs and ops,
+    # In the order the index groups them: developing TileOPs, specs and ops,
     # kernels and hardware, integration and performance.
     - user-guide/index.md
     - Development Guide: user-guide/development.md

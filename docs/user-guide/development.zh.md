@@ -1,5 +1,7 @@
 # 开发指南 { #development-guide }
 
+本指南面向参与开发 TileOPs 本身的贡献者。使用 TileOPs 只需 `pip install tileops`，见[首页的安装说明](../index.md)。
+
 ## 获取代码 { #get-code }
 
 ```bash

@@ -1,5 +1,8 @@
 # Development Guide { #development-guide }
 
+This guide is for contributors working on TileOPs itself. Using TileOPs needs only
+`pip install tileops`; see [Installation](../index.md#installation).
+
 ## Getting the code { #get-code }
 
 ```bash

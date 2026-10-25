@@ -12,6 +12,17 @@ TileOPs 是一个面向大模型推理的探索性算子库，构建在 [TileLan
 pip install tileops
 ```
 
+每次发布在以下一组配置上验证：
+
+- Linux
+- Python 3.12 或 3.13
+- PyTorch 2.13
+- [TileLang](https://github.com/tile-ai/tilelang) 0.1.12
+- CUDA Toolkit 13.2，且 `nvcc` 在 `PATH` 上：TileLang 在运行时编译 kernel
+- 计算能力 9.0（SM90）的 GPU，在 H200 上测试
+
+部分 kernel 另有 SM80、SM86 或 SM89 路径，不在发布验证范围内。从源码构建见[开发指南](user-guide/development.md)。
+
 ## 快速开始
 
 op 在构造时不绑定任何形状。形状和 dtype 取自调用时传入的张量，特化后的 kernel 在首次调用时编译并缓存。
@@ -33,9 +44,10 @@ flops, nbytes = op.eval_roofline()   # 本次调用所需的计算量与访存�
 - [博客](blog/index.md)：TileOPs 开发中的技术探索。
 - [用户指南](user-guide/index.md)：读写 manifest、接入 `torch.compile`、benchmark 的计时方法、接入新硬件 backend。
 - [API 参考](api/index.md)：各 op family 的构造参数与调用方式。
+- [API 稳定性](stability.md)：哪些名字是公开 API，以及一次发布可以改动什么。
 - [性能数据](benchmarks/index.md)：每晚在 H200 上实测，逐个 workload 与其他实现对比。
 
 ## 相关链接
 
 - [GitHub](https://github.com/tile-ai/TileOPs)
-- [开发指南](https://github.com/tile-ai/TileOPs/blob/main/docs/development.md)
+- [PyPI](https://pypi.org/project/tileops/)

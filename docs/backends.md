@@ -37,7 +37,8 @@ A package outside TileOPs takes over every call of an op through a target. A tar
 follows the op's manifest signature, and the backend writes a `build_kernel` for it. The
 kernel interfaces and call specs of TileOPs' ops are not public API, so a backend does not
 add an implementation to a single kernel interface; see
-[How a backend joins TileOPs](user-guide/dispatch/backends.md).
+[How a backend joins TileOPs](user-guide/dispatch/backends.md). The public modules a
+backend imports are listed on [API Stability](stability.md).
 
 ## Four things to write
 

@@ -27,7 +27,7 @@ TileLang 是支持多种 backend 的 DSL，每种硬件各有一套独立的 ker
 
 ## 接入方式 {#extend}
 
-一个仓库之外的包通过 target 接管 op 的全部调用。target 遵守的是 op 在 manifest 中的签名，backend 为它写一个 `build_kernel`。TileOPs 各 op 的 kernel 接口与 call spec 不是公开 API，backend 不为单个 kernel 接口新增实现，见 [backend 如何接入](user-guide/dispatch/backends.md)。
+一个仓库之外的包通过 target 接管 op 的全部调用。target 遵守的是 op 在 manifest 中的签名，backend 为它写一个 `build_kernel`。TileOPs 各 op 的 kernel 接口与 call spec 不是公开 API，backend 不为单个 kernel 接口新增实现，见 [backend 如何接入](user-guide/dispatch/backends.md)。backend 可以导入的公开模块列在 [API 稳定性](stability.md)。
 
 ## 写一个 backend 要做的四件事
 
