@@ -144,12 +144,15 @@ primitive 是表达式中可以调用的内建函数，例如 `broadcast`、`red
 | 4 | 输入上的 `mutated: "<discriminant 表达式>"` | 仅当表达式为 true 时，op 才写入这个输入 | 激活函数的 `mutated: inplace` |
 | 5 | 输出上的 `alias: <输入名>` | 该输入被写入时，这个输出就是该输入对象本身 | 激活函数的 `alias: input` |
 | 6 | 输入 `out` 上的 `mutated: true`、`write_only: true` 与 `kw_only: true` | 无法自行分配输出的 op 所必须传入的输出缓冲：只能以关键字传入，没有默认值，位于所有输入的最后；一个输出声明 `alias: out` | PagedKVCacheGather 的 `out` |
+| 7 | 被写入的输入或 `buffer: out` 输出上的 `overlaps: [<输入名>, ...]` | 被写入的张量可以与列出的输入共享字节 | MoEExpertMLPFwdOp 的 `output` |
 
 调用的返回值由这些声明决定：
 
 - 传入了 `out` 的 op 写入 `out`，并返回这个对象；
 - 有多个输出的 op 返回一个 tuple，每个声明的输出按声明顺序占一个位置，缺省的 `nullable` 输出在其位置上为 `None`；
 - 唯一的 effect 是写入输入的 op 不声明输出，返回 `None`。
+
+调用写入的张量（`out` 或被写入的输入）不与其他调用张量共享任何字节，除非它在 `overlaps` 中列出了那个输入；违反这一条的调用在任何实现运行前抛出 `CheckError`。完全相同的别名也算共享；带 stride 的视图所占的字节从首个元素起到末个元素止，中间的空洞也计入。只有每个实现都在写入该张量之前读完某个输入时，条目才列出这个输入，例如只由组合 op 的前一个 stage 读取的输入。
 
 以激活函数的 `inplace` 为例：
 
@@ -167,7 +170,8 @@ effect 声明还需满足以下规则，validator 会拒绝违反它们的 spec�
 - `write_only: true` 只能与 `mutated: true` 同时使用；
 - `alias` 指向的必须是一个会被写入的输入；
 - 声明了 `alias` 的输出不能再声明 `buffer`；
-- 至多一个输出声明 `buffer: out`。
+- 至多一个输出声明 `buffer: out`；
+- `overlaps` 只能写在被写入的输入或 `buffer: out` 输出上，列出的是其他输入，每个只列一次。
 
 validator 对每个 effect 分支检查 operator schema、别名关系与 roofline 的读写计数是否一致。
 
@@ -198,8 +202,9 @@ generator 的规则如下：
 - `requires` 列出约束 metadata 张量内容的谓词。例如 `prefix_offsets(S)` 要求张量首项为 0、单调不减、末项为 `S`。被约束张量的内容是谓词隐含的第一个实参。
 - 每个谓词按固定的秩读取被约束的张量；逐元素给出上下界的谓词（如 `in_range`）可以作用于任意秩的张量。
 - 谓词的实参可以是另一个 metadata 张量，这样一条谓词就能约束两个张量之间的关系，例如 GroupedGEMM 的 `batch_offsets` 声明 `requires: ["exclusive_prefix_of(batch_sizes)"]`，要求它是 `batch_sizes` 的 exclusive 前缀和。在被约束的张量存在的每个分支上，作为实参的那个张量也必须存在。
-- validator 在实例化时用生成的取值检查 `requires`。在实际调用中，这些约束由调用方保证，op 不检查张量的内容；因此 validator 还会检查，在被约束的张量存在的每个分支上，谓词都是良定义的。
+- validator 在实例化时用生成的取值检查 `requires`。在实际调用中，这些约束由调用方保证，op 默认不检查张量的内容；因此 validator 还会检查，在被约束的张量存在的每个分支上，谓词都是良定义的。
 - 声明了 `requires` 的张量也必须声明 `values`。
+- 有输入的 `requires` 含 `prefix_offsets` 的 op，在 `params` 中声明 `validate_inputs: {type: bool, default: false, kw_only: true}`。调用方把它设为 true 时，由 manifest 生成的检查在实现运行前于 CPU 上读取这些 offsets，以及声明相同 `values` 的每个输入（例如 CPU 副本）。这项检查会同步设备，不能在 CUDA Graph 捕获中运行。
 
 ## 8. dtype 组合与打包 dtype {#dtype-combos}
 

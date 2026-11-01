@@ -51,7 +51,8 @@ An op instance is constructed once and called many times:
       check uses its shape and dtype.
 - **Kernels:** built the first time a specialization is needed, then cached, so the same
   specialization is reused afterwards. Whether an in-tree entry is reused is decided by the
-  identity the implementation's `entry_for` returns; a kernel a target builds is cached by
+  identity the implementation's `entry_for` returns and by the build target, the device
+  facts the build compiles for; a kernel a target builds is cached by
   the call's device and each input's dtype and shape. See
   [Construction and calls § Kernel cache](lifecycle.md#kernel).
 

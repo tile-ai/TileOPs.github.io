@@ -93,7 +93,7 @@ The left side of the figure below shows the developer's steps; the right side sh
 3. The developer writes the reference implementation, the correctness tests and the benchmark function, adding them to the family's or module's existing file if there is one. See the design document [Testing](../../design/testing.md).
     - Correctness tests use the `BUILTIN` target by default and take their device from `workloads.device.run_device()`. Device availability is checked with `workloads.device.run_device_available()`, not `torch.cuda.is_available()`.
     - A test that depends on in-tree kernel state is marked `pytest.mark.in_tree_kernels` or passes `target=BUILTIN` explicitly.
-    - A test that needs CUDA to run is marked `pytest.mark.cuda_only`. A test in `tests/ops` that needs CUDA only because the in-tree kernels do is marked `in_tree_kernels` alone.
+    - A test that needs CUDA to run is marked `pytest.mark.cuda_only(<reason>)`, with one reason: `cuda-graph`, `cuda-kernel` or `cuda-reference`. A test whose `sm*` mark already needs CUDA carries no `cuda_only`, and a test in `tests/ops` that needs CUDA only because the in-tree kernels do is marked `in_tree_kernels` alone.
     - Benchmarks also accept `--tileops-target` and `--tileops-device`, and use `BUILTIN` by default. They run on CUDA or on the process's accelerator, timed with CUPTI on CUDA and with device events elsewhere.
 4. After `status` changes to `implemented`, the validator starts checking the code against the spec, and CI runs the manifest tests and the correctness tests on GPU. When a check fails, the implementation is changed, not the spec.
 5. After the change is merged into main, nightly runs the benchmarks by case id, the roofline tools compute efficiency, and the docs site is updated accordingly.
@@ -116,7 +116,7 @@ The spec describes the op's external contract. Its contents fall into five group
 | No. | Content | Fields | Described in |
 | --- | --- | --- | --- |
 | 1 | type signature | `signature` | [Spec fields](writing.md) |
-| 2 | side effects | `mutated`, `write_only`, `buffer`, `alias` on tensors | [Extensions § 6](extensions.md#effects) |
+| 2 | side effects | `mutated`, `write_only`, `buffer`, `alias`, `overlaps` on tensors | [Extensions § 6](extensions.md#effects) |
 | 3 | test cases | `workloads`, and `values`, `requires` on tensors | [Spec fields § 8](writing.md#workloads), [Extensions § 7](extensions.md#generators) |
 | 4 | cost model | `roofline` | [Spec fields § 9](writing.md#roofline) |
 | 5 | internal structure of a composite op | `composition` | [Extensions § 10](extensions.md#composition) |

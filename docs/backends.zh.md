@@ -542,9 +542,9 @@ TileOPs 把 `torch.device` 原样传给 `detect`，自己不解析它。原因�
 | # | op 层提供 | 对 backend 意味着什么 |
 | --- | --- | --- |
 | 1 | torch 侧的公开 API 与参数语义 | 这个 op 如何被调用、参数名与各参数的含义均已确定，backend 既不定义也不能改动 |
-| 2 | manifest 校验 | 不符合 manifest 签名的调用由 op 层拒绝，不会到达 backend；签名之内的检查分工见下文 |
+| 2 | manifest 校验 | 不符合 manifest 签名的调用由 op 层拒绝，不会到达 backend；被写入的张量与另一个调用张量共享字节、且 manifest 条目的 `overlaps` 没有列出后者的调用同样被拒绝。签名之内的检查分工见下文 |
 | 3 | 参数按名字传入 | backend 收到的参数名是 manifest `params` 的名字，值是 op 实例保存的值。manifest 中默认为 null 的参数，传入的是 op 选定的值，可能是 `None`，也可能是一个具体数值 |
-| 4 | 输入的连续性归一 | 本次调用不写入的输入都转成连续张量；被写入的输入按调用方传入的原样传给 backend，除非 manifest 声明它 `contiguous: true` |
+| 4 | 输入的连续性与对齐 | 本次调用不写入的输入都转成连续张量；被写入的输入按调用方传入的原样传给 backend，除非 manifest 声明它 `contiguous: true`。每个调用张量的起始地址都在 16 字节边界上：不在边界上的张量由 op 层换成对齐的副本传入，被写入的副本再拷回调用方的张量 |
 | 5 | kernel 的记忆与重用 | 构造函数对每种特化调用一次：设备与输入签名相同的后续调用直接使用上一次的返回值。因此构造函数内部可以编译，op 层保证它不会被重复调用 |
 | 6 | `torch.compile` 与 CUDA graph 的边界 | 对有编译边界的 op（spec 有调用期张量输入、没有 `composition`），op 层把一次调用包装成不透明 op，并另配一个 fake，使编译器不执行也能推出输出的形状与 dtype。**backend 的 kernel 不为编译做任何事**，细节见[接入 torch.compile](torch-compile.md) |
 | 7 | roofline、profile 与数值测试 | op 层已有的测试可以用 backend 的 kernel 运行，见[backend 的测试结论](#test-claim)；性能报告见[性能报告](#reports) |

@@ -163,7 +163,7 @@ Notes on Table 2:
 | 1 | `_target_builder` | • The selected target's builder<br>• `None` means the in-tree kernels | class-attribute default `_UNRESOLVED`, meaning not selected yet |
 | 2 | `_serving_target` | The selected target's name, which the `serving_target` property reads | class-attribute default `None` |
 | 3 | `_entries_by_call` | The cache from `(interface, call)` to entry; a hit is one lookup | an empty table `Op.__init__` builds when it installs the implementation table |
-| 4 | `_built_entries` | The entries under each interface, keyed by `(implementation class, identity)`; `_entries_built` reads it | an empty table `Op.__init__` builds when it installs the implementation table |
+| 4 | `_built_entries` | The entries under each interface, keyed by `(implementation class, identity, build target)`; `_entries_built` reads it | an empty table `Op.__init__` builds when it installs the implementation table |
 | 5 | `_target_kernels` | • The kernels a target built, keyed by device and each input's dtype and shape<br>• An optional input that is not passed holds its own slot | an empty table `Op.__init__` builds |
 
 The base class's methods read and write these fields without asking whether they exist,

@@ -42,8 +42,8 @@ The following lists every top-level field a spec can contain. Each comment gives
   signature:
     forall: {<index>: <kind>}        # 3
     params: {<p>: {type, default, kw_only}}                     # 4
-    inputs: {<t>: {dtype, shape, optional, mutated, values, requires, ...}}  # 5
-    outputs: {<t>: {dtype, shape, nullable, buffer, alias, ...}}   # 5
+    inputs: {<t>: {dtype, shape, optional, mutated, overlaps, values, requires, ...}}  # 5
+    outputs: {<t>: {dtype, shape, nullable, buffer, alias, overlaps, ...}}   # 5
     types: {<Family>: {params, match, cases}}                   # Extensions 2
     let: {<name>: "<expression>"}                               # Extensions 4
     shape_rules: ["<refinement>"]                               # 6

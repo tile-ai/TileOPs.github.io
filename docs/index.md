@@ -38,6 +38,17 @@ Some kernels also have SM80, SM86 or SM89 paths, which are outside the release
 verification. To build from source, see the
 [Development guide](user-guide/development.md).
 
+The release Docker image carries TileOPs 0.1.0,
+[TileFoundry](https://github.com/tile-ai/TileFoundry) 0.0.3 and the benchmark baselines,
+on CUDA 13.2, PyTorch 2.13 and TileLang 0.1.12:
+
+```bash
+docker run --rm -it --gpus all \
+  ghcr.io/tile-ai/tileops-release:tileops0.1.0-tilefoundry0.0.3-cuda13.2-torch2.13-tilelang0.1.12
+```
+
+`scripts/verify_release_image.sh`, run from a clone of TileOPs, checks the image on a GPU.
+
 ## Quick Start
 
 An op binds no shape at construction. Shapes and dtype come from the tensors passed

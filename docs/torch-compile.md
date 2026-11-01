@@ -94,9 +94,11 @@ the compiled path behave differently from the eager one.
 - **A second card may need its own build.** For a call a target serves, the device is
   part of the kernel's cache key, so the same instance builds the kernel again on a
   second card. The cache key of an in-tree kernel is the build identity the selected
-  implementation's `entry_for` returns, which includes the device only when the build
-  depends on it. A `target=` given to the constructor also takes effect on the first
-  compiled call, and a failed build pins the op to no target.
+  implementation's `entry_for` returns together with the build target, the device type
+  and the device facts the build compiles for: a second card of the same model reuses
+  the kernel, and a card of another architecture builds its own. A `target=` given to
+  the constructor also takes effect on the first compiled call, and a failed build pins
+  the op to no target.
 
 ### The three guarantees once an op is in
 

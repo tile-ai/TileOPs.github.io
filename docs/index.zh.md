@@ -23,6 +23,15 @@ pip install tileops
 
 部分 kernel 另有 SM80、SM86 或 SM89 路径，不在发布验证范围内。从源码构建见[开发指南](user-guide/development.md)。
 
+发布版 Docker 镜像包含 TileOPs 0.1.0、[TileFoundry](https://github.com/tile-ai/TileFoundry) 0.0.3 与 benchmark 的对比库，基于 CUDA 13.2、PyTorch 2.13 与 TileLang 0.1.12：
+
+```bash
+docker run --rm -it --gpus all \
+  ghcr.io/tile-ai/tileops-release:tileops0.1.0-tilefoundry0.0.3-cuda13.2-torch2.13-tilelang0.1.12
+```
+
+在 TileOPs 的 clone 中运行 `scripts/verify_release_image.sh`，可在 GPU 上检查这个镜像。
+
 ## 快速开始
 
 op 在构造时不绑定任何形状。形状和 dtype 取自调用时传入的张量，特化后的 kernel 在首次调用时编译并缓存。

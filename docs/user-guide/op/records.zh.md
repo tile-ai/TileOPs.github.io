@@ -61,7 +61,7 @@
 | No. | 方法 | 返回 |
 | --- | --- | --- |
 | 1 | `iter_kernels()` | • 各接口的 entry 和持有的子 op 中的每个 `Kernel`，每个只返回一次<br>• 不遍历 target 构造的 kernel，它们由 `_entries_built(interface)` 查看 |
-| 2 | `_entries_built(interface)` | • in-tree 路径：返回这个 kernel 接口已构造的 entry，按 `(实现类, identity)` 区分<br>• target 服务时：返回这个 op 的全部 target kernel，按设备与每个输入的 dtype、shape 区分，`interface` 不参与筛选 |
+| 2 | `_entries_built(interface)` | • in-tree 路径：返回这个 kernel 接口已构造的 entry，按 `(实现类, identity, build target)` 区分<br>• target 服务时：返回这个 op 的全部 target kernel，按设备与每个输入的 dtype、shape 区分，`interface` 不参与筛选 |
 | 3 | `_held_delegates()` | 组合 op 持有的子 op，按 stage 顺序 |
 
 三个方法的用途：

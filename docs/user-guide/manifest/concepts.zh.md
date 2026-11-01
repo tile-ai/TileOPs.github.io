@@ -148,7 +148,7 @@ effect 决定了 roofline 的读写计数，以及有编译边界的 op 所生�
 | 9 | refinement | 约束 index 取值的谓词 | `shape_rules` 中的每一条 | [6](#refinement) |
 | 10 | unification | 将声明的形状与实际形状逐轴对应，求出未知的 index | 由签名生成 | [7](#unification) |
 | 11 | type inference | 调用时求出全部 index 的过程 | 由签名生成 | [7](#unification) |
-| 12 | effect | 调用对参数的写入与别名关系 | `mutated`、`write_only`、`buffer`、`alias` | [8](#effect) |
+| 12 | effect | 调用对参数的写入与别名关系 | `mutated`、`write_only`、`buffer`、`alias`、`overlaps` | [8](#effect) |
 | 13 | `Maybe[X]`、`present` | 可能缺省的 `X`；`present(x)` 表示它是否给出 | 可选输入、可空输出、`int \| None` 参数 | [扩展写法 1](extensions.md#presence) |
 | 14 | primitive | 表达式中可以调用的内建函数，例如 `broadcast`、`pool.out` | 表达式中的函数调用 | [扩展写法 4](extensions.md#let) |
 | 15 | generator | 实例化时为 metadata 张量生成取值的函数，例如 `prefix_sum(q_lens)` | 张量的 `values` | [扩展写法 7](extensions.md#generators) |

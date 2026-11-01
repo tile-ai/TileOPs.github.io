@@ -141,20 +141,22 @@ Where the seven steps sit in time is shown in Figure 1 of
 | No. | Step | What happens |
 | --- | --- | --- |
 | 1 | Begin the call | • Observe the call's specialization and look up its plan in `_plans`<br>• Push the current thread's call stack<br>• Collect the calls sub-ops complete during this call |
-| 2 | Check the signature | • On a plan miss: run the checks `_SignaturePlan` generated, and hold what they decide as the plan<br>• On a hit: reuse the plan and run no check again |
+| 2 | Check the signature | • On a plan miss: run the checks `_SignaturePlan` generated, and hold what they decide as the plan<br>• On a hit: reuse the plan and run no check again<br>• On every call: raise `CheckError` when a tensor the call writes shares a byte with another call tensor its manifest entry does not list in `overlaps`<br>• On every call of an op constructed with `validate_inputs=True`: check the packed offsets on the CPU |
 | 3 | Detect an empty write | When the plan says there is at least one write and every write holds no elements, run no implementation and build the result from the signature |
 | 4 | Select the target | Select one when the instance has none yet and this call needs to run an implementation; see [§ 4](#target) |
-| 5 | Run | Run one of the three: the empty-write result, the target's kernel, or `forward` |
+| 5 | Run | • Run one of the three: the empty-write result, the target's kernel, or `forward`<br>• A call tensor that does not start on a 16-byte boundary is replaced by an aligned copy before the target's kernel or `forward` runs; a written copy is copied back to the caller's tensor after the result check |
 | 6 | Check the result | Check the return value with the plan's result check, on every call: the returned structure, each output's shape, dtype, device and layout, and the identities of `out` and the written inputs |
 | 7 | Record | 1. Pop the call stack<br>2. File the sub-ops' records under their stages<br>3. Commit the call's record as `_last_call`<br>4. Report it to the enclosing call |
 
 The plan (the Op plan):
 
 - **What it is keyed by:** the call's specialization, that is, everything the checks read:
-  each tensor's layout, dtype, device and presence, the params, the construction-time
-  tensors, the execution arguments, and the current device of a call no input places.
-- **What it holds:** the checked call's facts, the effect branch, the result check, whether
-  the call writes no element, and the call specs `forward` built
+  each tensor's layout, dtype, device and presence, whether each call tensor starts on a
+  16-byte boundary, the params, the construction-time tensors, the execution arguments, and
+  the current device of a call no input places.
+- **What it holds:** the checked call's facts, the call tensors it copies to a 16-byte
+  boundary, the pairs of call tensors that must share no byte, the effect branch, the result
+  check, whether the call writes no element, and the call specs `forward` built
   (see [§ 5](#kernel)); it holds no tensor of any call.
 - **How long it lives:** `_plans` holds up to 256 plans, oldest out first; an evicted
   specialization is checked again on its next call.
@@ -221,13 +223,16 @@ The cache of kernels a target builds:
 - an optional input that is not passed holds its own slot;
 - output buffers are not part of the key.
 
-Before a target is called, the generated checks have run, and the base class guarantees three
+Before a target is called, the generated checks have run, and the base class guarantees five
 things:
 
 1. every tensor is on the call's device, except tensors declaring `device: cpu`;
 1. every input this call does not write is contiguous, and a written input is contiguous when
    it declares `contiguous: true`;
-1. the call, including the output buffers the caller provides, satisfies the signature.
+1. the call, including the output buffers the caller provides, satisfies the signature;
+1. every call tensor starts on a 16-byte boundary;
+1. a tensor the call writes shares no byte with another call tensor, except the inputs its
+   manifest entry lists in `overlaps`.
 
 For an op with no call-time tensor input, the device follows the rules in
 [Calls and validation § Call device](../manifest/calls.md#device).
@@ -276,7 +281,7 @@ example:
 | 1 | Example | the class `RMSNormOnChipKernel` | an object built for `n=4096`, fp16 and other arguments |
 | 2 | Exists from | module import | built when the first call that needs it arrives |
 | 3 | Carries | its availability and applicability declarations (`supported_archs`, `refusal`, `preferred_over`) and `entry_for` | its construction arguments (settled by the identity) and one or more kernels |
-| 4 | How many | one per key | under each interface, at most one per `(kernel type, identity)`, for example one for `n=4096`, fp16 and another for `n=8192`, bf16 |
+| 4 | How many | one per key | under each interface, at most one per `(kernel type, identity, build target)`, for example one for `n=4096`, fp16 and another for `n=8192`, bf16 |
 | 5 | Kept in | `kernel_types`, `_installed_kernel_types` | `_built_entries` |
 | 6 | Used for | the base class selects this call's implementation from it | the subclass calls it: `entry(x, weight)` |
 
@@ -317,18 +322,22 @@ function of no argument that returns the call spec:
       [How an op selects a kernel § How a call finds its kernel](../dispatch/index.md#call-path).
       `key_for(interface, call)` returns the key this step selects.
     - The implementation's `entry_for(call)` gives the identity and the builder.
-    - `_built_entries` is split by interface and keyed by `(implementation class, identity)`
-      within each: calls with the same identity share one entry, and a new identity builds a
-      new entry and keeps it.
+    - `_built_entries` is split by interface and keyed by
+      `(implementation class, identity, build target)` within each. The build target is the
+      device type and the device facts a build compiles for: the architecture, the SM count,
+      the shared memory budget and the calibrated board model the device belongs to.
+    - Calls with the same identity on the same build target share one entry; a new identity
+      or build target builds a new entry and keeps it.
     - Building the entry and handling a tuning request both run with the call spec's device
       made current through `torch.accelerator`; a device that is not of the process's
-      accelerator type is left alone.
+      accelerator type is left alone. On CUDA, TileLang compiles for that device's
+      architecture.
 
 Further notes:
 
 - **Dtypes and entries:** call specs with different dtypes are dispatched separately; whether
   a built entry is reused is decided by the identity the selected implementation's
-  `entry_for` returns.
+  `entry_for` returns and by the build target.
 - **Only the implementation knows the identity:** a subclass defines no identity and keeps no
   cache of its own.
 - **Only the base class holds entries:** in `forward`, a subclass receives the entry

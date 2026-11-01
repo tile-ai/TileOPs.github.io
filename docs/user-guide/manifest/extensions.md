@@ -144,12 +144,15 @@ An op without effect declarations only reads its inputs and allocates new tensor
 | 4 | `mutated: "<discriminant expression>"` on an input | the op writes this input only when the expression is true | `mutated: inplace` of activation functions |
 | 5 | `alias: <input name>` on an output | when that input is written, this output is that input object itself | `alias: input` of activation functions |
 | 6 | input `out` with `mutated: true`, `write_only: true` and `kw_only: true` | the required output buffer of an op that cannot allocate its output: keyword-only without a default, last among the inputs; an output declares `alias: out` | `out` of PagedKVCacheGather |
+| 7 | `overlaps: [<input>, ...]` on a written input or a `buffer: out` output | the written tensor may share bytes with the inputs listed | `output` of MoEExpertMLPFwdOp |
 
 What a call returns follows from these declarations:
 
 - an op given `out` writes into it and returns that object;
 - an op with several outputs returns a tuple with one slot per declared output, in declaration order, and an absent `nullable` output is `None` in its slot;
 - an op whose only effect is writing its inputs declares no outputs and returns `None`.
+
+A tensor a call writes, `out` or a written input, shares no byte with another call tensor unless it lists that input in `overlaps`; a call that breaks this raises `CheckError` before anything runs. An exact alias counts, and a strided view's bytes run from its first element to the end of its last. An entry lists an input only when every implementation finishes reading it before writing the tensor, such as a composite op whose earlier stage alone reads it.
 
 The `inplace` parameter of activation functions is an example:
 
@@ -167,7 +170,8 @@ Effect declarations must also satisfy the following rules, and the validator rej
 - `write_only: true` can be used only together with `mutated: true`;
 - `alias` must point to an input that is written;
 - an output that declares `alias` cannot also declare `buffer`;
-- at most one output declares `buffer: out`.
+- at most one output declares `buffer: out`;
+- `overlaps` sits on a written input or a `buffer: out` output, and names other inputs, each once.
 
 For each effect branch, the validator checks that the operator schema, the aliasing and the roofline read and write counts agree.
 
@@ -198,8 +202,9 @@ The rules for `requires`:
 - `requires` lists predicates that constrain the contents of a metadata tensor. For example, `prefix_offsets(S)` requires the tensor's first element to be 0, the elements to be non-decreasing, and the last element to be `S`. The contents of the constrained tensor are the predicate's implicit first argument.
 - Each predicate reads the constrained tensor at a fixed rank; predicates that give elementwise bounds (such as `in_range`) can apply to tensors of any rank.
 - A predicate argument can be another metadata tensor, so that one predicate constrains the relation between two tensors. For example, `batch_offsets` in GroupedGEMM declares `requires: ["exclusive_prefix_of(batch_sizes)"]`, which requires it to be the exclusive prefix sum of `batch_sizes`. On every branch where the constrained tensor exists, the tensor used as the argument must also exist.
-- The validator checks `requires` at instantiation against the generated values. In an actual call, the caller guarantees these constraints and the op does not check tensor contents; the validator therefore also checks that the predicate is well defined on every branch where the constrained tensor exists.
+- The validator checks `requires` at instantiation against the generated values. In an actual call, the caller guarantees these constraints and the op does not check tensor contents by default; the validator therefore also checks that the predicate is well defined on every branch where the constrained tensor exists.
 - A tensor that declares `requires` must also declare `values`.
+- An op with an input whose `requires` holds `prefix_offsets` declares `validate_inputs: {type: bool, default: false, kw_only: true}` in `params`. When the caller sets it, a check generated from the manifest reads those offsets, and every input declaring the same `values` (such as a CPU copy), on the CPU before the implementation runs. The check synchronizes the device and cannot run inside CUDA Graph capture.
 
 ## 8. dtype combinations and packed dtypes {#dtype-combos}
 
