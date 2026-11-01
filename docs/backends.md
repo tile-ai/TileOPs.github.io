@@ -737,7 +737,7 @@ with `builtin`. Three kinds of marker decide which tests run:
 | Marker | Meaning | In a backend's run |
 | --- | --- | --- |
 | `in_tree_kernels` | The test depends on the in-tree implementations | dropped when `--tileops-target` is not `builtin` |
-| `cuda_only` | The test itself needs CUDA | dropped when `--tileops-device` is not `cuda` |
+| `cuda_only(<reason>)` | The test itself needs CUDA: it replays a CUDA graph, builds a CUDA kernel outside an op, or checks against a reference that runs only on CUDA | dropped when `--tileops-device` is not `cuda` |
 | `sm<NN>`, such as `sm90` | The test needs that CUDA architecture | skipped on another device, and counted as a skip |
 
 In the JUnit report, each test that called `check()` carries an `op` and a
@@ -756,10 +756,9 @@ A claim comes with three sets of numbers:
 
 - the op's pass and skip counts, where a test with `checked_outputs == 0` counts as a skip;
 - each test's `checked_outputs`;
-- the number of tests dropped, per test file. Dropped tests never reach the JUnit report,
-  so the backend computes this number itself, as the difference in node ids between two
-  `pytest tests/ops --collect-only -q` runs: one with the default options, one with
-  `--tileops-target` and `--tileops-device`.
+- the number of tests dropped, per test file. Dropped tests never reach the JUnit report;
+  `--tileops-dropped-report=<csv>` on the run writes, per test file, the tests collected and
+  the tests dropped.
 
 The in-tree kernels ([`src/tileops/_kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/_kernels))
 are the **default implementation**: they have no target name and are not in the registry.
