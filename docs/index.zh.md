@@ -30,8 +30,6 @@ docker run --rm -it --gpus all \
   ghcr.io/tile-ai/tileops-release:tileops0.1.0-tilefoundry0.0.3-cuda13.2-torch2.13-tilelang0.1.12
 ```
 
-在 TileOPs 的 clone 中运行 `scripts/verify_release_image.sh`，可在 GPU 上检查这个镜像。
-
 ## 快速开始
 
 op 在构造时不绑定任何形状。形状和 dtype 取自调用时传入的张量，特化后的 kernel 在首次调用时编译并缓存。

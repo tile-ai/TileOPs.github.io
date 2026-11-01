@@ -144,7 +144,7 @@ Where the seven steps sit in time is shown in Figure 1 of
 | 2 | Check the signature | • On a plan miss: run the checks `_SignaturePlan` generated, and hold what they decide as the plan<br>• On a hit: reuse the plan and run no check again<br>• On every call: raise `CheckError` when a tensor the call writes shares a byte with another call tensor its manifest entry does not list in `overlaps`<br>• On every call of an op constructed with `validate_inputs=True`: check the packed offsets on the CPU |
 | 3 | Detect an empty write | When the plan says there is at least one write and every write holds no elements, run no implementation and build the result from the signature |
 | 4 | Select the target | Select one when the instance has none yet and this call needs to run an implementation; see [§ 4](#target) |
-| 5 | Run | • Run one of the three: the empty-write result, the target's kernel, or `forward`<br>• A call tensor that does not start on a 16-byte boundary is replaced by an aligned copy before the target's kernel or `forward` runs; a written copy is copied back to the caller's tensor after the result check |
+| 5 | Run | • Run one of the three: the empty-write result, the target's kernel, or `forward`<br>• A call tensor off a 16-byte boundary runs as an aligned copy; a written copy is copied back |
 | 6 | Check the result | Check the return value with the plan's result check, on every call: the returned structure, each output's shape, dtype, device and layout, and the identities of `out` and the written inputs |
 | 7 | Record | 1. Pop the call stack<br>2. File the sub-ops' records under their stages<br>3. Commit the call's record as `_last_call`<br>4. Report it to the enclosing call |
 
@@ -154,9 +154,8 @@ The plan (the Op plan):
   each tensor's layout, dtype, device and presence, whether each call tensor starts on a
   16-byte boundary, the params, the construction-time tensors, the execution arguments, and
   the current device of a call no input places.
-- **What it holds:** the checked call's facts, the call tensors it copies to a 16-byte
-  boundary, the pairs of call tensors that must share no byte, the effect branch, the result
-  check, whether the call writes no element, and the call specs `forward` built
+- **What it holds:** the checked call's facts, the effect branch, the result check, whether
+  the call writes no element, and the call specs `forward` built
   (see [§ 5](#kernel)); it holds no tensor of any call.
 - **How long it lives:** `_plans` holds up to 256 plans, oldest out first; an evicted
   specialization is checked again on its next call.
@@ -324,14 +323,12 @@ function of no argument that returns the call spec:
     - The implementation's `entry_for(call)` gives the identity and the builder.
     - `_built_entries` is split by interface and keyed by
       `(implementation class, identity, build target)` within each. The build target is the
-      device type and the device facts a build compiles for: the architecture, the SM count,
-      the shared memory budget and the calibrated board model the device belongs to.
+      device type and the device facts a build compiles for.
     - Calls with the same identity on the same build target share one entry; a new identity
       or build target builds a new entry and keeps it.
     - Building the entry and handling a tuning request both run with the call spec's device
       made current through `torch.accelerator`; a device that is not of the process's
-      accelerator type is left alone. On CUDA, TileLang compiles for that device's
-      architecture.
+      accelerator type is left alone.
 
 Further notes:
 

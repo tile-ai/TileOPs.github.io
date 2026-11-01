@@ -132,11 +132,6 @@ python -m pytest -q -p tests.privateuse1 --tileops-device=tileops_test \
   --tileops-cuda-only-must-fail tests                             # every cuda_only test fails off CUDA
 ```
 
-- The second command runs only the tests marked `cuda_only`. An unexpected pass or skip,
-  a fixture failure, or an error unrelated to the CUDA capability the mark names fails it.
-- A test that needs CUDA carries `cuda_only` with one reason: `cuda-graph`, `cuda-kernel`
-  or `cuda-reference`.
-
 ## Running benchmarks { #bench }
 
 ```bash
@@ -192,9 +187,6 @@ python scripts/test_node_delta.py --base upstream/main
 - The CPU checks are pre-commit, gitleaks, manifest validation, actionlint, the
   compile contract check, the off-CUDA tests and the packaging check, plus the benchmark
   contract tests when a change touches the benchmarks.
-- The off-CUDA tests collect the suite for a backend on another device, run the suite
-  outside `tests/ops` on the PrivateUse1 test backend, and check that every `cuda_only`
-  test fails off CUDA.
 - The GPU smoke tests run once pre-commit, gitleaks and actionlint pass, scoped by
   the files the PR changes. A PR that changes no Python, manifest or native source
   skips them.

@@ -152,7 +152,7 @@ primitive 是表达式中可以调用的内建函数，例如 `broadcast`、`red
 - 有多个输出的 op 返回一个 tuple，每个声明的输出按声明顺序占一个位置，缺省的 `nullable` 输出在其位置上为 `None`；
 - 唯一的 effect 是写入输入的 op 不声明输出，返回 `None`。
 
-调用写入的张量（`out` 或被写入的输入）不与其他调用张量共享任何字节，除非它在 `overlaps` 中列出了那个输入；违反这一条的调用在任何实现运行前抛出 `CheckError`。完全相同的别名也算共享；带 stride 的视图所占的字节从首个元素起到末个元素止，中间的空洞也计入。只有每个实现都在写入该张量之前读完某个输入时，条目才列出这个输入，例如只由组合 op 的前一个 stage 读取的输入。
+调用写入的张量（`out` 或被写入的输入）不与其他调用张量共享任何字节，除非它在 `overlaps` 中列出了那个输入；违反这一条的调用在任何实现运行前抛出 `CheckError`。只有每个实现都在写入该张量之前读完某个输入时，条目才列出这个输入，例如只由组合 op 的前一个 stage 读取的输入。
 
 以激活函数的 `inplace` 为例：
 
@@ -204,7 +204,7 @@ generator 的规则如下：
 - 谓词的实参可以是另一个 metadata 张量，这样一条谓词就能约束两个张量之间的关系，例如 GroupedGEMM 的 `batch_offsets` 声明 `requires: ["exclusive_prefix_of(batch_sizes)"]`，要求它是 `batch_sizes` 的 exclusive 前缀和。在被约束的张量存在的每个分支上，作为实参的那个张量也必须存在。
 - validator 在实例化时用生成的取值检查 `requires`。在实际调用中，这些约束由调用方保证，op 默认不检查张量的内容；因此 validator 还会检查，在被约束的张量存在的每个分支上，谓词都是良定义的。
 - 声明了 `requires` 的张量也必须声明 `values`。
-- 有输入的 `requires` 含 `prefix_offsets` 的 op，在 `params` 中声明 `validate_inputs: {type: bool, default: false, kw_only: true}`。调用方把它设为 true 时，由 manifest 生成的检查在实现运行前于 CPU 上读取这些 offsets，以及声明相同 `values` 的每个输入（例如 CPU 副本）。这项检查会同步设备，不能在 CUDA Graph 捕获中运行。
+- 有输入的 `requires` 含 `prefix_offsets` 的 op，在 `params` 中声明 `validate_inputs: {type: bool, default: false, kw_only: true}`。调用方把它设为 true 时，由 manifest 生成的检查在实现运行前于 CPU 上读取这些 offsets；这项检查会同步设备，不能在 CUDA Graph 捕获中运行。
 
 ## 8. dtype 组合与打包 dtype {#dtype-combos}
 

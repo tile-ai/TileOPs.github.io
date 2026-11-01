@@ -110,9 +110,6 @@ python -m pytest -q -p tests.privateuse1 --tileops-device=tileops_test \
   --tileops-cuda-only-must-fail tests                             # 每个 cuda_only 测试在 CUDA 之外都失败
 ```
 
-- 第二条命令只运行标记 `cuda_only` 的测试。意外通过或跳过、fixture 失败，以及与标记所写的 CUDA 能力无关的错误，都使检查失败。
-- 需要 CUDA 的测试标记 `cuda_only` 并写明一个原因：`cuda-graph`、`cuda-kernel` 或 `cuda-reference`。
-
 ## 运行 benchmark { #bench }
 
 ```bash
@@ -151,7 +148,6 @@ python scripts/test_node_delta.py --base upstream/main
 
 - Draft PR 只运行 PR 标题检查与 manifest 统计，跳过下面的 CPU 检查与 GPU smoke 测试。PR 转为 **Ready for review** 后，这些检查才会运行。
 - CPU 检查包括 pre-commit、gitleaks、manifest 校验、actionlint、编译约定检查、CUDA 之外的测试与打包检查；改动涉及 benchmark 时，另含 benchmark 约定测试。
-- CUDA 之外的测试按另一设备上的 backend 收集测试，在 PrivateUse1 测试 backend 上运行 `tests/ops` 以外的测试，并检查每个 `cuda_only` 测试在 CUDA 之外都失败。
 - GPU smoke 测试在 pre-commit、gitleaks 与 actionlint 通过后运行，测试范围由改动的文件决定。没有改动 Python、manifest 或原生代码的 PR 跳过 GPU smoke。
 
 ## 常见问题 { #faq }

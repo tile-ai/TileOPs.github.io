@@ -100,14 +100,14 @@
 | 2 | 检查签名 | • plan 未命中：运行 `_SignaturePlan` 生成的检查，把检查的结论保存为 plan<br>• 命中：复用 plan，不再运行检查<br>• 每次调用：被写入的张量与另一个调用张量有共享字节、且 manifest 条目的 `overlaps` 没有列出后者时，抛出 `CheckError`<br>• 以 `validate_inputs=True` 构造的 op，每次调用都在 CPU 上检查打包的 offsets |
 | 3 | 判断空写 | plan 表明至少有一个写入、且所有写入都没有元素时，不运行任何实现，按签名构造结果 |
 | 4 | 选择 target | 实例尚未选定 target、且这次调用需要运行实现时选择，见[第 4 节](#target) |
-| 5 | 执行 | • 运行空写结果、target 的 kernel 或 `forward`，三者取一<br>• 起始地址不在 16 字节边界上的调用张量，在 target 的 kernel 或 `forward` 运行前换成对齐的副本；被写入的副本在结果检查之后拷回调用方的张量 |
+| 5 | 执行 | • 运行空写结果、target 的 kernel 或 `forward`，三者取一<br>• 起始地址不在 16 字节边界上的调用张量以对齐的副本运行，被写入的副本再拷回 |
 | 6 | 检查结果 | 每次调用都用 plan 中的结果检查核对返回值：返回结构，每个输出的 shape、dtype、设备与布局，以及 `out` 与被写入输入的身份 |
 | 7 | 记录 | 1. 弹出调用栈<br>2. 把子 op 的记录按 stage 归档<br>3. 把这次调用的记录提交为 `_last_call`<br>4. 报告给外层调用 |
 
 plan（Op plan）：
 
 - **以什么为键：** 调用的特化，即检查读取的全部内容：每个张量的布局、dtype、设备与是否传入，每个调用张量的起始地址是否在 16 字节边界上，参数，构造期张量，执行参数，以及没有输入确定设备时的当前设备。
-- **保存什么：** 检查后的调用事实、要拷到 16 字节边界上的调用张量、不得共享字节的调用张量对、effect branch、结果检查、是否没有写入任何元素，以及 `forward` 构造的 call spec（见[第 5 节](#kernel)）；不保存任何调用的张量。
+- **保存什么：** 检查后的调用事实、effect branch、结果检查、是否没有写入任何元素，以及 `forward` 构造的 call spec（见[第 5 节](#kernel)）；不保存任何调用的张量。
 - **保存多久：** `_plans` 至多保存 256 个 plan，最早的先移除；被移除的特化在下一次调用时重新检查。
 - **不复用的部分：** 结果检查、version 增加、子 op 调用的收集与记录，每次调用都执行。
 
@@ -232,9 +232,9 @@ target 被调用前，生成的检查已经运行，基类保证以下五点：
 1. **按构造查找。**
     - 派发机制选出一个实现，见 [op 如何选择 kernel § 一次调用如何找到 kernel](../dispatch/index.md#call-path)；`key_for(interface, call)` 返回这一步选中的 key。
     - 实现的 `entry_for(call)` 给出 identity 与构造函数。
-    - `_built_entries` 按接口分开，在每个接口下以 `(实现类, identity, build target)` 为键。build target 是设备类型，加上构造所针对的设备事实：架构、SM 数、共享内存预算，以及设备所属的标定板卡型号。
+    - `_built_entries` 按接口分开，在每个接口下以 `(实现类, identity, build target)` 为键。build target 是设备类型，加上构造所针对的设备事实。
     - identity 与 build target 都相同的调用共用一个 entry；identity 或 build target 不同则构造新的 entry 并保存。
-    - 构造 entry 与处理调优请求时，基类经 `torch.accelerator` 把 call spec 的设备设为当前设备；设备不是进程 accelerator 的类型时不切换。在 CUDA 上，TileLang 按该设备的架构编译。
+    - 构造 entry 与处理调优请求时，基类经 `torch.accelerator` 把 call spec 的设备设为当前设备；设备不是进程 accelerator 的类型时不切换。
 
 补充说明：
 

@@ -152,7 +152,7 @@ What a call returns follows from these declarations:
 - an op with several outputs returns a tuple with one slot per declared output, in declaration order, and an absent `nullable` output is `None` in its slot;
 - an op whose only effect is writing its inputs declares no outputs and returns `None`.
 
-A tensor a call writes, `out` or a written input, shares no byte with another call tensor unless it lists that input in `overlaps`; a call that breaks this raises `CheckError` before anything runs. An exact alias counts, and a strided view's bytes run from its first element to the end of its last. An entry lists an input only when every implementation finishes reading it before writing the tensor, such as a composite op whose earlier stage alone reads it.
+A tensor a call writes, `out` or a written input, shares no byte with another call tensor unless it lists that input in `overlaps`; a call that breaks this raises `CheckError` before anything runs. An entry lists an input only when every implementation finishes reading it before writing the tensor, such as a composite op whose earlier stage alone reads it.
 
 The `inplace` parameter of activation functions is an example:
 
@@ -204,7 +204,7 @@ The rules for `requires`:
 - A predicate argument can be another metadata tensor, so that one predicate constrains the relation between two tensors. For example, `batch_offsets` in GroupedGEMM declares `requires: ["exclusive_prefix_of(batch_sizes)"]`, which requires it to be the exclusive prefix sum of `batch_sizes`. On every branch where the constrained tensor exists, the tensor used as the argument must also exist.
 - The validator checks `requires` at instantiation against the generated values. In an actual call, the caller guarantees these constraints and the op does not check tensor contents by default; the validator therefore also checks that the predicate is well defined on every branch where the constrained tensor exists.
 - A tensor that declares `requires` must also declare `values`.
-- An op with an input whose `requires` holds `prefix_offsets` declares `validate_inputs: {type: bool, default: false, kw_only: true}` in `params`. When the caller sets it, a check generated from the manifest reads those offsets, and every input declaring the same `values` (such as a CPU copy), on the CPU before the implementation runs. The check synchronizes the device and cannot run inside CUDA Graph capture.
+- An op with an input whose `requires` holds `prefix_offsets` declares `validate_inputs: {type: bool, default: false, kw_only: true}` in `params`. When the caller sets it, a check generated from the manifest reads the offsets on the CPU before the implementation runs; it synchronizes the device, so it cannot run inside CUDA Graph capture.
 
 ## 8. dtype combinations and packed dtypes {#dtype-combos}
 

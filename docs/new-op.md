@@ -250,12 +250,10 @@ the generated code treats them as constants: loop bounds, TMA descriptors and th
 shape are all unrolled from them, and so are the tile sizes. The tensors are passed to
 `forward`, and each call only changes the pointers.
 
-The builder (`_gemm_kernel` above) is memoized with
-`tileops._kernels.build_target.target_cache`, which keys a build by its arguments and by
-the device it compiles for, so a card of another architecture never reuses it. Every
-parameter must be hashable. A `functools` cache under `src/tileops/_kernels/` fails
-`tilelang-idioms-lint` unless it carries `# lint: target-cache allow: <reason>` stating
-why the cached value does not depend on the device.
+Memoize the builder (`_gemm_kernel` above) with
+`tileops._kernels.build_target.target_cache`, which also keys a build by the device it
+compiles for; every parameter must be hashable. Lint rejects a plain `functools` cache
+under `src/tileops/_kernels/`.
 
 A wrong split causes recompilation. Decode advances one token per step, so `seq_len`
 grows by one every step, and the batch changes with the running set:

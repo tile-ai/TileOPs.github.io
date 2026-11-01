@@ -47,8 +47,6 @@ docker run --rm -it --gpus all \
   ghcr.io/tile-ai/tileops-release:tileops0.1.0-tilefoundry0.0.3-cuda13.2-torch2.13-tilelang0.1.12
 ```
 
-`scripts/verify_release_image.sh`, run from a clone of TileOPs, checks the image on a GPU.
-
 ## Quick Start
 
 An op binds no shape at construction. Shapes and dtype come from the tensors passed

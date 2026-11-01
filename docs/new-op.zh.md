@@ -179,7 +179,7 @@ class GEMMTMAKernel(Kernel, GEMMFwdInterface):
 
 `m`、`n`、`k`、dtype 与两个布局标志是构造参数，因为它们在生成的代码中是常量：循环边界、TMA 描述符与 WGMMA 的形状都按这些值展开，tile 尺寸也是如此。张量本身由 `forward` 接收，每次调用只更换指针。
 
-构建函数（上例中的 `_gemm_kernel`）用 `tileops._kernels.build_target.target_cache` 记忆，它按参数与构建所针对的设备区分构建结果，另一架构的卡不会重用它。每个参数都必须可哈希。`src/tileops/_kernels/` 下的 `functools` 缓存不能通过 `tilelang-idioms-lint`，除非带有 `# lint: target-cache allow: <reason>`，写明缓存的值与设备无关的原因。
+构建函数（上例中的 `_gemm_kernel`）用 `tileops._kernels.build_target.target_cache` 缓存，它同时按构建所针对的设备区分结果；每个参数都必须可哈希。lint 不允许在 `src/tileops/_kernels/` 下直接使用 `functools` 缓存。
 
 划分错误的后果是重新编译。decode 逐步推进时，`seq_len` 每一步加 1，batch 随 running set 变化：
 
