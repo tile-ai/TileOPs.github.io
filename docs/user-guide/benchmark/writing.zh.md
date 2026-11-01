@@ -42,7 +42,7 @@ def test_bmm_bench(case):
     bench.Runner(op, case).compare(
         {
             "flaggems": flaggems_op("bmm"),
-            "torch-cublas": case.reference,
+            "torch-cublas": case.torch,
         }
     )
 ```
@@ -53,7 +53,7 @@ def test_bmm_bench(case):
 - `BMMFwdOp(**case.arguments)` 用 case 提供的构造参数创建 op。
 - `flaggems_op("bmm")` 返回 FlagGems 的 bmm，是与 op 输入签名相同的 callable，`Runner` 会以 `case.inputs` 调用它。
 - 映射中的键会原样写入报告。`tileops` 这个名字已经由 op 占用，不能再用作键；如果只传入一个实现而不是映射，它在报告中记为 `baseline`。
-- `case.reference` 以 `"torch-cublas"` 为名传入，因此它既负责生成期望结果，也作为一个对比实现参与计时。
+- `case.torch` 以输入 dtype 在 PyTorch 中运行这个 op，bmm 即 cuBLAS，作为一个对比实现参与计时。每个实现都与 `case.reference` 的结果比较。
 
 benchmark 文件用 pytest 运行。加上 `--tileops-verify` 时只做校验、不计时，适合在改动 kernel 之后先确认数值：
 
@@ -148,8 +148,8 @@ vendor = bench.Implementation(
 
 ```text
 TileOPs op  ↔ case.reference
-vLLM        ↔ case.reference
-SGLang      ↔ case.reference
+FlagGems    ↔ case.reference
+cuBLAS      ↔ case.reference
 ```
 
 每个实现执行之前先调用它的 `reset`，执行之后还会检查共享输入是否被改写。任何一个实现校验失败，都会抛出异常，这次比较不再进入计时。

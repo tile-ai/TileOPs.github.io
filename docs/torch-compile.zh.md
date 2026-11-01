@@ -63,7 +63,7 @@ block(x, w)
 - **stride 不会原样传递。** op 不写入的非连续输入在节点内部被转为连续张量，op 自己分配的输出总是连续张量；后续计算需要其他布局时，在 op 之外自行转换。输出就是被写入的输入（`alias`）或调用方提供的 `out` 时，沿用那个张量的存储。
 - **meta 张量不能用于预热。** 有编译边界的 op，传入 meta 或 fake 张量的调用在 fake 函数处返回，不会执行到构造 kernel 的步骤。
 - **CUDA graph 捕获之前需要预热。** 用真实张量以相同形状至少调用一次：构造 kernel 时允许编译，捕获期间只允许在缓存命中后直接调用。各阶段分别允许执行哪些操作，见[各阶段允许做什么](backends.md#phase-limits)。
-- **换到另一块卡时可能重新构造 kernel。** 对由 target 服务的调用，设备是 kernel 缓存键的一部分，同一个实例换到另一块卡上会重新构造一次。in-tree kernel 的缓存键是选中实现的 `entry_for` 返回的 build identity，加上构建所针对的设备：同型号的第二块卡重用 kernel，另一架构的卡构造自己的 kernel。构造函数中指定的 `target=` 在首次编译调用中同样生效；构造失败不会把 op 固定到任何 target。
+- **换到另一块卡时可能重新构造 kernel。** 对由 target 服务的调用，设备是 kernel 缓存键的一部分，同一个实例换到另一块卡上会重新构造一次。in-tree kernel 的缓存键是选中实现的 `entry_for` 返回的 build identity，加上构建所针对的设备：另一架构的卡总是构造自己的 kernel；同型号的第二块卡重用 kernel，除非 identity 中包含设备。构造函数中指定的 `target=` 在首次编译调用中同样生效；构造失败不会把 op 固定到任何 target。
 
 ### 接入之后成立的三项保证
 
