@@ -34,16 +34,17 @@ This example compares TileOPs batched matmul with FlagGems and PyTorch/cuBLAS:
 import pytest
 
 from benchmarks import api as bench
+from benchmarks.baselines import flaggems_op
 from tileops.gemm import BMMFwdOp
 
 
 @pytest.mark.parametrize("case", bench.cases(BMMFwdOp), ids=lambda case: case.id)
-def test_bmm_bench(case, flaggems_bmm):
+def test_bmm_bench(case):
     op = BMMFwdOp(**case.arguments)
 
     bench.Runner(op, case).compare(
         {
-            "flaggems": flaggems_bmm,
+            "flaggems": flaggems_op("bmm"),
             "torch-cublas": case.reference,
         }
     )
@@ -54,7 +55,7 @@ Here is how the example works:
 - `bench.cases(BMMFwdOp)` creates a case for each dtype case of every manifest workload
   row. The `case.id` also serves as the pytest test ID.
 - `case.arguments` supplies the arguments used to construct the op.
-- `flaggems_bmm` is a callable that accepts the same inputs as the op.
+- `flaggems_op("bmm")` returns FlagGems' bmm, a callable that accepts the same inputs as the op.
   `Runner` calls it with `case.inputs`.
 - The mapping keys appear unchanged in the report. The name `tileops` is reserved for
   the op. If you pass one implementation instead of a mapping, it appears as `baseline`.

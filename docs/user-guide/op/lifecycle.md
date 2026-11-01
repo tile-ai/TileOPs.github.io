@@ -144,7 +144,7 @@ Where the seven steps sit in time is shown in Figure 1 of
 | 2 | Check the signature | • On a plan miss: run the checks `_SignaturePlan` generated, and hold what they decide as the plan<br>• On a hit: reuse the plan and run no check again<br>• On every call: raise `CheckError` when a tensor the call writes shares a byte with another call tensor its manifest entry does not list in `overlaps`<br>• On every call of an op constructed with `validate_inputs=True`: check the packed offsets on the CPU |
 | 3 | Detect an empty write | When the plan says there is at least one write and every write holds no elements, run no implementation and build the result from the signature |
 | 4 | Select the target | Select one when the instance has none yet and this call needs to run an implementation; see [§ 4](#target) |
-| 5 | Run | • Run one of the three: the empty-write result, the target's kernel, or `forward`<br>• A call tensor off a 16-byte boundary runs as an aligned copy; a written copy is copied back |
+| 5 | Run | • Run one of the three: the empty-write result, the target's kernel, or `forward`<br>• A call tensor off a 16-byte boundary runs as an aligned copy; a written copy is copied back after step 6 |
 | 6 | Check the result | Check the return value with the plan's result check, on every call: the returned structure, each output's shape, dtype, device and layout, and the identities of `out` and the written inputs |
 | 7 | Record | 1. Pop the call stack<br>2. File the sub-ops' records under their stages<br>3. Commit the call's record as `_last_call`<br>4. Report it to the enclosing call |
 

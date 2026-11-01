@@ -21,7 +21,7 @@ In the **call** phase, the checks generated from the signature around `forward` 
 5. check the preconditions of output buffers;
 6. check that no tensor the call writes shares a byte with another call tensor, except the inputs its manifest entry lists in `overlaps`;
 7. when the op was constructed with `validate_inputs=True`, check the packed offsets on the CPU;
-8. run the implementation on an aligned copy of any call tensor off a 16-byte boundary, copying a written copy back;
+8. run the implementation on an aligned copy of any call tensor off a 16-byte boundary, and copy a written copy back after step 9;
 9. check the outputs: the number of outputs and whether each is `None`, shape, dtype, device and memory layout; `out` and `alias` outputs must be the corresponding tensor objects, and other outputs must not share storage with inputs.
 
 When any check fails, the op raises an error that names the unsatisfied declaration.

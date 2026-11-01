@@ -152,7 +152,7 @@ What a call returns follows from these declarations:
 - an op with several outputs returns a tuple with one slot per declared output, in declaration order, and an absent `nullable` output is `None` in its slot;
 - an op whose only effect is writing its inputs declares no outputs and returns `None`.
 
-A tensor a call writes, `out` or a written input, shares no byte with another call tensor unless it lists that input in `overlaps`; a call that breaks this raises `CheckError` before anything runs. An entry lists an input only when every implementation finishes reading it before writing the tensor, such as a composite op whose earlier stage alone reads it.
+A tensor a call writes, `out` or a written input, shares no byte with another call tensor unless it lists that input in `overlaps`; a call that breaks this raises `CheckError` before anything runs. The check compares each tensor's byte span, from its first element to the end of its last, so two interleaved views of one buffer overlap. An entry lists an input only when every implementation finishes reading it before writing the tensor, such as a composite op whose earlier stage alone reads it.
 
 The `inplace` parameter of activation functions is an example:
 
