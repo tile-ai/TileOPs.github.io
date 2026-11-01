@@ -72,7 +72,7 @@ A subclass may also override two methods:
 | No. | Method | Returns |
 | --- | --- | --- |
 | 1 | `iter_kernels()` | • Every `Kernel` in each interface's entries and in the held sub-ops, each once<br>• Kernels a target built are not walked; `_entries_built(interface)` shows them |
-| 2 | `_entries_built(interface)` | • In-tree path: the entries built for this kernel interface, told apart by `(implementation class, identity)`<br>• When a target serves the op: every target kernel of the op, told apart by device and each input's dtype and shape; `interface` does not filter |
+| 2 | `_entries_built(interface)` | • In-tree path: the entries built for this kernel interface, told apart by `(implementation class, identity, build target)`<br>• When a target serves the op: every target kernel of the op, told apart by device and each input's dtype and shape; `interface` does not filter |
 | 3 | `_held_delegates()` | The sub-ops the composite op holds, in stage order |
 
 What the three methods are for:

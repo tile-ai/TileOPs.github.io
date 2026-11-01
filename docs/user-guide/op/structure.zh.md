@@ -97,7 +97,7 @@
 | 1 | `_target_builder` | • 选定 target 的 builder<br>• `None` 表示 in-tree kernel | 类属性默认值 `_UNRESOLVED`，表示尚未选定 |
 | 2 | `_serving_target` | 选定的 target 名，`serving_target` 属性读取它 | 类属性默认值 `None` |
 | 3 | `_entries_by_call` | `(interface, call)` 到 entry 的缓存，命中只需一次查表 | `Op.__init__` 安装实现表时建立的空表 |
-| 4 | `_built_entries` | 每个接口下按 `(实现类, identity)` 保存的 entry，`_entries_built` 读取它 | `Op.__init__` 安装实现表时建立的空表 |
+| 4 | `_built_entries` | 每个接口下按 `(实现类, identity, build target)` 保存的 entry，`_entries_built` 读取它 | `Op.__init__` 安装实现表时建立的空表 |
 | 5 | `_target_kernels` | • target 构造的 kernel，按设备与每个输入的 dtype、shape 保存<br>• 未传入的可选输入单独占位 | `Op.__init__` 建立的空表 |
 
 基类的方法读写这些字段时，不判断字段是否存在，因为构造之后它们都存在：

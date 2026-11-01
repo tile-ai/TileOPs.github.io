@@ -42,7 +42,7 @@ return self.kernel_for(
   1. Drop the implementations that cannot run on the call's device, based on `devices` and `supported_archs`.
   2. Drop the implementations that do not serve this call, based on `refusal`.
   3. Pick the single winner among the rest: a `general` implementation ranks below every other implementation, and the others are compared by `preferred_over`.
-  4. Call the winner's `entry_for(call)` to get a build identity and a factory, then build or reuse the entry. Within one interface, calls share an entry only when they select the same implementation class with the same build identity. An entry can contain one or more kernels.
+  4. Call the winner's `entry_for(call)` to get a build identity and a factory, then build or reuse the entry. Within one interface, calls share an entry only when they select the same implementation class with the same build identity on the same build target: the device type and the device facts the build compiles for. An entry can contain one or more kernels.
 
 When no key can run on the call's device type, the call raises `in-tree kernels do not run on` (`OpNotAvailableError`). When some key supports the device type but no implementation is both available and applicable, it raises `no implementation serves this call`. When several implementations remain with no precedence among them, it raises `dispatch is ambiguous`. Selection does not depend on declaration order, and there are no numeric priorities.
 

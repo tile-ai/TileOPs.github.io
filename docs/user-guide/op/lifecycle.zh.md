@@ -97,16 +97,16 @@
 | No. | 步骤 | 内容 |
 | --- | --- | --- |
 | 1 | 开启调用 | • 确定这次调用的特化，在 `_plans` 中查找它的 plan<br>• 压入当前线程的调用栈<br>• 收集本次调用期间子 op 完成的调用 |
-| 2 | 检查签名 | • plan 未命中：运行 `_SignaturePlan` 生成的检查，把检查的结论保存为 plan<br>• 命中：复用 plan，不再运行检查 |
+| 2 | 检查签名 | • plan 未命中：运行 `_SignaturePlan` 生成的检查，把检查的结论保存为 plan<br>• 命中：复用 plan，不再运行检查<br>• 每次调用：被写入的张量与另一个调用张量有共享字节、且 manifest 条目的 `overlaps` 没有列出后者时，抛出 `CheckError`<br>• 以 `validate_inputs=True` 构造的 op，每次调用都在 CPU 上检查打包的 offsets |
 | 3 | 判断空写 | plan 表明至少有一个写入、且所有写入都没有元素时，不运行任何实现，按签名构造结果 |
 | 4 | 选择 target | 实例尚未选定 target、且这次调用需要运行实现时选择，见[第 4 节](#target) |
-| 5 | 执行 | 运行空写结果、target 的 kernel 或 `forward`，三者取一 |
+| 5 | 执行 | • 运行空写结果、target 的 kernel 或 `forward`，三者取一<br>• 起始地址不在 16 字节边界上的调用张量以对齐的副本运行，被写入的副本在第 6 步之后拷回 |
 | 6 | 检查结果 | 每次调用都用 plan 中的结果检查核对返回值：返回结构，每个输出的 shape、dtype、设备与布局，以及 `out` 与被写入输入的身份 |
 | 7 | 记录 | 1. 弹出调用栈<br>2. 把子 op 的记录按 stage 归档<br>3. 把这次调用的记录提交为 `_last_call`<br>4. 报告给外层调用 |
 
 plan（Op plan）：
 
-- **以什么为键：** 调用的特化，即检查读取的全部内容：每个张量的布局、dtype、设备与是否传入，参数，构造期张量，执行参数，以及没有输入确定设备时的当前设备。
+- **以什么为键：** 调用的特化，即检查读取的全部内容：每个张量的布局、dtype、设备与是否传入，每个调用张量的起始地址是否在 16 字节边界上，参数，构造期张量，执行参数，以及没有输入确定设备时的当前设备。
 - **保存什么：** 检查后的调用事实、effect branch、结果检查、是否没有写入任何元素，以及 `forward` 构造的 call spec（见[第 5 节](#kernel)）；不保存任何调用的张量。
 - **保存多久：** `_plans` 至多保存 256 个 plan，最早的先移除；被移除的特化在下一次调用时重新检查。
 - **不复用的部分：** 结果检查、version 增加、子 op 调用的收集与记录，每次调用都执行。
@@ -158,11 +158,13 @@ target 构造的 kernel 的缓存：
 - 未传入的可选输入单独占位；
 - 输出缓冲不进入缓存键。
 
-target 被调用前，生成的检查已经运行，基类保证以下三点：
+target 被调用前，生成的检查已经运行，基类保证以下五点：
 
 1. 除声明 `device: cpu` 的张量外，所有张量都在调用设备上；
 1. 这次调用不写入的输入都是连续的，写入的输入在声明 `contiguous: true` 时是连续的；
-1. 调用，包括调用方提供的输出缓冲，满足签名。
+1. 调用，包括调用方提供的输出缓冲，满足签名；
+1. 每个调用张量的起始地址都在 16 字节边界上；
+1. 被写入的张量不与其他调用张量共享字节，manifest 条目在 `overlaps` 中列出的输入除外。
 
 没有调用期张量输入的 op，按[调用与校验 § 调用设备](../manifest/calls.md#device)的规则决定设备。
 
@@ -199,7 +201,7 @@ target 被调用前，生成的检查已经运行，基类保证以下三点：
 | 1 | 例子 | `RMSNormOnChipKernel` 这个类 | 按 `n=4096`、fp16 等参数构造出的对象 |
 | 2 | 何时存在 | 导入模块时 | 第一次需要它的调用到来时构造 |
 | 3 | 携带什么 | 可用性与适用范围的声明（`supported_archs`、`refusal`、`preferred_over`）和 `entry_for` | 构造参数（由 identity 确定）与一个或多个 kernel |
-| 4 | 数量 | 每个 key 一个 | 每个接口下，每个 `(kernel type, identity)` 至多一个，例如 `n=4096`、fp16 一个，`n=8192`、bf16 又一个 |
+| 4 | 数量 | 每个 key 一个 | 每个接口下，每个 `(kernel type, identity, build target)` 至多一个，例如 `n=4096`、fp16 一个，`n=8192`、bf16 又一个 |
 | 5 | 保存在 | `kernel_types`、`_installed_kernel_types` | `_built_entries` |
 | 6 | 用途 | 基类据此选择这次调用的实现 | 子类调用它：`entry(x, weight)` |
 
@@ -230,12 +232,13 @@ target 被调用前，生成的检查已经运行，基类保证以下三点：
 1. **按构造查找。**
     - 派发机制选出一个实现，见 [op 如何选择 kernel § 一次调用如何找到 kernel](../dispatch/index.md#call-path)；`key_for(interface, call)` 返回这一步选中的 key。
     - 实现的 `entry_for(call)` 给出 identity 与构造函数。
-    - `_built_entries` 按接口分开，在每个接口下以 `(实现类, identity)` 为键：identity 相同的调用共用一个 entry，不同则构造新的 entry 并保存。
+    - `_built_entries` 按接口分开，在每个接口下以 `(实现类, identity, build target)` 为键。build target 是设备类型，加上构造所针对的设备事实。
+    - identity 与 build target 都相同的调用共用一个 entry；identity 或 build target 不同则构造新的 entry 并保存。
     - 构造 entry 与处理调优请求时，基类经 `torch.accelerator` 把 call spec 的设备设为当前设备；设备不是进程 accelerator 的类型时不切换。
 
 补充说明：
 
-- **dtype 与 entry：** 不同 dtype 的 call spec 分别派发；是否复用已构造的 entry，由选中实现的 `entry_for` 返回的 identity 决定。
+- **dtype 与 entry：** 不同 dtype 的 call spec 分别派发；是否复用已构造的 entry，由选中实现的 `entry_for` 返回的 identity 与 build target 决定。
 - **identity 只有实现知道：** 子类不定义 identity，也不维护自己的缓存。
 - **entry 只由基类持有：** 子类在 `forward` 中用局部变量接收 `kernel_for` 返回的 entry，不保存到实例上；第二次调用再经 `kernel_for` 取得，返回 plan 保存的 entry。
 - **在 `forward` 中读取 call spec：** `forward` 自己需要 call spec 中的事实（例如缓冲区大小）时，用 `call_spec(interface, call)` 取得，plan 以同样方式保存它；之后把 `lambda: spec` 传给 `kernel_for`。

@@ -542,9 +542,9 @@ TileOPs 把 `torch.device` 原样传给 `detect`，自己不解析它。原因�
 | # | op 层提供 | 对 backend 意味着什么 |
 | --- | --- | --- |
 | 1 | torch 侧的公开 API 与参数语义 | 这个 op 如何被调用、参数名与各参数的含义均已确定，backend 既不定义也不能改动 |
-| 2 | manifest 校验 | 不符合 manifest 签名的调用由 op 层拒绝，不会到达 backend；签名之内的检查分工见下文 |
+| 2 | manifest 校验 | 不符合 manifest 签名的调用由 op 层拒绝，不会到达 backend；被写入的张量与另一个调用张量共享字节、且 manifest 条目的 `overlaps` 没有列出后者的调用同样被拒绝。签名之内的检查分工见下文 |
 | 3 | 参数按名字传入 | backend 收到的参数名是 manifest `params` 的名字，值是 op 实例保存的值。manifest 中默认为 null 的参数，传入的是 op 选定的值，可能是 `None`，也可能是一个具体数值 |
-| 4 | 输入的连续性归一 | 本次调用不写入的输入都转成连续张量；被写入的输入按调用方传入的原样传给 backend，除非 manifest 声明它 `contiguous: true` |
+| 4 | 输入的连续性与对齐 | 本次调用不写入的输入都转成连续张量；被写入的输入按调用方传入的原样传给 backend，除非 manifest 声明它 `contiguous: true`。每个调用张量的起始地址都在 16 字节边界上：不在边界上的张量由 op 层换成对齐的副本传入，被写入的副本再拷回调用方的张量 |
 | 5 | kernel 的记忆与重用 | 构造函数对每种特化调用一次：设备与输入签名相同的后续调用直接使用上一次的返回值。因此构造函数内部可以编译，op 层保证它不会被重复调用 |
 | 6 | `torch.compile` 与 CUDA graph 的边界 | 对有编译边界的 op（spec 有调用期张量输入、没有 `composition`），op 层把一次调用包装成不透明 op，并另配一个 fake，使编译器不执行也能推出输出的形状与 dtype。**backend 的 kernel 不为编译做任何事**，细节见[接入 torch.compile](torch-compile.md) |
 | 7 | roofline、profile 与数值测试 | op 层已有的测试可以用 backend 的 kernel 运行，见[backend 的测试结论](#test-claim)；性能报告见[性能报告](#reports) |
@@ -591,7 +591,7 @@ pytest tests/ops --tileops-target=<t> --tileops-device=<d> --junitxml=<report>
 | 标记 | 含义 | 在 backend 的运行中 |
 | --- | --- | --- |
 | `in_tree_kernels` | 测试依赖 in-tree 实现 | `--tileops-target` 不是 `builtin` 时去掉 |
-| `cuda_only` | 测试本身需要 CUDA | `--tileops-device` 不是 `cuda` 时去掉 |
+| `cuda_only(<reason>)` | 测试本身需要 CUDA：重放 CUDA graph、在 op 之外构建 CUDA kernel，或与只能在 CUDA 上运行的参考实现比对 | `--tileops-device` 不是 `cuda` 时去掉 |
 | `sm<NN>`，如 `sm90` | 测试需要该 CUDA 架构 | 设备不符时跳过，计入 skip 数 |
 
 JUnit 中每个调用了 `check()` 的测试带 `op` 与 `checked_outputs` 两个属性。
@@ -608,7 +608,7 @@ backend 对一个 op 的结论是「通过了这台设备上实际运行的测�
 
 - 该 op 名下的通过数与 skip 数，`checked_outputs == 0` 的测试记为 skip；
 - 各测试的 `checked_outputs`；
-- 按测试文件统计的被去掉的测试数。被去掉的测试不进 JUnit，这个数由 backend 自行计算，即两次 `pytest tests/ops --collect-only -q` 的 node id 之差：一次用默认参数，一次加上 `--tileops-target` 与 `--tileops-device`。
+- 按测试文件统计的被去掉的测试数。被去掉的测试不进 JUnit；运行时加 `--tileops-dropped-report=<csv>`，按测试文件写出收集到的测试数与被去掉的测试数。
 
 TileOPs 的 in-tree kernel（[`src/tileops/_kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/_kernels)）是**默认实现**：它没有 target 名，也不进入注册表。
 

@@ -42,7 +42,7 @@ return self.kernel_for(
   1. 去掉在调用设备上不能运行的实现，依据 `devices` 与 `supported_archs`；
   2. 去掉不服务这次调用的实现，依据 `refusal`；
   3. 在剩下的实现中选唯一的胜者：`general` 的实现低于其他所有实现，其余按 `preferred_over` 比较；
-  4. 调用胜者的 `entry_for(call)`，得到 build identity 与构建函数，再构建或复用 entry。在同一个 interface 内，只有选中同一实现类且 build identity 相同的调用才共用 entry；一个 entry 可以包含一个或多个 kernel。
+  4. 调用胜者的 `entry_for(call)`，得到 build identity 与构建函数，再构建或复用 entry。在同一个 interface 内，只有选中同一实现类、build identity 相同、且 build target（设备类型与构建所针对的设备事实）相同的调用才共用 entry；一个 entry 可以包含一个或多个 kernel。
 
 没有任何 key 能在调用设备类型上运行时，报 `in-tree kernels do not run on`（`OpNotAvailableError`）；有 key 支持这种设备类型、但没有实现同时可用且适用时，报 `no implementation serves this call`；剩下多个互相没有优先关系的实现时，报 `dispatch is ambiguous`。选择不依赖声明顺序，也没有数值优先级。
 

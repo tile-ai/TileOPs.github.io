@@ -95,10 +95,10 @@ d = op(a, b)   # the same call: reuses the cache
 - Installing TileOPs compiles no kernels. TileLang compiles a kernel the first time
   an op is called.
 - An op looks up the entry serving a call by the whole call; what is compiled is
-  cached by build identity, and calls that select the same implementation class
-  with the same build identity share one entry. TileLang compiles when no entry
-  matches. Build identity is defined in
-  [How an op selects a kernel](dispatch/index.md).
+  cached by build identity and build target, and calls that select the same
+  implementation class with the same build identity on the same build target share one
+  entry. TileLang compiles when no entry matches. Build identity and build target are
+  defined in [How an op selects a kernel](dispatch/index.md).
 - Under an editable install, changes to Python source take effect directly; a
   change to dependencies or build configuration needs the install command run
   again.
@@ -122,6 +122,16 @@ python -m pytest -q benchmarks/tests                  # benchmark infrastructure
 pre-commit run --all-files                            # lint, the same as CI's pre-commit check
 ```
 
+Two more run the suite on a PrivateUse1 test backend that `tests.privateuse1` builds, and
+need a host C++ compiler:
+
+```bash
+python -m pytest -q -p tests.privateuse1 --tileops-device=tileops_test \
+  tests benchmarks/tests --ignore=tests/ops                       # the portable tests
+python -m pytest -q -p tests.privateuse1 --tileops-device=tileops_test \
+  --tileops-cuda-only-must-fail tests                             # every cuda_only test fails off CUDA
+```
+
 ## Running benchmarks { #bench }
 
 ```bash
@@ -136,8 +146,8 @@ python -m pytest -q <bench-file>
   in the group: build it from the FlashAttention repository's `hopper/` directory, or use
   the dev image.
 - The dev image installs the baseline libraries at build time too. A failed install of
-  some of them does not stop the build, and `sgl-kernel` is not in the image. A baseline
-  missing from the container is installed at the version the repository declares.
+  some of them does not stop the build. A baseline missing from the container is
+  installed at the version the repository declares.
 - With `--tileops-verify`, a benchmark only checks correctness and times nothing, which
   is a quick way to confirm the numerics after changing a kernel.
 - How to write a benchmark file is in [Writing benchmarks](benchmark/writing.md); how the
@@ -175,8 +185,8 @@ python scripts/test_node_delta.py --base upstream/main
   the CPU checks and GPU smoke tests below. They run once the PR is marked
   **Ready for review**.
 - The CPU checks are pre-commit, gitleaks, manifest validation, actionlint, the
-  compile contract check and the packaging check, plus the benchmark contract tests
-  when a change touches the benchmarks.
+  compile contract check, the off-CUDA tests and the packaging check, plus the benchmark
+  contract tests when a change touches the benchmarks.
 - The GPU smoke tests run once pre-commit, gitleaks and actionlint pass, scoped by
   the files the PR changes. A PR that changes no Python, manifest or native source
   skips them.
@@ -194,5 +204,5 @@ build use the installed versions.
 
 ### Checks that run without an SM90 GPU { #faq-no-gpu }
 
-The three GPU-free checks under [Running the tests](#tests) run locally. The tests
+The GPU-free checks under [Running the tests](#tests) run locally. The tests
 that need a GPU run in the PR's CI.

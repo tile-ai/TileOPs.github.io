@@ -28,24 +28,24 @@ next three sections walk through these steps.
 
 ## Example {#example}
 
-This example compares TileOPs batched matmul with vLLM, SGLang, and PyTorch/cuBLAS:
+This example compares TileOPs batched matmul with FlagGems and PyTorch/cuBLAS:
 
 ```python
 import pytest
 
 from benchmarks import api as bench
+from benchmarks.baselines import flaggems_op
 from tileops.gemm import BMMFwdOp
 
 
 @pytest.mark.parametrize("case", bench.cases(BMMFwdOp), ids=lambda case: case.id)
-def test_bmm_bench(case, vllm_bmm, sglang_bmm):
+def test_bmm_bench(case):
     op = BMMFwdOp(**case.arguments)
 
     bench.Runner(op, case).compare(
         {
-            "vllm": vllm_bmm,
-            "sglang": sglang_bmm,
-            "torch-cublas": case.reference,
+            "flaggems": flaggems_op("bmm"),
+            "torch-cublas": case.torch,
         }
     )
 ```
@@ -55,12 +55,12 @@ Here is how the example works:
 - `bench.cases(BMMFwdOp)` creates a case for each dtype case of every manifest workload
   row. The `case.id` also serves as the pytest test ID.
 - `case.arguments` supplies the arguments used to construct the op.
-- `vllm_bmm` and `sglang_bmm` are callables that accept the same inputs as the op.
-  `Runner` calls them with `case.inputs`.
+- `flaggems_op("bmm")` returns FlagGems' bmm, a callable that accepts the same inputs as the op.
+  `Runner` calls it with `case.inputs`.
 - The mapping keys appear unchanged in the report. The name `tileops` is reserved for
   the op. If you pass one implementation instead of a mapping, it appears as `baseline`.
-- Passing `case.reference` under the name `"torch-cublas"` lets it produce the expected
-  result and take part in the timing comparison.
+- `case.torch` runs the op in PyTorch at the input dtype, cuBLAS for bmm, and takes part
+  in the timing. Every implementation is checked against `case.reference`.
 
 Benchmark files run under pytest. With `--tileops-verify`, pytest runs the correctness
 check without timing. This is useful for checking numerical results after a kernel change:
@@ -184,8 +184,8 @@ against one another:
 
 ```text
 TileOPs op  ↔ case.reference
-vLLM        ↔ case.reference
-SGLang      ↔ case.reference
+FlagGems    ↔ case.reference
+cuBLAS      ↔ case.reference
 ```
 
 Before each implementation runs, its `reset` runs. Afterwards, `Runner` checks whether

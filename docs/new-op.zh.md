@@ -109,6 +109,8 @@ class GEMMFwdOp(Op):
 
 构造函数不接收调优参数。需要调优时，先构造 op，再调用 `op.request_tune()`。
 
+输入 schema、数学定义或输出 schema 不同的，是另一个 op 类；schema 相同的语义模式是构造参数。所有 op 共同遵守的约定，例如 softmax 缩放 `sm_scale`、打包 offsets 的 `validate_inputs`、`Bwd` op 与其前向的配对，见 [Op Interfaces § Shared semantics](design/ops-design.md#shared-semantics)。
+
 ### `kernel_for` 与 kernel 的选择 {#kernel-selection}
 
 kernel 是编译产物，构造一次需要几百毫秒到几秒，而一个 op 实例会以不同的形状与 dtype 被反复调用。因此 op 层维护一张缓存表：本次调用所需的 kernel 已经构造过时直接取出，否则构造后存入表中。`kernel_for` 是 in-tree 实现访问这张表的唯一入口；[target](backends.md) 服务的是整个 op，不经过 `kernel_for`。
@@ -176,6 +178,8 @@ class GEMMTMAKernel(Kernel, GEMMFwdInterface):
 ```
 
 `m`、`n`、`k`、dtype 与两个布局标志是构造参数，因为它们在生成的代码中是常量：循环边界、TMA 描述符与 WGMMA 的形状都按这些值展开，tile 尺寸也是如此。张量本身由 `forward` 接收，每次调用只更换指针。
+
+构建函数（上例中的 `_gemm_kernel`）用 `tileops._kernels.build_target.target_cache` 缓存，它同时按构建所针对的设备区分结果；每个参数都必须可哈希。lint 不允许在 `src/tileops/_kernels/` 下直接使用 `functools` 缓存。
 
 划分错误的后果是重新编译。decode 逐步推进时，`seq_len` 每一步加 1，batch 随 running set 变化：
 

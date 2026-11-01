@@ -128,6 +128,12 @@ call directly, any other call inside the generated operator. How that works is i
 The constructor takes no tuning parameter. To tune, construct the op, then call
 `op.request_tune()`.
 
+A different input schema, different math or a different output schema is a separate op
+class; a semantic mode with the same schemas is a construction parameter. Conventions every
+op follows, such as the softmax scale `sm_scale`, `validate_inputs` for packed offsets and
+the pairing of a `Bwd` op with its forward, are in
+[Op Interfaces § Shared semantics](design/ops-design.md#shared-semantics).
+
 ### `kernel_for`, and choosing among kernels {#kernel-selection}
 
 A kernel is a compiled artefact that takes hundreds of milliseconds to seconds to
@@ -243,6 +249,11 @@ class GEMMTMAKernel(Kernel, GEMMFwdInterface):
 the generated code treats them as constants: loop bounds, TMA descriptors and the WGMMA
 shape are all unrolled from them, and so are the tile sizes. The tensors are passed to
 `forward`, and each call only changes the pointers.
+
+Memoize the builder (`_gemm_kernel` above) with
+`tileops._kernels.build_target.target_cache`, which also keys a build by the device it
+compiles for; every parameter must be hashable. Lint rejects a plain `functools` cache
+under `src/tileops/_kernels/`.
 
 A wrong split causes recompilation. Decode advances one token per step, so `seq_len`
 grows by one every step, and the batch changes with the running set:

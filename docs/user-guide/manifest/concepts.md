@@ -148,7 +148,7 @@ Effects determine the read and write counts of the roofline, and the operator sc
 | 9 | refinement | a predicate that constrains the values of indices | each entry in `shape_rules` | [§ 6](#refinement) |
 | 10 | unification | matching the declared shape against the actual shape axis by axis to solve unknown indices | generated from the signature | [§ 7](#unification) |
 | 11 | type inference | the process of solving every index at call time | generated from the signature | [§ 7](#unification) |
-| 12 | effect | what a call writes to its arguments, and aliasing | `mutated`, `write_only`, `buffer`, `alias` | [§ 8](#effect) |
+| 12 | effect | what a call writes to its arguments, and aliasing | `mutated`, `write_only`, `buffer`, `alias`, `overlaps` | [§ 8](#effect) |
 | 13 | `Maybe[X]`, `present` | an `X` that may be absent; `present(x)` says whether it is given | optional inputs, nullable outputs, `int \| None` parameters | [Extensions § 1](extensions.md#presence) |
 | 14 | primitive | a built-in function callable in expressions, such as `broadcast` and `pool.out` | function calls in expressions | [Extensions § 4](extensions.md#let) |
 | 15 | generator | a function that generates the values of a metadata tensor at instantiation, such as `prefix_sum(q_lens)` | a tensor's `values` | [Extensions § 7](extensions.md#generators) |

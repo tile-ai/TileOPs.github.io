@@ -683,9 +683,9 @@ the order a backend author meets them:
 | # | The op layer supplies | What it means for a backend |
 | --- | --- | --- |
 | 1 | The public torch-side API and the meaning of each parameter | How the op is called, the parameter names and their semantics are settled; a backend neither defines nor changes them |
-| 2 | Manifest validation | A call that does not conform to the manifest signature is rejected at the op layer and never reaches the backend; who checks what inside the signature follows the table |
+| 2 | Manifest validation | A call that does not conform to the manifest signature is rejected at the op layer and never reaches the backend; so is a call that writes a tensor sharing a byte with another call tensor its manifest entry does not list in `overlaps`. Who checks what inside the signature follows the table |
 | 3 | Parameters by name | Parameters arrive under the manifest's `params` names, with the values the op instance holds. For a parameter the manifest defaults to null, that is the value the op settled on, either `None` or a number |
-| 4 | Input contiguity | Every input the call does not write arrives contiguous; an input it writes arrives as the caller passed it, unless the manifest declares it `contiguous: true` |
+| 4 | Input contiguity and alignment | Every input the call does not write arrives contiguous; an input it writes arrives as the caller passed it, unless the manifest declares it `contiguous: true`. Every call tensor starts on a 16-byte boundary: the op layer passes an aligned copy of one that does not, and copies a written copy back to the caller's tensor |
 | 5 | Memoisation and reuse of kernels | The builder is called once per specialization: a later call with the same device and input signature reuses the previous return value. A builder may therefore compile, and the op layer guarantees it is not called again |
 | 6 | The `torch.compile` and CUDA-graph boundary | For an op with a compile boundary (its spec has a call-time tensor input and no `composition`), the op layer wraps a call as an opaque operator and registers a fake alongside, so the compiler can infer the output's shape and dtype without executing. **A backend's kernels do nothing for compilation**; see [Bringing an op into torch.compile](torch-compile.md) |
 | 7 | Roofline, profiling and numerical tests | The op layer's existing tests can run with the backend's kernel; see [A backend's test claim](#test-claim). Performance reports: see [Performance reports](#reports) |
@@ -737,7 +737,7 @@ with `builtin`. Three kinds of marker decide which tests run:
 | Marker | Meaning | In a backend's run |
 | --- | --- | --- |
 | `in_tree_kernels` | The test depends on the in-tree implementations | dropped when `--tileops-target` is not `builtin` |
-| `cuda_only` | The test itself needs CUDA | dropped when `--tileops-device` is not `cuda` |
+| `cuda_only(<reason>)` | The test itself needs CUDA: it replays a CUDA graph, builds a CUDA kernel outside an op, or checks against a reference that runs only on CUDA | dropped when `--tileops-device` is not `cuda` |
 | `sm<NN>`, such as `sm90` | The test needs that CUDA architecture | skipped on another device, and counted as a skip |
 
 In the JUnit report, each test that called `check()` carries an `op` and a
@@ -756,10 +756,9 @@ A claim comes with three sets of numbers:
 
 - the op's pass and skip counts, where a test with `checked_outputs == 0` counts as a skip;
 - each test's `checked_outputs`;
-- the number of tests dropped, per test file. Dropped tests never reach the JUnit report,
-  so the backend computes this number itself, as the difference in node ids between two
-  `pytest tests/ops --collect-only -q` runs: one with the default options, one with
-  `--tileops-target` and `--tileops-device`.
+- the number of tests dropped, per test file. Dropped tests never reach the JUnit report;
+  `--tileops-dropped-report=<csv>` on the run writes, per test file, the tests collected and
+  the tests dropped.
 
 The in-tree kernels ([`src/tileops/_kernels/`](https://github.com/tile-ai/TileOPs/tree/main/src/tileops/_kernels))
 are the **default implementation**: they have no target name and are not in the registry.

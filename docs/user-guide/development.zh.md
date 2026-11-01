@@ -79,7 +79,7 @@ d = op(a, b)   # 相同的调用：复用缓存
 ```
 
 - 安装 TileOPs 时不编译 kernel。kernel 在 op 首次被调用时由 TileLang 编译。
-- op 按完整的调用信息查找服务这次调用的 entry；编译结果按 build identity 缓存，选中同一实现类且 build identity 相同的调用共用同一个 entry。没有对应的 entry 时，TileLang 执行编译。build identity 的定义见 [op 如何选择 kernel](dispatch/index.md)。
+- op 按完整的调用信息查找服务这次调用的 entry；编译结果按 build identity 与 build target 缓存，选中同一实现类、在同一 build target 上 build identity 相同的调用共用同一个 entry。没有对应的 entry 时，TileLang 执行编译。build identity 与 build target 的定义见 [op 如何选择 kernel](dispatch/index.md)。
 - editable 安装下，Python 源码的改动直接生效；依赖或构建配置变更后，需要重新执行安装命令。
 
 ## 运行测试 { #tests }
@@ -101,6 +101,15 @@ python -m pytest -q benchmarks/tests                  # benchmark 基础设施�
 pre-commit run --all-files                            # 代码检查，与 CI 中的 pre-commit 一项相同
 ```
 
+另有两项在 `tests.privateuse1` 构建的 PrivateUse1 测试 backend 上运行测试，需要主机上的 C++ 编译器：
+
+```bash
+python -m pytest -q -p tests.privateuse1 --tileops-device=tileops_test \
+  tests benchmarks/tests --ignore=tests/ops                       # 可移植的测试
+python -m pytest -q -p tests.privateuse1 --tileops-device=tileops_test \
+  --tileops-cuda-only-must-fail tests                             # 每个 cuda_only 测试在 CUDA 之外都失败
+```
+
 ## 运行 benchmark { #bench }
 
 ```bash
@@ -110,7 +119,7 @@ python -m pytest -q <bench-file>
 
 - 改动 kernel 或 op 的 PR 需附上 benchmark 结果，对比对象是 TileOPs 以外的实现。
 - benchmark 的对比库通过 `bench` 依赖组安装，`--group` 需要 pip 25.1 及以上。FlashAttention-3（`flash_attn_interface`）不在 PyPI 上，也不在这个依赖组里：从 FlashAttention 仓库的 `hopper/` 目录编译安装，或使用 dev 镜像。
-- dev 镜像在构建时也会安装这些库，其中个别库安装失败不会中止构建，`sgl-kernel` 则不在镜像中；容器内缺少的库按仓库声明的版本另行安装。
+- dev 镜像在构建时也会安装这些库，其中个别库安装失败不会中止构建；容器内缺少的库按仓库声明的版本另行安装。
 - 加上 `--tileops-verify` 时，benchmark 只做正确性校验，不计时，适合在改动 kernel 后先确认数值。
 - benchmark 文件的写法见[编写 benchmark](benchmark/writing.md)，计时方式见 [benchmark 的计时方法](../timing.md)。
 
@@ -138,7 +147,7 @@ python scripts/test_node_delta.py --base upstream/main
 ### CI { #ci }
 
 - Draft PR 只运行 PR 标题检查与 manifest 统计，跳过下面的 CPU 检查与 GPU smoke 测试。PR 转为 **Ready for review** 后，这些检查才会运行。
-- CPU 检查包括 pre-commit、gitleaks、manifest 校验、actionlint、编译约定检查与打包检查；改动涉及 benchmark 时，另含 benchmark 约定测试。
+- CPU 检查包括 pre-commit、gitleaks、manifest 校验、actionlint、编译约定检查、CUDA 之外的测试与打包检查；改动涉及 benchmark 时，另含 benchmark 约定测试。
 - GPU smoke 测试在 pre-commit、gitleaks 与 actionlint 通过后运行，测试范围由改动的文件决定。没有改动 Python、manifest 或原生代码的 PR 跳过 GPU smoke。
 
 ## 常见问题 { #faq }
@@ -153,4 +162,4 @@ PIP_NO_BUILD_ISOLATION=1 pip install -e . --group dev -c constraints.txt
 
 ### 没有 SM90 GPU 时可运行的检查 { #faq-no-gpu }
 
-[运行测试](#tests)一节中不需要 GPU 的三项检查可以在本地运行。需要 GPU 的测试由 PR 上的 CI 运行。
+[运行测试](#tests)一节中不需要 GPU 的检查可以在本地运行。需要 GPU 的测试由 PR 上的 CI 运行。

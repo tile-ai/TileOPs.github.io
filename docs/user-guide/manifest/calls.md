@@ -19,14 +19,16 @@ In the **call** phase, the checks generated from the signature around `forward` 
 3. select type family branches;
 4. infer indices, and check the remaining refinements;
 5. check the preconditions of output buffers;
-6. run the implementation;
-7. check the outputs: the number of outputs and whether each is `None`, shape, dtype, device and memory layout; `out` and `alias` outputs must be the corresponding tensor objects, and other outputs must not share storage with inputs.
+6. check that no tensor the call writes shares a byte with another call tensor, except the inputs its manifest entry lists in `overlaps`;
+7. when the op was constructed with `validate_inputs=True`, check the packed offsets on the CPU;
+8. run the implementation on an aligned copy of any call tensor off a 16-byte boundary, and copy a written copy back after step 9;
+9. check the outputs: the number of outputs and whether each is `None`, shape, dtype, device and memory layout; `out` and `alias` outputs must be the corresponding tensor objects, and other outputs must not share storage with inputs.
 
 When any check fails, the op raises an error that names the unsatisfied declaration.
 
-Steps 1–5 run on the first call of each specialization: each tensor's layout, dtype, device and presence, the parameters, the construction-time tensors, the execution arguments, and the current device of a call no input places. The Op plan holds what they decide, and a later call of the same specialization runs them no more. Step 7 runs on every call.
+Steps 1–5 run on the first call of each specialization: each tensor's layout, dtype, device and presence, whether each call tensor starts on a 16-byte boundary, the parameters, the construction-time tensors, the execution arguments, and the current device of a call no input places. The Op plan holds what they decide, and a later call of the same specialization runs them no more. Steps 6, 7 and 9 run on every call.
 
-If every tensor a call writes (each output and each written input) has no elements, step 6 runs no implementation: new outputs are created on the call device with the checked shapes and dtypes, and `out` and the written inputs are returned unchanged. When the inputs are empty but the outputs are not, the implementation runs as usual.
+If every tensor a call writes (each output and each written input) has no elements, step 8 runs no implementation: new outputs are created on the call device with the checked shapes and dtypes, and `out` and the written inputs are returned unchanged. When the inputs are empty but the outputs are not, the implementation runs as usual.
 
 ## 2. Kernel selection {#selection}
 
