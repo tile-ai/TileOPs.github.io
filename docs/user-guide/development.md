@@ -122,15 +122,23 @@ python -m pytest -q benchmarks/tests                  # benchmark infrastructure
 pre-commit run --all-files                            # lint, the same as CI's pre-commit check
 ```
 
-Two more run the suite on a PrivateUse1 test backend that `tests.privateuse1` builds, and
-need a host C++ compiler:
+More run the suite on a PrivateUse1 test backend that `tests.privateuse1` builds, and
+need a host C++ compiler. `tests.privateuse1.target` adds the `tileops_test` target, whose
+kernel for each op computes that op's reference on the test device:
 
 ```bash
 python -m pytest -q -p tests.privateuse1 --tileops-device=tileops_test \
   tests benchmarks/tests --ignore=tests/ops                       # the portable tests
+python -m pytest -q -p tests.privateuse1.target --tileops-device=tileops_test \
+  --tileops-target=tileops_test -m smoke tests/ops                # the tests/ops smoke tests
 python -m pytest -q -p tests.privateuse1 --tileops-device=tileops_test \
-  --tileops-cuda-only-must-fail tests                             # every cuda_only test fails off CUDA
+  --tileops-cuda-only-must-fail tests --ignore=tests/ops          # every cuda_only test fails off CUDA
+python -m pytest -q -p tests.privateuse1.target --tileops-device=tileops_test \
+  --tileops-target=tileops_test --tileops-cuda-only-must-fail tests/ops
 ```
+
+Under the target, a test whose op call the target does not serve is reported unvalidated.
+Set `OMP_NUM_THREADS=1` when running these with `-n`.
 
 ## Running benchmarks { #bench }
 
