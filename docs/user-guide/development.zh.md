@@ -101,14 +101,20 @@ python -m pytest -q benchmarks/tests                  # benchmark 基础设施�
 pre-commit run --all-files                            # 代码检查，与 CI 中的 pre-commit 一项相同
 ```
 
-另有两项在 `tests.privateuse1` 构建的 PrivateUse1 测试 backend 上运行测试，需要主机上的 C++ 编译器：
+以下几项在 `tests.privateuse1` 构建的 PrivateUse1 测试 backend 上运行测试，需要主机上的 C++ 编译器。`tests.privateuse1.target` 另外注册 `tileops_test` target，它为每个 op 构建的 kernel 在测试设备上计算该 op 的 reference：
 
 ```bash
 python -m pytest -q -p tests.privateuse1 --tileops-device=tileops_test \
   tests benchmarks/tests --ignore=tests/ops                       # 可移植的测试
+python -m pytest -q -p tests.privateuse1.target --tileops-device=tileops_test \
+  --tileops-target=tileops_test -m smoke tests/ops                # tests/ops 的 smoke 测试
 python -m pytest -q -p tests.privateuse1 --tileops-device=tileops_test \
-  --tileops-cuda-only-must-fail tests                             # 每个 cuda_only 测试在 CUDA 之外都失败
+  --tileops-cuda-only-must-fail tests --ignore=tests/ops          # 每个 cuda_only 测试在 CUDA 之外都失败
+python -m pytest -q -p tests.privateuse1.target --tileops-device=tileops_test \
+  --tileops-target=tileops_test --tileops-cuda-only-must-fail tests/ops
 ```
+
+在这个 target 下，op 调用不被 target 服务的测试报告为 unvalidated。用 `-n` 并行运行时设置 `OMP_NUM_THREADS=1`。
 
 ## 运行 benchmark { #bench }
 
