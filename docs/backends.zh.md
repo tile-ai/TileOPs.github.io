@@ -90,7 +90,12 @@ def detect(device: torch.device) -> bool:
 def build_kernel(*inputs: "TensorSpec | None", **params) -> Callable[..., KernelResult]: ...
 ```
 
-由 backend 实现，每组 `(op, target)` 一个。它的签名就是该 op 的 manifest 签名：`inputs` 按声明顺序与 `signature.inputs` 的条目一一对应，`params` 按 `signature.params` 命名。声明为 optional 的输入在本次调用中没有传入时，对应的实参是 `None`。
+由 backend 实现，每组 `(op, target)` 一个。它的签名就是该 op 的 manifest 签名：`inputs` 按声明顺序与 `signature.inputs` 的条目一一对应，`params` 按 `signature.params` 命名。每个输入按它在本次调用中持有的值传入：
+
+- 张量传入它的 `TensorSpec`；
+- 张量序列（`type: "list[Tensor]"`）传入由 `TensorSpec` 组成的 tuple；
+- 调用期标量（例如以数值传入的 `ClampFwdOp` 的 `min`）传入它的 Python 类型（`int`、`float` 或 `bool`），不传入它的值；
+- 持有 `None` 的输入，无论是显式传入还是取了默认值，对应的实参是 `None`。
 
 ```python
 # GroupNormFwdOp 的 spec：weight、bias 是可选输入，没传时实参是 None
@@ -263,7 +268,7 @@ register_kernel_builder(op="GEMMFwdOp", target="acme", build_kernel=build_gemm)
 这条调用路径对应以下四点：
 
 - **`kernel_for` 与各实现的 `entry_for` 只服务 in-tree 实现。** 它们决定取哪个 in-tree kernel、按什么查表以及如何构造。op 选中某个 target 之后，整个 op 由这个 target 服务，这几处都不会执行。
-- **张量按位置传入，参数按名字传入。** 在 `build_kernel(*inputs, **params)` 中，位置实参是 `TensorSpec`（没有传入的可选输入是 `None`），关键字实参是 manifest 中 `params` 的名字与本次调用的确定值。
+- **张量按位置传入，参数按名字传入。** 在 `build_kernel(*inputs, **params)` 中，位置实参描述各输入（`TensorSpec`；张量序列是由它组成的 tuple；调用期标量是它的 Python 类型；持有 `None` 的输入是 `None`），关键字实参是 manifest 中 `params` 的名字与本次调用的确定值。
 - **一组 `(op, target)` 只注册一个 builder。** in-tree 路径会选用哪个实现（例如 GEMM 在 `kernel_types` 中声明的多个实现之一）不会告诉 backend，`build_kernel` 从 `TensorSpec` 自行判断应返回哪个 kernel。
 - **backend 不必自己缓存构建结果。** 设备与输入签名相同时，op 层不会再次调用 `build_kernel`；需要更细的区分或更少的重建时，backend 在 `build_kernel` 内部另加一层缓存。专为外部 backend 编写的 op 既不声明 `kernel_types` 也不声明 `interfaces`，没有 target 认领设备时，调用直接抛出 `OpNotAvailableError`。
 
@@ -400,7 +405,7 @@ signature:
     eps: {type: "float | None", default: null}
   inputs:                       # 声明顺序即传入顺序
     x: {dtype: T, shape: "[*B, *normalized_shape]"}
-    weight: {dtype: T, shape: "[*normalized_shape]", optional: true}
+    weight: {dtype: T, shape: "[*normalized_shape]", type: "Tensor | None", default: null}
 ```
 
 对应的 builder 签名：
@@ -618,7 +623,7 @@ TileOPs 的 in-tree kernel（[`src/tileops/_kernels/`](https://github.com/tile-a
 
 TileOPs 按**设备加输入签名**记住 `build_kernel` 的返回值。这个键的构成是：
 
-> 调用设备（见[调用设备](user-guide/manifest/calls.md#device)），加上按 `signature.inputs` 顺序逐项取出的 `(dtype, shape)`；声明为 optional 而本次没有传入的输入，这一项记 `None`。
+> 调用设备（见[调用设备](user-guide/manifest/calls.md#device)），加上按 `signature.inputs` 顺序逐项取出的 `(dtype, shape)`；本次持有 `None` 的输入，这一项记 `None`；调用期标量按它的 Python 类型记录，不记录它的值。
 
 因此，**设备与输入签名都相同的两次调用，TileOPs 使用同一个 kernel**，不再调用 `build_kernel`。同一个 target 的第二块卡会重新构造一次，因为为一块卡编译出的产物不一定能在另一块卡上启动。参数不进入这个键，因为它们对一个 op 实例而言是固定的。
 

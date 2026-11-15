@@ -100,7 +100,7 @@ class GEMMFwdOp(Op):
 | 1 | `__init__` | `signature.params` 的名字、顺序与默认值，再加上仅限关键字的 `target`；先把每个 manifest 参数赋给同名属性，再调用 `super().__init__(target=target)` |
 | 2 | `kernel_types` | 能服务这个 op 的 Kernel 类，各对应一个 key |
 | 3 | `interfaces` | op 发出的每一个 kernel 调用各占一条，从 `kernel_for` 使用的名字映射到服务这个调用的各实现所继承的 `KernelInterface` 类 |
-| 4 | `forward` | 参数按 `signature.inputs` 的顺序，可选输入排在最后，默认值为 `None`；方法体把输入转为连续张量，写出构造 call spec 的函数，取得 kernel，再调用它 |
+| 4 | `forward` | 参数按 `signature.inputs` 的顺序，有 manifest `default` 的输入以它为默认值，排在没有 `default` 的输入之后；方法体把输入转为连续张量，写出构造 call spec 的函数，取得 kernel，再调用它 |
 | 5 | `roof_key` | 可选。表示 op 的 FLOPs 按哪个硬件单元的峰值计算，默认是 CUDA core 上的 fp32，只在使用其他单元时编写 |
 
 `_infer_output_shapes` 与 `eval_roofline` 都依照 spec 生成，不需要编写。

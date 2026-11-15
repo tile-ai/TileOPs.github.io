@@ -48,7 +48,7 @@ Every type index in a signature has exactly one source, which is one of the foll
 
 ## 3. type family {#family}
 
-A type family is a function that gives a shape from the value of a discriminant. A discriminant is a quantity with finitely many values, such as a `Bool` parameter, an enum parameter, an ADT parameter, or whether a tensor is passed.
+A type family is a function that gives a shape from the value of a discriminant. A discriminant is a quantity with finitely many values, such as a `Bool` parameter, an enum parameter, an ADT parameter, or the member a call-time argument holds, for example whether a tensor is passed.
 
 `Mat` in GEMM is a type family: when `t` is false the result is `[R, C]`, and when it is true the result is `[C, R]`. The shape of tensor `a` is written `Mat[trans_a, M, K]`, so:
 
@@ -141,7 +141,7 @@ Effects determine the read and write counts of the roofline, and the operator sc
 | 2 | polymorphic function type | a function type with quantification over its type indices | `forall` | [§ 1](#pft) |
 | 3 | type index | a parameter name in a type | `forall`, construction parameters, `let` | [§ 2](#index) |
 | 4 | kind | the sort of a type index, which determines its range of values and the operations available on it | `forall: {M: Dim}` | [§ 2](#index) |
-| 5 | discriminant | a quantity with finitely many values, used to select a type family branch or to decide whether a tensor exists | expressions in `match`, `optional`, `nullable`, `mutated` | [§ 3](#family) |
+| 5 | discriminant | a quantity with finitely many values, used to select a type family branch or to decide whether a tensor exists | expressions in `match`, `nullable`, `mutated`, and `present(...)`, `member(...)` in refinements | [§ 3](#family) |
 | 6 | type family | a function that gives a shape from the value of a discriminant | `signature.types` | [§ 3](#family) |
 | 7 | ADT, constructor | a tagged sum type in which each constructor has its own fields | `adts` in `spec/types.yaml` | [§ 4](#adt) |
 | 8 | `let` | a named quantity computed from indices | `let: {H_out: "..."}` | [§ 5](#let) |
@@ -149,6 +149,7 @@ Effects determine the read and write counts of the roofline, and the operator sc
 | 10 | unification | matching the declared shape against the actual shape axis by axis to solve unknown indices | generated from the signature | [§ 7](#unification) |
 | 11 | type inference | the process of solving every index at call time | generated from the signature | [§ 7](#unification) |
 | 12 | effect | what a call writes to its arguments, and aliasing | `mutated`, `write_only`, `buffer`, `alias`, `overlaps` | [§ 8](#effect) |
-| 13 | `Maybe[X]`, `present` | an `X` that may be absent; `present(x)` says whether it is given | optional inputs, nullable outputs, `int \| None` parameters | [Extensions § 1](extensions.md#presence) |
+| 13 | argument type, `member`, `present` | the members a call-time argument may hold, such as `Tensor`, `Number` and `None`; `member(x)` names the member `x` holds, and `present(x)` says it is not `None` | an input's `type` and `default`, nullable outputs, `int \| None` parameters | [Extensions § 1](extensions.md#presence) |
 | 14 | primitive | a built-in function callable in expressions, such as `broadcast` and `pool.out` | function calls in expressions | [Extensions § 4](extensions.md#let) |
 | 15 | generator | a function that generates the values of a metadata tensor at instantiation, such as `prefix_sum(q_lens)` | a tensor's `values` | [Extensions § 7](extensions.md#generators) |
+| 16 | tensor sequence | a list of tensors passed as one argument, each element with its own shape and dtype | `type: "list[Tensor]"`, `Seq[Shape]`, `Seq[DType[...]]` | [Extensions § 11](extensions.md#sequences) |

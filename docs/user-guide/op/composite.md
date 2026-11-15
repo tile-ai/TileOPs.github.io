@@ -48,10 +48,9 @@ method of the base class.
     - One `(stage, identity)` is built once.
     - `identity` covers every argument that changes what the sub-op is built as, the same
       meaning as the identity a kernel's `entry_for` returns.
-    - `identity` is `None` when the sub-op's arguments come from the composite op's params
-      and construction-time tensors. The sub-op is then held per specialization of the
-      composite op: changed params build a new sub-op, and a return to earlier params reuses
-      the one built for them.
+    - `identity` is `None` when the sub-op's arguments come from the composite op's params.
+      The sub-op is then held per specialization of the composite op: changed params build a
+      new sub-op, and a return to earlier params reuses the one built for them.
     - `forward` gets the sub-op through `delegate_for` again rather than through an
       attribute, so it reaches the sub-op of the current params.
 - **Inheriting the execution policy.**

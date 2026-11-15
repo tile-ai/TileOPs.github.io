@@ -9,7 +9,7 @@ Most specs use only the following fields, and this page describes how to write t
 1. workload rows;
 1. inline roofline formulas.
 
-How to write optional inputs, shapes that vary with parameters, side effects, metadata tensors and similar cases is in [Extensions](extensions.md).
+How to write argument types (optional inputs, arguments that are a scalar or a tensor), shapes that vary with parameters, side effects, metadata tensors and similar cases is in [Extensions](extensions.md).
 
 ## 1. Structure of a spec {#anatomy}
 
@@ -42,7 +42,7 @@ The following lists every top-level field a spec can contain. Each comment gives
   signature:
     forall: {<index>: <kind>}        # 3
     params: {<p>: {type, default, kw_only}}                     # 4
-    inputs: {<t>: {dtype, shape, optional, mutated, overlaps, values, requires, ...}}  # 5
+    inputs: {<t>: {type, default, dtype, shape, mutated, overlaps, values, requires, ...}}  # 5
     outputs: {<t>: {dtype, shape, nullable, buffer, alias, overlaps, ...}}   # 5
     types: {<Family>: {params, match, cases}}                   # Extensions 2
     let: {<name>: "<expression>"}                               # Extensions 4
@@ -76,15 +76,16 @@ The following lists every top-level field a spec can contain. Each comment gives
 | 2 | `Shape` | a tuple of `Dim` | solved by unification of the inputs | a list of integers |
 | 3 | `DType[a \| b]` | one of the listed dtypes | solved by unification of the inputs | `dtype_cases` |
 | 4 | `Seq[Int]` | a list of integers, such as `q_lens` | exists only at instantiation, as an argument to a generator (see [Extensions § 7](extensions.md#generators)) | a list of integers, or a call to a value primitive that returns a list, such as `"repeat(512, 64)"` |
+| 5 | `Seq[Dim]`, `Seq[Shape]`, `Seq[DType[a \| b]]` | one item per element of a tensor sequence (see [Extensions § 11](extensions.md#sequences)) | solved by unification of each element | a list; a `Seq[DType]` index in `dtype_cases` |
 
 - A `Dim` can be used where an `Int` is required, and a `Shape` can be used where a `Seq[Int]` is required.
 - Every axis in a shape is an integer expression. An axis whose kind is not `Dim`, and every element of a sequence expanded with `*p`, must be non-negative; the generated checks confirm this at construction or at call time.
 - Values in YAML are converted to Python values by the declared kind or `type`: `Shape` and `tuple[...]` become tuples, `Seq[Int]` and `list[...]` stay lists, dtype names become `torch.dtype`, and ADT values become the corresponding Python objects.
-- Within one spec, the names of indices, `let` entries and tensors are all distinct. `out` is reserved for the output buffer: no parameter or index is named `out`, and the only tensor that may be is the required output buffer of [Extensions § 6](extensions.md#effects), Table 1 row 6.
+- Within one spec, the names of indices, `let` entries and tensors are all distinct. `out` is reserved for the output buffer: no parameter or index is named `out`, and the only tensor that may be is the required output buffer of [Extensions § 6](extensions.md#effects), Table 3 row 6.
 
 ## 4. params {#params}
 
-`signature.params` corresponds one to one with the parameter list of `__init__`. An ordinary construction parameter declares `type`, and optionally `default` and `kw_only` (keyword-only). A tensor passed at construction declares `dtype` and `shape` instead, see [Extensions § 5](extensions.md#placement).
+`signature.params` corresponds one to one with the parameter list of `__init__`. A construction parameter declares `type`, and optionally `default` and `kw_only` (keyword-only). A tensor is never a construction parameter: every tensor is a call-time input, declared in `inputs` (see [§ 5](#tensors)).
 
 - The spec is the authority. For an `implemented` op, the validator compares `params` with `__init__` item by item, and requires the same set of parameters, order, `default` and `kw_only`.
 - The code may have only two kinds of extra parameter: the execution-policy parameter `target`, which every op has, written as `*, target=None` after the manifest parameters; and the implementation objects injected by the caller that the class attribute `injected_parameters` lists.
@@ -95,18 +96,19 @@ Construction parameters can appear directly in types without extra annotation:
 - an `int` parameter can be written in a shape, for example `num_local_experts` in MoE;
 - a `list[int]` or `tuple[int, ...]` parameter can be expanded in a shape as `*p`, for example `normalized_shape` in RMSNorm;
 - a dtype parameter (whose `type` is a union of dtype names) can be used directly as a tensor's `dtype`, for example `out_dtype` in Alibi;
-- how to write an `int | None` parameter is in [Extensions § 1](extensions.md#presence).
+- how to write an `int | None` parameter is in [Extensions § 1](extensions.md#presence);
+- a `list[X]` or `tuple[X, ...]` parameter takes elements of any `type` in the mapping below; a list of values outside the type system, such as `list[float]`, is read only through its length, for example `not present(rescale_factors) or len(rescale_factors) == D // 2`.
 
 The full mapping from `type` to kind is in the design document [Manifest Table 3](../../design/manifest.md#t-types). Parameters of types such as `float` or an unconstrained `str` do not take part in type inference, but they can appear in `shape_rules` and roofline formulas; the validator checks their `type`, `default`, and how they are used in those expressions.
 
 ## 5. inputs and outputs {#tensors}
 
-Each tensor is written `{dtype: ..., shape: "..."}`, which corresponds to the type `Tensor[T, s]`.
+Each tensor is written `{dtype: ..., shape: "..."}`, which corresponds to the type `Tensor[T, s]`. An input also declares its argument `type` and `default`: `type` defaults to `Tensor`, and an input without `default` is passed on every call. Inputs that may be `None`, scalars or tensor sequences are in [Extensions § 1](extensions.md#presence).
 
 - A shape is written `"[" axis, ... "]"`, or as an application of a type family. Each axis can be an expression, `*S` or `*primitive(...)`; `"[]"` denotes a zero-dimensional tensor.
 - Tensors with the same shape use the same shape term; for example, the input and output of an elementwise op are both written `[*S]`.
-- Each spec has exactly one signature, so every call returns outputs with the same names and the same count. If the number of outputs of an op varies with some switch, or the same parameter can be either a scalar or a tensor, the op is split into several specs.
-- An op selects its implementation from its parameters and from which tensors are passed. The contents of a tensor are only input to the computation and do not affect implementation selection.
+- Each spec has exactly one signature, so every call returns outputs with the same names and the same count. If the number of outputs of an op varies with some switch, the op is split into several specs. An argument that is a scalar in one form and a tensor in another is one argument with a union `type`, such as `min: {type: "Number | Tensor | None"}` in Clamp.
+- An op selects its implementation from its parameters and from the member each call-time argument holds. The contents of a tensor and the value of a call-time scalar are only input to the computation and do not affect implementation selection.
 
 ## 6. shape_rules {#refinement}
 
@@ -121,9 +123,9 @@ shape_rules:
 - Shapes, `let`, type families, refinements and inline roofline formulas use the same closed expression language, with the same operator precedence as Python. The parts of the expression language are in the design document [Manifest Table 10](../../design/manifest.md#t-lang).
 - A refinement can depend only on quantities available at run time. A refinement that can be evaluated at construction is checked at construction; the others are checked at call time.
 - Constraints on the contents of a metadata tensor are written in the tensor's `requires`, not in `shape_rules`, see [Extensions § 7](extensions.md#generators).
-- A condition narrows kinds within the branch it selects: in the branch where `present(v)` is true, `Maybe[X]` narrows to `X`; in the branch where `x == 'a'` or `x in ('a', 'b')` holds, the values of `x` narrow to those literals. If a comparison uses a literal that is not a member of the corresponding enum or dtype set, the validator rejects the refinement.
+- A condition narrows kinds within the branch it selects: in the branch where `present(v)` is true, `Maybe[X]` narrows to `X`; in the branch where `member(x) == 'Tensor'` holds, `x` narrows to that member; in the branch where `x == 'a'` or `x in ('a', 'b')` holds, the values of `x` narrow to those literals. If a comparison uses a literal that is not a member of the corresponding enum or dtype set, the validator rejects the refinement.
 - Whether a refinement can be satisfied is the responsibility of the spec's author.
-- Forms such as `x.shape == (...)`, `x is None` and `isinstance` are rejected; the corresponding rewrites are in [Calls and validation § 7](calls.md#rejected).
+- Forms such as `x.shape == (...)`, `x is None` and `isinstance` are rejected; a rule reads the member an argument holds through `present(...)` or `member(...)`. The corresponding rewrites are in [Calls and validation § 7](calls.md#rejected).
 
 ## 7. dtype {#dtype}
 
@@ -154,16 +156,17 @@ workloads:
 | No. | Key | Value |
 | --- | --- | --- |
 | 1 | a construction parameter name | the parameter's value; parameters without a default must be given |
-| 2 | `some` | the optional tensors passed in this call, see [Extensions § 1](extensions.md#presence) |
-| 3 | a `Dim`, `Shape` or `Seq[Int]` index in `forall` | the indices used on the current branch that are not solved by a generator |
-| 4 | `dtype_cases` | a non-empty list, each item of which is one assignment of the `DType` indices used on the current branch, for example `[{T: float16}, {T: bfloat16}]`; written only when such indices exist; dtype parameters are given as construction parameters |
-| 5 | `label` | the name of the row |
+| 2 | `some` | the arguments with several members that pass their tensor member in this call, see [Extensions § 1](extensions.md#presence) |
+| 3 | a call-time argument name | its scalar value or `null`, for an argument with several members not listed in `some`; required when the argument has no default |
+| 4 | a `forall` index other than `DType` | the indices used on the current branch that are not solved by a generator |
+| 5 | `dtype_cases` | a non-empty list, each item of which is one assignment of the `DType` indices used on the current branch, for example `[{T: float16}, {T: bfloat16}]`; written only when such indices exist; dtype parameters are given as construction parameters |
+| 6 | `label` | the name of the row |
 
 - An index is used on a branch when it appears in one of the following places on that branch: a shape, a dtype, a refinement, a generator argument, `requires`, or an inline roofline formula. A workload row must give every index used on the current branch, and only those indices; `let` entries and indices solved by a generator are not given in the row.
   - For this decision, each expression is first simplified for the current branch. If the condition of a refinement is always true on that branch, the indices in it do not count as used.
   - When a `let` is used, the indices in its expression also count as used.
   - A roofline in `func` form makes no index used.
-  - A discriminant that selects a type family branch, decides whether a tensor exists, or decides whether an output is `None` always counts as used.
+  - A discriminant that selects a type family branch, decides which member an argument holds, or decides whether an output is `None` always counts as used.
 - Each row expands into several cases according to `dtype_cases`. The case id joins the following three parts in order with `-`:
 
   1. `label`;
@@ -174,7 +177,7 @@ workloads:
 - Nightly history is keyed by case id, so changing a `label` breaks the history of that row.
 - A `label` is non-empty, at most 24 characters long, and contains only characters in `[A-Za-z0-9._-]`. A `label` describes only the scenario the row models, that is, the model and its use or the synthetic purpose, plus the qualifiers needed to tell similar rows apart, for example `llama-8b-ffn-prefill`. The op name and dtype already appear in the case id and are not repeated. Rows that share a `label` may differ only in dtype.
 - Case ids within one spec are all distinct.
-- At instantiation, the workload row determines the shapes, dtypes, parameter values, which optional tensors are passed, and the values of metadata tensors. The rest is generated by fixed rules: the device is determined as described in [Calls and validation § 4](calls.md#device), strides are contiguous, tensors do not alias each other, and ordinary data is random.
+- At instantiation, the workload row determines the shapes, dtypes, parameter values, the member each argument holds, the values of call-time scalars, and the values of metadata tensors. The rest is generated by fixed rules: the device is determined as described in [Calls and validation § 4](calls.md#device), strides are contiguous, tensors do not alias each other, and ordinary data is random.
 - The validator re-infers the call from the instantiated inputs and requires the result to agree with the workload row.
 - Workload rows are not responsible for unit-test coverage; the shapes needed to cover every branch of the kernel are chosen separately by each op's tests.
 

@@ -115,8 +115,14 @@ def build_kernel(*inputs: "TensorSpec | None", **params) -> Callable[..., Kernel
 
 Implemented by the backend, one per `(op, target)`. Its signature is the op's manifest
 signature: `inputs` correspond one-to-one to `signature.inputs` in declaration order, and
-`params` are named after `signature.params`. An optional input that was not passed on
-this call arrives as `None`.
+`params` are named after `signature.params`. Each input arrives by what it holds on this
+call:
+
+- a tensor arrives as its `TensorSpec`;
+- a tensor sequence (`type: "list[Tensor]"`) arrives as a tuple of `TensorSpec`s;
+- a call-time scalar, such as `ClampFwdOp`'s `min` passed as a number, arrives as its
+  Python type (`int`, `float` or `bool`), never its value;
+- an input that holds `None`, passed or left at its default, arrives as `None`.
 
 ```python
 # GroupNormFwdOp's spec: weight and bias are optional, and arrive as None when absent
@@ -325,7 +331,8 @@ This call path implies four things:
   decide which in-tree kernel is fetched, what it is looked up by and how it is built.
   Once the op settles on a target, that target serves the whole op, and none of them runs.
 - **Tensors arrive positionally, params by name.** `build_kernel(*inputs, **params)`: the
-  positional arguments are `TensorSpec`s (`None` for an optional input the call omitted),
+  positional arguments describe the inputs (`TensorSpec`, a tuple of them for a tensor
+  sequence, the Python type of a call-time scalar, `None` for an input that holds `None`),
   and the keyword arguments are the manifest's `params` names with the values settled for
   this call.
 - **One builder per `(op, target)`.** The backend is not told which kernel the in-tree
@@ -494,7 +501,7 @@ signature:
     eps: {type: "float | None", default: null}
   inputs:                       # declaration order is call order
     x: {dtype: T, shape: "[*B, *normalized_shape]"}
-    weight: {dtype: T, shape: "[*normalized_shape]", optional: true}
+    weight: {dtype: T, shape: "[*normalized_shape]", type: "Tensor | None", default: null}
 ```
 
 The corresponding builder signature:
@@ -773,8 +780,8 @@ backend serves an op only when its `detect` claims the device, or when it is nam
 TileOPs memoises a builder's return value by **device plus input signature**:
 
 > the call's device (see [Call device](user-guide/manifest/calls.md#device)), plus `(dtype, shape)` taken per input in
-> `signature.inputs` order; an optional input not passed on this call is recorded
-> as `None`.
+> `signature.inputs` order; an input that holds `None` on this call is recorded as `None`,
+> and a call-time scalar is recorded by its Python type, never its value.
 
 **Two calls with the same device and input signature get the same kernel**, with no
 further call to `build_kernel`. A second card under the same target builds again, because

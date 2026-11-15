@@ -43,12 +43,12 @@ An op instance is constructed once and called many times:
     - the parameters the manifest declares;
     - the execution policy `target`;
     - for a few ops, extra parameters their family defines, described below.
-- **Known only at each call:** the shapes and dtypes of the tensors the call passes. The call
-  decides them, so they are not construction parameters.
+- **Known only at each call:** the shapes and dtypes of the tensors the call passes, and the
+  values of the call-time scalars, such as `ClampFwdOp`'s `min` passed as a number. The
+  call decides them, so they are not construction parameters.
     - For an op with no tensor input, construction parameters give this information.
-    - A tensor the manifest declares among the parameters (a construction-time tensor) is
-      passed at construction, such as `LongRoPEFwdOp`'s `rescale_factors`; the construction
-      check uses its shape and dtype.
+    - A tensor is always passed at call time; the manifest declares no tensor among the
+      construction parameters.
 - **Kernels:** built the first time a specialization is needed, then cached, so the same
   specialization is reused afterwards. Whether an in-tree entry is reused is decided by the
   identity the implementation's `entry_for` returns and by the build target, the device

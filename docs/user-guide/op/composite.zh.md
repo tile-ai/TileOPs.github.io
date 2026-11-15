@@ -41,7 +41,7 @@ class MoEExpertMLPFwdOp(Op):
 - **持有。** `delegate_for(stage, identity, given=None, /, **params)` 是持有子 op 的唯一方式。
     - 同一个 `(stage, identity)` 只构造一次。
     - `identity` 包含所有会改变子 op 构造结果的参数，与 kernel 侧 `entry_for` 返回的 identity 同义。
-    - 子 op 的参数来自组合 op 的参数与构造期张量时，`identity` 取 `None`。这时子 op 按组合 op 的特化持有：参数改变时构造新的子 op，参数改回之前的值时重用为它构造的子 op。
+    - 子 op 的参数来自组合 op 的参数时，`identity` 取 `None`。这时子 op 按组合 op 的特化持有：参数改变时构造新的子 op，参数改回之前的值时重用为它构造的子 op。
     - `forward` 再次经 `delegate_for` 取得子 op，不经属性取得，从而拿到与当前参数对应的子 op。
 - **继承执行策略。**
     - 基类构造的子 op 继承组合 op 的 `target`。

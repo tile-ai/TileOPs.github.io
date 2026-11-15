@@ -38,9 +38,9 @@ op 实例构造一次，调用多次：
     - manifest 声明的参数；
     - 执行策略 `target`；
     - 少数 op 还接收 family 自己定义的额外参数，见下文。
-- **每次调用时才知道：** 调用时传入的张量的 shape 与 dtype。它们由这次调用决定，所以不作为构造参数。
+- **每次调用时才知道：** 调用时传入的张量的 shape 与 dtype，以及调用期标量的值，例如以数值传入的 `ClampFwdOp` 的 `min`。它们由这次调用决定，所以不作为构造参数。
     - 没有张量输入的 op，这些信息由构造参数给出。
-    - manifest 在参数中声明的张量（构造期张量）在构造时传入，例如 `LongRoPEFwdOp` 的 `rescale_factors`；它的 shape 与 dtype 在构造检查中使用。
+    - 张量总是在调用时传入；manifest 不在构造参数中声明张量。
 - **kernel：** 第一次需要某种特化时构造，然后缓存，之后同一种特化直接重用。in-tree 的 entry 是否重用，由实现的 `entry_for` 返回的 identity 与 build target（构造所针对的设备事实）决定；target 构造的 kernel 按调用设备与各输入的 dtype、shape 缓存。见[构造与调用 § kernel 缓存](lifecycle.md#kernel)。
 
 **额外的构造参数：** 类属性 `injected_parameters` 是 manifest validator 的白名单。

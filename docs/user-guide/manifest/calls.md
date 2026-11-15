@@ -4,17 +4,19 @@ A call has two phases, construction and call, and the checks in both phases are 
 
 ## 1. The two phases of a call {#call}
 
-In the **construction** phase, the op checks parameter values against their `type` (including whether a dtype parameter is in the allowed set), checks that every non-optional construction-time tensor is given, and checks the `invariant` of ADTs. The following are fixed at construction:
+In the **construction** phase, the op checks parameter values against their `type` (including whether a dtype parameter is in the allowed set), and checks the `invariant` of ADTs. The following are fixed at construction:
 
 - the values of `Bool`, enum and ADT parameters;
-- whether `Maybe` parameters and construction-time tensors are given;
-- the indices solved from the shapes and dtypes of construction-time tensors, and the `let` entries computable from these.
+- whether `Maybe` parameters are given;
+- the `let` entries computable from the parameters and ADT fields.
+
+The following are known only at each call: the call-time arguments, the member each holds, and the indices solved from their tensors.
 
 Checks such as non-negative axes, refinements and `invariant` run at construction when they can already be evaluated there, and are deferred to call time otherwise.
 
 In the **call** phase, the checks generated from the signature around `forward` run in the following order:
 
-1. determine whether each call-time tensor is passed;
+1. determine the member each call-time argument holds;
 2. check domain restrictions;
 3. select type family branches;
 4. infer indices, and check the remaining refinements;
@@ -26,7 +28,7 @@ In the **call** phase, the checks generated from the signature around `forward` 
 
 When any check fails, the op raises an error that names the unsatisfied declaration.
 
-Steps 1–5 run on the first call of each specialization: each tensor's layout, dtype, device and presence, whether each call tensor starts on a 16-byte boundary, the parameters, the construction-time tensors, the execution arguments, and the current device of a call no input places. The Op plan holds what they decide, and a later call of the same specialization runs them no more. Steps 6, 7 and 9 run on every call.
+Steps 1–5 run on the first call of each specialization: each tensor's layout, dtype, device and presence, whether each call tensor starts on a 16-byte boundary, the type of each call-time scalar, the parameters, the execution arguments, and the current device of a call no input places. The Op plan holds what they decide, and a later call of the same specialization runs them no more. Steps 6, 7 and 9 run on every call, and so do the refinements and `let` entries that read a call-time scalar's value.
 
 If every tensor a call writes (each output and each written input) has no elements, step 8 runs no implementation: new outputs are created on the call device with the checked shapes and dtypes, and `out` and the written inputs are returned unchanged. When the inputs are empty but the outputs are not, the implementation runs as usual.
 
@@ -44,7 +46,7 @@ The selection rules, how to add a kernel, and how a backend joins are in [How an
 
 ## 3. type inference {#inference}
 
-The construction phase first solves the indices that construction-time tensors determine, and the call phase then solves the remaining indices from the call-time tensors actually passed. The validator fixes the solving order in advance, independent of the order in which declarations are written.
+The construction phase first settles the type family branches the parameters select and the `let` entries they make computable, and the call phase then solves the remaining indices from the call-time tensors actually passed. The validator fixes the solving order in advance, independent of the order in which declarations are written.
 
 **Table 1** Unification rules for input axes
 
@@ -76,10 +78,9 @@ The call device is determined as shown below. At workload instantiation, tensors
 
 ![Call device](img/device.svg)
 
-- A tensor that declares `device: cpu` is always on the CPU and does not take part in deciding the call device; among construction-time tensors, too, only those that do not declare `device: cpu` take part.
-- When there is no call-time tensor, no `device` parameter and no construction-time tensor that takes part, the call device is the current device of the process's accelerator, or `None` if the process has no accelerator. The accelerator is the device type `torch.accelerator` reports: CUDA, or a backend's device type.
+- A tensor that declares `device: cpu` is always on the CPU and does not take part in deciding the call device. Every element of a tensor sequence takes part.
+- When there is no call-time tensor and no `device` parameter, the call device is the current device of the process's accelerator, or `None` if the process has no accelerator. The accelerator is the device type `torch.accelerator` reports: CUDA, or a backend's device type.
 - Once the call device is determined, `out` and each output are checked or allocated on that device.
-- A construction-time tensor that does not declare `device: cpu` is copied to the call device at call time and converted to the dtype in the signature.
 - For a tensor that declares `contiguous: true`, the generated checks confirm that it is contiguous in memory; tensors generated by workload instantiation are always contiguous.
 
 ## 5. torch.compile and SymInt {#symint}
@@ -97,12 +98,12 @@ The conventions a caller follows under `torch.compile` are in [Bringing an op in
 [`scripts/validate_manifest.py`](https://github.com/tile-ai/TileOPs/blob/main/scripts/validate_manifest.py) checks each spec on every combination of discriminant values. The quantities that take part in the combinations are:
 
 - the `match` of type families;
-- `optional` and `nullable`;
+- the `member` of each argument with several members, and `nullable`;
 - `mutated`;
 - whether output buffers are passed;
 - the quantities involved in deciding whether an index is used.
 
-For combinations excluded by a domain restriction, the validator skips only two checks: type family coverage and the solving order. If a spec has more value combinations to check than the configured limit (256 by default), the validator issues an advisory-level notice but still checks the spec in full.
+For combinations excluded by a domain restriction, the validator skips only three checks: type family coverage, the solving order, and where a call-time scalar's value is read. If a spec has more value combinations accepted by its domain restrictions than the configured limit (256 by default), the validator issues an advisory-level notice but still checks the spec in full.
 
 On each value combination, the validator checks the following:
 
@@ -110,7 +111,7 @@ On each value combination, the validator checks the following:
 2. The `cases` of each type family have no gaps and no overlaps over the accepted values, and references between type families have no cycle.
 3. Every index can be solved (see [§ 3](#inference)).
 4. Dependencies between `let` entries have no cycle.
-5. Every expression belongs to the expression language, and every primitive used is built in.
+5. Every expression belongs to the expression language, every primitive used is built in, and a call-time scalar's value is read only in refinements and `let` entries.
 6. On every workload row, the generator results unify with their declarations and every `requires` holds.
 7. Every workload row can be instantiated.
 8. On each effect branch, the operator schema, the aliasing and the roofline read and write counts agree.
@@ -123,7 +124,7 @@ For an `implemented` op, the validator also checks that the code agrees with the
 
 ## 7. Rejected forms {#rejected}
 
-`shape_rules` contains only refinements. Forms that also act as a shape declaration, a name definition or a presence test are rejected:
+`shape_rules` contains only refinements. Forms that also act as a shape declaration, a name definition, or a test of presence or type are rejected; a rule reads the member an argument holds through `present(...)` or `member(...)`:
 
 **Table 3** Rejected forms and their rewrites
 
@@ -136,3 +137,4 @@ For an `implemented` op, the validator also checks that the code agrees with the
 | 5 | `v is None` on a value | `max_seqlen is None` | `not present(max_seqlen)` |
 | 6 | `isinstance` | `s[0] if isinstance(s, tuple) else s` | `per_axis(s, 0, 2)` |
 | 7 | a set comprehension | `len({d % n for d in dim}) == len(dim)` | `unique_axes(dim, n)` |
+| 8 | `isinstance` on an argument | `isinstance(min, torch.Tensor)` | `member(min) == 'Tensor'` |

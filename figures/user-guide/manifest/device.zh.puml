@@ -28,28 +28,22 @@ rectangle {
 title 调用设备的确定方式\n（workload 实例化按同一规则放置张量）
 
 card "声明 device: cpu 的张量固定在 CPU，不参与下面的判定" as pre
-card "有调用期输入？" as c1
+card "有调用期张量？\n（张量序列的每个元素都计入）" as c1
 card "参数 device 不为 None？" as c2
-card "有构造期张量？" as c3
 card "取当前 accelerator 设备；\n没有 accelerator 时为 None" as r5 #E2F6F8;line:3AA9B8
 
-rectangle "取这些输入的设备；它们须位于同一设备" as r1
+rectangle "取这些张量的设备；它们须位于同一设备" as r1
 rectangle "取 device；字符串按 torch.device 解析" as r2
-rectangle "取构造期张量的设备；多个时须位于同一设备" as r3
 
 pre -down-> c1
 c1 -down-> c2 : 否
-c2 -down-> c3 : 否
-c3 -down-> r5 : 否
+c2 -down-> r5 : 否
 c1 -right-> r1 : 是
 c2 -right-> r2 : 是
-c3 -right-> r3 : 是
 
 r1 -[hidden]down- r2
-r2 -[hidden]down- r3
 
 note bottom of r5 #FBFAFE
-  确定调用设备后，out 与输出在该设备上检查或分配；
-  构造期张量复制到调用设备，并转为签名中的 dtype
+  确定调用设备后，out 与输出在该设备上检查或分配
 end note
 @enduml

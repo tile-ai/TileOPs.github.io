@@ -4,17 +4,19 @@
 
 ## 1. 一次调用的两个阶段 {#call}
 
-在**构造**阶段，op 按 `type` 检查参数的取值（包括 dtype 参数是否在允许的集合内），检查非可选的构造期张量都已给出，并检查 ADT 的 `invariant`。以下各量在构造时确定：
+在**构造**阶段，op 按 `type` 检查参数的取值（包括 dtype 参数是否在允许的集合内），并检查 ADT 的 `invariant`。以下各量在构造时确定：
 
 - `Bool`、枚举与 ADT 参数的值；
-- `Maybe` 参数与构造期张量是否给出；
-- 由构造期张量的形状与 dtype 求得的 index，以及由这些量可以算出的 `let`。
+- `Maybe` 参数是否给出；
+- 由参数与 ADT 字段可以算出的 `let`。
+
+以下各量每次调用时才知道：调用期实参、每个实参持有的成员，以及由它们的张量求得的 index。
 
 轴非负、refinement、`invariant` 等检查，如果在构造时已经可以求值，就在构造时执行，否则推迟到调用时执行。
 
 在**调用**阶段，`forward` 外层由签名生成的检查按以下顺序执行：
 
-1. 确定各调用期张量是否传入；
+1. 确定每个调用期实参持有的成员；
 2. 检查定义域限制；
 3. 选择 type family 的分支；
 4. 推断 index，并检查其余的 refinement；
@@ -26,7 +28,7 @@
 
 任何一项检查失败时，op 都会报错，并指出未满足的那条声明。
 
-第 1 至 5 步在每个特化的第一次调用时执行。特化包括：每个张量的布局、dtype、设备与是否传入，每个调用张量的起始地址是否在 16 字节边界上，参数，构造期张量，执行参数，以及没有输入确定设备时的当前设备。Op plan 保存这几步的结论，同一特化之后的调用不再执行它们。第 6、7、9 步每次调用都执行。
+第 1 至 5 步在每个特化的第一次调用时执行。特化包括：每个张量的布局、dtype、设备与是否传入，每个调用张量的起始地址是否在 16 字节边界上，每个调用期标量的类型，参数，执行参数，以及没有输入确定设备时的当前设备。Op plan 保存这几步的结论，同一特化之后的调用不再执行它们。第 6、7、9 步每次调用都执行，读取调用期标量取值的 refinement 与 `let` 也每次调用都执行。
 
 如果一次调用写入的所有张量（各输出与被写入的输入）都不含元素，第 8 步不执行任何实现：新的输出按检查过的形状与 dtype 在调用设备上创建，`out` 与被写入的输入原样返回。输入为空而输出不为空时，照常执行实现。
 
@@ -44,7 +46,7 @@ op 在 `interfaces` 中声明它调用 kernel 的位置，每个位置对应一�
 
 ## 3. type inference {#inference}
 
-构造阶段先求出由构造期张量能确定的 index，调用阶段再从实际传入的调用期张量求出其余的 index。求解的顺序由 validator 预先确定，与声明的书写顺序无关。
+构造阶段先确定由参数选出的 type family 分支与由参数可以算出的 `let`，调用阶段再从实际传入的调用期张量求出其余的 index。求解的顺序由 validator 预先确定，与声明的书写顺序无关。
 
 **表 1** 输入轴的 unification 规则
 
@@ -76,10 +78,9 @@ op 在 `interfaces` 中声明它调用 kernel 的位置，每个位置对应一�
 
 ![调用设备](img/device.svg)
 
-- 声明了 `device: cpu` 的张量始终位于 CPU，不参与调用设备的判定；构造期张量也只有未声明 `device: cpu` 的才参与判定。
-- 没有调用期张量、`device` 参数与参与判定的构造期张量时，调用设备取进程 accelerator 的当前设备；进程没有 accelerator 时为 `None`。accelerator 是 `torch.accelerator` 报告的设备类型，CUDA 或某个 backend 的设备类型。
+- 声明了 `device: cpu` 的张量始终位于 CPU，不参与调用设备的判定。张量序列的每个元素都参与判定。
+- 没有调用期张量与 `device` 参数时，调用设备取进程 accelerator 的当前设备；进程没有 accelerator 时为 `None`。accelerator 是 `torch.accelerator` 报告的设备类型，CUDA 或某个 backend 的设备类型。
 - 调用设备确定后，`out` 与各输出在该设备上检查或分配。
-- 没有声明 `device: cpu` 的构造期张量，在调用时复制到调用设备，并转换为签名中的 dtype。
 - 声明了 `contiguous: true` 的张量，由生成的检查确认其内存连续；workload 实例化生成的张量总是连续的。
 
 ## 5. torch.compile 与 SymInt {#symint}
@@ -97,12 +98,12 @@ op 在 `interfaces` 中声明它调用 kernel 的位置，每个位置对应一�
 [`scripts/validate_manifest.py`](https://github.com/tile-ai/TileOPs/blob/main/scripts/validate_manifest.py) 在 discriminant 的每一种取值组合上检查每个 spec。参与组合的量包括：
 
 - type family 的 `match`；
-- `optional` 与 `nullable`；
+- 每个有多个成员的实参的 `member`，以及 `nullable`；
 - `mutated`；
 - 输出缓冲是否传入；
 - 判断 index 是否被用到时涉及的量。
 
-对于被定义域限制排除的组合，validator 只跳过 type family 覆盖与求解顺序这两项检查。如果一个 spec 需要检查的取值组合超过配置的上限（默认 256），validator 给出 advisory 级别的提示，但仍然完整地检查这个 spec。
+对于被定义域限制排除的组合，validator 只跳过三项检查：type family 覆盖、求解顺序，以及调用期标量的取值在哪里被读取。如果一个 spec 中被定义域限制接受的取值组合超过配置的上限（默认 256），validator 给出 advisory 级别的提示，但仍然完整地检查这个 spec。
 
 在每一种取值组合上，validator 检查以下各项：
 
@@ -110,7 +111,7 @@ op 在 `interfaces` 中声明它调用 kernel 的位置，每个位置对应一�
 2. type family 的 `cases` 在接受的取值上既无遗漏也无重叠，type family 之间的引用无环。
 3. 每个 index 都能求得（见[第 3 节](#inference)）。
 4. `let` 之间的依赖无环。
-5. 每个表达式都属于表达式语言，用到的 primitive 都是内建的。
+5. 每个表达式都属于表达式语言，用到的 primitive 都是内建的，调用期标量的取值只在 refinement 与 `let` 中读取。
 6. 在每条 workload 行上，generator 的结果都能与声明做 unification，`requires` 都成立。
 7. 每条 workload 行都能实例化。
 8. 在每个 effect 分支上，operator schema、别名关系与 roofline 的读写计数一致。
@@ -123,7 +124,7 @@ op 在 `interfaces` 中声明它调用 kernel 的位置，每个位置对应一�
 
 ## 7. 不被接受的写法 {#rejected}
 
-`shape_rules` 中只写 refinement。兼做形状声明、名字定义或存在性判断的写法不被接受：
+`shape_rules` 中只写 refinement。兼做形状声明、名字定义，或判断存在与类型的写法不被接受；规则通过 `present(...)` 或 `member(...)` 读取实参持有的成员：
 
 **表 3** 不被接受的写法及对应的改写
 
@@ -136,3 +137,4 @@ op 在 `interfaces` 中声明它调用 kernel 的位置，每个位置对应一�
 | 5 | 对值使用 `v is None` | `max_seqlen is None` | `not present(max_seqlen)` |
 | 6 | `isinstance` | `s[0] if isinstance(s, tuple) else s` | `per_axis(s, 0, 2)` |
 | 7 | 集合推导式 | `len({d % n for d in dim}) == len(dim)` | `unique_axes(dim, n)` |
+| 8 | 对实参使用 `isinstance` | `isinstance(min, torch.Tensor)` | `member(min) == 'Tensor'` |

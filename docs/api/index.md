@@ -23,7 +23,7 @@ a tool rather than an op, comes last. The Benchmarks pages use the same order.
 | Page | What it covers |
 | --- | --- |
 | [Elementwise](elementwise.md) | unary and binary maps, activations, dropout, and the in-place forms |
-| [RoPE](rope.md) | rotary position embedding — NeoX and interleaved layouts, Llama 3.1, YaRN, LongRoPE |
+| [RoPE](rope.md) | rotary position embedding — NeoX and interleaved rotation, Llama 3.1, YaRN, LongRoPE |
 | [Reduction](reduction.md) | sums, extrema, arg-reductions, cumulative scans, softmax |
 | [Normalization](normalization.md) | RMSNorm, LayerNorm, GroupNorm, BatchNorm and the fused variants, including RMSNorm with per-token quantization and the q/k RMSNorm with RoPE |
 | [Pooling](pool.md) | average, max and adaptive pooling, with and without indices, plus the chunked sequence mean |

@@ -7,17 +7,11 @@ what runs when you call `op(...)`.
 
 ## Base frequencies
 
-One op serves both rotation conventions: pass `rope_layout` as `"neox"` to
-rotate the two halves of a head against each other, or `"interleaved"` to rotate
-each adjacent pair.
+One op serves both rotation conventions: pass `is_neox_style=True` to rotate the
+two halves of a head against each other, or `is_neox_style=False` to rotate each
+adjacent pair.
 
 ::: tileops.rope.RoPEFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-::: tileops.rope.RoPENeoxPositionIdsFwdOp
     options:
       show_root_heading: true
       heading_level: 3

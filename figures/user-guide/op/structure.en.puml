@@ -35,7 +35,7 @@ abstract class Op #E9EAF0 {
     _signature : _SignaturePlan (shared by the class's instances)
     == <back:#CBD5E6> <b>Instance state</b> </back> ==
     .. <i>construction</i> ..
-    manifest params (construction-time tensors aside)
+    manifest params
     target
     _installed_kernel_types : key → implementation class
     _preferred_over
@@ -49,7 +49,6 @@ abstract class Op #E9EAF0 {
     _built_entries : interface → entries
     _target_kernels : (device, each input's dtype, shape) → kernel
     .. <i>running</i> ..
-    construction-time tensors
     _tune_requested
     _delegates : stage → identity → Op
     _delegate_stages

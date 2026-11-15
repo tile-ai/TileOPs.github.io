@@ -35,7 +35,7 @@ abstract class Op #E9EAF0 {
     _signature : _SignaturePlan（同类实例共享）
     == <back:#CBD5E6> <b>实例状态</b> </back> ==
     .. <i>构造</i> ..
-    manifest 参数（构造期张量除外）
+    manifest 参数
     target
     _installed_kernel_types : key → 实现类
     _preferred_over
@@ -49,7 +49,6 @@ abstract class Op #E9EAF0 {
     _built_entries : interface → entries
     _target_kernels : (设备, 各输入 dtype、shape) → kernel
     .. <i>运行</i> ..
-    构造期张量
     _tune_requested
     _delegates : stage → identity → Op
     _delegate_stages
