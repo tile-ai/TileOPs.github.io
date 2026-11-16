@@ -25,7 +25,7 @@ shape_rules:
 | 1 | `Tensor` | a tensor | the declaration's `Tensor[T, s]` |
 | 2 | `list[Tensor]` | a list or tuple of tensors | a tensor sequence, see [§ 11](#sequences) |
 | 3 | `int` | an `int` that is not a `bool` | `Int`, a call-time scalar |
-| 4 | `float` | a `float` | a value, a call-time scalar |
+| 4 | `float` | a `float`; also an `int` (not a `bool`) when the type has no `int` or `Number` member | a value, a call-time scalar |
 | 5 | `Number` | an `int` or a `float` | a value, a call-time scalar |
 | 6 | `bool` | a `bool` | `Bool`, a call-time scalar |
 | 7 | `None` | `None` | `None` |
@@ -34,7 +34,7 @@ The rules for argument types:
 
 - `type` defaults to `Tensor`, which stands for the declaration's `Tensor[dtype, shape]`. `Number` already holds `int` and `float`, so it is never listed together with them.
 - An argument with a `Tensor` or `list[Tensor]` member is a call-time input, declared in `inputs`; every other argument is a construction parameter, declared in `params`. A tensor is never a construction parameter.
-- A value takes a member by its Python type: `None` takes `None`; a list or tuple takes `list[Tensor]`; a tensor takes `Tensor`; a `bool` takes only `bool`; an `int` takes `int`, else `Number`; a `float` takes `float`, else `Number`. A value that no member takes is rejected.
+- A value takes a member by its Python type: `None` takes `None`; a list or tuple takes `list[Tensor]`; a tensor takes `Tensor`; a `bool` takes only `bool`; an `int` takes `int`, else `Number`, else `float`; a `float` takes `float`, else `Number`. A value that no member takes is rejected.
 - An input without `default` is passed on every call. An input with `default` may be omitted; `forward` takes the `default` as its default, and omitting the input has the same effect as passing that value.
 - Among positional inputs, an input without `default` never follows one with `default`. A `kw_only` input follows every positional one, and may be required.
 - A required argument that may be `None` declares the `None` member and no `default`, for example `bias: {type: "Tensor | None", dtype: Wb, shape: "[N]"}`.
@@ -105,7 +105,7 @@ signature:
 
 - A tensor's `shape` is written `<Family>[argument, ...]`, and the arguments map to `params` in declaration order.
 - The subject of `match` must be a discriminant with finitely many values: `Bool`, an enum, an ADT, `present(...)`, `member(...)`, a boolean expression of these such as `member(min) == 'Tensor'`, or a tuple of these. When matching a tuple, `when` is written as a list, for example `when: [true, false]`.
-- A `Maybe` discriminant matches by its value; only `_` matches it when it is absent.
+- A `Maybe[ADT]` discriminant matches by its value; only `_` matches it when it is absent.
 - `cases` must have no gaps and no overlaps over all values the spec accepts.
 - When several tensors apply the same type family, they always take the same branch.
 - References between type families must not form a cycle, and the validator reports an error if a type family is not used by any shape.
@@ -280,7 +280,9 @@ The rules for `requires`:
 - A predicate argument can be another metadata tensor, so that one predicate constrains the relation between two tensors. For example, `batch_offsets` in GroupedGEMM declares `requires: ["exclusive_prefix_of(batch_sizes)"]`, which requires it to be the exclusive prefix sum of `batch_sizes`. On every branch where the constrained tensor exists, the tensor used as the argument must also exist.
 - The validator checks `requires` at instantiation against the generated values. In an actual call, the caller guarantees these constraints and the op does not check tensor contents by default; the validator therefore also checks that the predicate is well defined on every branch where the constrained tensor exists.
 - A tensor that declares `requires` must also declare `values`.
-- An op with an input whose `requires` holds `prefix_offsets` declares `validate_inputs: {type: bool, default: false, kw_only: true}` in `params`. When the caller sets it, a check generated from the manifest reads the offsets on the CPU before the implementation runs; it synchronizes the device, so it cannot run inside CUDA Graph capture.
+- An op with an input whose `requires` holds `prefix_offsets` declares `validate_inputs: {type: bool, default: false, kw_only: true}` in `params`. An op whose inputs' `requires` hold `in_range` but no `prefix_offsets` may declare it too.
+- When the caller sets `validate_inputs`, a check generated from the manifest reads the inputs on the CPU before the implementation runs and checks their `prefix_offsets` and `in_range` predicates. Every other predicate stays the caller's obligation.
+- The check synchronizes the device, so it cannot run inside CUDA Graph capture.
 
 ## 8. dtype combinations and packed dtypes {#dtype-combos}
 
