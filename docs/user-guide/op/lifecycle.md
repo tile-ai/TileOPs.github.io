@@ -16,8 +16,8 @@ A subclass's constructor is written one of two ways, by its direct parent class:
 - **Inheriting `Op` directly:** assign the manifest parameters to attributes of the same name,
   then call `super().__init__(target=target)`.
 - **Through a family base class:** pass arguments by the family base's signature, for example
-  `input_layout` and `base` for a RoPE leaf class, `dim` and `keepdim` for a reduction. The
-  family base assigns them and ends by calling `Op.__init__`.
+  `dim` and `keepdim` for a reduction. The family base assigns them and ends by calling
+  `Op.__init__`.
 
 Either way, the manifest parameters' values are settled before `Op.__init__` runs.
 
@@ -88,9 +88,6 @@ Exceptions and additions:
   yet.
 - A device that cannot run the op is refused only when a kernel is first selected, built or
   called.
-- A construction-time tensor the manifest declares (such as `LongRoPEFwdOp`'s
-  `rescale_factors`) is passed at construction, and the construction check reads its shape
-  and dtype.
 
 ## 2. Call entry points {#entry}
 
@@ -152,8 +149,8 @@ The plan (the Op plan):
 
 - **What it is keyed by:** the call's specialization, that is, everything the checks read:
   each tensor's layout, dtype, device and presence, whether each call tensor starts on a
-  16-byte boundary, the params, the construction-time tensors, the execution arguments, and
-  the current device of a call no input places.
+  16-byte boundary, the type of each call-time scalar (not its value), the params, the
+  execution arguments, and the current device of a call no input places.
 - **What it holds:** the checked call's facts, the effect branch, the result check, whether
   the call writes no element, and the call specs `forward` built
   (see [§ 5](#kernel)); it holds no tensor of any call.
@@ -166,8 +163,8 @@ The signature check and dtypes:
 
 - The signature check decides whether the call satisfies the manifest, dtypes included.
 - The dtypes of call-time input tensors are decided by the call, so construction has nothing
-  to compare them with; the signature check also uses the dtype indices solved at
-  construction, such as a construction-time tensor's dtype.
+  to compare them with; the signature check also uses what construction settles, such as
+  a dtype parameter's value.
 - A call that passes the check may still be refused when its kernel is selected, for example
   when no implementation supports the dtype; see
   [How an op selects a kernel § How a call finds its kernel](../dispatch/index.md#call-path).
@@ -206,8 +203,7 @@ The call's device is settled by the signature check, taken from the first of:
 
 1. the device of the call-time tensors;
 1. the declared `device` parameter;
-1. the device of the construction-time tensors;
-1. when there is none of the three, the current device of the process's accelerator.
+1. when there is neither, the current device of the process's accelerator.
 
 When the process has no accelerator either, and there is no constructor argument or process
 default target, the base class has nothing to select from:

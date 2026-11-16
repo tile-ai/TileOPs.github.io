@@ -53,7 +53,7 @@ deactivate chk
 == 调用 ==
 caller -> chk : op(张量, ...)
 activate chk
-chk -> chk : 1. 确定可选张量是否传入\n2. 检查定义域限制\n3. 选择 type family 分支\n4. 推断 index，\n    检查 refinement\n5. 检查输出缓冲
+chk -> chk : 1. 确定每个调用期实参持有的成员\n2. 检查定义域限制\n3. 选择 type family 分支\n4. 推断 index，\n    检查 refinement\n5. 检查输出缓冲
 alt 所有写入的张量都为空
   chk -> chk : 按签名构造输出，不执行实现
 else target 为 op 注册了 builder

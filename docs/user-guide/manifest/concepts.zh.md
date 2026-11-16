@@ -48,7 +48,7 @@ type index 是类型中的参数名，例如 GEMM 的 `T`、`M`、`N`、`K`。�
 
 ## 3. type family {#family}
 
-type family 是一个根据 discriminant 的取值给出形状的函数。discriminant 指取值有限的量，例如 `Bool` 参数、枚举参数、ADT 参数，以及某个张量是否传入。
+type family 是一个根据 discriminant 的取值给出形状的函数。discriminant 指取值有限的量，例如 `Bool` 参数、枚举参数、ADT 参数，以及调用期实参持有的成员，比如某个张量是否传入。
 
 GEMM 中的 `Mat` 就是一个 type family：`t` 为 false 时结果是 `[R, C]`，为 true 时结果是 `[C, R]`。张量 `a` 的形状写作 `Mat[trans_a, M, K]`，于是：
 
@@ -141,7 +141,7 @@ effect 决定了 roofline 的读写计数，以及有编译边界的 op 所生�
 | 2 | polymorphic function type | 对 type index 做了 quantification 的函数类型 | `forall` | [1](#pft) |
 | 3 | type index | 类型中的参数名 | `forall`、构造参数、`let` | [2](#index) |
 | 4 | kind | type index 的种类，决定其取值范围与可用的运算 | `forall: {M: Dim}` | [2](#index) |
-| 5 | discriminant | 取值有限的量，用于选择 type family 的分支，或决定张量是否存在 | `match`、`optional`、`nullable`、`mutated` 中的表达式 | [3](#family) |
+| 5 | discriminant | 取值有限的量，用于选择 type family 的分支，或决定张量是否存在 | `match`、`nullable`、`mutated` 中的表达式，以及 refinement 中的 `present(...)`、`member(...)` | [3](#family) |
 | 6 | type family | 根据 discriminant 的取值给出形状的函数 | `signature.types` | [3](#family) |
 | 7 | ADT、constructor | 带 tag 的 sum type，每个 constructor 有各自的字段 | `spec/types.yaml` 中的 `adts` | [4](#adt) |
 | 8 | `let` | 由 index 计算得到的具名量 | `let: {H_out: "..."}` | [5](#let) |
@@ -149,6 +149,7 @@ effect 决定了 roofline 的读写计数，以及有编译边界的 op 所生�
 | 10 | unification | 将声明的形状与实际形状逐轴对应，求出未知的 index | 由签名生成 | [7](#unification) |
 | 11 | type inference | 调用时求出全部 index 的过程 | 由签名生成 | [7](#unification) |
 | 12 | effect | 调用对参数的写入与别名关系 | `mutated`、`write_only`、`buffer`、`alias`、`overlaps` | [8](#effect) |
-| 13 | `Maybe[X]`、`present` | 可能缺省的 `X`；`present(x)` 表示它是否给出 | 可选输入、可空输出、`int \| None` 参数 | [扩展写法 1](extensions.md#presence) |
+| 13 | 实参类型、`member`、`present` | 调用期实参可以持有的成员，例如 `Tensor`、`Number` 与 `None`；`member(x)` 给出 `x` 持有的成员，`present(x)` 表示它不是 `None` | 输入的 `type` 与 `default`、可空输出、`int \| None` 参数 | [扩展写法 1](extensions.md#presence) |
 | 14 | primitive | 表达式中可以调用的内建函数，例如 `broadcast`、`pool.out` | 表达式中的函数调用 | [扩展写法 4](extensions.md#let) |
 | 15 | generator | 实例化时为 metadata 张量生成取值的函数，例如 `prefix_sum(q_lens)` | 张量的 `values` | [扩展写法 7](extensions.md#generators) |
+| 16 | 张量序列 | 作为一个实参传入的张量列表，每个元素有自己的形状与 dtype | `type: "list[Tensor]"`、`Seq[Shape]`、`Seq[DType[...]]` | [扩展写法 11](extensions.md#sequences) |

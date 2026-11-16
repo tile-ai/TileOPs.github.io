@@ -9,7 +9,7 @@
 1. workload 行；
 1. 内联的 roofline 公式。
 
-可选输入、随参数变化的形状、副作用、metadata 张量等情况的写法见[扩展写法](extensions.md)。
+实参类型（可选输入、既可以是标量也可以是张量的实参）、随参数变化的形状、副作用、metadata 张量等情况的写法见[扩展写法](extensions.md)。
 
 ## 1. spec 的结构 {#anatomy}
 
@@ -42,7 +42,7 @@ SiLUAndMulFwdOp:
   signature:
     forall: {<index>: <kind>}        # 3
     params: {<p>: {type, default, kw_only}}                     # 4
-    inputs: {<t>: {dtype, shape, optional, mutated, overlaps, values, requires, ...}}  # 5
+    inputs: {<t>: {type, default, dtype, shape, mutated, overlaps, values, requires, ...}}  # 5
     outputs: {<t>: {dtype, shape, nullable, buffer, alias, overlaps, ...}}   # 5
     types: {<Family>: {params, match, cases}}                   # 扩展写法 2
     let: {<name>: "<表达式>"}                                    # 扩展写法 4
@@ -76,15 +76,16 @@ SiLUAndMulFwdOp:
 | 2 | `Shape` | 由 `Dim` 组成的元组 | 由输入的 unification 求得 | 整数列表 |
 | 3 | `DType[a \| b]` | 所列 dtype 中的一个 | 由输入的 unification 求得 | `dtype_cases` |
 | 4 | `Seq[Int]` | 整数列表，例如 `q_lens` | 只在实例化时存在，作为 generator 的实参（见[扩展写法 7](extensions.md#generators)） | 整数列表，或返回列表的值 primitive 调用，例如 `"repeat(512, 64)"` |
+| 5 | `Seq[Dim]`、`Seq[Shape]`、`Seq[DType[a \| b]]` | 张量序列的每个元素对应一项（见[扩展写法 11](extensions.md#sequences)） | 由每个元素的 unification 求得 | 列表；`Seq[DType]` index 写在 `dtype_cases` 中 |
 
 - 要求 `Int` 的位置可以使用 `Dim`，要求 `Seq[Int]` 的位置可以使用 `Shape`。
 - 形状中的每个轴都是一个整数表达式。kind 不是 `Dim` 的轴，以及以 `*p` 展开的序列中的每个元素，都必须是非负数；生成的检查会在构造时或调用时确认这一点。
 - YAML 中的值按声明的 kind 或 `type` 转换为 Python 值：`Shape` 与 `tuple[...]` 转为 tuple，`Seq[Int]` 与 `list[...]` 保持为 list，dtype 名转为 `torch.dtype`，ADT 值转为对应的 Python 对象。
-- 在同一个 spec 中，index、`let` 与张量的名字互不相同。`out` 保留给输出缓冲：参数与 index 都不能命名为 `out`，唯一可以命名为 `out` 的张量是[扩展写法 6](extensions.md#effects) 表 1 第 6 行的必须传入的输出缓冲。
+- 在同一个 spec 中，index、`let` 与张量的名字互不相同。`out` 保留给输出缓冲：参数与 index 都不能命名为 `out`，唯一可以命名为 `out` 的张量是[扩展写法 6](extensions.md#effects) 表 3 第 6 行的必须传入的输出缓冲。
 
 ## 4. params {#params}
 
-`signature.params` 与 `__init__` 的参数表一一对应。普通的构造参数声明 `type`，以及可选的 `default` 与 `kw_only`（表示只能以关键字方式传入）；构造时传入的张量改为声明 `dtype` 与 `shape`，见[扩展写法 5](extensions.md#placement)。
+`signature.params` 与 `__init__` 的参数表一一对应。构造参数声明 `type`，以及可选的 `default` 与 `kw_only`（表示只能以关键字方式传入）。张量不作为构造参数：每个张量都是调用期输入，声明在 `inputs` 中（见[第 5 节](#tensors)）。
 
 - 以 spec 为准。对于 `implemented` 的 op，validator 逐项比较 `params` 与 `__init__`，要求参数集合、顺序、`default` 与 `kw_only` 都相同。
 - 代码中可以额外出现的只有两类参数：所有 op 共有的执行策略参数 `target`，以 `*, target=None` 写在 manifest 参数之后；以及类属性 `injected_parameters` 列出的、由调用方注入的实现对象。
@@ -95,18 +96,19 @@ SiLUAndMulFwdOp:
 - `int` 参数可以写在形状中，例如 MoE 的 `num_local_experts`；
 - `list[int]` 或 `tuple[int, ...]` 参数可以以 `*p` 的形式展开在形状中，例如 RMSNorm 的 `normalized_shape`；
 - dtype 参数（`type` 为若干 dtype 名的并集）可以直接作为张量的 `dtype`，例如 Alibi 的 `out_dtype`；
-- `int | None` 参数的写法见[扩展写法 1](extensions.md#presence)。
+- `int | None` 参数的写法见[扩展写法 1](extensions.md#presence)；
+- `list[X]` 或 `tuple[X, ...]` 参数的元素可以是下文映射中的任一 `type`；类型系统之外的值组成的列表，例如 `list[float]`，只通过它的长度读取，例如 `not present(rescale_factors) or len(rescale_factors) == D // 2`。
 
 `type` 到 kind 的完整映射见设计文档 [Manifest 表 3](../../design/manifest.md#t-types)。`float`、取值不受限的 `str` 等类型的参数不参与类型推导，但可以出现在 `shape_rules` 与 roofline 公式中，validator 检查它们的 `type`、`default` 以及在这些表达式中的用法。
 
 ## 5. inputs 与 outputs {#tensors}
 
-每个张量写作 `{dtype: ..., shape: "..."}`，对应类型 `Tensor[T, s]`。
+每个张量写作 `{dtype: ..., shape: "..."}`，对应类型 `Tensor[T, s]`。输入还声明它的实参 `type` 与 `default`：`type` 默认为 `Tensor`，没有 `default` 的输入每次调用都要传入。可以为 `None`、可以是标量或是张量序列的输入，写法见[扩展写法 1](extensions.md#presence)。
 
 - 形状写作 `"[" 轴, ... "]"`，或者写成 type family 的应用。每个轴可以是表达式、`*S` 或 `*primitive(...)`；`"[]"` 表示零维张量。
 - 形状相同的张量使用同一个形状项，例如逐元素 op 的输入与输出都写作 `[*S]`。
-- 每个 spec 只有一份签名，因此每次调用返回的输出名字与数量都相同。如果一个 op 的输出数量随某个开关变化，或者同一个参数既可以是标量也可以是张量，这个 op 应拆分为多个 spec。
-- op 根据参数以及张量是否传入来选择实现；张量的内容只作为计算的输入，不影响实现的选择。
+- 每个 spec 只有一份签名，因此每次调用返回的输出名字与数量都相同。如果一个 op 的输出数量随某个开关变化，这个 op 应拆分为多个 spec。一个实参在一种写法中是标量、在另一种写法中是张量时，它是一个 `type` 为并集的实参，例如 Clamp 的 `min: {type: "Number | Tensor | None"}`。
+- op 根据参数以及每个调用期实参持有的成员来选择实现；张量的内容与调用期标量的取值只作为计算的输入，不影响实现的选择。
 
 ## 6. shape_rules {#refinement}
 
@@ -121,9 +123,9 @@ shape_rules:
 - 形状、`let`、type family、refinement 与内联 roofline 公式使用同一套封闭的表达式语言，运算优先级与 Python 相同。表达式语言的组成见设计文档 [Manifest 表 10](../../design/manifest.md#t-lang)。
 - refinement 只能依赖运行时可以得到的量。能在构造时求值的 refinement 在构造时检查，其余的在调用时检查。
 - 对 metadata 张量内容的约束写在张量的 `requires` 中，而非 `shape_rules` 中，见[扩展写法 7](extensions.md#generators)。
-- 条件判断会在其所选分支内收窄 kind：`present(v)` 为 true 的分支中，`Maybe[X]` 收窄为 `X`；`x == 'a'` 或 `x in ('a', 'b')` 成立的分支中，`x` 的取值收窄为这些字面量。如果一个比较所用的字面量不是对应枚举或 dtype 集合中的任何成员，validator 会拒绝这条 refinement。
+- 条件判断会在其所选分支内收窄 kind：`present(v)` 为 true 的分支中，`Maybe[X]` 收窄为 `X`；`member(x) == 'Tensor'` 成立的分支中，`x` 收窄为该成员；`x == 'a'` 或 `x in ('a', 'b')` 成立的分支中，`x` 的取值收窄为这些字面量。如果一个比较所用的字面量不是对应枚举或 dtype 集合中的任何成员，validator 会拒绝这条 refinement。
 - refinement 是否可以满足，由 spec 的作者负责。
-- `x.shape == (...)`、`x is None`、`isinstance` 等写法不被接受，对应的改写方式见[调用与校验 7](calls.md#rejected)。
+- `x.shape == (...)`、`x is None`、`isinstance` 等写法不被接受；规则通过 `present(...)` 或 `member(...)` 读取实参持有的成员。对应的改写方式见[调用与校验 7](calls.md#rejected)。
 
 ## 7. dtype {#dtype}
 
@@ -154,16 +156,17 @@ workloads:
 | No. | 键 | 值 |
 | --- | --- | --- |
 | 1 | 构造参数名 | 参数的值；没有默认值的参数必须给出 |
-| 2 | `some` | 本次调用传入的可选张量，见[扩展写法 1](extensions.md#presence) |
-| 3 | `forall` 中的 `Dim`、`Shape`、`Seq[Int]` index | 当前分支用到、且不由 generator 求得的 index |
-| 4 | `dtype_cases` | 一个非空列表，每一项是当前分支用到的 `DType` index 的一组取值，例如 `[{T: float16}, {T: bfloat16}]`；只在有这类 index 时写；dtype 参数按构造参数给出 |
-| 5 | `label` | 这条行的名字 |
+| 2 | `some` | 本次调用中传入张量成员的、有多个成员的实参，见[扩展写法 1](extensions.md#presence) |
+| 3 | 调用期实参名 | 不在 `some` 中的、有多个成员的实参的标量值或 `null`；该实参没有默认值时必须给出 |
+| 4 | `forall` 中 `DType` 以外的 index | 当前分支用到、且不由 generator 求得的 index |
+| 5 | `dtype_cases` | 一个非空列表，每一项是当前分支用到的 `DType` index 的一组取值，例如 `[{T: float16}, {T: bfloat16}]`；只在有这类 index 时写；dtype 参数按构造参数给出 |
+| 6 | `label` | 这条行的名字 |
 
 - 一个 index 在某个分支上被用到，是指它出现在该分支的以下位置之一：形状、dtype、refinement、generator 实参、`requires`、内联 roofline 公式。workload 行必须给出当前分支用到的每一个 index，且只给出这些 index；`let` 与由 generator 求得的 index 不在行中给出。
   - 判断时，各处表达式先按当前分支化简。如果一条 refinement 的条件在该分支上恒为 true，其中出现的 index 不算被用到。
   - 一个 `let` 被用到时，它的表达式中出现的 index 也算被用到。
   - `func` 形式的 roofline 不会使任何 index 被用到。
-  - 选择 type family 分支、决定张量是否存在或决定输出是否为 `None` 的 discriminant，总是算作被用到。
+  - 选择 type family 分支、决定实参持有哪个成员或决定输出是否为 `None` 的 discriminant，总是算作被用到。
 - 每条行按 `dtype_cases` 展开为若干个 case。case id 由以下三部分依次以 `-` 连接而成：
 
   1. `label`；
@@ -174,7 +177,7 @@ workloads:
 - nightly 的历史数据以 case id 为键，因此修改 `label` 会使这条行的历史记录中断。
 - `label` 不能为空，长度不超过 24 个字符，只能包含 `[A-Za-z0-9._-]` 中的字符。`label` 只描述这条行所建模的场景，即模型及其用途或合成目的，再加上区分同类行所需的限定词，例如 `llama-8b-ffn-prefill`；op 名与 dtype 已经出现在 case id 中，不必重复。共用同一个 `label` 的行只能在 dtype 上不同。
 - 同一个 spec 内的 case id 互不相同。
-- 实例化时，workload 行确定形状、dtype、参数取值、可选张量是否传入，以及 metadata 张量的取值。其余部分按固定规则生成：设备的确定方式见[调用与校验 4](calls.md#device)，stride 连续，张量之间没有别名，普通数据随机生成。
+- 实例化时，workload 行确定形状、dtype、参数取值、每个实参持有的成员、调用期标量的取值，以及 metadata 张量的取值。其余部分按固定规则生成：设备的确定方式见[调用与校验 4](calls.md#device)，stride 连续，张量之间没有别名，普通数据随机生成。
 - validator 会根据实例化后的输入重新推断这次调用，并要求结果与 workload 行一致。
 - workload 行不承担单元测试的覆盖职责，覆盖 kernel 各分支所需的形状由各 op 的测试另行选取。
 

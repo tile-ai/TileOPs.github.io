@@ -1,9 +1,9 @@
 # Elementwise Operators
 
 Every op on this page is used the same way: construct it once, then call it. The
-constructor takes what the kernel is compiled with; the call takes the tensors.
-Both are documented under each op — `__init__` and `forward`, where `forward` is
-what runs when you call `op(...)`.
+constructor takes what the kernel is compiled with; the call takes the inputs, tensors
+or numbers. Both are documented under each op — `__init__` and `forward`, where
+`forward` is what runs when you call `op(...)`.
 
 ## Arithmetic
 
@@ -61,13 +61,7 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.elementwise.LerpScalarFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-::: tileops.elementwise.LerpTensorFwdOp
+::: tileops.elementwise.LerpFwdOp
     options:
       show_root_heading: true
       heading_level: 3
@@ -391,25 +385,13 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.elementwise.ClampTensorFwdOp
+::: tileops.elementwise.ClampFwdOp
     options:
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
 
-::: tileops.elementwise.ClampScalarFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-::: tileops.elementwise.MaskedFillTensorFwdOp
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members: ["__init__", "forward"]
-
-::: tileops.elementwise.MaskedFillScalarFwdOp
+::: tileops.elementwise.MaskedFillFwdOp
     options:
       show_root_heading: true
       heading_level: 3

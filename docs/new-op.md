@@ -113,7 +113,7 @@ class GEMMFwdOp(Op):
 | 1 | `__init__` | the names, order and defaults in `signature.params`, then the keyword-only `target`; it assigns each manifest parameter to the attribute of the same name, then calls `super().__init__(target=target)` |
 | 2 | `kernel_types` | the Kernel classes that can serve the op, each under a key |
 | 3 | `interfaces` | one entry per kernel call the op makes, mapping the name `kernel_for` uses to the `KernelInterface` class that the implementations serving that call inherit |
-| 4 | `forward` | the parameters: the order of `signature.inputs`, with optional inputs last and defaulting to `None`; the body: making the inputs contiguous, writing the function that builds the call spec, fetching the kernel and calling it |
+| 4 | `forward` | the parameters: the order of `signature.inputs`, an input with a manifest `default` taking it as its default and following the inputs without one; the body: making the inputs contiguous, writing the function that builds the call spec, fetching the kernel and calling it |
 | 5 | `roof_key` | optional: the hardware unit whose peak prices the op's FLOPs; the default is fp32 on CUDA cores, and the member is written only when the op uses another unit |
 
 `_infer_output_shapes` and `eval_roofline` are generated from the spec and are not

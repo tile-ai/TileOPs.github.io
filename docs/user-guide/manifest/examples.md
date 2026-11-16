@@ -124,18 +124,19 @@ MeanPoolingFwdOp:
       accum_dtype: {type: torch.dtype}
     inputs:
       x: {dtype: T, shape: "[B, S, H, D]"}
-      cu_seqlens: {dtype: int32, optional: true, shape: "[NS + 1]", values: "prefix_sum(seq_lens)", requires: ["prefix_offsets(S)"]}
-      chunk_indices: {dtype: int32, optional: "present(cu_seqlens)", shape: "[NC, 2]", values: "chunk_indices(seq_lens, chunk_size)"}
+      cu_seqlens: {dtype: int32, type: "Tensor | None", default: null, shape: "[NS + 1]", values: "prefix_sum(seq_lens)", requires: ["prefix_offsets(S)"]}
+      chunk_indices: {dtype: int32, type: "Tensor | None", default: null, shape: "[NC, 2]", values: "chunk_indices(seq_lens, chunk_size)"}
     outputs:
       output: {dtype: T, shape: "PoolOut[present(cu_seqlens), B, NC, S, chunk_size, H, D]"}
     shape_rules:
+    - "present(chunk_indices) == present(cu_seqlens)"
     - "chunk_size > 0 and chunk_size % 32 == 0"
     - "D <= 128 or D % 128 == 0"
     - "category(accum_dtype) == 'float'"
 
   workloads:
   - {B: 1, S: 8192, H: 64, D: 128, chunk_size: 64, accum_dtype: float32, dtype_cases: [{T: float16}, {T: bfloat16}], label: uniform-8k}
-  - {B: 1, S: 8192, H: 64, D: 128, seq_lens: "repeat(2048, 4)", chunk_size: 64, accum_dtype: float32, some: [cu_seqlens], dtype_cases: [{T: float16}, {T: float32}], label: ragged-even}
+  - {B: 1, S: 8192, H: 64, D: 128, seq_lens: "repeat(2048, 4)", chunk_size: 64, accum_dtype: float32, some: [cu_seqlens, chunk_indices], dtype_cases: [{T: float16}, {T: float32}], label: ragged-even}
   # remaining rows omitted
 
   roofline:
@@ -146,9 +147,9 @@ MeanPoolingFwdOp:
 
 | No. | Form in the spec | Described in |
 | --- | --- | --- |
-| 1 | `chunk_indices` is declared `optional: "present(cu_seqlens)"`, so it is passed together with `cu_seqlens` or omitted together with it | [Extensions § 1](extensions.md#presence) |
+| 1 | `cu_seqlens` and `chunk_indices` both declare `type: "Tensor \| None", default: null`, and the domain restriction `present(chunk_indices) == present(cu_seqlens)` requires them to be passed together or omitted together | [Extensions § 1](extensions.md#presence) |
 | 2 | the type family `PoolOut` uses `present(cu_seqlens)` as its discriminant | [Extensions § 2](extensions.md#type-family) |
-| 3 | the first row does not pass `cu_seqlens` and does not use `seq_lens`, so the row does not give it; the second row passes `cu_seqlens` through `some: [cu_seqlens]` and gives `seq_lens`, written here as the value primitive call `"repeat(2048, 4)"` | [Extensions § 1](extensions.md#presence), [Spec fields § 8](writing.md#workloads) |
+| 3 | the first row does not pass `cu_seqlens` and does not use `seq_lens`, so the row does not give it; the second row passes both through `some: [cu_seqlens, chunk_indices]` and gives `seq_lens`, written here as the value primitive call `"repeat(2048, 4)"` | [Extensions § 1](extensions.md#presence), [Spec fields § 8](writing.md#workloads) |
 | 4 | `NS` and `NC` are solved by unification of the generator results and are not given in the row | [Extensions § 7](extensions.md#generators) |
 | 5 | `category(accum_dtype) == 'float'` requires the accumulation dtype to be a floating-point type | [Extensions § 9](extensions.md#scalar-dtype) |
 | 6 | the roofline formula distinguishes the two cases with `present(cu_seqlens)` | [Spec fields § 9](writing.md#roofline) |

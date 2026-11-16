@@ -61,9 +61,9 @@
 
 | No. | 组 | 何时写入 | 撤销 target 选择时 | 字段 |
 | --- | --- | --- | --- | --- |
-| 1 | 构造 | 构造时，之后不再写 | 保留 | manifest 参数（构造期张量除外）、`target`、`_installed_kernel_types`、`_preferred_over`、`_keys_by_interface`、`_construction_indices`、`_instance_key`、`_building` |
+| 1 | 构造 | 构造时，之后不再写 | 保留 | manifest 参数、`target`、`_installed_kernel_types`、`_preferred_over`、`_keys_by_interface`、`_construction_indices`、`_instance_key`、`_building` |
 | 2 | 绑定 | 选定 target、构造 kernel 时 | 重置为初值 | `_target_builder`、`_serving_target`、`_entries_by_call`、`_built_entries`、`_target_kernels` |
-| 3 | 运行 | 构造之后仍会写入 | 保留 | 构造期张量、`_tune_requested`、`_delegates`、`_delegate_stages`、`_effect_branches`、`_plans`、`_last_call`、`_tune_warned` |
+| 3 | 运行 | 构造之后仍会写入 | 保留 | `_tune_requested`、`_delegates`、`_delegate_stages`、`_effect_branches`、`_plans`、`_last_call`、`_tune_warned` |
 
 表 2 的补充说明：
 
@@ -71,10 +71,9 @@
 - **绑定组：** 构造时建成空表或取类属性初值，初值见表 3；调用的第 4、5 步写入，见[构造与调用 § 一次调用的七步](lifecycle.md#serve)；撤销时 `_reset_binding` 重置为初值，见[构造与调用 § 失败与撤销](lifecycle.md#failure)。
 - **运行组：**
     - `_tune_requested` 初值为 `False`，只由 `request_tune()` 改为 `True`；
-    - `_effect_branches` 由 manifest、这个实例的构造参数与调用中可选输入是否出现决定，不依赖选定的 target；
+    - `_effect_branches` 由 manifest、这个实例的构造参数与调用中每个实参持有的成员决定，不依赖选定的 target；
     - `_plans` 保存每个特化的 Op plan，见[构造与调用 § 一次调用的七步](lifecycle.md#serve)；plan 只保存结论，不保存 target 构造的 entry；
     - `_last_call` 保存最近一次成功调用提交的记录，`last_call` 由它构造 `SignatureCall`；
-    - 构造期张量（例如 `LongRoPEFwdOp` 的 `rescale_factors`）在调用时若与调用的设备或 dtype 不一致，会被转换后写回实例；
     - `_tune_warned` 记住调优警告已经发过，同一实例只警告一次。
 
 !!! note "绑定组与运行组的关系"

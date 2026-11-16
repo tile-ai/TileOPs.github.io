@@ -2,28 +2,89 @@
 
 This page describes forms that only some specs use. Each section covers one case, and each section can be read on its own. The fields most specs need are in [Spec fields](writing.md).
 
-## 1. Optional inputs, nullable outputs and omittable parameters {#presence}
+## 1. Argument types: optional inputs, nullable outputs and omittable parameters {#presence}
 
-Whether a tensor exists is expressed with `present`. FusedMoESharedExpert is an example:
+A call-time input declares its argument `type` and `default`, as a construction parameter does. `type` lists the members the argument may hold. FusedMoESharedExpert is an example:
 
 ```yaml
 inputs:
-  correction_bias:  {dtype: float32, shape: "[E]", optional: true}
-  shared_w_gate_up: {dtype: D, shape: "[2 * S, H]", optional: true}
-  shared_w_down:    {dtype: D, shape: "[H, S]", optional: "present(shared_w_gate_up)"}
+  correction_bias:  {type: "Tensor | None", default: null, dtype: float32, shape: "[E]"}
+  shared_w_gate_up: {type: "Tensor | None", default: null, dtype: D, shape: "[2 * S, H]"}
+  shared_w_down:    {type: "Tensor | None", default: null, dtype: D, shape: "[H, S]"}
 outputs:
   shared_output: {dtype: D, shape: "[T, H]", nullable: "present(shared_w_gate_up)"}
   routed_output: {dtype: D, shape: "[T, H]"}
+shape_rules:
+- "present(shared_w_down) == present(shared_w_gate_up)"
 ```
 
-- An optional input is declared with `optional: true`. If several tensors must be passed together or omitted together, they share one discriminant, written `optional: "<expression>"`, as `shared_w_down` does above.
-- An output that may be `None` is declared with `nullable: "<expression>"`. In the example above, the op returns `shared_output` when `shared_w_gate_up` is passed, and that output is `None` otherwise.
-- The expressions of `optional` and `nullable` may consist only of boolean quantities with finitely many values: `Bool` and enum parameters, ADT tags and fields with finitely many values, and `present(...)`.
-- Optional inputs come after required inputs, and `forward` receives them in declaration order with a default of `None`. Omitting an optional input has the same effect as passing `None` explicitly.
-- The kind of an `int | None` parameter is `Maybe[Int]`: `present(v)` says whether it is given, and `v.value` is its value. `v.value` may appear only in branches where `present(v)` is true.
-- An index is used only on the branches where it appears. In the example above, when `shared_w_gate_up` is not passed, `S` is not used, and the corresponding workload row does not give `S`.
-- A workload row lists the optional tensors it passes in `some`. `some` lists only tensors declared `optional: true`; a tensor whose `optional` is an expression follows the value of that expression and is not written in `some`. For example, passing the shared expert is written `some: [shared_w_gate_up]`, and `shared_w_down` is passed along with it.
-- For an `implemented` op, each optional tensor must be passed by at least one row and omitted by at least one row.
+**Table 1** Members of an argument type
+
+| No. | Member | Value it takes | Read as, on a branch narrowed to it |
+| --- | --- | --- | --- |
+| 1 | `Tensor` | a tensor | the declaration's `Tensor[T, s]` |
+| 2 | `list[Tensor]` | a list or tuple of tensors | a tensor sequence, see [§ 11](#sequences) |
+| 3 | `int` | an `int` that is not a `bool` | `Int`, a call-time scalar |
+| 4 | `float` | a `float` | a value, a call-time scalar |
+| 5 | `Number` | an `int` or a `float` | a value, a call-time scalar |
+| 6 | `bool` | a `bool` | `Bool`, a call-time scalar |
+| 7 | `None` | `None` | `None` |
+
+The rules for argument types:
+
+- `type` defaults to `Tensor`, which stands for the declaration's `Tensor[dtype, shape]`. `Number` already holds `int` and `float`, so it is never listed together with them.
+- An argument with a `Tensor` or `list[Tensor]` member is a call-time input, declared in `inputs`; every other argument is a construction parameter, declared in `params`. A tensor is never a construction parameter.
+- A value takes a member by its Python type: `None` takes `None`; a list or tuple takes `list[Tensor]`; a tensor takes `Tensor`; a `bool` takes only `bool`; an `int` takes `int`, else `Number`; a `float` takes `float`, else `Number`. A value that no member takes is rejected.
+- An input without `default` is passed on every call. An input with `default` may be omitted; `forward` takes the `default` as its default, and omitting the input has the same effect as passing that value.
+- Among positional inputs, an input without `default` never follows one with `default`. A `kw_only` input follows every positional one, and may be required.
+- A required argument that may be `None` declares the `None` member and no `default`, for example `bias: {type: "Tensor | None", dtype: Wb, shape: "[N]"}`.
+- `member(x)` is the name of the member `x` holds, such as `'Tensor'` or `'Number'`, and each argument with several members is one discriminant with finitely many values. `present(x)` means `member(x) != 'None'`, whether the caller passed `x` or its `default` applied.
+- `member(x) == '<m>'` narrows `x` to that member, `member(x) != '<m>'` excludes it, and `present(x)` excludes `None`. Narrowing composes through `not`, `and`, `or` and conditional expressions.
+- The tensor declarations `shape`, `dtype`, `contiguous`, `device`, `values`, `requires` and effects apply only on the branches where the argument holds a tensor member. An index used only by them is not used elsewhere: in the example above, when `shared_w_gate_up` is not passed, `S` is not used, and the corresponding workload row does not give `S`.
+
+Inputs that must be passed together or omitted together each declare `type: "Tensor | None", default: null`, and a refinement that reads only discriminants ties them, as `present(shared_w_down) == present(shared_w_gate_up)` does above. Such a refinement is a domain restriction, see [§ 2](#type-family).
+
+An output that may be `None` is declared with `nullable: "<expression>"`. In the example above, the op returns `shared_output` when `shared_w_gate_up` is passed, and that output is `None` otherwise. The expression may consist only of discriminants with finitely many values: `Bool` and enum parameters, ADT tags and fields with finitely many values, `present(...)` and `member(...)`.
+
+The kind of an `int | None` parameter is `Maybe[Int]`. `present(v)` says whether it is given, and on a branch where `present(v)` holds, `v` itself is its value, for example `R: "rotary_dim if present(rotary_dim) else D"` in a `let`.
+
+**Call-time scalars.** An argument narrowed to a scalar member is a call-time scalar. RoPECosSin's `seqlen_offsets` is one offset for every sequence or a tensor of one offset per sequence:
+
+```yaml
+inputs:
+  seqlen_offsets: {type: "int | Tensor", default: 0, dtype: O, shape: "[B]"}
+shape_rules:
+- "member(seqlen_offsets) != 'int' or 0 <= seqlen_offsets <= P - L"
+```
+
+- A call-time scalar's value is read only in refinements and in `let` entries; a `let` that reads one, directly or through another `let`, is likewise read only in refinements and in such `let` entries.
+- Shapes, dtypes, type families, `nullable` and `mutated` conditions, `values`, `requires` and roofline formulas never read a call-time scalar's value, and the validator rejects a spec that does. A value therefore decides no output shape and no branch. Construction parameters are not restricted this way.
+- The refinements and `let` entries that read a call-time scalar run on every call. The Op plan is keyed by the member each argument holds and by a scalar's type, never by its value.
+
+**Workload rows.**
+
+- `some` lists the arguments with several members that pass their tensor member in the row. Every input passed is listed, including inputs passed together: passing the shared expert is written `some: [shared_w_gate_up, shared_w_down]`.
+- Any other argument with several members takes the row's scalar value or `null`, else its `default`. For example, the Clamp row `{A: [4096, 4096], min: -0.5, max: 0.5, ...}` passes both bounds as numbers. A required argument that may be `None` writes `null` to pass `None`.
+- For an `implemented` op, every member of every argument with several members that a domain restriction accepts is taken by at least one row.
+
+**Operator schema.** For an op with a compile boundary, each input becomes one or more slots of the generated `torch.library` operator:
+
+**Table 2** Operator slots of an input
+
+| No. | Member | Slot type | Slot name |
+| --- | --- | --- | --- |
+| 1 | `Tensor`, the only member | `Tensor` | `<name>` |
+| 2 | `list[Tensor]` | `Tensor[]` | `<name>` |
+| 3 | `Tensor`, among several members | `Tensor?` | `<name>` |
+| 4 | `int` | `SymInt?` | `<name>__int` |
+| 5 | `float` | `float?` | `<name>__float` |
+| 6 | `Number` | `Scalar?` | `<name>__number` |
+| 7 | `bool` | `bool?` | `<name>__bool` |
+| 8 | `None` | no slot | — |
+
+- An argument with one member takes one slot under its own name. An argument with several members takes one nullable slot per member other than `None`.
+- A call passes at most one slot of an argument, and passes none only when `None` is a member; the operator and its fake function both check this.
+- A slot name equal to another argument's name or to an execution parameter's name is rejected.
 
 ## 2. Shapes that vary with parameters: type family {#type-family}
 
@@ -43,29 +104,47 @@ signature:
 ```
 
 - A tensor's `shape` is written `<Family>[argument, ...]`, and the arguments map to `params` in declaration order.
-- The subject of `match` must be a discriminant with finitely many values: `Bool`, an enum, an ADT, `present(...)`, or a tuple of these. When matching a tuple, `when` is written as a list, for example `when: [true, false]`.
+- The subject of `match` must be a discriminant with finitely many values: `Bool`, an enum, an ADT, `present(...)`, `member(...)`, a boolean expression of these such as `member(min) == 'Tensor'`, or a tuple of these. When matching a tuple, `when` is written as a list, for example `when: [true, false]`.
+- A `Maybe` discriminant matches by its value; only `_` matches it when it is absent.
 - `cases` must have no gaps and no overlaps over all values the spec accepts.
 - When several tensors apply the same type family, they always take the same branch.
 - References between type families must not form a cycle, and the validator reports an error if a type family is not used by any shape.
 
-A refinement that reads only discriminants is called a **domain restriction**. A domain restriction is checked before a type family branch is selected, and values it excludes need no corresponding case. Clamp is an example:
+Clamp is an example of matching on argument members. `min` and `max` each hold a number, a tensor or `None`, and only a tensor bound takes part in broadcasting the output:
 
 ```yaml
 types:
   ClampOut:
-    params: {A: Shape, L: Shape, U: Shape, pl: Bool, pu: Bool}
-    match: [pl, pu]
+    params: {A: Shape, L: Shape, U: Shape, tl: Bool, tu: Bool}
+    match: [tl, tu]
     cases:
-    - {when: [true, true],  is: "[*broadcast(A, L, U)]"}
-    - {when: [true, false], is: "[*broadcast(A, L)]"}
-    - {when: [false, true], is: "[*broadcast(A, U)]"}
+    - {when: [true, true],   is: "[*broadcast(A, L, U)]"}
+    - {when: [true, false],  is: "[*broadcast(A, L)]"}
+    - {when: [false, true],  is: "[*broadcast(A, U)]"}
+    - {when: [false, false], is: "[*A]"}
+inputs:
+  input: {dtype: T, shape: "[*A]"}
+  min: {type: "Number | Tensor | None", default: null, dtype: T, shape: "[*L]"}
+  max: {type: "Number | Tensor | None", default: null, dtype: T, shape: "[*U]"}
 outputs:
-  output: {dtype: T, shape: "ClampOut[A, L, U, present(min), present(max)]"}
-shape_rules:
-- "present(min) or present(max)"
+  output: {dtype: T, shape: "ClampOut[A, L, U, member(min) == 'Tensor', member(max) == 'Tensor']"}
 ```
 
-`present(min) or present(max)` reads only discriminants and excludes the case where neither `min` nor `max` is passed, so the three cases already cover every combination Clamp accepts. Whether a refinement reads only discriminants is decided by all the names that appear in it, independent of the order in which the operands are written.
+A refinement that reads only discriminants is called a **domain restriction**. A domain restriction is checked before a type family branch is selected, and values it excludes need no corresponding case. MoEPrePermute is an example:
+
+```yaml
+types:
+  LayoutMetadata:
+    params: {layout: MGroupedLayout, E: Dim, P: Dim}
+    match: layout
+    cases:
+    - {when: {contiguous: {metadata_kind: physical_psum}}, is: "[E]"}
+    - {when: {contiguous: {metadata_kind: per_row}}, is: "[P]"}
+shape_rules:
+- "layout.kind == 'contiguous'"
+```
+
+`layout.kind == 'contiguous'` reads only the discriminant `layout` and excludes the masked layout, so the two cases already cover every value MoEPrePermute accepts. Whether a refinement reads only discriminants is decided by all the names that appear in it, independent of the order in which the operands are written. Clamp's `present(min) or present(max)`, which requires at least one bound, is also a domain restriction.
 
 ## 3. Parameters with fields: ADT {#adt}
 
@@ -117,15 +196,9 @@ A primitive is a built-in function callable in expressions, such as `broadcast`,
 - Adding a member requires changing `tileops.manifest.primitives`, with tests.
 - Every primitive that takes an axis argument handles axes by the same rule: for a zero-dimensional tensor, both `0` and `-1` denote the single scalar axis; otherwise, the axis ranges over `[-rank, rank)`.
 
-## 5. Construction-time tensors, memory layout and device {#placement}
+## 5. Memory layout and device {#placement}
 
-- A tensor passed at construction is declared in `params` with `dtype` and `shape`, and can declare `optional: true`. For example, `rescale_factors` in LongRoPE:
-
-  ```yaml
-  params:
-    rescale_factors: {dtype: R, shape: "[D // 2]", optional: true}
-  ```
-
+- Every tensor is a call-time input. A list of values outside the type system is a construction parameter read only through its length; for example, LongRoPE's `rescale_factors` is a `list[float] | None` parameter, checked by `not present(rescale_factors) or len(rescale_factors) == D // 2`.
 - A tensor that must be contiguous in memory declares `contiguous: true`, for example the inputs and outputs of the MoE staged ops. Calls are supported with contiguous inputs ([API Stability](../../stability.md)); a non-contiguous tensor without this declaration is not promised to work.
 - A tensor that must be on the CPU declares `device: cpu`, for example `cu_seqlens_cpu` in `GDNFwdOp`.
 - An op without call-time tensor inputs declares a `device` parameter, for example Alibi. How the call device is determined is in [Calls and validation § 4](calls.md#device).
@@ -134,7 +207,7 @@ A primitive is a built-in function callable in expressions, such as `broadcast`,
 
 An op without effect declarations only reads its inputs and allocates new tensors for its outputs. If an op writes to an argument, an effect is declared on the corresponding tensor in the signature. Effects determine the read and write counts of the roofline, and the operator schema generated for an op with a compile boundary.
 
-**Table 1** Effect declarations
+**Table 3** Effect declarations
 
 | No. | Declaration | Meaning | Example |
 | --- | --- | --- | --- |
@@ -167,6 +240,7 @@ outputs:
 
 Effect declarations must also satisfy the following rules, and the validator rejects specs that violate them:
 
+- an effect is declared only on an input without a scalar member, and never on a tensor sequence;
 - `write_only: true` can be used only together with `mutated: true`;
 - `alias` must point to an input that is written;
 - an output that declares `alias` cannot also declare `buffer`;
@@ -182,10 +256,12 @@ Varlen, paged and similar ops use metadata tensors such as `cu_seqlens` and `blo
 ```yaml
 forall: {B: Dim, S: Dim, H: Dim, D: Dim, NS: Dim, NC: Dim, T: "DType[...]", seq_lens: "Seq[Int]"}
 inputs:
-  cu_seqlens: {dtype: int32, optional: true, shape: "[NS + 1]",
+  cu_seqlens: {dtype: int32, type: "Tensor | None", default: null, shape: "[NS + 1]",
                values: "prefix_sum(seq_lens)", requires: ["prefix_offsets(S)"]}
-  chunk_indices: {dtype: int32, optional: "present(cu_seqlens)", shape: "[NC, 2]",
+  chunk_indices: {dtype: int32, type: "Tensor | None", default: null, shape: "[NC, 2]",
                   values: "chunk_indices(seq_lens, chunk_size)"}
+shape_rules:
+- "present(chunk_indices) == present(cu_seqlens)"
 ```
 
 The rules for generators:
@@ -263,3 +339,32 @@ composition:
 - The manifest does not prescribe how the roofline of a composite op relates to the rooflines of its stages.
 - For an `implemented` op, the validator checks in order that the `op` stages agree with the class's `delegate_types` and the `kernel` stages agree with the class's `kernel_types`.
 - `stages` cannot be empty, stage names are all distinct, and `optional` is a boolean.
+
+## 11. Tensor sequences {#sequences}
+
+An argument that holds a list of tensors declares `type: "list[Tensor]"`. Its element-wise indices have the kinds `Seq[Dim]`, `Seq[Shape]` and `Seq[DType[...]]`. Concat is an example:
+
+```yaml
+forall: {S: "Seq[Shape]", D: "Seq[DType[float16 | bfloat16 | float32]]"}
+params:
+  dim: {type: int, default: 0}
+inputs:
+  tensors: {type: "list[Tensor]", dtype: D, shape: "[*S]"}
+outputs:
+  output: {dtype: "promote(D)", shape: "[*concat(S, dim)]"}
+shape_rules:
+- "len(S) >= 1"
+workloads:
+- {S: [[2048, 1024], [2048, 4096], [2048, 3000]], dim: 1, dtype_cases: [{D: [bfloat16, bfloat16, bfloat16]}], label: uneven-cols}
+```
+
+- In the `shape` and `dtype` of a `list[Tensor]` declaration, every element-wise index stands for the element's item: element `i` has shape `S[i]` and dtype `D[i]`, and `len(S)` there is `len(S[i])`. Every other index is shared by all elements.
+- Outside the declaration, an element-wise index is the whole list, readable in outputs, refinements, `let` entries and roofline formulas. A `let` is not expanded into the element.
+- `Seq[Dim]` holds one axis length per element, while a `Shape` is one tuple of axes shared by all elements.
+- The sequence length is the common length of its element-wise indices, and a `list[Tensor]` declaration reads at least one element-wise index.
+- Element-wise indices are solved on every element. A shared index is solved from the other tensors first; only when inference stalls is it solved from element 0, then checked on every element.
+- An empty sequence gives its element-wise indices empty lists; a shared index that only the sequence could solve stays unsolved, and the call raises an error that names the declaration.
+- A tensor sequence is passed on every call and is only read. It declares no effect, `values`, `requires` or `device`, and is not a member of a union.
+- Choosing the call device, the 16-byte alignment copy and the alias and overlap checks visit each element. The derived byte count counts each element once, and `bytes(t)` is the sum over the elements.
+- A workload row writes an element-wise index as a list with one item per element. A `Seq[DType]` index is written in `dtype_cases` as a list of dtypes, and its value in the case id joins them with `.`, for example `uneven-cols-bfloat16.bfloat16.bfloat16`.
+- A `list[Tensor]` output, `None` elements in a sequence, `list[Tensor]` as a member of a union, and an effect on a sequence are all rejected.

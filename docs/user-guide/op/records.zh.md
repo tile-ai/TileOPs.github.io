@@ -22,7 +22,7 @@
 | 1 | `indices` | 签名中各 index 求出的值：`forall` 的标量与 dtype index、位于 index 位置的构造参数与 `let`；`forall` 中 `Seq[Int]` 类型的 index 不在其中 |
 | 2 | `branch_key` | 签名检查采用的判别分支 |
 | 3 | `device` | 签名检查确定的调用设备，基类据此选择 target |
-| 4 | `tensors` | • 按签名中的名字，记录这次调用出现的输入、构造期张量与输出的 shape 与 dtype<br>• 调用方传入的 `out` 不单列 |
+| 4 | `tensors` | • 按签名中的名字，记录这次调用出现的输入与输出的 shape 与 dtype<br>• 调用方传入的 `out` 不单列 |
 | 5 | `traffic` | 每个张量的读写次数，由 manifest 的 effect 规则给出 |
 | 6 | `written`、`has_out` | 这次调用写入的输入，以及调用方是否传入了 `out` |
 | 7 | `metadata` | 声明了 `values` 的 metadata 输入张量 |

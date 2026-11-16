@@ -149,7 +149,7 @@ The following belong to the implementation, are decided by code, and do not appe
 | --- | --- | --- |
 | 1 | [Concepts](concepts.md) | the concepts used to describe an op's type |
 | 2 | [Spec fields](writing.md) | how to write the fields most specs need |
-| 3 | [Extensions](extensions.md) | how to write optional inputs, shapes that vary with parameters, side effects, metadata tensors and similar cases |
+| 3 | [Extensions](extensions.md) | how to write argument types, shapes that vary with parameters, side effects, metadata tensors, tensor sequences and similar cases |
 | 4 | [Calls and validation](calls.md) | the signature-based checks at call time, the validator's checks, and forms that are rejected |
 | 5 | [Examples](examples.md) | real specs from the manifest |
 

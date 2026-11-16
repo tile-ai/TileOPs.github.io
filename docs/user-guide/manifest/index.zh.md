@@ -149,7 +149,7 @@ spec 描述 op 的外部契约，其内容分为五组字段：
 | --- | --- | --- |
 | 1 | [概念](concepts.md) | 描述 op 类型所用的概念 |
 | 2 | [写一个 spec](writing.md) | 大多数 spec 所需字段的写法 |
-| 3 | [扩展写法](extensions.md) | 可选输入、随参数变化的形状、副作用、metadata 张量等情况的写法 |
+| 3 | [扩展写法](extensions.md) | 实参类型、随参数变化的形状、副作用、metadata 张量、张量序列等情况的写法 |
 | 4 | [调用与校验](calls.md) | 调用时基于签名的检查、validator 的检查项，以及不被接受的写法 |
 | 5 | [示例](examples.md) | manifest 中的真实 spec |
 

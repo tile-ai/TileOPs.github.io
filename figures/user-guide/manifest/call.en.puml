@@ -53,7 +53,7 @@ deactivate chk
 == Call ==
 caller -> chk : op(tensors, ...)
 activate chk
-chk -> chk : 1. Settle which optional\n    tensors are passed\n2. Check domain restrictions\n3. Choose type-family branches\n4. Infer indices,\n    check refinements\n5. Check output buffers
+chk -> chk : 1. Settle the member each\n    call-time argument holds\n2. Check domain restrictions\n3. Choose type-family branches\n4. Infer indices,\n    check refinements\n5. Check output buffers
 alt Every written tensor is empty
   chk -> chk : Build the outputs from the signature; run nothing
 else A target registered a builder

@@ -28,29 +28,23 @@ rectangle {
 title How the call device is chosen\n(workload instantiation places tensors by the same rule)
 
 card "A tensor declaring device: cpu stays on the CPU\nand takes no part below" as pre
-card "Any call-time input?" as c1
+card "Any call-time tensor?\n(each element of a tensor sequence counts)" as c1
 card "device parameter not None?" as c2
-card "Any construction-time tensor?" as c3
 card "The accelerator's current device;\nNone without an accelerator" as r5 #E2F6F8;line:3AA9B8
 
 rectangle "Their device; they must share one" as r1
 rectangle "device; a string is parsed\nby torch.device" as r2
-rectangle "Their device; several must share one" as r3
 
 pre -down-> c1
 c1 -down-> c2 : no
-c2 -down-> c3 : no
-c3 -down-> r5 : no
+c2 -down-> r5 : no
 c1 -right-> r1 : yes
 c2 -right-> r2 : yes
-c3 -right-> r3 : yes
 
 r1 -[hidden]down- r2
-r2 -[hidden]down- r3
 
 note bottom of r5 #FBFAFE
   Once the call device is chosen, out and the outputs
-  are checked or allocated on it; construction-time tensors
-  are copied to it and cast to their signature dtype
+  are checked or allocated on it
 end note
 @enduml

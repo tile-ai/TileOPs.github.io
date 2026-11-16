@@ -258,6 +258,9 @@ def _fmt_value(value) -> str:
             if len(set(value)) == 1 and len(value) > 3:
                 return f"{value[0]}(×{len(value)})"
             return "[" + ",".join(str(x) for x in value[:4]) + ("…]" if len(value) > 4 else "]")
+        if value and all(isinstance(x, float) for x in value):
+            # A per-frequency factor list, such as LongRoPE's `rescale_factors`.
+            return "[" + ",".join(f"{x:g}" for x in value[:4]) + ("…]" if len(value) > 4 else "]")
         return str(value)
     if isinstance(value, float):
         return f"{value:g}"
@@ -449,6 +452,8 @@ def _symbolic_branch(plan, row, call):
         scope = {p: workload._convert(sig, p, row[p] if p in row
                                       else sig.params[p].get("default"))
                  for p in sig.params}
+        # A call-time scalar the row gives, such as `min: -0.5`, decides its member.
+        scope.update({k: v for k, v in row.items() if k in sig.inputs})
         point = workload._point(sig, scope, set(row.get("some", [])))
         shapes = plan.branch(point).shapes
     except Exception:  # noqa: BLE001 — private helpers of another repository
@@ -466,11 +471,19 @@ def _symbolic_branch(plan, row, call):
 
 def _parametric_spec(plan, row, case, call) -> Spec:
     sig = plan.sig
-    present = [(n, call.specs[n]) for n in sig.inputs if call.specs.get(n) is not None]
+    present = []
+    for n in sig.inputs:
+        spec = call.specs.get(n)
+        if isinstance(spec, tuple):
+            # A tensor sequence: each element is a tensor of its own.
+            present.extend((f"{n}[{i}]", e) for i, e in enumerate(spec))
+        elif spec is not None:
+            present.append((n, spec))
     # The row's dtype is the first one its case id names, so a tensor in
     # another dtype — an int32 index, an fp32 state — is the one that says so.
     # A row with no dtype case takes the dtype most of its inputs have.
-    named = [str(case[i]) for i in sig.forall if i in case]
+    named = [".".join(case[i]) if isinstance(case[i], list) else str(case[i])
+             for i in sig.forall if i in case]
     dtypes = [str(spec.dtype) for _, spec in present]
     dtype = named[0] if named else (max(dtypes, key=dtypes.count) if dtypes else None)
     # A tensor carries a dtype of its own only where it differs, so rows at
@@ -499,6 +512,9 @@ def _parametric_spec(plan, row, case, call) -> Spec:
         elif key in sig.params:
             if value != sig.params[key].get("default"):
                 params.append((key, _fmt_param(value)))
+        elif key in sig.inputs:
+            # A call-time scalar, such as Clamp's `min: -0.5`.
+            params.append((key, _fmt_param(value)))
     return Spec(row.get("label"), dtype, tensors, dims, params, symbolic, bindings)
 
 

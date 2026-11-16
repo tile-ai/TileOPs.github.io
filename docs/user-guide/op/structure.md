@@ -96,9 +96,9 @@ the selected target, so they belong to the binding group.
 
 | No. | Group | Written | On undoing the target selection | Fields |
 | --- | --- | --- | --- | --- |
-| 1 | construction | at construction, never after | kept | manifest parameters (construction-time tensors aside), `target`, `_installed_kernel_types`, `_preferred_over`, `_keys_by_interface`, `_construction_indices`, `_instance_key`, `_building` |
+| 1 | construction | at construction, never after | kept | manifest parameters, `target`, `_installed_kernel_types`, `_preferred_over`, `_keys_by_interface`, `_construction_indices`, `_instance_key`, `_building` |
 | 2 | binding | when a target is selected and kernels are built | reset to initial values | `_target_builder`, `_serving_target`, `_entries_by_call`, `_built_entries`, `_target_kernels` |
-| 3 | running | still written after construction | kept | construction-time tensors, `_tune_requested`, `_delegates`, `_delegate_stages`, `_effect_branches`, `_plans`, `_last_call`, `_tune_warned` |
+| 3 | running | still written after construction | kept | `_tune_requested`, `_delegates`, `_delegate_stages`, `_effect_branches`, `_plans`, `_last_call`, `_tune_warned` |
 
 Notes on Table 2:
 
@@ -114,15 +114,12 @@ Notes on Table 2:
 - **Running group:**
     - `_tune_requested` starts as `False`, and only `request_tune()` sets it to `True`;
     - `_effect_branches` is decided by the manifest, this instance's construction parameters
-      and which optional inputs a call passes, not by the selected target;
+      and the member each argument of a call holds, not by the selected target;
     - `_plans` holds the Op plan of each specialization, see
       [Construction and calls § The seven steps of a call](lifecycle.md#serve); a plan holds
       decisions only, not the entries the target built;
     - `_last_call` holds the committed record of the last successful call, from which
       `last_call` builds the `SignatureCall`;
-    - a construction-time tensor (such as `LongRoPEFwdOp`'s `rescale_factors`) whose device
-      or dtype differs from the call's is converted at the call and written back to the
-      instance;
     - `_tune_warned` remembers that the tuning warning has been issued, so an instance warns
       once.
 

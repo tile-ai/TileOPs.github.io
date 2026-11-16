@@ -24,7 +24,7 @@ This page describes what the `Op` base class offers after a call:
 | 1 | `indices` | The values solved for the signature's indices: `forall`'s scalar and dtype indices, construction parameters in index positions, and `let`; a `forall` index of type `Seq[Int]` is not among them |
 | 2 | `branch_key` | The discriminant branch the signature check took |
 | 3 | `device` | The call's device, settled by the signature check; the base class selects the target from it |
-| 4 | `tensors` | • The shape and dtype of each input, construction-time tensor and output present in this call, by its name in the signature<br>• An `out` the caller passes is not listed separately |
+| 4 | `tensors` | • The shape and dtype of each input and output present in this call, by its name in the signature<br>• An `out` the caller passes is not listed separately |
 | 5 | `traffic` | How many times each tensor is read and written, given by the manifest's effect rules |
 | 6 | `written`, `has_out` | The inputs this call writes, and whether the caller passed `out` |
 | 7 | `metadata` | The metadata input tensors that declare `values` |

@@ -124,18 +124,19 @@ MeanPoolingFwdOp:
       accum_dtype: {type: torch.dtype}
     inputs:
       x: {dtype: T, shape: "[B, S, H, D]"}
-      cu_seqlens: {dtype: int32, optional: true, shape: "[NS + 1]", values: "prefix_sum(seq_lens)", requires: ["prefix_offsets(S)"]}
-      chunk_indices: {dtype: int32, optional: "present(cu_seqlens)", shape: "[NC, 2]", values: "chunk_indices(seq_lens, chunk_size)"}
+      cu_seqlens: {dtype: int32, type: "Tensor | None", default: null, shape: "[NS + 1]", values: "prefix_sum(seq_lens)", requires: ["prefix_offsets(S)"]}
+      chunk_indices: {dtype: int32, type: "Tensor | None", default: null, shape: "[NC, 2]", values: "chunk_indices(seq_lens, chunk_size)"}
     outputs:
       output: {dtype: T, shape: "PoolOut[present(cu_seqlens), B, NC, S, chunk_size, H, D]"}
     shape_rules:
+    - "present(chunk_indices) == present(cu_seqlens)"
     - "chunk_size > 0 and chunk_size % 32 == 0"
     - "D <= 128 or D % 128 == 0"
     - "category(accum_dtype) == 'float'"
 
   workloads:
   - {B: 1, S: 8192, H: 64, D: 128, chunk_size: 64, accum_dtype: float32, dtype_cases: [{T: float16}, {T: bfloat16}], label: uniform-8k}
-  - {B: 1, S: 8192, H: 64, D: 128, seq_lens: "repeat(2048, 4)", chunk_size: 64, accum_dtype: float32, some: [cu_seqlens], dtype_cases: [{T: float16}, {T: float32}], label: ragged-even}
+  - {B: 1, S: 8192, H: 64, D: 128, seq_lens: "repeat(2048, 4)", chunk_size: 64, accum_dtype: float32, some: [cu_seqlens, chunk_indices], dtype_cases: [{T: float16}, {T: float32}], label: ragged-even}
   # 其余行省略
 
   roofline:
@@ -146,9 +147,9 @@ MeanPoolingFwdOp:
 
 | No. | spec 中的写法 | 说明所在 |
 | --- | --- | --- |
-| 1 | `chunk_indices` 声明为 `optional: "present(cu_seqlens)"`，因此与 `cu_seqlens` 同时传入或同时不传 | [扩展写法 1](extensions.md#presence) |
+| 1 | `cu_seqlens` 与 `chunk_indices` 都声明为 `type: "Tensor \| None", default: null`，定义域限制 `present(chunk_indices) == present(cu_seqlens)` 要求二者同时传入或同时不传 | [扩展写法 1](extensions.md#presence) |
 | 2 | type family `PoolOut` 以 `present(cu_seqlens)` 为 discriminant | [扩展写法 2](extensions.md#type-family) |
-| 3 | 第一行不传 `cu_seqlens`，没有用到 `seq_lens`，因此行中不给出它；第二行通过 `some: [cu_seqlens]` 传入 `cu_seqlens`，同时给出 `seq_lens`，这里写成值 primitive 调用 `"repeat(2048, 4)"` | [扩展写法 1](extensions.md#presence)、[写一个 spec 8](writing.md#workloads) |
+| 3 | 第一行不传 `cu_seqlens`，没有用到 `seq_lens`，因此行中不给出它；第二行通过 `some: [cu_seqlens, chunk_indices]` 传入二者，同时给出 `seq_lens`，这里写成值 primitive 调用 `"repeat(2048, 4)"` | [扩展写法 1](extensions.md#presence)、[写一个 spec 8](writing.md#workloads) |
 | 4 | `NS` 与 `NC` 由 generator 结果的 unification 求得，不在行中给出 | [扩展写法 7](extensions.md#generators) |
 | 5 | `category(accum_dtype) == 'float'` 限制累加 dtype 必须是浮点类型 | [扩展写法 9](extensions.md#scalar-dtype) |
 | 6 | roofline 公式通过 `present(cu_seqlens)` 区分两种情况 | [写一个 spec 9](writing.md#roofline) |
