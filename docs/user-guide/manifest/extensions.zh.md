@@ -25,7 +25,7 @@ shape_rules:
 | 1 | `Tensor` | 张量 | 该声明的 `Tensor[T, s]` |
 | 2 | `list[Tensor]` | 由张量组成的 list 或 tuple | 张量序列，见[第 11 节](#sequences) |
 | 3 | `int` | 不是 `bool` 的 `int` | `Int`，调用期标量 |
-| 4 | `float` | `float` | 一个值，调用期标量 |
+| 4 | `float` | `float`；没有 `int` 或 `Number` 成员对应时，也接受不是 `bool` 的 `int` | 一个值，调用期标量 |
 | 5 | `Number` | `int` 或 `float` | 一个值，调用期标量 |
 | 6 | `bool` | `bool` | `Bool`，调用期标量 |
 | 7 | `None` | `None` | `None` |
@@ -34,7 +34,7 @@ shape_rules:
 
 - `type` 默认为 `Tensor`，表示该声明的 `Tensor[dtype, shape]`。`Number` 已经包含 `int` 与 `float`，因此不与它们同时列出。
 - 有 `Tensor` 或 `list[Tensor]` 成员的实参是调用期输入，声明在 `inputs` 中；其他实参都是构造参数，声明在 `params` 中。张量不作为构造参数。
-- 值按它的 Python 类型对应成员：`None` 对应 `None`；list 或 tuple 对应 `list[Tensor]`；张量对应 `Tensor`；`bool` 只对应 `bool`；`int` 对应 `int`，没有 `int` 成员时对应 `Number`；`float` 对应 `float`，没有 `float` 成员时对应 `Number`。没有成员可以对应的值被拒绝。
+- 值按它的 Python 类型对应成员：`None` 对应 `None`；list 或 tuple 对应 `list[Tensor]`；张量对应 `Tensor`；`bool` 只对应 `bool`；`int` 对应 `int`，没有 `int` 成员时对应 `Number`，两者都没有时对应 `float`；`float` 对应 `float`，没有 `float` 成员时对应 `Number`。没有成员可以对应的值被拒绝。
 - 没有 `default` 的输入每次调用都要传入。有 `default` 的输入可以省略：`forward` 以 `default` 作为它的默认值，省略这个输入与传入该值效果相同。
 - 在按位置传入的输入中，没有 `default` 的输入不排在有 `default` 的输入之后。`kw_only` 的输入排在所有按位置传入的输入之后，也可以是必须传入的。
 - 必须传入、但可以为 `None` 的实参声明 `None` 成员，不声明 `default`，例如 `bias: {type: "Tensor | None", dtype: Wb, shape: "[N]"}`。
@@ -105,7 +105,7 @@ signature:
 
 - 张量的 `shape` 写作 `<Family>[实参, ...]`，实参按 `params` 的声明顺序对应。
 - `match` 的对象必须是取值有限的 discriminant，即 `Bool`、枚举、ADT、`present(...)`、`member(...)`、由它们构成的布尔表达式（例如 `member(min) == 'Tensor'`），或由它们组成的元组。对元组做 match 时，`when` 写成列表，例如 `when: [true, false]`。
-- `Maybe` 类型的 discriminant 按它的值匹配；只有 `_` 能匹配它缺省的情况。
+- `Maybe[ADT]` 类型的 discriminant 按它的值匹配；只有 `_` 能匹配它缺省的情况。
 - `cases` 在 spec 接受的所有取值上必须既无遗漏也无重叠。
 - 多个张量应用同一个 type family 时，它们总是取同一个分支。
 - type family 之间的引用不能成环；如果某个 type family 没有被任何形状使用，validator 会报错。
@@ -280,7 +280,7 @@ generator 的规则如下：
 - 谓词的实参可以是另一个 metadata 张量，这样一条谓词就能约束两个张量之间的关系，例如 GroupedGEMM 的 `batch_offsets` 声明 `requires: ["exclusive_prefix_of(batch_sizes)"]`，要求它是 `batch_sizes` 的 exclusive 前缀和。在被约束的张量存在的每个分支上，作为实参的那个张量也必须存在。
 - validator 在实例化时用生成的取值检查 `requires`。在实际调用中，这些约束由调用方保证，op 默认不检查张量的内容；因此 validator 还会检查，在被约束的张量存在的每个分支上，谓词都是良定义的。
 - 声明了 `requires` 的张量也必须声明 `values`。
-- 有输入的 `requires` 含 `prefix_offsets` 的 op，在 `params` 中声明 `validate_inputs: {type: bool, default: false, kw_only: true}`。调用方把它设为 true 时，由 manifest 生成的检查在实现运行前于 CPU 上读取这些 offsets；这项检查会同步设备，不能在 CUDA Graph 捕获中运行。
+- 有输入的 `requires` 含 `prefix_offsets` 的 op，在 `params` 中声明 `validate_inputs: {type: bool, default: false, kw_only: true}`。没有打包 offsets 的 op 也可以只为 `in_range` 上下界声明它。调用方把它设为 true 时，由 manifest 生成的检查在实现运行前于 CPU 上读取所传入输入的内容，检查其中的 `prefix_offsets` 与 `in_range` 谓词；其他谓词仍由调用方保证。这项检查会同步设备，不能在 CUDA Graph 捕获中运行。
 
 ## 8. dtype 组合与打包 dtype {#dtype-combos}
 

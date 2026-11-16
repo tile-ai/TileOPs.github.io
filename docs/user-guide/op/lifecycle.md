@@ -138,7 +138,7 @@ Where the seven steps sit in time is shown in Figure 1 of
 | No. | Step | What happens |
 | --- | --- | --- |
 | 1 | Begin the call | • Observe the call's specialization and look up its plan in `_plans`<br>• Push the current thread's call stack<br>• Collect the calls sub-ops complete during this call |
-| 2 | Check the signature | • On a plan miss: run the checks `_SignaturePlan` generated, and hold what they decide as the plan<br>• On a hit: reuse the plan and run no check again<br>• On every call: raise `CheckError` when a tensor the call writes shares a byte with another call tensor its manifest entry does not list in `overlaps`<br>• On every call of an op constructed with `validate_inputs=True`: check the packed offsets on the CPU |
+| 2 | Check the signature | • On a plan miss: run the checks `_SignaturePlan` generated, and hold what they decide as the plan<br>• On a hit: reuse the plan and run no check again<br>• On every call: raise `CheckError` when a tensor the call writes shares a byte with another call tensor its manifest entry does not list in `overlaps`<br>• On every call of an op constructed with `validate_inputs=True`: check the packed offsets and `in_range` bounds on the CPU |
 | 3 | Detect an empty write | When the plan says there is at least one write and every write holds no elements, run no implementation and build the result from the signature |
 | 4 | Select the target | Select one when the instance has none yet and this call needs to run an implementation; see [§ 4](#target) |
 | 5 | Run | • Run one of the three: the empty-write result, the target's kernel, or `forward`<br>• A call tensor off a 16-byte boundary runs as an aligned copy; a written copy is copied back after step 6 |

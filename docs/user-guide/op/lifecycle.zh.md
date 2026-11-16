@@ -96,7 +96,7 @@
 | No. | 步骤 | 内容 |
 | --- | --- | --- |
 | 1 | 开启调用 | • 确定这次调用的特化，在 `_plans` 中查找它的 plan<br>• 压入当前线程的调用栈<br>• 收集本次调用期间子 op 完成的调用 |
-| 2 | 检查签名 | • plan 未命中：运行 `_SignaturePlan` 生成的检查，把检查的结论保存为 plan<br>• 命中：复用 plan，不再运行检查<br>• 每次调用：被写入的张量与另一个调用张量有共享字节、且 manifest 条目的 `overlaps` 没有列出后者时，抛出 `CheckError`<br>• 以 `validate_inputs=True` 构造的 op，每次调用都在 CPU 上检查打包的 offsets |
+| 2 | 检查签名 | • plan 未命中：运行 `_SignaturePlan` 生成的检查，把检查的结论保存为 plan<br>• 命中：复用 plan，不再运行检查<br>• 每次调用：被写入的张量与另一个调用张量有共享字节、且 manifest 条目的 `overlaps` 没有列出后者时，抛出 `CheckError`<br>• 以 `validate_inputs=True` 构造的 op，每次调用都在 CPU 上检查打包的 offsets 与 `in_range` 上下界 |
 | 3 | 判断空写 | plan 表明至少有一个写入、且所有写入都没有元素时，不运行任何实现，按签名构造结果 |
 | 4 | 选择 target | 实例尚未选定 target、且这次调用需要运行实现时选择，见[第 4 节](#target) |
 | 5 | 执行 | • 运行空写结果、target 的 kernel 或 `forward`，三者取一<br>• 起始地址不在 16 字节边界上的调用张量以对齐的副本运行，被写入的副本在第 6 步之后拷回 |

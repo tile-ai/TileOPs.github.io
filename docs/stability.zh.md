@@ -21,13 +21,13 @@
 
 ## 兼容性
 
-在 0.x 版本内，minor 与 patch 发布对公开 API 只做增加：
+在 0.x 版本内，patch 发布对公开 API 只做增加，minor 发布还可以带有经过评审的不兼容改动：
 
-- 公开的名字、签名、参数默认值、返回结构与文档写明的行为保持不变。
+- 公开的名字、签名、参数默认值、返回结构与文档写明的行为保持不变，经过评审的不兼容改动除外。
 - 一次发布可以增加模块、名字、可选参数，或新接受的输入。
-- 其他改动等到 major 发布。
+- 发布说明列出每一项经过评审的不兼容改动。从 1.0 起，不兼容改动等到 major 发布。
 
-`scripts/ci/check_api_compat.py` 在每个 PR 上对照最新发布做检查，一个调用若按最新发布写成、在 PR 上会被破坏，检查就失败。
+`scripts/ci/check_api_compat.py` 在每个 PR 上对照最新发布做检查，一个调用若按最新发布写成、在 PR 上会被破坏，检查就失败。检查报出的、经过评审的不兼容改动列在 [`scripts/ci/api_compat_allow.txt`](https://github.com/tile-ai/TileOPs/blob/main/scripts/ci/api_compat_allow.txt) 中，检查跳过其中各项，下一次发布时清空该文件。检查看不到的不兼容改动，例如 spec 格式的改动，在 PR 中写明。
 
 ## 支持范围
 
