@@ -130,8 +130,8 @@ The constructor takes no tuning parameter. To tune, construct the op, then call
 
 A different input schema, different math or a different output schema is a separate op
 class; a semantic mode with the same schemas is a construction parameter. Conventions every
-op follows, such as the softmax scale `sm_scale`, `validate_inputs` for packed offsets and
-`in_range` bounds, and the pairing of a `Bwd` op with its forward, are in
+op follows, such as the softmax scale `sm_scale`, the `validate_inputs` check of packed
+offsets and `in_range` bounds, and the pairing of a `Bwd` op with its forward, are in
 [Op Interfaces § Shared semantics](design/ops-design.md#shared-semantics).
 
 ### `kernel_for`, and choosing among kernels {#kernel-selection}

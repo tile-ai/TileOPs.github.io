@@ -109,7 +109,7 @@ class GEMMFwdOp(Op):
 
 构造函数不接收调优参数。需要调优时，先构造 op，再调用 `op.request_tune()`。
 
-输入 schema、数学定义或输出 schema 不同的，是另一个 op 类；schema 相同的语义模式是构造参数。所有 op 共同遵守的约定，例如 softmax 缩放 `sm_scale`、检查打包 offsets 与 `in_range` 上下界的 `validate_inputs`、`Bwd` op 与其前向的配对，见 [Op Interfaces § Shared semantics](design/ops-design.md#shared-semantics)。
+输入 schema、数学定义或输出 schema 不同的，是另一个 op 类；schema 相同的语义模式是构造参数。所有 op 共同遵守的约定，例如 softmax 缩放 `sm_scale`、`validate_inputs` 对打包 offsets 与 `in_range` 上下界的检查、`Bwd` op 与其前向的配对，见 [Op Interfaces § Shared semantics](design/ops-design.md#shared-semantics)。
 
 ### `kernel_for` 与 kernel 的选择 {#kernel-selection}
 

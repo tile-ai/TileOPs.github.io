@@ -25,7 +25,7 @@ shape_rules:
 | 1 | `Tensor` | a tensor | the declaration's `Tensor[T, s]` |
 | 2 | `list[Tensor]` | a list or tuple of tensors | a tensor sequence, see [§ 11](#sequences) |
 | 3 | `int` | an `int` that is not a `bool` | `Int`, a call-time scalar |
-| 4 | `float` | a `float`, or an `int` that is not a `bool` when no `int` or `Number` member takes it | a value, a call-time scalar |
+| 4 | `float` | a `float`; also an `int` (not a `bool`) when the type has no `int` or `Number` member | a value, a call-time scalar |
 | 5 | `Number` | an `int` or a `float` | a value, a call-time scalar |
 | 6 | `bool` | a `bool` | `Bool`, a call-time scalar |
 | 7 | `None` | `None` | `None` |
@@ -280,7 +280,9 @@ The rules for `requires`:
 - A predicate argument can be another metadata tensor, so that one predicate constrains the relation between two tensors. For example, `batch_offsets` in GroupedGEMM declares `requires: ["exclusive_prefix_of(batch_sizes)"]`, which requires it to be the exclusive prefix sum of `batch_sizes`. On every branch where the constrained tensor exists, the tensor used as the argument must also exist.
 - The validator checks `requires` at instantiation against the generated values. In an actual call, the caller guarantees these constraints and the op does not check tensor contents by default; the validator therefore also checks that the predicate is well defined on every branch where the constrained tensor exists.
 - A tensor that declares `requires` must also declare `values`.
-- An op with an input whose `requires` holds `prefix_offsets` declares `validate_inputs: {type: bool, default: false, kw_only: true}` in `params`. An op without packed offsets may declare it for its `in_range` bounds alone. When the caller sets it, a check generated from the manifest reads the passed inputs' contents on the CPU before the implementation runs, and checks their `prefix_offsets` and `in_range` predicates; any other predicate stays the caller's obligation. The check synchronizes the device, so it cannot run inside CUDA Graph capture.
+- An op with an input whose `requires` holds `prefix_offsets` declares `validate_inputs: {type: bool, default: false, kw_only: true}` in `params`. An op whose inputs' `requires` hold `in_range` but no `prefix_offsets` may declare it too.
+- When the caller sets `validate_inputs`, a check generated from the manifest reads the inputs on the CPU before the implementation runs and checks their `prefix_offsets` and `in_range` predicates. Every other predicate stays the caller's obligation.
+- The check synchronizes the device, so it cannot run inside CUDA Graph capture.
 
 ## 8. dtype combinations and packed dtypes {#dtype-combos}
 

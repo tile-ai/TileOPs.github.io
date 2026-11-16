@@ -25,7 +25,7 @@ shape_rules:
 | 1 | `Tensor` | 张量 | 该声明的 `Tensor[T, s]` |
 | 2 | `list[Tensor]` | 由张量组成的 list 或 tuple | 张量序列，见[第 11 节](#sequences) |
 | 3 | `int` | 不是 `bool` 的 `int` | `Int`，调用期标量 |
-| 4 | `float` | `float`；没有 `int` 或 `Number` 成员对应时，也接受不是 `bool` 的 `int` | 一个值，调用期标量 |
+| 4 | `float` | `float`；类型中没有 `int` 和 `Number` 成员时，也接受 `int`（`bool` 除外） | 一个值，调用期标量 |
 | 5 | `Number` | `int` 或 `float` | 一个值，调用期标量 |
 | 6 | `bool` | `bool` | `Bool`，调用期标量 |
 | 7 | `None` | `None` | `None` |
@@ -280,7 +280,9 @@ generator 的规则如下：
 - 谓词的实参可以是另一个 metadata 张量，这样一条谓词就能约束两个张量之间的关系，例如 GroupedGEMM 的 `batch_offsets` 声明 `requires: ["exclusive_prefix_of(batch_sizes)"]`，要求它是 `batch_sizes` 的 exclusive 前缀和。在被约束的张量存在的每个分支上，作为实参的那个张量也必须存在。
 - validator 在实例化时用生成的取值检查 `requires`。在实际调用中，这些约束由调用方保证，op 默认不检查张量的内容；因此 validator 还会检查，在被约束的张量存在的每个分支上，谓词都是良定义的。
 - 声明了 `requires` 的张量也必须声明 `values`。
-- 有输入的 `requires` 含 `prefix_offsets` 的 op，在 `params` 中声明 `validate_inputs: {type: bool, default: false, kw_only: true}`。没有打包 offsets 的 op 也可以只为 `in_range` 上下界声明它。调用方把它设为 true 时，由 manifest 生成的检查在实现运行前于 CPU 上读取所传入输入的内容，检查其中的 `prefix_offsets` 与 `in_range` 谓词；其他谓词仍由调用方保证。这项检查会同步设备，不能在 CUDA Graph 捕获中运行。
+- 有输入的 `requires` 含 `prefix_offsets` 的 op，在 `params` 中声明 `validate_inputs: {type: bool, default: false, kw_only: true}`。输入的 `requires` 含 `in_range`、不含 `prefix_offsets` 的 op 也可以声明它。
+- 调用方设置 `validate_inputs` 时，由 manifest 生成的检查在实现运行前于 CPU 上读取输入，检查其中的 `prefix_offsets` 与 `in_range` 谓词。其他谓词仍由调用方保证。
+- 这项检查会同步设备，不能在 CUDA Graph 捕获中运行。
 
 ## 8. dtype 组合与打包 dtype {#dtype-combos}
 
