@@ -17,15 +17,15 @@ The pages run in the order a reader meets the ops in a model: the pointwise
 transforms and the positional rotation, then the axis reductions and the
 normalizations built on them, the windowed kernels, the matmul and the
 quantization around it, then attention, the expert routing after it and sampling,
-then the sequence-model kernels. FFT, Transform, mHC and Engram follow, and Trace,
+then the sequence-model kernels. FFT, Transform, Indexing and Engram follow, and Trace,
 a tool rather than an op, comes last. The Benchmarks pages use the same order.
 
 | Page | What it covers |
 | --- | --- |
 | [Elementwise](elementwise.md) | unary and binary maps, activations, dropout, and the in-place forms |
-| [RoPE](rope.md) | rotary position embedding — NeoX and interleaved rotation, Llama 3.1, YaRN, LongRoPE |
+| [RoPE](rope.md) | rotary position embedding — NeoX and interleaved rotation, Llama 3.1, YaRN, LongRoPE, and rotation by caller-given cos and sin |
 | [Reduction](reduction.md) | sums, extrema, arg-reductions, cumulative scans, softmax |
-| [Normalization](normalization.md) | RMSNorm, LayerNorm, GroupNorm, BatchNorm and the fused variants, including RMSNorm with per-token quantization and the q/k RMSNorm with RoPE |
+| [Normalization](normalization.md) | RMSNorm, LayerNorm, GroupNorm, BatchNorm and the fused variants, including RMSNorm with per-token quantization, the q/k RMSNorm with RoPE and the gated RMSNorm |
 | [Pooling](pool.md) | average, max and adaptive pooling, with and without indices, plus the chunked sequence mean |
 | [Convolution](convolution.md) | forward convolution over 1D, 2D and 3D inputs |
 | [GEMM](linear-algebra.md) | dense matmul — plain, batched and grouped, with the fp8, W4A16, W4A8 and INT8 W8A8 variants |
@@ -37,7 +37,7 @@ a tool rather than an op, comes last. The Benchmarks pages use the same order.
 | [Mamba](mamba.md) | the Mamba-1 selective scan, the causal convolution and the SSD scan, their decode steps, and the chunked forms |
 | [FFT](fft.md) | the discrete transform |
 | [Transform](transform.md) | the fast Walsh-Hadamard transform along the last axis |
-| [mHC](mhc.md) | Manifold-Constrained Hyper-Connections — the pre/post pair around a layer |
+| [Indexing](indexing.md) | embedding lookup, concatenation and masked scatter |
 | [Engram](engram.md) | the Engram GateConv pair and its decode step |
 | [Trace](trace.md) | the in-kernel timeline tracer, a tool rather than an op |
 

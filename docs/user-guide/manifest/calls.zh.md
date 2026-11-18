@@ -70,7 +70,7 @@ op 在 `interfaces` 中声明它调用 kernel 的位置，每个位置对应一�
 - generator 只在 workload 实例化时生成 metadata 张量的取值，并帮助确定 workload 行中不写的 index；实际调用时，这些 index 同样从传入的张量求得。
 - 如果某个 index 无法求得，或者有多个解，validator 会拒绝这个 spec。
 - 对于输出缓冲 `out`，推断阶段只确定它是否传入；输出类型确定之后，再按输出类型检查它。
-- 如果轴长与逻辑维度之间不是 affine 关系，可以用一个名字表示物理轴，再用 `let` 计算逻辑维度。例如 MHCPre 写作 `b: "[Q]"` 与 `let: {n: "mhc.expansion(Q)"}`。
+- 如果轴长与逻辑维度之间不是 affine 关系，可以用一个名字表示物理轴，再用 `let` 计算逻辑维度。
 
 ## 4. 调用设备 {#device}
 

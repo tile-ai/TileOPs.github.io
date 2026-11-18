@@ -70,7 +70,7 @@ The construction phase first settles the type family branches the parameters sel
 - A generator generates the values of metadata tensors only at workload instantiation, and helps determine the indices a workload row does not write; in an actual call, these indices are likewise solved from the tensors passed.
 - If an index cannot be solved, or has more than one solution, the validator rejects the spec.
 - For the output buffer `out`, the inference phase only determines whether it is passed; once the output type is fixed, `out` is checked against it.
-- If the relation between an axis length and a logical dimension is not affine, a name can stand for the physical axis and a `let` computes the logical dimension. For example, MHCPre writes `b: "[Q]"` and `let: {n: "mhc.expansion(Q)"}`.
+- If the relation between an axis length and a logical dimension is not affine, a name can stand for the physical axis and a `let` computes the logical dimension.
 
 ## 4. Call device {#device}
 

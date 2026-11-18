@@ -97,7 +97,7 @@ FAMILY_TITLE = {
     "moe": "MoE", "linear_algebra": "GEMM", "reduction": "Reduction",
     "elementwise": "Elementwise", "convolution": "Convolution", "pool": "Pooling",
     "quantization": "Quantization & Dequantization", "sampling": "Sampling", "positional": "RoPE",
-    "fft": "FFT", "mhc": "mHC", "engram": "Engram", "topk": "Top-k",
+    "fft": "FFT", "engram": "Engram", "topk": "Top-k",
     "other": "Other",
 }
 API_DIR = os.path.join(REPO, "docs", "api")
@@ -162,7 +162,7 @@ DATA_PAGES = [
     ("sampling", "Sampling", ["sampling"]),
     ("linear-attention", "Linear Attention", ["linear_attention"]),
     ("ssm", "SSM", ["ssm"]),
-    ("other", "Other", ["topk", "fft", "mhc", "engram", "scan", "other"]),
+    ("other", "Other", ["topk", "fft", "engram", "scan", "other"]),
 ]
 _KEYWORD_FAMILY = [
     (("mamba", "ssd", "ssm"), "ssm"),
@@ -181,14 +181,14 @@ _KEYWORD_FAMILY = [
     (("lightning_indexer",), "attention"),
     (("quant", "fp8"), "quantization"),
     (("rope", "rotary", "positional"), "positional"),
-    (("mhc",), "mhc"), (("topk", "top_k"), "topk"),
+    (("topk", "top_k"), "topk"),
     (("attention", "gqa", "mha", "mla", "flash", "kv_cache", "dsa"), "attention"),
     (("reduce", "argmax", "argmin", "argreduce", "mean", "sum", "max", "min"),
      "reduction"),
 ]
 # The manifest declares each op's family under TileOPs' names; these are this
-# file's. `sequence_modeling` is absent: mHC and Engram publish on pages of
-# their own, so one family name cannot place them.
+# file's. `sequence_modeling` is absent: Engram publishes on a page of its
+# own, which the family name alone cannot place.
 _MANIFEST_FAMILY = {
     "elementwise": "elementwise", "reduction": "reduction",
     "attention": "attention", "pool": "pool", "norm": "normalization",

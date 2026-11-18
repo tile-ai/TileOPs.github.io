@@ -36,3 +36,14 @@ adjacent pair.
       show_root_heading: true
       heading_level: 3
       members: ["__init__", "forward"]
+
+## Caller-given cos and sin
+
+The op reads the rotation from `cos` and `sin` rows the caller computes, so any
+frequency scheme the caller builds applies.
+
+::: tileops.rope.RoPECosSinFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]

@@ -45,6 +45,12 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
+::: tileops.norm.RMSNormGatedFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
 ## Adaptive LayerNorm
 
 ::: tileops.norm.AdaLayerNormFwdOp
