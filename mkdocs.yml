@@ -68,7 +68,7 @@ nav:
   # them, the windowed kernels, the matmul and the quantization around it, then
   # attention, the expert routing after it and sampling at the end of a decode
   # step, then the sequence-mixing kernels. The pages Benchmarks folds into Other
-  # follow: FFT, Transform, Indexing and Engram. Top-k shares the Sampling page, though its op is
+  # follow: FFT, Transform, Indexing, Hyper-Connections and Engram. Top-k shares the Sampling page, though its op is
   # exported from `tileops.attention` and its benchmark sits on Attention. Pages are not one per family. The FP8
   # lightning indexer is a section of the Attention page, where its single op is
   # used. Trace comes last — a tool rather than an op.
@@ -91,6 +91,7 @@ nav:
     - FFT: api/fft.md
     - Transform: api/transform.md
     - Indexing: api/indexing.md
+    - Hyper-Connections: api/hyper-connection.md
     - Engram: api/engram.md
     - Trace: api/trace.md
   - Benchmarks:
@@ -227,6 +228,7 @@ plugins:
             FFT: FFT
             Transform: Transform
             Indexing: Indexing
+            Hyper-Connections: Hyper-Connections
             MoE: MoE
             Sampling: Sampling
             Engram: Engram

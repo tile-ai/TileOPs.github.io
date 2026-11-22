@@ -17,7 +17,7 @@ The pages run in the order a reader meets the ops in a model: the pointwise
 transforms and the positional rotation, then the axis reductions and the
 normalizations built on them, the windowed kernels, the matmul and the
 quantization around it, then attention, the expert routing after it and sampling,
-then the sequence-model kernels. FFT, Transform, Indexing and Engram follow, and Trace,
+then the sequence-model kernels. FFT, Transform, Indexing, Hyper-Connections and Engram follow, and Trace,
 a tool rather than an op, comes last. The Benchmarks pages use the same order.
 
 | Page | What it covers |
@@ -29,8 +29,8 @@ a tool rather than an op, comes last. The Benchmarks pages use the same order.
 | [Pooling](pool.md) | average, max and adaptive pooling, with and without indices, plus the chunked sequence mean |
 | [Convolution](convolution.md) | forward convolution over 1D, 2D and 3D inputs |
 | [GEMM](linear-algebra.md) | dense matmul — plain, batched and grouped, with the fp8, W4A16, W4A8 and INT8 W8A8 variants |
-| [Quantization & Dequantization](quantization.md) | INT8, FP8 and INT4 quantization, and INT8 dequantization |
-| [Attention](attention.md) | forward and backward attention, including the paged and decode kernels, merging attention states, writing and gathering the paged KV cache, and writing the MLA latent cache |
+| [Quantization & Dequantization](quantization.md) | INT8, FP8, FP4 and INT4 quantization, and INT8 dequantization |
+| [Attention](attention.md) | forward and backward attention, including the paged and decode kernels, KV compression by gated pooling, merging attention states, writing and gathering the paged KV cache, and writing the MLA latent cache |
 | [MoE](moe.md) | the routed mixture-of-experts FFN and its separately callable stages |
 | [Top-k & Sampling](sampling.md) | top-k selection, logits masks (top-k, top-p, min-p) and sampling, including chain speculative sampling |
 | [Linear Attention](linear-attention.md) | DeltaNet, Gated DeltaNet, Kimi Delta Attention and Gated Linear Attention |
@@ -38,7 +38,8 @@ a tool rather than an op, comes last. The Benchmarks pages use the same order.
 | [FFT](fft.md) | the discrete transform |
 | [Transform](transform.md) | the fast Walsh-Hadamard transform along the last axis |
 | [Indexing](indexing.md) | embedding lookup, concatenation and masked scatter |
-| [Engram](engram.md) | the Engram GateConv pair and its decode step |
+| [Hyper-Connections](hyper-connection.md) | Manifold-Constrained Hyper-Connections — the pre and post steps around a block, and the residual-stream collapse before the LM head |
+| [Engram](engram.md) | the n-gram hash, the Engram GateConv pair and its decode step |
 | [Trace](trace.md) | the in-kernel timeline tracer, a tool rather than an op |
 
 Two things this reference does not carry:

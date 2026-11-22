@@ -61,7 +61,7 @@ TileOPs 的组件分为四层：
 | 4 | `bench.Runner` | case 与 op | 用 reference 校验各实现、计时、从 `eval_roofline()` 取得 FLOPs 与字节数，并以 op 名记录结果，见[编写 benchmark](../benchmark/writing.md) |
 | 5 | manifest 测试 | 全部 spec | 在 meta 张量上执行每个调用；检查 target conformance；检查公开 API 与 manifest 一致；检查 roofline 字节数与签名的推导一致 |
 | 6 | validator | 全部字段 | 静态检查签名；对 `implemented` 的 op 核对 `__init__`、`forward` 与 `composition` |
-| 7 | nightly | benchmark | 每晚运行全部 benchmark，检查每个调用都被测到，并按 case id 记录历史数据 |
+| 7 | nightly | benchmark | 每晚运行 benchmark，检查 sweep 选中的调用都被测到，并按 case id 记录历史数据 |
 | 8 | roofline 工具 | device time、GPU profile | 计算 SOL 效率，判定瓶颈 |
 | 9 | 文档站 | spec、docstring、benchmark 与 roofline 结果 | 生成 API 参考、支持矩阵与性能页面 |
 

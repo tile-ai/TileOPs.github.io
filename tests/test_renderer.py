@@ -156,6 +156,16 @@ def test_the_package_decides_the_family_not_a_word_in_the_name():
     assert g.family_of("RmsNormFwdOp", None) == "normalization"
 
 
+def test_sequence_modeling_ops_publish_on_their_own_api_page_family():
+    # `sequence_modeling` maps to no family, so the name decides; `NGramHash`
+    # contains `mha` once lowercased and would otherwise land on the Attention page.
+    module = "tileops._ops.sequence_modeling"
+    assert g.family_of("NGramHashFwdOp", f"{module}.ngram_hash",
+                       "sequence_modeling") == "engram"
+    assert g.family_of("HyperConnectionPreFwdOp", f"{module}.hyper_connection",
+                       "sequence_modeling") == "hyper_connection"
+
+
 def test_a_parametric_row_resolves_through_the_tileops_checkout():
     # The parametric format is instantiated by TileOPs itself, so this needs a
     # checkout: `./TileOPs`, or the one `TILEOPS` names.
