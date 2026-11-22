@@ -45,6 +45,14 @@ what runs when you call `op(...)`.
       heading_level: 3
       members: ["__init__", "forward"]
 
+## FP4 quantization
+
+::: tileops.quantization.FP4QuantPerGroupFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
 ## INT4 quantization
 
 ::: tileops.quantization.INT4QuantPerGroupFwdOp

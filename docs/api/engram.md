@@ -5,6 +5,14 @@ constructor takes what the kernel is compiled with; the call takes the tensors.
 Both are documented under each op — `__init__` and `forward`, where `forward` is
 what runs when you call `op(...)`.
 
+## N-gram hash
+
+::: tileops.sequence_modeling.NGramHashFwdOp
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members: ["__init__", "forward"]
+
 ## GateConv
 
 ::: tileops.sequence_modeling.EngramGateConvFwdOp

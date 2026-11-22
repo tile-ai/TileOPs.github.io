@@ -61,7 +61,7 @@ The following are written only when needed:
 | 4 | `bench.Runner` | the case and the op | checking every implementation against the reference, timing, taking FLOPs and byte count from `eval_roofline()`, and recording results under the op name; see [Writing benchmarks](../benchmark/writing.md) |
 | 5 | manifest tests | all specs | running every call on meta tensors; checking target conformance; checking that the public API agrees with the manifest; checking that the roofline byte count agrees with what the signature derives |
 | 6 | validator | all fields | static checks of the signature; for `implemented` ops, checking `__init__`, `forward` and `composition` |
-| 7 | nightly | benchmarks | running every benchmark each night, checking that every call is measured, and recording history by case id |
+| 7 | nightly | benchmarks | running the benchmarks each night, checking that every call the sweep selects is measured, and recording history by case id |
 | 8 | roofline tools | device time, GPU profile | computing SOL efficiency and identifying the bottleneck |
 | 9 | docs site | spec, docstring, benchmark and roofline results | generating the API reference, the support matrix and the performance pages |
 

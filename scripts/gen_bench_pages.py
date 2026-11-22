@@ -97,7 +97,8 @@ FAMILY_TITLE = {
     "moe": "MoE", "linear_algebra": "GEMM", "reduction": "Reduction",
     "elementwise": "Elementwise", "convolution": "Convolution", "pool": "Pooling",
     "quantization": "Quantization & Dequantization", "sampling": "Sampling", "positional": "RoPE",
-    "fft": "FFT", "engram": "Engram", "topk": "Top-k",
+    "fft": "FFT", "hyper_connection": "Hyper-Connections", "engram": "Engram",
+    "topk": "Top-k",
     "other": "Other",
 }
 API_DIR = os.path.join(REPO, "docs", "api")
@@ -162,13 +163,16 @@ DATA_PAGES = [
     ("sampling", "Sampling", ["sampling"]),
     ("linear-attention", "Linear Attention", ["linear_attention"]),
     ("ssm", "SSM", ["ssm"]),
-    ("other", "Other", ["topk", "fft", "engram", "scan", "other"]),
+    ("other", "Other", ["topk", "fft", "hyper_connection", "engram", "scan",
+                        "other"]),
 ]
 _KEYWORD_FAMILY = [
     (("mamba", "ssd", "ssm"), "ssm"),
-    # Ahead of `conv`, which `EngramGateConv` would otherwise match. Engram is
-    # its own algorithm, published on its own API page, not a linear attention.
-    (("engram",), "engram"),
+    # Ahead of `conv`, which `EngramGateConv` would otherwise match, and of
+    # `mha`, which the lowercased `NGramHash` contains. Engram is its own algorithm, published on
+    # its own API page, not a linear attention.
+    (("engram", "ngram"), "engram"),
+    (("hyper_connection",), "hyper_connection"),
     (("deltanet", "gla", "linear_attn", "recurrence"), "linear_attention"),
     (("cumsum", "cumulative", "scan", "cumprod"), "scan"),
     (("layer_norm", "rms_norm", "rmsnorm", "batch_norm", "group_norm",
@@ -187,8 +191,8 @@ _KEYWORD_FAMILY = [
      "reduction"),
 ]
 # The manifest declares each op's family under TileOPs' names; these are this
-# file's. `sequence_modeling` is absent: Engram publishes on a page of its
-# own, which the family name alone cannot place.
+# file's. `sequence_modeling` is absent: Hyper-Connections and Engram publish
+# on pages of their own, which the family name alone cannot place.
 _MANIFEST_FAMILY = {
     "elementwise": "elementwise", "reduction": "reduction",
     "attention": "attention", "pool": "pool", "norm": "normalization",

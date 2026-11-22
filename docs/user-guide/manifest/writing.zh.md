@@ -48,7 +48,7 @@ SiLUAndMulFwdOp:
     let: {<name>: "<表达式>"}                                    # 扩展写法 4
     shape_rules: ["<refinement>"]                               # 6
     dtype_combos: [{<DType index>: <dtype>}]                    # 扩展写法 8
-  workloads: [{<参数与 index>, some, dtype_cases, label}]       # 8
+  workloads: [{<参数与 index>, some, dtype_cases, nightly, label}] # 8
   roofline: {flops, bytes} | {func}                             # 9
   composition: {kind: composite, stages}                        # 扩展写法 10
 ```
@@ -160,7 +160,8 @@ workloads:
 | 3 | 调用期实参名 | 不在 `some` 中的、有多个成员的实参的标量值或 `null`；该实参没有默认值时必须给出 |
 | 4 | `forall` 中 `DType` 以外的 index | 当前分支用到、且不由 generator 求得的 index |
 | 5 | `dtype_cases` | 一个非空列表，每一项是当前分支用到的 `DType` index 的一组取值，例如 `[{T: float16}, {T: bfloat16}]`；只在有这类 index 时写；dtype 参数按构造参数给出 |
-| 6 | `label` | 这条行的名字 |
+| 6 | `nightly` | `skip` 或 `every-dtype`；可省略 |
+| 7 | `label` | 这条行的名字 |
 
 - 一个 index 在某个分支上被用到，是指它出现在该分支的以下位置之一：形状、dtype、refinement、generator 实参、`requires`、内联 roofline 公式。workload 行必须给出当前分支用到的每一个 index，且只给出这些 index；`let` 与由 generator 求得的 index 不在行中给出。
   - 判断时，各处表达式先按当前分支化简。如果一条 refinement 的条件在该分支上恒为 true，其中出现的 index 不算被用到。
@@ -175,6 +176,7 @@ workloads:
 
   例如上例第一个 case 的 id 是 `llama-8b-ffn-prefill-float16`。
 - nightly 的历史数据以 case id 为键，因此修改 `label` 会使这条行的历史记录中断。
+- 一个 float16 case 与只在 dtype 上不同的 bfloat16 case 同时存在时，nightly benchmark 只跑 bfloat16 那一个；写了 `nightly: every-dtype` 的行两者都跑，写了 `nightly: skip` 的行不进入 nightly benchmark。
 - `label` 不能为空，长度不超过 24 个字符，只能包含 `[A-Za-z0-9._-]` 中的字符。`label` 只描述这条行所建模的场景，即模型及其用途或合成目的，再加上区分同类行所需的限定词，例如 `llama-8b-ffn-prefill`；op 名与 dtype 已经出现在 case id 中，不必重复。共用同一个 `label` 的行只能在 dtype 上不同。
 - 同一个 spec 内的 case id 互不相同。
 - 实例化时，workload 行确定形状、dtype、参数取值、每个实参持有的成员、调用期标量的取值，以及 metadata 张量的取值。其余部分按固定规则生成：设备的确定方式见[调用与校验 4](calls.md#device)，stride 连续，张量之间没有别名，普通数据随机生成。
